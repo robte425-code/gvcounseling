@@ -16,27 +16,30 @@ export default function OurTeamPage() {
       />
 
       <section className="mx-auto max-w-6xl space-y-20 px-4 py-16 sm:px-6 lg:px-8">
-        {teamMembers.map((member, index) => (
+        {teamMembers.map((member, index) => {
+          const imageOnRight = index % 2 === 1;
+
+          return (
           <article
             key={member.name}
-            className={`grid items-start gap-10 lg:grid-cols-[280px_1fr] ${
-              index % 2 === 1 ? "lg:grid-flow-dense" : ""
+            className={`grid items-start gap-10 ${
+              imageOnRight ? "lg:grid-cols-[1fr_280px]" : "lg:grid-cols-[280px_1fr]"
             }`}
           >
-            <div className={`relative ${index % 2 === 1 ? "lg:col-start-2" : ""}`}>
-              <div className="overflow-hidden rounded-2xl shadow-lg ring-1 ring-border">
+            <div className={`relative w-full max-w-[280px] ${imageOnRight ? "lg:col-start-2" : ""}`}>
+              <div className="relative aspect-[4/5] overflow-hidden rounded-2xl shadow-lg ring-1 ring-border">
                 <Image
                   src={member.image}
                   alt={member.name}
-                  width={320}
-                  height={400}
-                  className="aspect-[4/5] w-full object-cover"
+                  fill
+                  sizes="280px"
+                  className="object-cover object-top"
                 />
               </div>
               <p className="mt-3 text-center text-sm font-medium text-primary">{member.location}</p>
             </div>
 
-            <div className={index % 2 === 1 ? "lg:col-start-1 lg:row-start-1" : ""}>
+            <div className={imageOnRight ? "lg:col-start-1 lg:row-start-1" : ""}>
               <h2 className="font-serif text-2xl font-semibold text-primary-dark sm:text-3xl">
                 {member.name}
                 <span className="ml-2 text-primary">{member.credentials}</span>
@@ -51,7 +54,8 @@ export default function OurTeamPage() {
               </blockquote>
             </div>
           </article>
-        ))}
+          );
+        })}
       </section>
     </>
   );
