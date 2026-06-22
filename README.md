@@ -1,36 +1,42 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Grandview Counseling
 
-## Getting Started
+Modern website for [Grandview Counseling](https://gvcounseling.com), rebuilt with Next.js for deployment on Vercel.
 
-First, run the development server:
+## Pages
+
+- **What we do** — Home page with services overview
+- **Our team** — Therapist profiles
+- **Contact us** — Contact form and office information
+- **Refer a client** — VRC referral form with file uploads
+- **Privacy Statement**, **Terms of use**, **Accessibility**
+
+## Development
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Deploy to Vercel
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. Push this repository to GitHub.
+2. Import the project in [Vercel](https://vercel.com/new).
+3. Add environment variables for form submissions:
 
-## Learn More
+| Variable | Description |
+|----------|-------------|
+| `RESEND_API_KEY` | API key from [Resend](https://resend.com) |
+| `CONTACT_EMAIL` | Inbox for form submissions (e.g. `info@gvcounseling.com`) |
+| `EMAIL_FROM` | Verified sender address in Resend (e.g. `Grandview Counseling <noreply@gvcounseling.com>`) |
 
-To learn more about Next.js, take a look at the following resources:
+4. Deploy. Vercel will build and host the site automatically.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Connect your domain
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+After deploying, add `gvcounseling.com` and `www.gvcounseling.com` in your Vercel project under **Settings → Domains**. Update DNS at your registrar to point to Vercel, then remove or redirect the old Wix site once verified.
 
-## Deploy on Vercel
+## Forms
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Contact and referral forms send email via the Resend API. File attachments on the referral form are included in the notification email. If `RESEND_API_KEY` is not set, forms will show a configuration error until environment variables are added.
