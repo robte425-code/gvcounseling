@@ -101,6 +101,10 @@ export async function upsertClientFromReferral(
     warnings.push("Could not find client name");
   }
 
+  const fromSupplement = supplement != null;
+  const supplementOrExisting = <T>(value: T | undefined, existing: T | null | undefined): T | null =>
+    fromSupplement ? (value ?? null) : (existing ?? null);
+
   const data = {
     lniClaimNumber: claimNumber,
     firstName,
@@ -109,33 +113,54 @@ export async function upsertClientFromReferral(
     diagnoses: mergedReferral.diagnoses.length
       ? mergedReferral.diagnoses
       : (existing?.diagnoses ?? []),
-    addressLine1: supplement?.addressLine1 ?? existing?.addressLine1 ?? null,
-    city: supplement?.city ?? existing?.city ?? null,
-    state: supplement?.state ?? existing?.state ?? "WA",
-    zip: supplement?.zip ?? existing?.zip ?? null,
-    residenceAddressLine1: supplement?.residenceAddressLine1 ?? existing?.residenceAddressLine1 ?? null,
-    residenceCity: supplement?.residenceCity ?? existing?.residenceCity ?? null,
-    residenceState: supplement?.residenceState ?? existing?.residenceState ?? null,
-    residenceZip: supplement?.residenceZip ?? existing?.residenceZip ?? null,
-    workerPhone: supplement?.workerPhone ?? existing?.workerPhone ?? null,
-    employerName: supplement
-      ? (supplement.employerName ?? null)
-      : (existing?.employerName ?? null),
-    attendingDoctorName: supplement?.attendingDoctorName ?? existing?.attendingDoctorName ?? null,
-    attendingDoctorAddress: supplement?.attendingDoctorAddress ?? existing?.attendingDoctorAddress ?? null,
-    attendingDoctorPhone: supplement?.attendingDoctorPhone ?? existing?.attendingDoctorPhone ?? null,
-    claimManagerName: supplement?.claimManagerName ?? existing?.claimManagerName ?? null,
-    claimManagerPhone: supplement?.claimManagerPhone ?? existing?.claimManagerPhone ?? null,
-    claimManagerFax: supplement?.claimManagerFax ?? existing?.claimManagerFax ?? null,
-    legalRepresentativeName:
-      supplement?.legalRepresentativeName ?? existing?.legalRepresentativeName ?? null,
-    legalRepresentativeAddress:
-      supplement?.legalRepresentativeAddress ?? existing?.legalRepresentativeAddress ?? null,
-    legalRepresentativePhone:
-      supplement?.legalRepresentativePhone ?? existing?.legalRepresentativePhone ?? null,
+    addressLine1: supplementOrExisting(supplement?.addressLine1, existing?.addressLine1),
+    city: supplementOrExisting(supplement?.city, existing?.city),
+    state: fromSupplement ? (supplement?.state ?? "WA") : (existing?.state ?? "WA"),
+    zip: supplementOrExisting(supplement?.zip, existing?.zip),
+    residenceAddressLine1: supplementOrExisting(
+      supplement?.residenceAddressLine1,
+      existing?.residenceAddressLine1,
+    ),
+    residenceCity: supplementOrExisting(supplement?.residenceCity, existing?.residenceCity),
+    residenceState: supplementOrExisting(supplement?.residenceState, existing?.residenceState),
+    residenceZip: supplementOrExisting(supplement?.residenceZip, existing?.residenceZip),
+    workerPhone: supplementOrExisting(supplement?.workerPhone, existing?.workerPhone),
+    employerName: supplementOrExisting(supplement?.employerName, existing?.employerName),
+    attendingDoctorName: supplementOrExisting(
+      supplement?.attendingDoctorName,
+      existing?.attendingDoctorName,
+    ),
+    attendingDoctorAddress: supplementOrExisting(
+      supplement?.attendingDoctorAddress,
+      existing?.attendingDoctorAddress,
+    ),
+    attendingDoctorPhone: supplementOrExisting(
+      supplement?.attendingDoctorPhone,
+      existing?.attendingDoctorPhone,
+    ),
+    claimManagerName: supplementOrExisting(supplement?.claimManagerName, existing?.claimManagerName),
+    claimManagerPhone: supplementOrExisting(
+      supplement?.claimManagerPhone,
+      existing?.claimManagerPhone,
+    ),
+    claimManagerFax: supplementOrExisting(supplement?.claimManagerFax, existing?.claimManagerFax),
+    legalRepresentativeName: supplementOrExisting(
+      supplement?.legalRepresentativeName,
+      existing?.legalRepresentativeName,
+    ),
+    legalRepresentativeAddress: supplementOrExisting(
+      supplement?.legalRepresentativeAddress,
+      existing?.legalRepresentativeAddress,
+    ),
+    legalRepresentativePhone: supplementOrExisting(
+      supplement?.legalRepresentativePhone,
+      existing?.legalRepresentativePhone,
+    ),
     dateOfBirth: mergedReferral.dateOfBirth ?? existing?.dateOfBirth ?? null,
     gender: mergedReferral.gender ?? existing?.gender ?? null,
-    dateOfInjury: mergedReferral.dateOfInjury ?? existing?.dateOfInjury ?? null,
+    dateOfInjury:
+      mergedReferral.dateOfInjury ??
+      (fromSupplement ? (supplement?.dateOfInjury ?? null) : existing?.dateOfInjury ?? null),
     vrcName: mergedReferral.vrcName ?? existing?.vrcName ?? null,
     vrcEmail: mergedReferral.vrcEmail ?? existing?.vrcEmail ?? null,
     vrcPhone: mergedReferral.vrcPhone ?? existing?.vrcPhone ?? null,

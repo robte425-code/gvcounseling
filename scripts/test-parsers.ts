@@ -89,3 +89,6 @@ console.log(
   "Claim resolve (folder wins):",
   resolveImportClaimNumber("BL13687", "BL12687", "BL13687"),
 );
+
+const alonsoContacts = `Worker mailing address Worker residence address 1505 S ROAD 40 E TRLR 36 PASCO, WA 99301-6414 509-551-1130 Percent of liability 100 percent Vocational counselor THOMAS NATHAN W VRC 7401 W HOOD PLACE STE 115 KENNEWICK, WA 99336 Attending doctor DECHTER STEPHEN M DO BENTON FRANKLIN ORTHOPEDICO 8200 W GAGE BLVD KENNEWICK, WA 99336 Location Phone: 509-586-2828 Employer name(s) > TSCHIRKY TED Vocational firm`;
+console.log("Alonso contacts:", parseLniAddressesText(alonsoContacts));

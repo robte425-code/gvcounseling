@@ -153,11 +153,15 @@ function isPlausibleEmployerName(name: string): boolean {
 }
 
 function parseEmployerFromLiabilityTable(text: string): string | undefined {
-  const match = text.match(
+  const patterns = [
     /Employer name\(s\)\s+Percent of liability\s*>\s*([A-Z0-9][A-Z0-9\s&.'-]+?)\s+\d+\s+percent/i,
-  );
-  const name = match?.[1]?.trim().toUpperCase();
-  return name && isPlausibleEmployerName(name) ? name : undefined;
+    /Employer name\(s\)\s*>\s*([A-Z0-9][A-Z0-9\s&.'-]+?)(?=\s+Vocational firm|\s+Percent|\s+\d+\s+percent|$)/i,
+  ];
+  for (const pattern of patterns) {
+    const name = pattern.exec(text)?.[1]?.trim().toUpperCase();
+    if (name && isPlausibleEmployerName(name)) return name;
+  }
+  return undefined;
 }
 
 function parseEmployerName(text: string): string | undefined {
@@ -185,10 +189,15 @@ function parseAttendingDoctorName(text: string): string | undefined {
 
   for (const section of text.split(/Attending doctor/i).slice(1)) {
     const cleaned = section.replace(/^\s*Legal representative\s+/i, "");
-    const match = cleaned.match(
-      new RegExp(`^(${ATTENDING_DOCTOR_NAME.source})`, "i"),
+    const atStart = cleaned.match(
+      new RegExp(`^\\s*(${ATTENDING_DOCTOR_NAME.source})`, "i"),
     );
-    if (match?.[1]) return match[1].trim().toUpperCase();
+    if (atStart?.[1]) return atStart[1].trim().toUpperCase();
+
+    if (/(?:Billing Phone|Location Phone)/i.test(section)) {
+      const inSection = section.match(ATTENDING_DOCTOR_NAME);
+      if (inSection?.[1]) return inSection[1].trim().toUpperCase();
+    }
   }
 
   return undefined;
@@ -324,6 +333,24 @@ function parseClaimManager(text: string): Pick<
   };
 }
 
+function isPlausibleWorkerAddress(addressLine1?: string): boolean {
+  if (!addressLine1) return false;
+  const line = addressLine1.trim().toUpperCase();
+  if (
+    /\b(PERCENT|LIABILITY|VOCATIONAL|COUNSELOR|CLAIM MANAGER|EMPLOYER NAME)\b/.test(line) ||
+    /\bVRC\b/.test(line)
+  ) {
+    return false;
+  }
+  return true;
+}
+
+function firstPlausibleAddress(text: string) {
+  return parseAllStreetCityStateZip(text).find((a) =>
+    isPlausibleWorkerAddress(a.addressLine1),
+  );
+}
+
 function parseWorkerAddresses(text: string): Pick<
   ParsedLniCacFields,
   | "mailingAddressLine1"
@@ -336,6 +363,36 @@ function parseWorkerAddresses(text: string): Pick<
   | "residenceZip"
   | "workerPhone"
 > {
+  const mailingBlock = text.match(
+    /Worker mailing address\s+(.*?)\s+Worker residence address/i,
+  )?.[1];
+  const residenceBlock = text.match(
+    /Worker residence address\s+(.*?)(?=Attending doctor|Percent of liability|Vocational firm|Employer name|$)/i,
+  )?.[1];
+
+  if (mailingBlock || residenceBlock) {
+    const mailing =
+      firstPlausibleAddress(mailingBlock ?? "") ??
+      firstPlausibleAddress(residenceBlock ?? "");
+    const residence =
+      firstPlausibleAddress(residenceBlock ?? "") ?? mailing;
+    const phoneSource = residenceBlock ?? mailingBlock ?? "";
+    const workerPhone = phoneSource.match(/\b(\d{3}-\d{3}-\d{4})\b/)?.[1];
+
+    const resolvedResidence = residence ?? mailing;
+    return {
+      mailingAddressLine1: mailing?.addressLine1,
+      mailingCity: mailing?.city,
+      mailingState: mailing?.state,
+      mailingZip: mailing?.zip,
+      residenceAddressLine1: resolvedResidence?.addressLine1,
+      residenceCity: resolvedResidence?.city,
+      residenceState: resolvedResidence?.state,
+      residenceZip: resolvedResidence?.zip,
+      workerPhone,
+    };
+  }
+
   const section =
     text.split(/Worker residence address/i)[1] ??
     text.split(/Worker mailing address/i)[1] ??
@@ -344,7 +401,9 @@ function parseWorkerAddresses(text: string): Pick<
   if (!section) return {};
 
   const beforeAttending = section.split(/Attending doctor/i)[0] ?? section;
-  const addresses = parseAllStreetCityStateZip(beforeAttending);
+  const addresses = parseAllStreetCityStateZip(beforeAttending).filter((a) =>
+    isPlausibleWorkerAddress(a.addressLine1),
+  );
   const workerPhone = beforeAttending.match(/\b(\d{3}-\d{3}-\d{4})\b/)?.[1];
 
   const mailing = addresses[0];
