@@ -119,6 +119,29 @@ function parseEmployerName(text: string): string | undefined {
   return match?.[1]?.trim().toUpperCase();
 }
 
+const ATTENDING_DOCTOR_NAME =
+  /([A-Z][A-Z]+\s+[A-Z][A-Z]+(?:\s+[A-Z]\.?)?\s+(?:PAC|ARNP|MD|DO))\b/i;
+
+function parseAttendingDoctorName(text: string): string | undefined {
+  const header = text.match(
+    new RegExp(
+      `Attending doctor\\s+(${ATTENDING_DOCTOR_NAME.source})(?=\\s+Claim Manager)`,
+      "i",
+    ),
+  );
+  if (header?.[1]) return header[1].trim().toUpperCase();
+
+  for (const section of text.split(/Attending doctor/i).slice(1)) {
+    const cleaned = section.replace(/^\s*Legal representative\s+/i, "");
+    const match = cleaned.match(
+      new RegExp(`^(${ATTENDING_DOCTOR_NAME.source})`, "i"),
+    );
+    if (match?.[1]) return match[1].trim().toUpperCase();
+  }
+
+  return undefined;
+}
+
 function parseAttendingDoctor(text: string): Pick<
   ParsedLniCacFields,
   "attendingDoctorName" | "attendingDoctorAddress" | "attendingDoctorPhone"
@@ -127,11 +150,10 @@ function parseAttendingDoctor(text: string): Pick<
   const section =
     sections.find((s) => /(?:Billing Phone|Location Phone)/i.test(s)) ??
     sections[sections.length - 1];
-  if (!section) return {};
 
-  const name = section.match(
-    /^\s*([A-Z][A-Z\s.'-]+?(?:\s+PAC|\s+ARNP|\s+MD|\s+DO)?)(?=\s+(?:Claim Manager|SWEDISH|\d+\s+[A-Z0-9]|Billing Phone|$))/i,
-  )?.[1]?.trim();
+  const name = parseAttendingDoctorName(text);
+  if (!section) return { attendingDoctorName: name };
+
   const addressMatch = section.match(
     new RegExp(
       `(\\d+\\s+[A-Z0-9][A-Z0-9\\s.'#-]*${STREET_SUFFIX}(?:\\s+[A-Z0-9#-]+)?)\\s+([A-Z][A-Z\\s.'-]+),\\s*([A-Z]{2})\\s+(\\d{5}(?:-\\d{4})?)`,
@@ -147,7 +169,7 @@ function parseAttendingDoctor(text: string): Pick<
   }
 
   return {
-    attendingDoctorName: name?.toUpperCase(),
+    attendingDoctorName: name,
     attendingDoctorAddress,
     attendingDoctorPhone: phone,
   };
