@@ -1,6 +1,8 @@
 import type { ClientDocumentSupplement } from "@/lib/client-document-import";
 import type { ClientDocumentPart } from "@/lib/client-import-quality";
 import {
+  formatMissingRequiredFields,
+  getMissingRequiredImportFields,
   isPlausibleVrcName,
   validateAndRepairClientImport,
 } from "@/lib/client-import-quality";
@@ -109,6 +111,13 @@ export async function upsertClientFromReferral(
 
   if (firstName === "Unknown" && lastName === "Unknown" && !mergedReferral.clientName?.trim()) {
     warnings.push("Could not find client name");
+  }
+
+  const stillMissing = getMissingRequiredImportFields(mergedReferral, supplement);
+  if (stillMissing.length) {
+    warnings.push(
+      `Missing required import fields: ${formatMissingRequiredFields(stillMissing)}`,
+    );
   }
 
   const fromSupplement = supplement != null;

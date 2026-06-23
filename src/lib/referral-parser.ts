@@ -96,11 +96,31 @@ function parseDiagnoses(text: string): string[] {
 }
 
 function parseReferralVrcName(text: string): string | undefined {
-  return (
+  const raw =
     fieldValue(text, "Referring VRC Name") ??
     fieldValue(text, /^VRC$/i) ??
-    text.match(/^VRC:\s*(.+)$/im)?.[1]?.trim()
-  );
+    text.match(/^VRC:\s*(.+)$/im)?.[1]?.trim();
+  return normalizeReferralVrcName(raw);
+}
+
+function titleCasePersonName(raw: string): string {
+  return raw
+    .trim()
+    .split(/\s+/)
+    .map((part) => {
+      if (part.length <= 2 && /^[A-Z]\.?$/i.test(part)) return part.toUpperCase().replace(/\.$/, "") + ".";
+      return part.charAt(0).toUpperCase() + part.slice(1).toLowerCase();
+    })
+    .join(" ");
+}
+
+function normalizeReferralVrcName(raw?: string): string | undefined {
+  if (!raw?.trim()) return undefined;
+  const trimmed = raw.trim();
+  const newVrc = trimmed.match(/new\s+VRC:\s*(.+)$/i)?.[1]?.trim();
+  const candidate = (newVrc ?? trimmed.split(/[/,;]/)[0]?.trim()) ?? trimmed;
+  const normalized = candidate.replace(/\s+/g, " ").trim();
+  return normalized ? titleCasePersonName(normalized) : undefined;
 }
 
 function parseReferralVrcEmail(text: string): string | undefined {

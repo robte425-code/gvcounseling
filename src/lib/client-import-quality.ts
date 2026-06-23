@@ -1,5 +1,5 @@
 import type { ClientDocumentSupplement } from "@/lib/client-document-import";
-import { isLniClaimNumber } from "@/lib/constants";
+import { isLniClaimNumber, isPlausibleIcdCode } from "@/lib/constants";
 import {
   isPlausibleEmployerName,
   isPlausiblePersonName,
@@ -22,13 +22,13 @@ const DOCTOR_CREDENTIAL = /\b(PAC|ARNP|MD|DO|DC|APRN|NP)\b/i;
 const PHONE_PATTERN = /^\d{3}-\d{3}-\d{4}$/;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const ZIP_PATTERN = /^\d{5}$/;
-const ICD_PATTERN = /^[A-TV-Z]\d[\d.A-Z]*$/i;
 
 export function isPlausibleDoctorName(name?: string | null): boolean {
   const n = name?.trim();
   if (!n || n.length < 5 || n.length > 60) return false;
   if (/\b(ATTENDING DOCTOR|LEGAL REPRESENTATIVE|CLAIM MANAGER)\b/i.test(n)) return false;
-  return DOCTOR_CREDENTIAL.test(n);
+  if (DOCTOR_CREDENTIAL.test(n)) return true;
+  return isPlausiblePersonName(n) && n.split(/\s+/).filter(Boolean).length >= 2;
 }
 
 export function isPlausiblePhone(phone?: string | null): boolean {
@@ -44,6 +44,97 @@ export function isPlausibleEmail(email?: string | null): boolean {
 
 export function isPlausibleNpi(npi?: string | null): boolean {
   return /^\d{10}$/.test(npi?.trim() ?? "");
+}
+
+export function isPlausibleClaimManagerName(name?: string | null): boolean {
+  const n = name?.trim();
+  if (!n || n.length < 4) return false;
+  if (/\b(PAC|ARNP|MD|DO|DC|ATTENDING|CLAIM MANAGER|FAX|VRC|VOCATIONAL)\b/i.test(n)) {
+    return false;
+  }
+  if (/\b(REVIEW|DATE|STATUS|NEXT|ALLOWED|DEPARTMENT|CORRESPONDENCE|SUPERVISOR|LOCATION)\b/i.test(n)) {
+    return false;
+  }
+  return isPlausiblePersonName(n);
+}
+
+export type RequiredImportField =
+  | "attendingDoctor"
+  | "claimManager"
+  | "employer"
+  | "mailingAddress"
+  | "residenceAddress"
+  | "injuryDate"
+  | "vocationalCounselor";
+
+const REQUIRED_FIELD_LABELS: Record<RequiredImportField, string> = {
+  attendingDoctor: "Attending doctor",
+  claimManager: "Claim Manager",
+  employer: "Employer name",
+  mailingAddress: "Worker mailing address",
+  residenceAddress: "Worker residence address",
+  injuryDate: "Injury date",
+  vocationalCounselor: "Vocational counselor",
+};
+
+/** Fields that must be present on a complete client import. */
+export function getMissingRequiredImportFields(
+  referral: ParsedReferral | undefined,
+  supplement: ClientDocumentSupplement | undefined,
+): RequiredImportField[] {
+  const missing: RequiredImportField[] = [];
+
+  if (!isPlausibleDoctorName(supplement?.attendingDoctorName)) {
+    missing.push("attendingDoctor");
+  }
+  const claimManagerOk =
+    isPlausibleClaimManagerName(supplement?.claimManagerName) &&
+    !(
+      supplement?.attendingDoctorName &&
+      supplement.attendingDoctorName
+        .trim()
+        .toUpperCase()
+        .startsWith(supplement.claimManagerName!.trim().toUpperCase())
+    );
+  if (!claimManagerOk) {
+    missing.push("claimManager");
+  }
+  if (!isPlausibleEmployerName(supplement?.employerName ?? "")) {
+    missing.push("employer");
+  }
+  if (
+    !isPlausibleMailingAddress({
+      addressLine1: supplement?.addressLine1,
+      city: supplement?.city,
+      state: supplement?.state,
+      zip: supplement?.zip,
+    })
+  ) {
+    missing.push("mailingAddress");
+  }
+  if (
+    !isPlausibleResidenceAddress({
+      residenceAddressLine1: supplement?.residenceAddressLine1,
+      residenceCity: supplement?.residenceCity,
+      residenceState: supplement?.residenceState,
+      residenceZip: supplement?.residenceZip,
+    })
+  ) {
+    missing.push("residenceAddress");
+  }
+  if (!(referral?.dateOfInjury ?? supplement?.dateOfInjury)) {
+    missing.push("injuryDate");
+  }
+  const vrc = referral?.vrcName?.trim() || supplement?.vrcName?.trim();
+  if (!isPlausibleVrcName(vrc)) {
+    missing.push("vocationalCounselor");
+  }
+
+  return missing;
+}
+
+export function formatMissingRequiredFields(fields: RequiredImportField[]): string {
+  return fields.map((f) => REQUIRED_FIELD_LABELS[f]).join(", ");
 }
 
 export function isPlausibleVrcName(name?: string | null): boolean {
@@ -105,7 +196,7 @@ function mergeDiagnoses(into: string[], from: string[]) {
   const seen = new Set(into.map((c) => c.toUpperCase()));
   for (const code of from) {
     const upper = code.toUpperCase();
-    if (!seen.has(upper) && ICD_PATTERN.test(upper)) {
+    if (!seen.has(upper) && isPlausibleIcdCode(upper)) {
       seen.add(upper);
       into.push(upper);
     }
@@ -153,8 +244,10 @@ function pickFieldFromParts(
   parts: ClientDocumentPart[],
   read: (s: ClientDocumentSupplement) => string | undefined,
   validate: (value: string) => boolean,
+  preferLast = false,
 ): string | undefined {
-  for (const { supplement } of parts) {
+  const ordered = preferLast ? [...parts].reverse() : parts;
+  for (const { supplement } of ordered) {
     const value = read(supplement)?.trim();
     if (value && validate(value)) return value;
   }
@@ -215,17 +308,25 @@ export function mergeDocumentPartsPreferValid(
   merged.claimManagerName = pickFieldFromParts(
     parts,
     (s) => s.claimManagerName,
-    isPlausiblePersonName,
+    (value) => {
+      if (!isPlausibleClaimManagerName(value)) return false;
+      const doctor = merged.attendingDoctorName?.trim().toUpperCase();
+      if (doctor && doctor.startsWith(value.trim().toUpperCase())) return false;
+      return true;
+    },
+    true,
   );
   merged.claimManagerPhone = pickFieldFromParts(
     parts,
     (s) => s.claimManagerPhone,
     isPlausiblePhone,
+    true,
   );
   merged.claimManagerFax = pickFieldFromParts(
     parts,
     (s) => s.claimManagerFax,
     isPlausiblePhone,
+    true,
   );
   merged.workerPhone = pickFieldFromParts(parts, (s) => s.workerPhone, isPlausiblePhone);
   merged.vrcName = pickFieldFromParts(parts, (s) => s.vrcName, isPlausibleVrcName);
@@ -317,7 +418,7 @@ function sanitizeSupplement(
     next.vrcName = undefined;
   }
 
-  if (next.claimManagerName && !isPlausiblePersonName(next.claimManagerName)) {
+  if (next.claimManagerName && !isPlausibleClaimManagerName(next.claimManagerName)) {
     next.claimManagerName = undefined;
   }
 
@@ -358,7 +459,7 @@ function sanitizeReferral(
     next.attendingNpi = undefined;
   }
 
-  next.diagnoses = next.diagnoses.filter((code) => ICD_PATTERN.test(code));
+  next.diagnoses = next.diagnoses.filter((code) => isPlausibleIcdCode(code));
 
   return next;
 }

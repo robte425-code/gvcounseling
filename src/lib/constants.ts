@@ -53,6 +53,14 @@ export function isLniClaimNumber(raw: string): boolean {
   return /^[A-Z]{1,2}\d+$/.test(parseClaimNumber(raw));
 }
 
+/** Reject OCR table fragments like S13, S33, A328 — real ICD-10 codes have a decimal after the category. */
+export function isPlausibleIcdCode(code: string): boolean {
+  const c = code.trim().toUpperCase();
+  if (!/^[A-TV-Z]\d[\d.A-Z]*$/.test(c)) return false;
+  if (c.length < 5) return false;
+  return /^[A-TV-Z]\d{2}\./.test(c);
+}
+
 export function extractClaimNumber(raw?: string): string | undefined {
   if (!raw) return undefined;
 

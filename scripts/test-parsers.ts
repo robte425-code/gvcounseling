@@ -132,3 +132,18 @@ console.log("Quality repair:", {
   vrc: badMerge.referral.vrcName,
   warnings: badMerge.warnings.filter((w) => w.startsWith("Data quality")),
 });
+
+import { parseLniCacText } from "../src/lib/parse-lni-cac-fields";
+
+const stantonAddresses = `Worker mailing address Worker residence address 911 N 16TH STSUNNYSIDE, WA 98944 PO BOX 119SUNNYSIDE, WA 98944 509-837-1234 Vocational counselor LEAVERTON SARAH E Attending doctor VARGAS ISMAEL Location Phone: 509-837-3933`;
+console.log("Stanton addresses:", parseLniCacText(stantonAddresses, { requireMailingAddress: true }));
+
+const stantonClaim = `Attending doctor VARGAS ISMAEL Claim Manager JOHN SMITH 360-902-1234 Employer name ACME CORP`;
+console.log("Stanton doctor:", parseLniCacText(stantonClaim).attendingDoctorName);
+
+const stantonReferral = `Referral Submission
+VRC: Sarah Leaverton/ new VRC: Nikki Jellison
+VRC Email: nikki@example.com
+Client name: James Stanton
+Please enter the LNI claim number: BL53128`;
+console.log("Stanton VRC:", parseReferralSubmissionText(stantonReferral).vrcName);

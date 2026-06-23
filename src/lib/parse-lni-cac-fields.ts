@@ -1,4 +1,4 @@
-import { DIAGNOSIS_LABEL_PATTERN, extractClaimNumber } from "@/lib/constants";
+import { DIAGNOSIS_LABEL_PATTERN, extractClaimNumber, isPlausibleIcdCode } from "@/lib/constants";
 
 export type ParsedLniCacFields = {
   claimNumber?: string;
@@ -55,7 +55,34 @@ function parseInjuryDate(raw?: string): Date | undefined {
 const STREET_SUFFIX =
   "(?:ST|STREET|STE|SUITE|AVE|AVENUE|RD|ROAD|DR|DRIVE|LN|LANE|BLVD|WAY|CT|COURT|PL|PLACE|HWY|PIKE|SW|SE|NW|NE|RTE|ROUTE)";
 
-const ADDRESS_LINE_TAIL = "(?:\\s+(?:UNIT|STE|SUITE|RTE|#|RM|APT|BLDG|[A-Z0-9#-]+))*";
+const ADDRESS_LINE_TAIL =
+  "(?:\\s+(?:UNIT|STE|SUITE|RTE|RM|APT|BLDG)\\s+[A-Z0-9#-]+|\\s+#\\d+|\\s+(?:N|S|E|W|NE|NW|SE|SW)\\b)*";
+
+/** Word exports often run street suffixes into city names (e.g. STSUNNYSIDE). */
+function preprocessAddressText(text: string): string {
+  let out = text;
+  out = out.replace(
+    new RegExp(`(${STREET_SUFFIX})(${ADDRESS_LINE_TAIL}?)([A-Z][A-Z]+)(,\\s*[A-Z]{2}\\s+\\d{5})`, "gi"),
+    "$1$2 $3$4",
+  );
+  out = out.replace(
+    /((?:P\.?O\.?\s+BOX|PO BOX)\s+\d+)([A-Z][A-Z]+)(,\s*[A-Z]{2}\s+\d{5})/gi,
+    "$1 $2$3",
+  );
+  out = out.replace(
+    /(STE|SUITE|UNIT|RM|APT)\s+(\d+)([A-Z][A-Z]+)(,\s*[A-Z]{2}\s+\d{5})/gi,
+    "$1 $2 $3$4",
+  );
+  return out;
+}
+
+const STREET_CITY_ZIP_PATTERN = new RegExp(
+  `(\\d+\\s+[A-Z0-9][A-Z0-9\\s.'#-]*${STREET_SUFFIX}${ADDRESS_LINE_TAIL})\\s+([A-Z][A-Z\\s.'-]+),\\s*([A-Z]{2})\\s+(\\d{5}(?:-\\d{4})?)`,
+  "i",
+);
+
+const PO_BOX_CITY_ZIP_PATTERN =
+  /((?:P\.?O\.?\s+BOX|PO BOX)\s+\d+[A-Z0-9\s#-]*)\s+([A-Z][A-Z\s.'-]+),\s*([A-Z]{2})\s+(\d{5}(?:-\d{4})?)/i;
 
 function parseStreetCityStateZip(text: string): {
   addressLine1?: string;
@@ -63,12 +90,9 @@ function parseStreetCityStateZip(text: string): {
   state?: string;
   zip?: string;
 } {
-  const match = text.match(
-    new RegExp(
-      `(\\d+\\s+[A-Z0-9][A-Z0-9\\s.'#-]*${STREET_SUFFIX}${ADDRESS_LINE_TAIL})\\s+([A-Z][A-Z\\s.'-]+),\\s*([A-Z]{2})\\s+(\\d{5}(?:-\\d{4})?)`,
-      "i",
-    ),
-  );
+  const prepared = preprocessAddressText(text);
+  const match =
+    prepared.match(STREET_CITY_ZIP_PATTERN) ?? prepared.match(PO_BOX_CITY_ZIP_PATTERN);
   if (!match) return {};
   return {
     addressLine1: match[1]!.trim().toUpperCase(),
@@ -79,10 +103,8 @@ function parseStreetCityStateZip(text: string): {
 }
 
 function parseAllStreetCityStateZip(text: string) {
-  const streetPattern = new RegExp(
-    `(\\d+\\s+[A-Z0-9][A-Z0-9\\s.'#-]*${STREET_SUFFIX}${ADDRESS_LINE_TAIL})\\s+([A-Z][A-Z\\s.'-]+),\\s*([A-Z]{2})\\s+(\\d{5}(?:-\\d{4})?)`,
-    "gi",
-  );
+  const prepared = preprocessAddressText(text);
+  const streetPattern = new RegExp(STREET_CITY_ZIP_PATTERN.source, "gi");
   const poBoxPattern =
     /((?:P\.?O\.?\s+BOX|PO BOX)\s+\d+[A-Z0-9\s#-]*)\s+([A-Z][A-Z\s.'-]+),\s*([A-Z]{2})\s+(\d{5}(?:-\d{4})?)/gi;
 
@@ -93,7 +115,7 @@ function parseAllStreetCityStateZip(text: string) {
     zip?: string;
   }[] = [];
 
-  for (const match of text.matchAll(streetPattern)) {
+  for (const match of prepared.matchAll(streetPattern)) {
     results.push({
       addressLine1: match[1]!.trim().toUpperCase(),
       city: match[2]!.trim().toUpperCase(),
@@ -101,7 +123,7 @@ function parseAllStreetCityStateZip(text: string) {
       zip: match[4]!.slice(0, 5),
     });
   }
-  for (const match of text.matchAll(poBoxPattern)) {
+  for (const match of prepared.matchAll(poBoxPattern)) {
     results.push({
       addressLine1: match[1]!.trim().toUpperCase(),
       city: match[2]!.trim().toUpperCase(),
@@ -178,14 +200,34 @@ function parseEmployerName(text: string): string | undefined {
   return parseEmployerFromLiabilityTable(text);
 }
 
+const ATTENDING_DOCTOR_SIMPLE =
+  /\b([A-Z][A-Z]+\s+[A-Z][A-Z]+(?:\s+[A-Z]\.?)?)\b/i;
+
+function isPlausibleAttendingDoctorSimple(name: string): boolean {
+  const n = name.trim().toUpperCase();
+  if (!isPlausiblePersonName(n)) return false;
+  if (/\b(ATTENDING DOCTOR|LEGAL REPRESENTATIVE|CLAIM MANAGER|EMPLOYER)\b/.test(n)) {
+    return false;
+  }
+  const parts = n.split(/\s+/).filter(Boolean);
+  return parts.length >= 2 && parts.length <= 4;
+}
+
 function parseAttendingDoctorName(text: string): string | undefined {
-  const header = text.match(
+  const headerCred = text.match(
     new RegExp(
       `Attending doctor\\s+(${ATTENDING_DOCTOR_NAME.source})(?=\\s+Claim Manager)`,
       "i",
     ),
   );
-  if (header?.[1]) return header[1].trim().toUpperCase();
+  if (headerCred?.[1]) return headerCred[1].trim().toUpperCase();
+
+  const headerSimple = text.match(
+    /Attending doctor\s+([A-Z][A-Z]+\s+[A-Z][A-Z]+(?:\s+[A-Z]\.?)?)(?=\s+Claim Manager)/i,
+  );
+  if (headerSimple?.[1] && isPlausibleAttendingDoctorSimple(headerSimple[1])) {
+    return headerSimple[1].trim().toUpperCase();
+  }
 
   for (const section of text.split(/Attending doctor/i).slice(1)) {
     const cleaned = section.replace(/^\s*Legal representative\s+/i, "");
@@ -194,8 +236,17 @@ function parseAttendingDoctorName(text: string): string | undefined {
     );
     if (atStart?.[1]) return atStart[1].trim().toUpperCase();
 
+    const simpleStart = cleaned.match(/^\s*([A-Z][A-Z]+\s+[A-Z][A-Z]+(?:\s+[A-Z]\.?)?)\b/i);
+    if (simpleStart?.[1] && isPlausibleAttendingDoctorSimple(simpleStart[1])) {
+      return simpleStart[1].trim().toUpperCase();
+    }
+
     if (/(?:Billing Phone|Location Phone)/i.test(section)) {
-      const inSection = section.match(ATTENDING_DOCTOR_NAME);
+      const inSection =
+        section.match(ATTENDING_DOCTOR_NAME) ??
+        (isPlausibleAttendingDoctorSimple(section.match(ATTENDING_DOCTOR_SIMPLE)?.[1] ?? "")
+          ? section.match(ATTENDING_DOCTOR_SIMPLE)
+          : null);
       if (inSection?.[1]) return inSection[1].trim().toUpperCase();
     }
   }
@@ -215,12 +266,9 @@ function parseAttendingDoctor(text: string): Pick<
   const name = parseAttendingDoctorName(text);
   if (!section) return { attendingDoctorName: name };
 
-  const addressMatch = section.match(
-    new RegExp(
-      `(\\d+\\s+[A-Z0-9][A-Z0-9\\s.'#-]*${STREET_SUFFIX}${ADDRESS_LINE_TAIL})\\s+([A-Z][A-Z\\s.'-]+),\\s*([A-Z]{2})\\s+(\\d{5}(?:-\\d{4})?)`,
-      "i",
-    ),
-  );
+  const addressMatch =
+    section.match(new RegExp(STREET_CITY_ZIP_PATTERN.source, "i")) ??
+    preprocessAddressText(section).match(PO_BOX_CITY_ZIP_PATTERN);
   const phone =
     section.match(/Location Phone:\s*([\d-]+)/i)?.[1] ??
     section.match(/Billing Phone:\s*([\d-]+)/i)?.[1];
@@ -322,13 +370,82 @@ function parseClaimManager(text: string): Pick<
   ParsedLniCacFields,
   "claimManagerName" | "claimManagerPhone" | "claimManagerFax"
 > {
-  const match = text.match(
-    /Claim Manager\s+([A-Z][A-Z\s.'-]+?)\s+(\d{3}-\d{3}-\d{4})/i,
-  );
-  const fax = text.match(/Claim Manager\s+fax\s+(\d{3}-\d{3}-\d{4})/i)?.[1];
+  const fax =
+    text.match(/Claim Manager\s+fax\s+(\d{3}-\d{3}-\d{4})/i)?.[1] ??
+    text.match(/\bFax\s+(\d{3}-\d{3}-\d{4})/i)?.[1];
+
+  const isClaimManagerName = (name: string): boolean => {
+    const n = name.trim().toUpperCase();
+    if (!isPlausiblePersonName(n)) return false;
+    if (/\b(PAC|ARNP|MD|DO|DC|APRN|NP|ATTENDING|CLAIM MANAGER|FAX|VRC|VOCATIONAL|REVIEW|DATE|STATUS|NEXT|DEPARTMENT)\b/.test(n)) {
+      return false;
+    }
+    if (n.split(/\s+/).length < 2 || n.split(/\s+/).length > 5) return false;
+    if (
+      new RegExp(
+        `Attending doctor\\s+${n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?:\\s+[A-Z]\\.?)?\\s+(?:PAC|ARNP|MD|DO|DC|APRN|NP)`,
+        "i",
+      ).test(text)
+    ) {
+      return false;
+    }
+    return true;
+  };
+
+  const extractNameFromGarbage = (raw: string): string | undefined => {
+    const n = raw.trim().toUpperCase().replace(/^CLAIM MANAGER\s+(?:FAX\s+)?/i, "");
+    if (isClaimManagerName(n)) return n;
+    const tail = n.match(/([A-Z][A-Z0-9'-]+(?:\s+[A-Z][A-Z0-9'-]+)+)$/);
+    if (tail?.[1] && isClaimManagerName(tail[1])) return tail[1];
+    return undefined;
+  };
+
+  type Candidate = { name: string; phone?: string; index: number };
+  const candidates: Candidate[] = [];
+
+  const pickClaimManagerPhone = (after: string): string | undefined => {
+    const phones = [...after.matchAll(/(\d{3}-\d{3}-\d{4})/g)].map((m) => m[1]!);
+    return (
+      phones.find((p) => p.startsWith("360-902")) ??
+      phones.find((p) => !/^800-|^888-|^877-/.test(p)) ??
+      phones[0]
+    );
+  };
+
+  const addCandidate = (raw: string, phone: string | undefined, index: number) => {
+    const name = extractNameFromGarbage(raw);
+    if (name) candidates.push({ name, phone, index });
+  };
+
+  for (const match of text.matchAll(
+    /Claim Manager\s+(?:Claim Manager\s+|fax\s+|Attending doctor\s+)*([A-Z][A-Z0-9'-]+(?:\s+[A-Z][A-Z0-9'-]+){0,2})(?=\s+(?:\d{3}-\d{3}-\d{4}|Office|Phone|Fax|Nearest|$))/gi,
+  )) {
+    const after = text.slice(match.index! + match[0].length);
+    addCandidate(match[1]!, pickClaimManagerPhone(after), match.index!);
+  }
+
+  for (const match of text.matchAll(
+    /([A-Z][A-Z0-9'-]+(?:\s+[A-Z][A-Z0-9'-]+)+)\s+(\d{3}-\d{3}-\d{4})/g,
+  )) {
+    addCandidate(match[1]!, match[2], match.index!);
+  }
+
+  const inline = text.match(/Claim Manager\s+([A-Z][A-Z0-9\s.'-]+?)\s+(\d{3}-\d{3}-\d{4})/i);
+  if (inline?.[1]) addCandidate(inline[1], inline[2], inline.index ?? 0);
+
+  if (!candidates.length) return { claimManagerFax: fax };
+
+  const score = (c: Candidate) => {
+    let s = c.index;
+    if (c.phone?.startsWith("360-902")) s += 10_000;
+    if (c.phone && /^800-|^888-|^877-/.test(c.phone)) s -= 10_000;
+    return s;
+  };
+
+  const best = candidates.sort((a, b) => score(b) - score(a))[0]!;
   return {
-    claimManagerName: match?.[1]?.trim().toUpperCase(),
-    claimManagerPhone: match?.[2],
+    claimManagerName: best.name,
+    claimManagerPhone: best.phone,
     claimManagerFax: fax,
   };
 }
@@ -422,18 +539,67 @@ function parseWorkerAddresses(text: string): Pick<
   };
 }
 
+function formatVrcCounselorName(raw: string): string {
+  const parts = raw.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 2) {
+    return `${parts[1]!.charAt(0)}${parts[1]!.slice(1).toLowerCase()} ${parts[0]!.charAt(0)}${parts[0]!.slice(1).toLowerCase()}`;
+  }
+  if (parts.length === 3 && parts[2]!.length <= 2) {
+    const first = parts[1]!.charAt(0) + parts[1]!.slice(1).toLowerCase();
+    const last = parts[0]!.charAt(0) + parts[0]!.slice(1).toLowerCase();
+    return `${first} ${parts[2]!.toUpperCase()}. ${last}`;
+  }
+  return raw.trim();
+}
+
 function parseVrcContact(text: string): Pick<ParsedLniCacFields, "vrcName" | "vrcPhone"> {
-  const matches = [
-    ...text.matchAll(/\b((?:[A-Z][A-Z]+(?:\s+[A-Z][A-Z'.-]*){0,4})\s+VRC)\b/gi),
-  ];
-  const vrcName = matches.at(-1)?.[1]?.trim().toUpperCase();
-  if (vrcName) {
-    const after = text.split(vrcName).pop() ?? "";
-    const vrcPhone = after.match(/(\d{3}-\d{3}-\d{4})/)?.[1];
-    return { vrcName, vrcPhone };
+  const counselorVrc = text.match(
+    /Vocational counselor\s+([A-Z][A-Z]+(?:\s+[A-Z][A-Z'.-]+){0,2})\s+VRC/i,
+  )?.[1];
+  if (counselorVrc && isPlausiblePersonName(counselorVrc)) {
+    const section = text.split(/Vocational counselor/i)[1] ?? "";
+    const vrcPhone = section.match(/(\d{3}-\d{3}-\d{4})/)?.[1];
+    return { vrcName: formatVrcCounselorName(counselorVrc), vrcPhone };
   }
 
-  const section = text.split(/Vocational counselor/i)[1];
+  const matches = [
+    ...text.matchAll(/\b([A-Z][A-Z]+(?:\s+[A-Z][A-Z'.-]+){1,3}\s+VRC)\b/gi),
+  ].filter((m) => !/\b(VOCATIONAL|COUNSELOR|SERVICES|FIRM|CONSULTING)\b/i.test(m[1]!));
+
+  const vrcMatch = matches.at(-1)?.[1]?.trim().toUpperCase();
+  if (vrcMatch) {
+    const withoutSuffix = vrcMatch.replace(/\s+VRC\b/i, "").trim();
+    const formatted = formatVrcCounselorName(withoutSuffix);
+    const after = text.split(vrcMatch).pop() ?? "";
+    const vrcPhone = after.match(/(\d{3}-\d{3}-\d{4})/)?.[1];
+    return { vrcName: formatted, vrcPhone };
+  }
+
+  const counselorSection = text.split(/Vocational counselor/i)[1];
+  if (counselorSection) {
+    for (const line of counselorSection.split(/\n+/)) {
+      const trimmed = line.trim();
+      if (!trimmed || /\b(LLC|INC|SERVICES|CONSULTING|FIRM|SOUND)\b/i.test(trimmed)) {
+        continue;
+      }
+      const person = trimmed.match(/^([A-Z][A-Z]+\s+[A-Z][A-Z]+(?:\s+[A-Z]\.?)?)$/);
+      if (person?.[1] && isPlausiblePersonName(person[1])) {
+        const vrcPhone = counselorSection.match(/(\d{3}-\d{3}-\d{4})/)?.[1];
+        return { vrcName: formatVrcCounselorName(person[1]), vrcPhone };
+      }
+    }
+  }
+
+  const counselor = text.match(
+    /Vocational counselor\s+([A-Z][A-Z]+\s+[A-Z][A-Z]+(?:\s+[A-Z]\.?)?)/i,
+  )?.[1];
+  if (counselor && isPlausiblePersonName(counselor) && !/\b(SERVICES|CONSULTING|FIRM|SOUND)\b/i.test(counselor)) {
+    const section = text.split(/Vocational counselor/i)[1] ?? "";
+    const vrcPhone = section.match(/(\d{3}-\d{3}-\d{4})/)?.[1];
+    return { vrcName: formatVrcCounselorName(counselor), vrcPhone };
+  }
+
+  const section = counselorSection;
   if (!section) return {};
 
   const phoneMatch = section.match(/(\d{3}-\d{3}-\d{4})/);
@@ -444,9 +610,16 @@ function parseDiagnosisCodes(text: string): string[] {
   const section = text.split(/Diagnosis and coverage decisions/i)[1] ?? text;
   const codes = new Set<string>();
 
+  for (const match of section.matchAll(/\b([A-TV-Z]\d{2}\.\d+[A-Z0-9]*)\b/g)) {
+    const code = match[1]!.toUpperCase();
+    if (isPlausibleIcdCode(code)) codes.add(code);
+  }
+
+  if (codes.size) return [...codes];
+
   for (const match of section.matchAll(/\b([A-TV-Z]\d{2}(?:\.\d+)?[A-Z0-9]?)\b/g)) {
     const code = match[1]!.toUpperCase();
-    if (/^[A-TV-Z]\d/.test(code) && code.length >= 3) codes.add(code);
+    if (isPlausibleIcdCode(code)) codes.add(code);
   }
 
   if (codes.size) return [...codes];
@@ -457,7 +630,7 @@ function parseDiagnosisCodes(text: string): string[] {
   if (labeled?.[1]) {
     for (const part of labeled[1].split(/[,;\/]+/)) {
       const code = part.trim().toUpperCase();
-      if (/^[A-TV-Z]\d/.test(code)) codes.add(code);
+      if (isPlausibleIcdCode(code)) codes.add(code);
     }
   }
 

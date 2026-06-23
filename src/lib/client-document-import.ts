@@ -3,7 +3,13 @@ import {
   classifyClientDocument,
   type ImportableDocCategory,
 } from "@/lib/client-document-types";
+import {
+  formatMissingRequiredFields,
+  getMissingRequiredImportFields,
+  mergeDocumentPartsPreferValid,
+} from "@/lib/client-import-quality";
 import { listClientFolderFiles, downloadFileBuffer, type DriveFile } from "@/lib/google-drive";
+import { ocrPdfBuffer } from "@/lib/google-vision-ocr";
 import { parseLniAddressesText, type ParsedAddressesContacts } from "@/lib/parse-lni-addresses";
 import { parseLniClaimStatusText, type ParsedClaimStatus } from "@/lib/parse-lni-claim-status";
 import { parseReferralSheetText, type ParsedReferralSheet } from "@/lib/parse-referral-sheet";
@@ -217,6 +223,25 @@ function routeTextToParser(
   return empty;
 }
 
+/** Run both L&I parsers and merge — catches fields split across claim/address views. */
+function parseWithAllLniParsers(text: string, filename: string): ClientDocumentSupplement {
+  const merged: ClientDocumentSupplement = { diagnoses: [], warnings: [] };
+  applyClaimStatus(merged, parseLniClaimStatusText(text), `${filename} (claim retry)`);
+  applyAddresses(merged, parseLniAddressesText(text), `${filename} (address retry)`);
+  return merged;
+}
+
+function isPdfFile(file: DriveFile): boolean {
+  return (
+    file.mimeType === "application/pdf" ||
+    file.name.toLowerCase().endsWith(".pdf")
+  );
+}
+
+function isWordCategory(category: ImportableDocCategory): boolean {
+  return category === "word-doc-cac-address" || category === "referral-sheet";
+}
+
 function isDocxBuffer(buffer: Buffer, mimeType?: string, filename?: string): boolean {
   if (mimeType === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") {
     return true;
@@ -245,21 +270,33 @@ async function extractWordText(
   );
 }
 
-async function parseImportableFile(
-  accessToken: string,
+async function extractFileText(
+  buffer: Buffer,
   file: DriveFile,
   category: ImportableDocCategory,
-): Promise<ClientDocumentSupplement> {
-  const buffer = await downloadFileBuffer(accessToken, file);
-
-  if (category === "word-doc-cac-address" || category === "referral-sheet") {
+  options?: { forceOcr?: boolean },
+): Promise<{ text: string; usedOcr: boolean; warnings: string[] }> {
+  if (isWordCategory(category)) {
     const text = await extractWordText(buffer, file.mimeType, file.name);
-    if (category === "referral-sheet") {
-      const parsed: ClientDocumentSupplement = { diagnoses: [], warnings: [] };
-      applyLniFields(parsed, fromReferralSheet(parseReferralSheetText(text)));
-      return parsed;
+    return { text, usedOcr: false, warnings: [] };
+  }
+
+  if (options?.forceOcr && isPdfFile(file)) {
+    try {
+      const ocrText = await ocrPdfBuffer(buffer);
+      if (ocrText.trim()) {
+        return { text: ocrText, usedOcr: true, warnings: [`${file.name}: OCR retry`] };
+      }
+      return { text: "", usedOcr: true, warnings: [`${file.name}: OCR retry returned no text`] };
+    } catch (e) {
+      return {
+        text: "",
+        usedOcr: true,
+        warnings: [
+          `${file.name}: OCR retry failed (${e instanceof Error ? e.message : "unknown error"})`,
+        ],
+      };
     }
-    return routeTextToParser(text, category, file.name);
   }
 
   const { text, usedOcr, parseError, ocrError } = await extractPdfText(buffer);
@@ -270,16 +307,122 @@ async function parseImportableFile(
       parseError ? `PDF: ${parseError.slice(0, 120)}` : null,
     ].filter(Boolean);
     return {
-      diagnoses: [],
+      text: "",
+      usedOcr,
       warnings: [
         `${file.name}: no text extracted${details.length ? ` (${details.join("; ")})` : ""}`,
       ],
     };
   }
 
-  const parsed = routeTextToParser(text, category, file.name);
-  if (usedOcr) parsed.warnings.push(`${file.name}: used OCR`);
+  const warnings = usedOcr ? [`${file.name}: used OCR`] : [];
+  return { text, usedOcr, warnings };
+}
+
+function supplementFromText(
+  text: string,
+  category: ImportableDocCategory,
+  filename: string,
+  mode: "routed" | "all-parsers",
+): ClientDocumentSupplement {
+  if (category === "referral-sheet") {
+    const parsed: ClientDocumentSupplement = { diagnoses: [], warnings: [] };
+    applyLniFields(parsed, fromReferralSheet(parseReferralSheetText(text)));
+    return parsed;
+  }
+  if (mode === "all-parsers") {
+    return parseWithAllLniParsers(text, filename);
+  }
+  return routeTextToParser(text, category, filename);
+}
+
+async function parseImportableFile(
+  accessToken: string,
+  file: DriveFile,
+  category: ImportableDocCategory,
+  options?: { forceOcr?: boolean; parseMode?: "routed" | "all-parsers" },
+): Promise<ClientDocumentSupplement> {
+  const buffer = await downloadFileBuffer(accessToken, file);
+  const { text, warnings: extractWarnings } = await extractFileText(
+    buffer,
+    file,
+    category,
+    options,
+  );
+
+  if (!text.trim()) {
+    return { diagnoses: [], warnings: extractWarnings };
+  }
+
+  const parsed = supplementFromText(
+    text,
+    category,
+    file.name,
+    options?.parseMode ?? "routed",
+  );
+  parsed.warnings.push(...extractWarnings);
   return parsed;
+}
+
+async function retryMissingRequiredFields(
+  accessToken: string,
+  importable: { file: DriveFile; category: ImportableDocCategory }[],
+  parts: ClientDocumentPart[],
+): Promise<ClientDocumentPart[]> {
+  let merged = mergeDocumentPartsPreferValid(parts);
+  let missing = getMissingRequiredImportFields(undefined, merged);
+  if (!missing.length) return parts;
+
+  const retried = [...parts];
+
+  // Retry 1: run both L&I parsers on every document.
+  for (const { file, category } of importable) {
+    if (category === "referral-sheet") continue;
+    try {
+      const supplement = await parseImportableFile(accessToken, file, category, {
+        parseMode: "all-parsers",
+      });
+      retried.push({ filename: `${file.name} (dual-parser retry)`, supplement });
+    } catch (e) {
+      retried.push({
+        filename: `${file.name} (dual-parser retry)`,
+        supplement: {
+          diagnoses: [],
+          warnings: [
+            `${file.name}: dual-parser retry failed (${e instanceof Error ? e.message : "error"})`,
+          ],
+        },
+      });
+    }
+  }
+
+  merged = mergeDocumentPartsPreferValid(retried);
+  missing = getMissingRequiredImportFields(undefined, merged);
+  if (!missing.length) return retried;
+
+  // Retry 2: force fresh OCR on PDFs, then dual-parse.
+  for (const { file, category } of importable) {
+    if (category === "referral-sheet" || !isPdfFile(file)) continue;
+    try {
+      const supplement = await parseImportableFile(accessToken, file, category, {
+        forceOcr: true,
+        parseMode: "all-parsers",
+      });
+      retried.push({ filename: `${file.name} (OCR retry)`, supplement });
+    } catch (e) {
+      retried.push({
+        filename: `${file.name} (OCR retry)`,
+        supplement: {
+          diagnoses: [],
+          warnings: [
+            `${file.name}: OCR retry failed (${e instanceof Error ? e.message : "error"})`,
+          ],
+        },
+      });
+    }
+  }
+
+  return retried;
 }
 
 function mergeSupplements(parts: ClientDocumentSupplement[]): ClientDocumentSupplement {
@@ -327,5 +470,14 @@ export async function importClientDocumentsFromFolderDetailed(
     }
   }
 
-  return { merged: mergeSupplements(parts.map((p) => p.supplement)), parts };
+  const retriedParts = await retryMissingRequiredFields(accessToken, importable, parts);
+  const merged = mergeDocumentPartsPreferValid(retriedParts);
+  const stillMissing = getMissingRequiredImportFields(undefined, merged);
+  if (stillMissing.length) {
+    merged.warnings.push(
+      `Missing required fields after retries: ${formatMissingRequiredFields(stillMissing)}`,
+    );
+  }
+
+  return { merged, parts: retriedParts };
 }
