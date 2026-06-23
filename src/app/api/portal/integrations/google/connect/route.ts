@@ -1,15 +1,26 @@
 import { randomBytes } from "crypto";
 import { NextResponse } from "next/server";
-import { requireAdmin } from "@/auth";
+import { auth } from "@/auth";
 import { buildGoogleAuthUrl, getGoogleOAuthStateCookieName } from "@/lib/google-oauth";
 
-export async function GET() {
-  await requireAdmin();
+function importErrorRedirect(request: Request, message: string) {
+  const url = new URL("/portal/admin/clients/import", request.url);
+  url.searchParams.set("driveError", message);
+  return NextResponse.redirect(url);
+}
+
+export async function GET(request: Request) {
+  const session = await auth();
+  if (!session?.user?.id || session.user.role !== "ADMIN") {
+    const login = new URL("/portal/login", request.url);
+    login.searchParams.set("callbackUrl", "/portal/admin/clients/import/connect");
+    return NextResponse.redirect(login);
+  }
 
   try {
     const state = randomBytes(24).toString("hex");
-    const url = buildGoogleAuthUrl(state);
-    const response = NextResponse.redirect(url);
+    const authUrl = buildGoogleAuthUrl(state);
+    const response = NextResponse.redirect(authUrl);
 
     response.cookies.set(getGoogleOAuthStateCookieName(), state, {
       httpOnly: true,
@@ -21,9 +32,9 @@ export async function GET() {
 
     return response;
   } catch (e) {
-    const message = e instanceof Error ? e.message : "Google OAuth is not configured.";
-    return NextResponse.redirect(
-      `/portal/admin/clients/import?driveError=${encodeURIComponent(message)}`,
+    return importErrorRedirect(
+      request,
+      e instanceof Error ? e.message : "Google OAuth is not configured.",
     );
   }
 }

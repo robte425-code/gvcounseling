@@ -230,7 +230,7 @@ export function ClientImportForms({
             </button>
           </div>
         ) : (
-          <a href="/api/portal/integrations/google/connect" className={portalButtonClass}>
+          <a href="/portal/admin/clients/import/connect" className={portalButtonClass}>
             Connect Google Drive
           </a>
         )}

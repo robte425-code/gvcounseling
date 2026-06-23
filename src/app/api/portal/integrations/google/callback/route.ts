@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
-import { requireAdmin } from "@/auth";
+import { auth } from "@/auth";
 import {
   exchangeCodeForTokens,
   fetchGoogleUserEmail,
@@ -9,35 +9,48 @@ import {
 } from "@/lib/google-oauth";
 import { prisma } from "@/lib/prisma";
 
+function importRedirect(request: Request, params: Record<string, string>) {
+  const url = new URL("/portal/admin/clients/import", request.url);
+  for (const [key, value] of Object.entries(params)) {
+    url.searchParams.set(key, value);
+  }
+  return NextResponse.redirect(url);
+}
+
 export async function GET(request: Request) {
-  const session = await requireAdmin();
+  const session = await auth();
+  if (!session?.user?.id || session.user.role !== "ADMIN") {
+    const login = new URL("/portal/login", request.url);
+    login.searchParams.set("callbackUrl", "/portal/admin/clients/import");
+    return NextResponse.redirect(login);
+  }
+
   const url = new URL(request.url);
   const code = url.searchParams.get("code");
   const state = url.searchParams.get("state");
   const oauthError = url.searchParams.get("error");
 
   if (oauthError) {
-    return NextResponse.redirect(
-      `/portal/admin/clients/import?driveError=${encodeURIComponent(oauthError)}`,
-    );
+    return importRedirect(request, { driveError: oauthError });
   }
 
   const cookieStore = await cookies();
   const savedState = cookieStore.get(getGoogleOAuthStateCookieName())?.value;
 
   if (!code || !state || !savedState || state !== savedState) {
-    return NextResponse.redirect(
-      `/portal/admin/clients/import?driveError=${encodeURIComponent("Invalid OAuth state. Try connecting again.")}`,
-    );
+    return importRedirect(request, {
+      driveError: "Invalid OAuth state. Try connecting again.",
+    });
   }
 
   try {
     getGoogleOAuthConfig();
     const tokens = await exchangeCodeForTokens(code);
     if (!tokens.refresh_token) {
-      return NextResponse.redirect(
-        `/portal/admin/clients/import?driveError=${encodeURIComponent("Google did not return a refresh token. Disconnect the app in your Google account settings and try again.")}`,
-      );
+      return importRedirect(request, {
+        driveError:
+          "Google did not return a refresh token. Disconnect the app in your Google account settings and try again.",
+      });
     }
 
     const googleEmail = await fetchGoogleUserEmail(tokens.access_token);
@@ -60,13 +73,13 @@ export async function GET(request: Request) {
       },
     });
 
-    const response = NextResponse.redirect("/portal/admin/clients/import?driveConnected=1");
+    const response = importRedirect(request, { driveConnected: "1" });
     response.cookies.set(getGoogleOAuthStateCookieName(), "", { maxAge: 0, path: "/" });
     return response;
   } catch (e) {
-    const message = e instanceof Error ? e.message : "Google connection failed.";
-    return NextResponse.redirect(
-      `/portal/admin/clients/import?driveError=${encodeURIComponent(message)}`,
-    );
+    console.error("Google OAuth callback failed:", e);
+    return importRedirect(request, {
+      driveError: e instanceof Error ? e.message : "Google connection failed.",
+    });
   }
 }
