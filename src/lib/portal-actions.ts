@@ -7,6 +7,7 @@ import { Gender, InvoiceStatus } from "@/generated/prisma/client";
 import { buildEdi837, generateClmControlNumber, type Edi837Claim } from "@/lib/edi837";
 import { client837Ready, parseClaimNumber } from "@/lib/constants";
 import { hashPassword, verifyPassword } from "@/lib/password";
+import { fetchLniPayPeriods } from "@/lib/lni-pay-periods";
 import { prisma } from "@/lib/prisma";
 
 function parseDecimal(value: FormDataEntryValue | null): number {
@@ -19,6 +20,20 @@ function parseDate(value: FormDataEntryValue | null): Date | null {
   if (!s) return null;
   const d = new Date(s);
   return Number.isNaN(d.getTime()) ? null : d;
+}
+
+async function findPayPeriodByCutoff(cutoffDate: Date) {
+  const dayStart = Date.UTC(
+    cutoffDate.getUTCFullYear(),
+    cutoffDate.getUTCMonth(),
+    cutoffDate.getUTCDate(),
+  );
+  const dayEnd = dayStart + 24 * 60 * 60 * 1000;
+  return prisma.payPeriod.findFirst({
+    where: {
+      cutoffDate: { gte: new Date(dayStart), lt: new Date(dayEnd) },
+    },
+  });
 }
 
 export type ChangePasswordState = { error?: string };
@@ -81,6 +96,43 @@ export async function deletePayPeriodAction(formData: FormData) {
   }
   await prisma.payPeriod.delete({ where: { id } });
   revalidatePath("/portal/admin/pay-periods");
+}
+
+export async function syncPayPeriodsFromLniAction() {
+  await requireAdmin();
+
+  const rows = await fetchLniPayPeriods();
+  let created = 0;
+  let updated = 0;
+
+  for (const row of rows) {
+    const existing = await findPayPeriodByCutoff(row.cutoffDate);
+    if (existing) {
+      await prisma.payPeriod.update({
+        where: { id: existing.id },
+        data: {
+          paymentDate: row.paymentDate,
+          label: existing.label ?? row.label,
+        },
+      });
+      updated++;
+    } else {
+      await prisma.payPeriod.create({
+        data: {
+          cutoffDate: row.cutoffDate,
+          paymentDate: row.paymentDate,
+          label: row.label,
+        },
+      });
+      created++;
+    }
+  }
+
+  revalidatePath("/portal/admin/pay-periods");
+  revalidatePath("/portal/admin/generate-bill");
+  redirect(
+    `/portal/admin/pay-periods?synced=1&created=${created}&updated=${updated}&total=${rows.length}`,
+  );
 }
 
 export async function saveClientAction(formData: FormData) {
