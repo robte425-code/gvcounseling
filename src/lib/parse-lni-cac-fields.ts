@@ -11,6 +11,9 @@ export type ParsedLniCacFields = {
   claimManagerName?: string;
   claimManagerPhone?: string;
   claimManagerFax?: string;
+  legalRepresentativeName?: string;
+  legalRepresentativeAddress?: string;
+  legalRepresentativePhone?: string;
   mailingAddressLine1?: string;
   mailingCity?: string;
   mailingState?: string;
@@ -74,16 +77,38 @@ function parseStreetCityStateZip(text: string): {
 }
 
 function parseAllStreetCityStateZip(text: string) {
-  const pattern = new RegExp(
+  const streetPattern = new RegExp(
     `(\\d+\\s+[A-Z0-9][A-Z0-9\\s.'#-]*${STREET_SUFFIX}(?:\\s+[A-Z0-9#-]+)?)\\s+([A-Z][A-Z\\s.'-]+),\\s*([A-Z]{2})\\s+(\\d{5}(?:-\\d{4})?)`,
     "gi",
   );
-  return [...text.matchAll(pattern)].map((match) => ({
-    addressLine1: match[1]!.trim().toUpperCase(),
-    city: match[2]!.trim().toUpperCase(),
-    state: match[3]!.trim().toUpperCase(),
-    zip: match[4]!.slice(0, 5),
-  }));
+  const poBoxPattern =
+    /((?:P\.?O\.?\s+BOX|PO BOX)\s+\d+[A-Z0-9\s#-]*)\s+([A-Z][A-Z\s.'-]+),\s*([A-Z]{2})\s+(\d{5}(?:-\d{4})?)/gi;
+
+  const results: {
+    addressLine1?: string;
+    city?: string;
+    state?: string;
+    zip?: string;
+  }[] = [];
+
+  for (const match of text.matchAll(streetPattern)) {
+    results.push({
+      addressLine1: match[1]!.trim().toUpperCase(),
+      city: match[2]!.trim().toUpperCase(),
+      state: match[3]!.trim().toUpperCase(),
+      zip: match[4]!.slice(0, 5),
+    });
+  }
+  for (const match of text.matchAll(poBoxPattern)) {
+    results.push({
+      addressLine1: match[1]!.trim().toUpperCase(),
+      city: match[2]!.trim().toUpperCase(),
+      state: match[3]!.trim().toUpperCase(),
+      zip: match[4]!.slice(0, 5),
+    });
+  }
+
+  return results;
 }
 
 export function parseWorkerName(text: string): string | undefined {
@@ -120,7 +145,7 @@ function parseEmployerName(text: string): string | undefined {
 }
 
 const ATTENDING_DOCTOR_NAME =
-  /([A-Z][A-Z]+\s+[A-Z][A-Z]+(?:\s+[A-Z]\.?)?\s+(?:PAC|ARNP|MD|DO))\b/i;
+  /([A-Z][A-Z]+\s+[A-Z][A-Z]+(?:\s+[A-Z]\.?)?\s+(?:PAC|ARNP|MD|DO|DC|APRN|NP))\b/i;
 
 function parseAttendingDoctorName(text: string): string | undefined {
   const header = text.match(
@@ -160,7 +185,9 @@ function parseAttendingDoctor(text: string): Pick<
       "i",
     ),
   );
-  const phone = section.match(/(?:Billing Phone|Location Phone):\s*([\d-]+)/i)?.[1];
+  const phone =
+    section.match(/Location Phone:\s*([\d-]+)/i)?.[1] ??
+    section.match(/Billing Phone:\s*([\d-]+)/i)?.[1];
 
   let attendingDoctorAddress: string | undefined;
   if (addressMatch) {
@@ -172,6 +199,86 @@ function parseAttendingDoctor(text: string): Pick<
     attendingDoctorName: name,
     attendingDoctorAddress,
     attendingDoctorPhone: phone,
+  };
+}
+
+function looksLikeLegalFirm(name: string): boolean {
+  const n = name.trim();
+  if (!n || n.length < 4) return false;
+  if (
+    /\b(HEALTH|CLINIC|HOSPITAL|MEDICAL|ORTHOP|OCCUPATIO|WORK INJURY|FAMILY MED|PRIMARY|SWEDISH|MED GRP|ROBINSON AND KOLE)\b/i.test(
+      n,
+    )
+  ) {
+    return false;
+  }
+  return /\b(LAW CENTER|LAW GROUP|LAW FIRM|JUSTICE|ATTORNEY|ATTORNEYS|LLC|PLLC|AXION LAW|LEGAL)\b/i.test(
+    n,
+  );
+}
+
+function parseLegalFirmName(afterDoctor: string): string | undefined {
+  const patterns = [
+    /^([A-Z0-9][A-Z0-9\s&.',-]+?(?:LLC\.?|L\.L\.C\.?|PLLC\.?))\s+/i,
+    /^([A-Z][A-Z0-9\s&.',-]*LAW CENTER)\s+/i,
+    /^([A-Z][A-Z0-9\s&.',-]*LAW GROUP)\s+/i,
+    /^([A-Z0-9][A-Z0-9\s&.',-]+JUSTICE,?\s*LLC\.?)\s+/i,
+  ];
+  for (const pattern of patterns) {
+    const match = afterDoctor.match(pattern);
+    if (match?.[1] && looksLikeLegalFirm(match[1])) {
+      return match[1].trim().replace(/\.$/, "").toUpperCase();
+    }
+  }
+  return undefined;
+}
+
+function parseGeneralPhone(section: string): string | undefined {
+  const stripped = section
+    .replace(/Billing Phone:\s*[\d-]*/gi, "")
+    .replace(/Location Phone:\s*[\d-]*/gi, "");
+  return stripped.match(/Phone:\s*([\d-]+)/i)?.[1];
+}
+
+function formatAddress(addr: {
+  addressLine1?: string;
+  city?: string;
+  state?: string;
+  zip?: string;
+}): string | undefined {
+  if (!addr.addressLine1) return undefined;
+  return `${addr.addressLine1}, ${addr.city ?? ""}, ${addr.state ?? ""} ${addr.zip ?? ""}`
+    .replace(/,\s*,/g, ",")
+    .trim()
+    .toUpperCase();
+}
+
+function parseLegalRepresentative(text: string): Pick<
+  ParsedLniCacFields,
+  "legalRepresentativeName" | "legalRepresentativeAddress" | "legalRepresentativePhone"
+> {
+  const section = text.match(
+    /Attending doctor\s+Legal representative\s+([\s\S]+?)(?=View\s*>|Employer name|Vocational firm|Surgical Coordinator|$)/i,
+  )?.[1];
+  if (!section) return {};
+
+  const doctorMatch = section.match(ATTENDING_DOCTOR_NAME);
+  if (!doctorMatch?.[1]) return {};
+
+  const afterDoctor = section.slice(section.indexOf(doctorMatch[1]) + doctorMatch[1].length).trim();
+  const legalRepresentativeName = parseLegalFirmName(afterDoctor);
+  if (!legalRepresentativeName) return {};
+
+  const addresses = parseAllStreetCityStateZip(section);
+  const legalAddress =
+    addresses.length >= 2
+      ? addresses[addresses.length - 1]
+      : addresses.find((a) => /PO BOX|\bBOX\b/i.test(a.addressLine1 ?? ""));
+
+  return {
+    legalRepresentativeName,
+    legalRepresentativeAddress: legalAddress ? formatAddress(legalAddress) : undefined,
+    legalRepresentativePhone: parseGeneralPhone(section),
   };
 }
 
@@ -289,6 +396,7 @@ export function parseLniCacText(
   const clientName = parseWorkerName(text);
   const employerName = parseEmployerName(text);
   const attending = parseAttendingDoctor(text);
+  const legalRepresentative = parseLegalRepresentative(text);
   const claimManager = parseClaimManager(text);
   const addresses = parseWorkerAddresses(text);
   const vrc = parseVrcContact(text);
@@ -308,6 +416,7 @@ export function parseLniCacText(
     dateOfInjury,
     employerName,
     ...attending,
+    ...legalRepresentative,
     ...claimManager,
     ...addresses,
     ...vrc,

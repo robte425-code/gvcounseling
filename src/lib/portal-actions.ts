@@ -211,6 +211,11 @@ export async function saveClientAction(formData: FormData) {
     claimManagerName: String(formData.get("claimManagerName") ?? "").trim() || null,
     claimManagerPhone: String(formData.get("claimManagerPhone") ?? "").trim() || null,
     claimManagerFax: String(formData.get("claimManagerFax") ?? "").trim() || null,
+    legalRepresentativeName: String(formData.get("legalRepresentativeName") ?? "").trim() || null,
+    legalRepresentativeAddress:
+      String(formData.get("legalRepresentativeAddress") ?? "").trim() || null,
+    legalRepresentativePhone:
+      String(formData.get("legalRepresentativePhone") ?? "").trim() || null,
     dateOfBirth: parseDate(formData.get("dateOfBirth")),
     gender,
     dateOfInjury: parseDate(formData.get("dateOfInjury")),

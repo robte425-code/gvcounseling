@@ -14,6 +14,9 @@ export type ParsedClaimStatus = Pick<
       | "claimManagerName"
       | "claimManagerPhone"
       | "claimManagerFax"
+      | "legalRepresentativeName"
+      | "legalRepresentativeAddress"
+      | "legalRepresentativePhone"
     >
   >;
 

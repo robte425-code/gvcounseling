@@ -77,6 +77,9 @@ model Client {
   claimManagerName      String?
   claimManagerPhone     String?
   claimManagerFax       String?
+  legalRepresentativeName     String?
+  legalRepresentativeAddress  String?
+  legalRepresentativePhone    String?
   dateOfBirth    DateTime?
   gender         Gender?
   dateOfInjury   DateTime?

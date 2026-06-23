@@ -29,6 +29,9 @@ export type ClientDocumentSupplement = {
   claimManagerName?: string;
   claimManagerPhone?: string;
   claimManagerFax?: string;
+  legalRepresentativeName?: string;
+  legalRepresentativeAddress?: string;
+  legalRepresentativePhone?: string;
   vrcName?: string;
   vrcPhone?: string;
   warnings: string[];
@@ -67,6 +70,9 @@ function applyLniFields(into: LniSupplementFields, parsed: LniSupplementFields) 
   into.claimManagerName ??= parsed.claimManagerName;
   into.claimManagerPhone ??= parsed.claimManagerPhone;
   into.claimManagerFax ??= parsed.claimManagerFax;
+  into.legalRepresentativeName ??= parsed.legalRepresentativeName;
+  into.legalRepresentativeAddress ??= parsed.legalRepresentativeAddress;
+  into.legalRepresentativePhone ??= parsed.legalRepresentativePhone;
   into.vrcName ??= parsed.vrcName;
   into.vrcPhone ??= parsed.vrcPhone;
 }
@@ -83,6 +89,9 @@ function fromClaimStatus(parsed: ParsedClaimStatus): LniSupplementFields {
     claimManagerName: parsed.claimManagerName,
     claimManagerPhone: parsed.claimManagerPhone,
     claimManagerFax: parsed.claimManagerFax,
+    legalRepresentativeName: parsed.legalRepresentativeName,
+    legalRepresentativeAddress: parsed.legalRepresentativeAddress,
+    legalRepresentativePhone: parsed.legalRepresentativePhone,
   };
 }
 
@@ -107,6 +116,9 @@ function fromAddresses(parsed: ParsedAddressesContacts): LniSupplementFields {
     claimManagerName: parsed.claimManagerName,
     claimManagerPhone: parsed.claimManagerPhone,
     claimManagerFax: parsed.claimManagerFax,
+    legalRepresentativeName: parsed.legalRepresentativeName,
+    legalRepresentativeAddress: parsed.legalRepresentativeAddress,
+    legalRepresentativePhone: parsed.legalRepresentativePhone,
     vrcName: parsed.vrcName,
     vrcPhone: parsed.vrcPhone,
   };

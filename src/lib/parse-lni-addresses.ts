@@ -28,6 +28,9 @@ export type ParsedAddressesContacts = Pick<
       | "claimManagerName"
       | "claimManagerPhone"
       | "claimManagerFax"
+      | "legalRepresentativeName"
+      | "legalRepresentativeAddress"
+      | "legalRepresentativePhone"
     >
   >;
 

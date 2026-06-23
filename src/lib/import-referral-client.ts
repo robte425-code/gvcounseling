@@ -100,6 +100,12 @@ export async function upsertClientFromReferral(
     claimManagerName: supplement?.claimManagerName ?? existing?.claimManagerName ?? null,
     claimManagerPhone: supplement?.claimManagerPhone ?? existing?.claimManagerPhone ?? null,
     claimManagerFax: supplement?.claimManagerFax ?? existing?.claimManagerFax ?? null,
+    legalRepresentativeName:
+      supplement?.legalRepresentativeName ?? existing?.legalRepresentativeName ?? null,
+    legalRepresentativeAddress:
+      supplement?.legalRepresentativeAddress ?? existing?.legalRepresentativeAddress ?? null,
+    legalRepresentativePhone:
+      supplement?.legalRepresentativePhone ?? existing?.legalRepresentativePhone ?? null,
     dateOfBirth: mergedReferral.dateOfBirth ?? existing?.dateOfBirth ?? null,
     gender: mergedReferral.gender ?? existing?.gender ?? null,
     dateOfInjury: supplement?.dateOfInjury ?? existing?.dateOfInjury ?? null,

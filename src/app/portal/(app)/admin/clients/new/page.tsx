@@ -38,6 +38,9 @@ type ClientFormProps = {
     claimManagerName: string | null;
     claimManagerPhone: string | null;
     claimManagerFax: string | null;
+    legalRepresentativeName: string | null;
+    legalRepresentativeAddress: string | null;
+    legalRepresentativePhone: string | null;
     dateOfBirth: Date | null;
     gender: Gender | null;
     dateOfInjury: Date | null;
@@ -252,6 +255,36 @@ export async function ClientForm({ client }: ClientFormProps) {
           <div>
             <label className={portalLabelClass}>Fax</label>
             <input name="claimManagerFax" defaultValue={client?.claimManagerFax ?? ""} className={portalInputClass} />
+          </div>
+        </div>
+      </section>
+
+      <section className="space-y-4">
+        <SectionHeading>Legal representative</SectionHeading>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="sm:col-span-2">
+            <label className={portalLabelClass}>Name / firm</label>
+            <input
+              name="legalRepresentativeName"
+              defaultValue={client?.legalRepresentativeName ?? ""}
+              className={portalInputClass}
+            />
+          </div>
+          <div className="sm:col-span-2">
+            <label className={portalLabelClass}>Address</label>
+            <input
+              name="legalRepresentativeAddress"
+              defaultValue={client?.legalRepresentativeAddress ?? ""}
+              className={portalInputClass}
+            />
+          </div>
+          <div>
+            <label className={portalLabelClass}>Phone</label>
+            <input
+              name="legalRepresentativePhone"
+              defaultValue={client?.legalRepresentativePhone ?? ""}
+              className={portalInputClass}
+            />
           </div>
         </div>
       </section>
