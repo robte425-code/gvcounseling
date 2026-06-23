@@ -58,7 +58,10 @@ function parseAttendingPhysician(text: string): Pick<
   const addressMatch = section.match(
     /(\d+[^\n]+)\s*\n\s*([^,\n]+),\s*([A-Z]{2})\s+(\d{5}(?:-\d{4})?)/i,
   );
-  const phone = section.match(/Phone:\s*([\d().\-\s]+)/i)?.[1]?.replace(/\s+/g, " ").trim();
+  const phones = [...section.matchAll(/Phone:\s*([^\n]+)/gi)]
+    .map((m) => m[1]?.replace(/\s*\(VR\)\s*/i, "").replace(/\s+/g, " ").trim())
+    .filter((p) => p && /\d{3}/.test(p));
+  const phone = phones.at(-1);
 
   let attendingDoctorAddress: string | undefined;
   if (addressMatch) {
@@ -80,8 +83,9 @@ export function parseReferralSheetText(text: string): ParsedReferralSheet {
   const clientName = workerSection.match(/Name:\s*\n?\s*([^\n]+)/i)?.[1]?.trim();
   const dateOfBirth = parseDate(workerSection.match(/Date of birth:\s*\n?\s*(\d{1,2}\/\d{1,2}\/\d{4})/i)?.[1]);
   const workerPhone = workerSection
-    .match(/(?:Home phone|Cell phone):\s*\n?\s*([\d().\-\s]+)/i)?.[1]
-    ?.replace(/\s*\(VR\)\s*/i, "")
+    .match(/(?:Home phone|Cell phone):\s*\n?\s*([^\n]+)/i)?.[1]
+    ?.replace(/\s*\(VR\)\s*/gi, "")
+    .replace(/[^\d().\-\s].*$/, "")
     .trim();
 
   const claimSection = text.split(/Claim Information/i)[1] ?? "";
