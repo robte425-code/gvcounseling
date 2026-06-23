@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { requireAdmin } from "@/auth";
+import { ClientTableRow } from "@/components/portal/ClientTableRow";
 import { StatusBadge, portalButtonClass, portalCardClass } from "@/components/portal/ui";
 import { client837Ready, formatDate } from "@/lib/constants";
 import { prisma } from "@/lib/prisma";
@@ -36,14 +37,13 @@ export default async function AdminClientsPage() {
               <th className="py-2 pr-4">Name</th>
               <th className="py-2 pr-4">Therapist</th>
               <th className="py-2 pr-4">837 ready</th>
-              <th className="py-2" />
             </tr>
           </thead>
           <tbody>
             {clients.map((c) => {
               const readiness = client837Ready(c);
               return (
-                <tr key={c.id} className="border-b border-border/60">
+                <ClientTableRow key={c.id} clientId={c.id}>
                   <td className="py-3 pr-4 font-mono text-xs">{c.lniClaimNumber}</td>
                   <td className="py-3 pr-4">
                     {c.lastName}, {c.firstName}
@@ -58,12 +58,7 @@ export default async function AdminClientsPage() {
                       <span className="text-xs text-amber-800">{readiness.missing.join(", ")}</span>
                     )}
                   </td>
-                  <td className="py-3 text-right">
-                    <Link href={`/portal/admin/clients/${c.id}`} className="text-primary hover:underline">
-                      Edit
-                    </Link>
-                  </td>
-                </tr>
+                </ClientTableRow>
               );
             })}
           </tbody>
