@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { auth, getRealRole, isImpersonating, signOut } from "@/auth";
-import { startImpersonationAction, stopImpersonationAction } from "@/lib/portal-actions";
+import { stopImpersonationAction } from "@/lib/portal-actions";
+import { ViewAsTherapistSelect } from "@/components/portal/ViewAsTherapistSelect";
 import { prisma } from "@/lib/prisma";
 
 const adminLinks = [
@@ -74,22 +75,7 @@ export async function PortalNav() {
             ))}
           </nav>
           <div className="flex flex-wrap items-center gap-3">
-            {therapists.length > 0 && (
-              <div className="flex flex-wrap items-center gap-1">
-                <span className="text-xs text-muted">View as</span>
-                {therapists.map((t) => (
-                  <form key={t.email} action={startImpersonationAction}>
-                    <input type="hidden" name="email" value={t.email} />
-                    <button
-                      type="submit"
-                      className="rounded-full px-2.5 py-1 text-xs text-primary-dark transition hover:bg-primary/10"
-                    >
-                      {t.firstName}
-                    </button>
-                  </form>
-                ))}
-              </div>
-            )}
+            {therapists.length > 0 && <ViewAsTherapistSelect therapists={therapists} />}
             <form
               action={async () => {
                 "use server";
