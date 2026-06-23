@@ -7,7 +7,7 @@ import { prisma } from "@/lib/prisma";
 
 export default async function GenerateBillPage() {
   await requireAdmin();
-  const periods = await prisma.payPeriod.findMany({ orderBy: { cutoffDate: "desc" } });
+  const periods = await prisma.payPeriod.findMany({ orderBy: { cutoffDate: "asc" } });
 
   const queuedByPeriod = await Promise.all(
     periods.map(async (period) => {

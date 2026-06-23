@@ -23,7 +23,7 @@ export default async function PayPeriodsPage({
   await requireAdmin();
   const params = await searchParams;
   const periods = await prisma.payPeriod.findMany({
-    orderBy: { cutoffDate: "desc" },
+    orderBy: { cutoffDate: "asc" },
     include: { _count: { select: { bills: true } } },
   });
 

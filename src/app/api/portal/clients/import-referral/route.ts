@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/auth";
-import { isReferralSubmissionFilename, parseClaimNumber } from "@/lib/constants";
-import { parseReferralDocx, splitClientName } from "@/lib/referral-parser";
+import { upsertClientFromReferral } from "@/lib/import-referral-client";
+import { isReferralSubmissionFilename } from "@/lib/constants";
+import { parseReferralDocx } from "@/lib/referral-parser";
 import { prisma } from "@/lib/prisma";
 
 export async function POST(request: Request) {
@@ -34,38 +36,19 @@ export async function POST(request: Request) {
 
     const buffer = Buffer.from(await file.arrayBuffer());
     const parsed = await parseReferralDocx(buffer);
-    const warnings = [...parsed.warnings];
+    const result = await upsertClientFromReferral(parsed, therapistId);
 
-    if (!parsed.claimNumber) {
-      return NextResponse.json({ error: "Could not parse claim number.", warnings }, { status: 400 });
+    if (result.error) {
+      return NextResponse.json({ error: result.error, warnings: result.warnings }, { status: 400 });
     }
 
-    const nameParts = splitClientName(parsed.clientName);
-    const existing = await prisma.client.findUnique({
-      where: { lniClaimNumber: parsed.claimNumber },
+    revalidatePath("/portal/admin/clients");
+
+    return NextResponse.json({
+      created: result.created,
+      updated: result.updated,
+      warnings: result.warnings,
     });
-
-    const data = {
-      lniClaimNumber: parsed.claimNumber,
-      firstName: nameParts?.firstName ?? existing?.firstName ?? "Unknown",
-      lastName: nameParts?.lastName ?? existing?.lastName ?? "Unknown",
-      attendingNpi: parsed.attendingNpi ?? existing?.attendingNpi ?? null,
-      diagnoses: parsed.diagnoses.length ? parsed.diagnoses : existing?.diagnoses ?? [],
-      dateOfBirth: parsed.dateOfBirth ?? existing?.dateOfBirth ?? null,
-      gender: parsed.gender ?? existing?.gender ?? null,
-      vrcName: parsed.vrcName ?? existing?.vrcName ?? null,
-      vrcEmail: parsed.vrcEmail ?? existing?.vrcEmail ?? null,
-      vrcPhone: parsed.vrcPhone ?? existing?.vrcPhone ?? null,
-      therapistId: existing?.therapistId ?? therapistId,
-    };
-
-    if (existing) {
-      await prisma.client.update({ where: { id: existing.id }, data });
-      return NextResponse.json({ updated: 1, warnings });
-    }
-
-    await prisma.client.create({ data });
-    return NextResponse.json({ created: 1, warnings });
   } catch (e) {
     console.error(e);
     return NextResponse.json(

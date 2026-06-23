@@ -39,6 +39,7 @@ model User {
   clients            Client[]
   invoices           Invoice[]
   billsGenerated     Bill[]    @relation("BillGeneratedBy")
+  googleDriveConnection GoogleDriveConnection?
 }
 
 model PayPeriod {
@@ -146,4 +147,16 @@ model Bill {
   invoices      Invoice[]
 
   @@index([payPeriodId])
+}
+
+model GoogleDriveConnection {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  googleEmail  String?
+  accessToken  String   @db.Text
+  refreshToken String   @db.Text
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }

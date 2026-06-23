@@ -55,6 +55,9 @@ Therapists and admin sign in at **`/portal/login`**.
 | `DATABASE_URL` | PostgreSQL connection string |
 | `AUTH_SECRET` | Random secret (`openssl rand -base64 32`) |
 | `BLOB_READ_WRITE_TOKEN` | Vercel Blob token for invoice PDF attachments |
+| `GOOGLE_OAUTH_CLIENT_ID` | Google OAuth client ID (Drive import) |
+| `GOOGLE_OAUTH_CLIENT_SECRET` | Google OAuth client secret |
+| `GOOGLE_OAUTH_REDIRECT_URI` | OAuth callback URL (must match Google Cloud console) |
 
 3. Run migrations and seed users:
 
@@ -72,7 +75,9 @@ The seed script prints one-time passwords for `ghim@gvcounseling.com`, `maria@gv
 
 ### Referral Submission import
 
-Upload `.docx` files from client folders. The parser extracts NPI, diagnoses (tolerates label misspellings), claim number, client name, DOB, gender, and VRC contact info.
+**Google Drive (recommended):** Admin → Clients → Import → **Connect Google Drive**, then **Sync from Drive**. Reads `Maria: Client files` and `Steven: Client files`, finds each `<claim #> - <client name>` folder, exports the **Referral Submission** Google Doc, and creates or updates clients by claim number.
+
+**Manual upload:** Upload `.docx` files from client folders. The parser extracts NPI, diagnoses (tolerates label misspellings), claim number, client name, DOB, gender, and VRC contact info.
 
 ### 837 generation
 
