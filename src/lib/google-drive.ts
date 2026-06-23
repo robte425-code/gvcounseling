@@ -3,7 +3,7 @@ import { isReferralSubmissionFilename, isLniClaimNumber, parseClaimNumber } from
 const GOOGLE_DOC_MIME = "application/vnd.google-apps.document";
 const DOCX_MIME = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 
-type DriveFile = {
+export type DriveFile = {
   id: string;
   name: string;
   mimeType: string;
@@ -117,6 +117,24 @@ export async function findReferralSubmissionFile(
   const query = [`'${clientFolderId}' in parents`, "trashed=false"].join(" and ");
   const files = await listFiles(accessToken, query);
   return files.find((f) => isReferralSubmissionFilename(f.name)) ?? null;
+}
+
+export async function listClientFolderFiles(
+  accessToken: string,
+  clientFolderId: string,
+): Promise<DriveFile[]> {
+  const query = [`'${clientFolderId}' in parents`, "trashed=false"].join(" and ");
+  return listFiles(accessToken, query);
+}
+
+export async function downloadFileBuffer(accessToken: string, file: DriveFile): Promise<Buffer> {
+  const res = await fetch(`https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!res.ok) {
+    throw new Error(`Failed to download "${file.name}" (${res.status}).`);
+  }
+  return Buffer.from(await res.arrayBuffer());
 }
 
 export async function downloadReferralDocx(accessToken: string, file: DriveFile): Promise<Buffer> {

@@ -75,7 +75,9 @@ The seed script prints one-time passwords for `ghim@gvcounseling.com`, `maria@gv
 
 ### Referral Submission import
 
-**Google Drive (recommended):** Admin → Clients → Import → **Connect Google Drive**, then **Sync from Drive**. Reads `Maria: Client files` and `Steven: Client files`, finds each `<claim #> - <client name>` folder, exports the **Referral Submission** Google Doc, and creates or updates clients by claim number.
+**Google Drive (recommended):** Admin → Clients → Import → **Connect Google Drive**, then **Sync from Drive**. Reads `Maria: Client files` and `Steven: Client files`, finds each `<claim #> - <client name>` folder, exports the **Referral Submission** Google Doc, and parses **Claim Status / CAC** and **Addresses & Contacts** PDFs (with OCR fallback for scans). Creates or updates clients by claim number. BHI approval and medical note PDFs are not imported.
+
+Set `GOOGLE_CLOUD_VISION_API_KEY` (Cloud Vision API enabled in your Google Cloud project) for OCR on scanned PDFs.
 
 **Manual upload:** Upload `.docx` files from client folders. The parser extracts NPI, diagnoses (tolerates label misspellings), claim number, client name, DOB, gender, and VRC contact info.
 
