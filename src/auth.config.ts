@@ -9,7 +9,10 @@ export const authConfig = {
   },
   providers: [],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger, session }) {
+      if (trigger === "update" && session?.user) {
+        token.mustChangePassword = session.user.mustChangePassword ?? token.mustChangePassword;
+      }
       if (user) {
         token.id = user.id!;
         token.role = (user as { role: Role }).role;

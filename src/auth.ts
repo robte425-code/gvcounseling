@@ -1,10 +1,11 @@
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
+import { redirect } from "next/navigation";
 import { authConfig } from "@/auth.config";
 import { verifyPassword } from "@/lib/password";
 import { prisma } from "@/lib/prisma";
 
-export const { handlers, signIn, signOut, auth } = NextAuth({
+export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
   ...authConfig,
   providers: [
     Credentials({
@@ -41,7 +42,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 export async function requireSession() {
   const session = await auth();
   if (!session?.user?.id) {
-    throw new Error("Unauthorized");
+    redirect("/portal/login");
   }
   return session;
 }
@@ -49,7 +50,7 @@ export async function requireSession() {
 export async function requireAdmin() {
   const session = await requireSession();
   if (session.user.role !== "ADMIN") {
-    throw new Error("Forbidden");
+    redirect("/portal/therapist/dashboard");
   }
   return session;
 }
@@ -57,7 +58,7 @@ export async function requireAdmin() {
 export async function requireTherapist() {
   const session = await requireSession();
   if (session.user.role !== "THERAPIST") {
-    throw new Error("Forbidden");
+    redirect("/portal/admin/dashboard");
   }
   return session;
 }

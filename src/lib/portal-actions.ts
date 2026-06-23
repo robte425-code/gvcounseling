@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { requireAdmin, requireSession, requireTherapist } from "@/auth";
+import { requireAdmin, requireSession, requireTherapist, unstable_update } from "@/auth";
 import { Gender, InvoiceStatus } from "@/generated/prisma/client";
 import { buildEdi837, generateClmControlNumber, type Edi837Claim } from "@/lib/edi837";
 import { client837Ready, parseClaimNumber } from "@/lib/constants";
@@ -21,29 +21,36 @@ function parseDate(value: FormDataEntryValue | null): Date | null {
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
-export async function changePasswordAction(formData: FormData) {
+export type ChangePasswordState = { error?: string };
+
+export async function changePasswordAction(
+  _prevState: ChangePasswordState,
+  formData: FormData,
+): Promise<ChangePasswordState> {
   const session = await requireSession();
   const current = String(formData.get("currentPassword") ?? "");
   const next = String(formData.get("newPassword") ?? "");
   const confirm = String(formData.get("confirmPassword") ?? "");
 
   if (next.length < 10) {
-    throw new Error("New password must be at least 10 characters.");
+    return { error: "New password must be at least 10 characters." };
   }
   if (next !== confirm) {
-    throw new Error("Passwords do not match.");
+    return { error: "Passwords do not match." };
   }
 
   const user = await prisma.user.findUniqueOrThrow({ where: { id: session.user.id } });
   const ok = await verifyPassword(current, user.passwordHash);
   if (!ok) {
-    throw new Error("Current password is incorrect.");
+    return { error: "Current password is incorrect." };
   }
 
   await prisma.user.update({
     where: { id: user.id },
     data: { passwordHash: await hashPassword(next), mustChangePassword: false },
   });
+
+  await unstable_update({ user: { mustChangePassword: false } });
 
   const dest =
     session.user.role === "ADMIN" ? "/portal/admin/dashboard" : "/portal/therapist/dashboard";
