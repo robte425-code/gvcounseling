@@ -55,6 +55,13 @@ export function isPlausibleClaimManagerName(name?: string | null): boolean {
   if (/\b(REVIEW|DATE|STATUS|NEXT|ALLOWED|DEPARTMENT|CORRESPONDENCE|SUPERVISOR|LOCATION)\b/i.test(n)) {
     return false;
   }
+  if (
+    /\b(STREET|ST\b|AVE|AVENUE|ROAD|RD|BLVD|DEPT|LABOR|INDUSTRIES|UNIT|HIGHWAY|HWY|WAY|LANE|DRIVE|DR)\b/i.test(
+      n,
+    )
+  ) {
+    return false;
+  }
   return isPlausiblePersonName(n);
 }
 
@@ -314,13 +321,13 @@ export function mergeDocumentPartsPreferValid(
       if (doctor && doctor.startsWith(value.trim().toUpperCase())) return false;
       return true;
     },
-    true,
+    false,
   );
   merged.claimManagerPhone = pickFieldFromParts(
     parts,
     (s) => s.claimManagerPhone,
     isPlausiblePhone,
-    true,
+    false,
   );
   merged.claimManagerFax = pickFieldFromParts(
     parts,

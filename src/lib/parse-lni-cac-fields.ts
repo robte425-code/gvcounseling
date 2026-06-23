@@ -380,6 +380,13 @@ function parseClaimManager(text: string): Pick<
     if (/\b(PAC|ARNP|MD|DO|DC|APRN|NP|ATTENDING|CLAIM MANAGER|FAX|VRC|VOCATIONAL|REVIEW|DATE|STATUS|NEXT|DEPARTMENT)\b/.test(n)) {
       return false;
     }
+    if (
+      /\b(STREET|ST\b|AVE|AVENUE|ROAD|RD|BLVD|DEPT|LABOR|INDUSTRIES|UNIT|HIGHWAY|HWY|WAY|LANE|DRIVE|DR)\b/.test(
+        n,
+      )
+    ) {
+      return false;
+    }
     if (n.split(/\s+/).length < 2 || n.split(/\s+/).length > 5) return false;
     if (
       new RegExp(
