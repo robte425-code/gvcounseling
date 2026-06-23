@@ -3,6 +3,14 @@ import { requireAdmin } from "@/auth";
 import { ClientImportForms } from "@/components/portal/ClientImportForms";
 import { prisma } from "@/lib/prisma";
 
+function safeDecodeParam(value: string): string {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+}
+
 export default async function ClientImportPage({
   searchParams,
 }: {
@@ -17,10 +25,15 @@ export default async function ClientImportPage({
     select: { id: true, firstName: true, lastName: true },
   });
 
-  const driveConnection = await prisma.googleDriveConnection.findUnique({
-    where: { userId: session.user.id },
-    select: { googleEmail: true },
-  });
+  let driveConnection: { googleEmail: string | null } | null = null;
+  try {
+    driveConnection = await prisma.googleDriveConnection.findUnique({
+      where: { userId: session.user.id },
+      select: { googleEmail: true },
+    });
+  } catch (e) {
+    console.error("GoogleDriveConnection lookup failed:", e);
+  }
 
   const driveMessage =
     params.driveConnected === "1"
@@ -44,7 +57,7 @@ export default async function ClientImportPage({
           connected: Boolean(driveConnection),
           googleEmail: driveConnection?.googleEmail,
           message: driveMessage,
-          error: params.driveError ? decodeURIComponent(params.driveError) : null,
+          error: params.driveError ? safeDecodeParam(params.driveError) : null,
         }}
       />
     </div>

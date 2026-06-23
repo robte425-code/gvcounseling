@@ -13,7 +13,7 @@ export async function GET(request: Request) {
   const session = await auth();
   if (!session?.user?.id || session.user.role !== "ADMIN") {
     const login = new URL("/portal/login", request.url);
-    login.searchParams.set("callbackUrl", "/portal/admin/clients/import/connect");
+    login.searchParams.set("callbackUrl", "/api/portal/integrations/google/connect");
     return NextResponse.redirect(login);
   }
 
