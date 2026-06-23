@@ -11,6 +11,11 @@ declare module "next-auth" {
       mustChangePassword: boolean;
       firstName: string;
       lastName: string;
+      /** Logged-in user id (admin) while impersonating */
+      realUserId?: string;
+      /** Logged-in user role while impersonating */
+      realRole?: Role;
+      isImpersonating?: boolean;
     };
   }
 
@@ -22,6 +27,13 @@ declare module "next-auth" {
   }
 }
 
+type AdminSnapshot = {
+  id: string;
+  role: Role;
+  firstName: string;
+  lastName: string;
+};
+
 declare module "next-auth/jwt" {
   interface JWT {
     id: string;
@@ -29,5 +41,16 @@ declare module "next-auth/jwt" {
     mustChangePassword: boolean;
     firstName: string;
     lastName: string;
+    realUserId?: string;
+    realRole?: Role;
+    impersonatingUserId?: string;
+    adminSnapshot?: AdminSnapshot;
   }
 }
+
+export type ImpersonationUpdate =
+  | {
+      action: "start";
+      user: { id: string; role: Role; firstName: string; lastName: string };
+    }
+  | { action: "stop" };

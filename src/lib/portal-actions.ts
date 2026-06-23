@@ -2,7 +2,16 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { requireAdmin, requireSession, requireTherapist, unstable_update } from "@/auth";
+import {
+  getRealRole,
+  getRealUserId,
+  isImpersonating,
+  requireAdmin,
+  requireSession,
+  requireTherapist,
+  unstable_update,
+} from "@/auth";
+import type { ImpersonationUpdate } from "@/types/next-auth";
 import { Gender, InvoiceStatus } from "@/generated/prisma/client";
 import { buildEdi837, generateClmControlNumber, type Edi837Claim } from "@/lib/edi837";
 import { client837Ready, parseClaimNumber } from "@/lib/constants";
@@ -54,7 +63,7 @@ export async function changePasswordAction(
     return { error: "Passwords do not match." };
   }
 
-  const user = await prisma.user.findUniqueOrThrow({ where: { id: session.user.id } });
+  const user = await prisma.user.findUniqueOrThrow({ where: { id: getRealUserId(session) } });
   const ok = await verifyPassword(current, user.passwordHash);
   if (!ok) {
     return { error: "Current password is incorrect." };
@@ -68,8 +77,37 @@ export async function changePasswordAction(
   await unstable_update({ user: { mustChangePassword: false } });
 
   const dest =
-    session.user.role === "ADMIN" ? "/portal/admin/dashboard" : "/portal/therapist/dashboard";
+    getRealRole(session) === "ADMIN" ? "/portal/admin/dashboard" : "/portal/therapist/dashboard";
   redirect(dest);
+}
+
+export async function startImpersonationAction(formData: FormData) {
+  await requireAdmin();
+  const email = String(formData.get("email") ?? "").toLowerCase().trim();
+  if (!email) throw new Error("Therapist email is required.");
+
+  const therapist = await prisma.user.findFirst({
+    where: { email, role: "THERAPIST" },
+    select: { id: true, role: true, firstName: true, lastName: true },
+  });
+  if (!therapist) throw new Error("Therapist not found.");
+
+  const impersonation: ImpersonationUpdate = { action: "start", user: therapist };
+  await unstable_update({ impersonation } as Record<string, unknown>);
+
+  redirect("/portal/therapist/dashboard");
+}
+
+export async function stopImpersonationAction() {
+  const session = await requireSession();
+  if (!isImpersonating(session)) {
+    redirect("/portal/admin/dashboard");
+  }
+
+  const impersonation: ImpersonationUpdate = { action: "stop" };
+  await unstable_update({ impersonation } as Record<string, unknown>);
+
+  redirect("/portal/admin/dashboard");
 }
 
 export async function createPayPeriodAction(formData: FormData) {

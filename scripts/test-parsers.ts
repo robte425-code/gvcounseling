@@ -29,4 +29,5 @@ console.log("CAC:", parseLniClaimStatusText(claimStatus));
 console.log("Addresses:", parseLniAddressesText(addresses));
 console.log("Skip BHI:", classifyClientDocument("AP addressed BHI questionnaire.pdf"));
 console.log("Skip medical:", classifyClientDocument("Medical note.pdf"));
-console.log("Import CAC:", classifyClientDocument("A. Keyes - Claim Status.pdf"));
+console.log("Word docx contact:", classifyClientDocument("Valdovino contact info.docx"));
+console.log("Google doc CAC:", classifyClientDocument("Merino-Aviles.Claim & Account Center", "application/vnd.google-apps.document"));

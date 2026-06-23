@@ -128,9 +128,20 @@ export async function listClientFolderFiles(
 }
 
 export async function downloadFileBuffer(accessToken: string, file: DriveFile): Promise<Buffer> {
-  const res = await fetch(`https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`, {
-    headers: { Authorization: `Bearer ${accessToken}` },
-  });
+  let res: Response;
+
+  if (file.mimeType === GOOGLE_DOC_MIME) {
+    const params = new URLSearchParams({ mimeType: DOCX_MIME });
+    res = await fetch(
+      `https://www.googleapis.com/drive/v3/files/${file.id}/export?${params.toString()}`,
+      { headers: { Authorization: `Bearer ${accessToken}` } },
+    );
+  } else {
+    res = await fetch(`https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+  }
+
   if (!res.ok) {
     throw new Error(`Failed to download "${file.name}" (${res.status}).`);
   }

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
-import { requireAdminApi } from "@/auth";
+import { getRealUserId, requireAdminApi } from "@/auth";
 import {
   importDriveClientFolder,
   scanDriveClientFolders,
@@ -21,7 +21,7 @@ export async function GET() {
   if (!auth.ok) return auth.response;
 
   try {
-    const scan = await scanDriveClientFolders(auth.session.user.id);
+    const scan = await scanDriveClientFolders(getRealUserId(auth.session));
     return NextResponse.json(scan);
   } catch (e) {
     console.error("Drive scan failed:", e);
@@ -51,12 +51,12 @@ export async function POST(request: Request) {
         therapistId: body.therapistId,
         therapistName: body.therapistName,
       };
-      const result = await importDriveClientFolder(auth.session.user.id, target);
+      const result = await importDriveClientFolder(getRealUserId(auth.session), target);
       revalidatePath("/portal/admin/clients");
       return NextResponse.json(result);
     }
 
-    const scan = await scanDriveClientFolders(auth.session.user.id);
+    const scan = await scanDriveClientFolders(getRealUserId(auth.session));
     if (!scan.folders.length) {
       revalidatePath("/portal/admin/clients");
       return NextResponse.json({
@@ -79,7 +79,7 @@ export async function POST(request: Request) {
     };
 
     for (const folder of scan.folders) {
-      const part = await importDriveClientFolder(auth.session.user.id, folder);
+      const part = await importDriveClientFolder(getRealUserId(auth.session), folder);
       aggregate.created += part.created;
       aggregate.updated += part.updated;
       aggregate.skipped += part.skipped;

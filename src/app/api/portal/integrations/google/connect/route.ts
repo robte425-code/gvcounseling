@@ -1,6 +1,6 @@
 import { randomBytes } from "crypto";
 import { NextResponse } from "next/server";
-import { auth } from "@/auth";
+import { auth, getRealRole } from "@/auth";
 import { buildGoogleAuthUrl, getGoogleOAuthStateCookieName } from "@/lib/google-oauth";
 
 function importErrorRedirect(request: Request, message: string) {
@@ -11,7 +11,7 @@ function importErrorRedirect(request: Request, message: string) {
 
 export async function GET(request: Request) {
   const session = await auth();
-  if (!session?.user?.id || session.user.role !== "ADMIN") {
+  if (!session?.user?.id || getRealRole(session) !== "ADMIN") {
     const login = new URL("/portal/login", request.url);
     login.searchParams.set("callbackUrl", "/api/portal/integrations/google/connect");
     return NextResponse.redirect(login);

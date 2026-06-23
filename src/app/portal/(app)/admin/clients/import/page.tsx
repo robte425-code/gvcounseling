@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { requireAdmin } from "@/auth";
+import { getRealUserId, requireAdmin } from "@/auth";
 import { ClientImportForms } from "@/components/portal/ClientImportForms";
 import { prisma } from "@/lib/prisma";
 
@@ -28,7 +28,7 @@ export default async function ClientImportPage({
   let driveConnection: { googleEmail: string | null } | null = null;
   try {
     driveConnection = await prisma.googleDriveConnection.findUnique({
-      where: { userId: session.user.id },
+      where: { userId: getRealUserId(session) },
       select: { googleEmail: true },
     });
   } catch (e) {

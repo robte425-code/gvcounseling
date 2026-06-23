@@ -1,12 +1,33 @@
 /** Classify client-folder files for supplemental import (CAC + addresses only). */
 
+export const GOOGLE_DOC_MIME = "application/vnd.google-apps.document";
+
 export type ImportableDocCategory =
   | "claim-account-center"
   | "addresses-contacts"
   | "word-doc-cac-address"
   | "claim-number-pdf";
 
-export function classifyClientDocument(filename: string): ImportableDocCategory | null {
+function isWordMime(mimeType?: string): boolean {
+  return (
+    mimeType === GOOGLE_DOC_MIME ||
+    mimeType === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
+    mimeType === "application/msword"
+  );
+}
+
+function isWordFilename(filename: string): boolean {
+  return /\.docx?$/i.test(filename);
+}
+
+function isRelevantWordDoc(name: string): boolean {
+  return /address|contact|claim|cac|status|account center/i.test(name);
+}
+
+export function classifyClientDocument(
+  filename: string,
+  mimeType?: string,
+): ImportableDocCategory | null {
   const n = filename.toLowerCase();
 
   if (/referral submission/.test(n)) return null;
@@ -16,15 +37,16 @@ export function classifyClientDocument(filename: string): ImportableDocCategory 
   if (/medical|provider|note|addendum|recs/.test(n)) return null;
   if (/testing report|ld testing/.test(n)) return null;
 
+  // Word / Google Docs before generic "contact" matching (e.g. "contact info.docx").
+  if (isWordFilename(filename) || isWordMime(mimeType)) {
+    if (isRelevantWordDoc(n)) return "word-doc-cac-address";
+    return null;
+  }
+
   if (/claim\s*&\s*account|claim and account|\bcac\b|current claim status|claim status/.test(n))
     return "claim-account-center";
   if (/^([a-z]{1,2}\d+)\.pdf$/i.test(filename.trim())) return "claim-number-pdf";
   if (/address|contact/.test(n)) return "addresses-contacts";
-
-  if (/\.docx?$/i.test(n)) {
-    if (/address|contact|claim|cac|status/.test(n)) return "word-doc-cac-address";
-    return null;
-  }
 
   if (/\.pdf$/i.test(n)) return null;
 

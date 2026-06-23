@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
-import { auth } from "@/auth";
+import { auth, getRealRole, getRealUserId } from "@/auth";
 import {
   exchangeCodeForTokens,
   fetchGoogleUserEmail,
@@ -19,7 +19,7 @@ function importRedirect(request: Request, params: Record<string, string>) {
 
 export async function GET(request: Request) {
   const session = await auth();
-  if (!session?.user?.id || session.user.role !== "ADMIN") {
+  if (!session?.user?.id || getRealRole(session) !== "ADMIN") {
     const login = new URL("/portal/login", request.url);
     login.searchParams.set("callbackUrl", "/portal/admin/clients/import");
     return NextResponse.redirect(login);
@@ -56,10 +56,11 @@ export async function GET(request: Request) {
     const googleEmail = await fetchGoogleUserEmail(tokens.access_token);
     const expiresAt = new Date(Date.now() + tokens.expires_in * 1000);
 
+    const adminUserId = getRealUserId(session);
     await prisma.googleDriveConnection.upsert({
-      where: { userId: session.user.id },
+      where: { userId: adminUserId },
       create: {
-        userId: session.user.id,
+        userId: adminUserId,
         googleEmail,
         accessToken: tokens.access_token,
         refreshToken: tokens.refresh_token,

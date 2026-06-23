@@ -2,8 +2,11 @@ import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { redirect } from "next/navigation";
 import { authConfig } from "@/auth.config";
+import { getRealRole, isImpersonating } from "@/lib/session";
 import { verifyPassword } from "@/lib/password";
 import { prisma } from "@/lib/prisma";
+
+export { getRealRole, getRealUserId, isImpersonating, portalHomePath } from "@/lib/session";
 
 export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
   ...authConfig,
@@ -49,7 +52,10 @@ export async function requireSession() {
 
 export async function requireAdmin() {
   const session = await requireSession();
-  if (session.user.role !== "ADMIN") {
+  if (getRealRole(session) !== "ADMIN") {
+    redirect("/portal/therapist/dashboard");
+  }
+  if (isImpersonating(session)) {
     redirect("/portal/therapist/dashboard");
   }
   return session;
@@ -69,7 +75,7 @@ export async function requireAdminApi() {
   if (!session?.user?.id) {
     return { ok: false as const, response: Response.json({ error: "Unauthorized." }, { status: 401 }) };
   }
-  if (session.user.role !== "ADMIN") {
+  if (getRealRole(session) !== "ADMIN") {
     return { ok: false as const, response: Response.json({ error: "Forbidden." }, { status: 403 }) };
   }
   return { ok: true as const, session };

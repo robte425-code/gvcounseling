@@ -142,7 +142,7 @@ export async function importClientDocumentsFromFolder(
 ): Promise<ClientDocumentSupplement> {
   const files = await listClientFolderFiles(accessToken, clientFolderId);
   const importable = files
-    .map((f) => ({ file: f, category: classifyClientDocument(f.name) }))
+    .map((f) => ({ file: f, category: classifyClientDocument(f.name, f.mimeType) }))
     .filter((x): x is { file: DriveFile; category: ImportableDocCategory } => x.category !== null);
 
   const parts: ClientDocumentSupplement[] = [];

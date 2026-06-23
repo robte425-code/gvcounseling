@@ -1,5 +1,7 @@
 import Link from "next/link";
-import { auth, signOut } from "@/auth";
+import { auth, getRealRole, isImpersonating, signOut } from "@/auth";
+import { startImpersonationAction, stopImpersonationAction } from "@/lib/portal-actions";
+import { prisma } from "@/lib/prisma";
 
 const adminLinks = [
   { href: "/portal/admin/dashboard", label: "Dashboard" },
@@ -20,39 +22,87 @@ export async function PortalNav() {
   const session = await auth();
   if (!session?.user) return null;
 
-  const links = session.user.role === "ADMIN" ? adminLinks : therapistLinks;
+  const impersonating = isImpersonating(session);
+  const admin = getRealRole(session) === "ADMIN";
+  const links = impersonating || session.user.role === "THERAPIST" ? therapistLinks : adminLinks;
+
+  const therapists =
+    admin && !impersonating
+      ? await prisma.user.findMany({
+          where: { role: "THERAPIST" },
+          orderBy: { firstName: "asc" },
+          select: { email: true, firstName: true, lastName: true },
+        })
+      : [];
 
   return (
-    <header className="border-b border-border bg-surface">
-      <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-4 py-4">
-        <div>
-          <Link href="/" className="font-serif text-lg font-semibold text-primary-dark">
-            Grandview Counseling
-          </Link>
-          <p className="text-xs text-muted">Billing portal · {session.user.firstName}</p>
+    <>
+      {impersonating && (
+        <div className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-center text-sm text-amber-950">
+          Viewing as{" "}
+          <span className="font-medium">
+            {session.user.firstName} {session.user.lastName}
+          </span>
+          {" · "}
+          <form action={stopImpersonationAction} className="inline">
+            <button type="submit" className="font-medium underline hover:no-underline">
+              Exit to admin
+            </button>
+          </form>
         </div>
-        <nav className="flex flex-wrap items-center gap-1">
-          {links.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className="rounded-full px-3 py-1.5 text-sm text-muted transition hover:bg-primary/10 hover:text-primary-dark"
-            >
-              {link.label}
+      )}
+      <header className="border-b border-border bg-surface">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-4 py-4">
+          <div>
+            <Link href="/" className="font-serif text-lg font-semibold text-primary-dark">
+              Grandview Counseling
             </Link>
-          ))}
-        </nav>
-        <form
-          action={async () => {
-            "use server";
-            await signOut({ redirectTo: "/portal/login" });
-          }}
-        >
-          <button type="submit" className="text-sm text-muted hover:text-primary-dark">
-            Sign out
-          </button>
-        </form>
-      </div>
-    </header>
+            <p className="text-xs text-muted">
+              Billing portal · {session.user.firstName}
+              {admin && !impersonating ? " (admin)" : ""}
+            </p>
+          </div>
+          <nav className="flex flex-wrap items-center gap-1">
+            {links.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className="rounded-full px-3 py-1.5 text-sm text-muted transition hover:bg-primary/10 hover:text-primary-dark"
+              >
+                {link.label}
+              </Link>
+            ))}
+          </nav>
+          <div className="flex flex-wrap items-center gap-3">
+            {therapists.length > 0 && (
+              <div className="flex flex-wrap items-center gap-1">
+                <span className="text-xs text-muted">View as</span>
+                {therapists.map((t) => (
+                  <form key={t.email} action={startImpersonationAction}>
+                    <input type="hidden" name="email" value={t.email} />
+                    <button
+                      type="submit"
+                      className="rounded-full px-2.5 py-1 text-xs text-primary-dark transition hover:bg-primary/10"
+                    >
+                      {t.firstName}
+                    </button>
+                  </form>
+                ))}
+              </div>
+            )}
+            <form
+              action={async () => {
+                "use server";
+                await signOut({ redirectTo: "/portal/login" });
+              }}
+            >
+              <button type="submit" className="text-sm text-muted hover:text-primary-dark">
+                Sign out
+              </button>
+            </form>
+          </div>
+        </div>
+      </header>
+    </>
   );
 }
