@@ -21,6 +21,8 @@ export const navLinks = [
   { href: "/refer-a-client", label: "Refer a client" },
 ] as const;
 
+export const portalLoginHref = "/portal/login";
+
 export const footerLinks = [
   { href: "/privacy-page", label: "Privacy Statement" },
   { href: "/terms-of-use", label: "Terms of use" },

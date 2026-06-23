@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { navLinks } from "@/lib/site";
+import { navLinks, portalLoginHref } from "@/lib/site";
 
 export function Header() {
   const pathname = usePathname();
@@ -41,6 +41,12 @@ export function Header() {
               </Link>
             );
           })}
+          <Link
+            href={portalLoginHref}
+            className="ml-2 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-primary-dark"
+          >
+            Portal login
+          </Link>
         </nav>
 
         <button
@@ -84,6 +90,15 @@ export function Header() {
                 </li>
               );
             })}
+            <li className="pt-2">
+              <Link
+                href={portalLoginHref}
+                className="block rounded-full bg-primary px-4 py-2.5 text-center text-sm font-semibold text-white"
+                onClick={() => setOpen(false)}
+              >
+                Portal login
+              </Link>
+            </li>
           </ul>
         </nav>
       )}
