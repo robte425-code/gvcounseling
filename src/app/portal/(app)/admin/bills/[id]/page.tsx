@@ -1,0 +1,70 @@
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { requireAdmin } from "@/auth";
+import { portalButtonClass, portalCardClass } from "@/components/portal/ui";
+import { formatCurrency, formatDate } from "@/lib/constants";
+import { prisma } from "@/lib/prisma";
+
+export default async function BillDetailPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ generated?: string }>;
+}) {
+  await requireAdmin();
+  const { id } = await params;
+  const { generated } = await searchParams;
+
+  const bill = await prisma.bill.findUnique({
+    where: { id },
+    include: {
+      payPeriod: true,
+      invoices: {
+        include: { client: true, therapist: true },
+        orderBy: { invoiceNumber: "asc" },
+      },
+    },
+  });
+  if (!bill) notFound();
+
+  return (
+    <div className="space-y-8">
+      {generated === "1" && (
+        <p className="rounded-xl bg-primary/10 px-4 py-3 text-sm text-primary-dark">
+          837 file generated successfully. Invoices are now marked as billed.
+        </p>
+      )}
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <Link href="/portal/admin/bills" className="text-sm text-primary hover:underline">
+            ← Bill history
+          </Link>
+          <h1 className="mt-2 font-serif text-3xl font-semibold text-primary-dark">{bill.filename}</h1>
+          <p className="mt-2 text-muted">
+            Cutoff {formatDate(bill.payPeriod.cutoffDate)} · {bill.invoiceCount} claims ·{" "}
+            {formatCurrency(Number(bill.totalAmount))}
+          </p>
+        </div>
+        <a href={`/api/portal/bills/${bill.id}/download`} className={portalButtonClass}>
+          Download 837 (.TXT)
+        </a>
+      </div>
+
+      <div className={portalCardClass}>
+        <h2 className="font-serif text-xl font-semibold text-primary-dark">Included invoices</h2>
+        <ul className="mt-4 divide-y divide-border text-sm">
+          {bill.invoices.map((inv) => (
+            <li key={inv.id} className="flex flex-wrap justify-between gap-2 py-2">
+              <span>
+                #{inv.invoiceNumber} · {inv.therapist.firstName} {inv.therapist.lastName} ·{" "}
+                {inv.client.lniClaimNumber} · CLM {inv.clmControlNumber}
+              </span>
+              <span>{formatCurrency(Number(inv.totalAmount))}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  );
+}

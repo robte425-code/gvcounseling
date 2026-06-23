@@ -27,9 +27,9 @@ Open [http://localhost:3000](http://localhost:3000).
 
 | Variable | Description |
 |----------|-------------|
-| `RESEND_API_KEY` | API key from [Resend](https://resend.com) |
+| `POSTMARK_SERVER_TOKEN` | Server API token from [Postmark](https://postmarkapp.com) |
 | `CONTACT_EMAIL` | Inbox for form submissions (e.g. `info@gvcounseling.com`) |
-| `EMAIL_FROM` | Verified sender address in Resend (e.g. `Grandview Counseling <noreply@gvcounseling.com>`) |
+| `EMAIL_FROM` | Verified sender in Postmark (e.g. `Grandview Counseling <info@gvcounseling.com>`) |
 
 4. Deploy. Vercel will build and host the site automatically.
 
@@ -39,4 +39,41 @@ After deploying, add `gvcounseling.com` and `www.gvcounseling.com` in your Verce
 
 ## Forms
 
-Contact and referral forms send email via the Resend API. File attachments on the referral form are included in the notification email. If `RESEND_API_KEY` is not set, forms will show a configuration error until environment variables are added.
+Contact and referral forms send email via the Postmark API. File attachments on the referral form are included in the notification email. If `POSTMARK_SERVER_TOKEN` is not set, forms will show a configuration error until environment variables are added.
+
+## Billing portal (Phase 1)
+
+Therapists and admin sign in at **`/portal/login`**.
+
+### Setup
+
+1. Create a PostgreSQL database (e.g. [Vercel Postgres](https://vercel.com/docs/storage/vercel-postgres)).
+2. Copy `.env.example` to `.env` and set:
+
+| Variable | Description |
+|----------|-------------|
+| `DATABASE_URL` | PostgreSQL connection string |
+| `AUTH_SECRET` | Random secret (`openssl rand -base64 32`) |
+| `BLOB_READ_WRITE_TOKEN` | Vercel Blob token for invoice PDF attachments |
+
+3. Run migrations and seed users:
+
+```bash
+npx prisma migrate dev --name init
+npm run db:seed
+```
+
+The seed script prints one-time passwords for `ghim@gvcounseling.com`, `maria@gvcounseling.com`, and `steven@gvcounseling.com`. All users must change password on first login.
+
+### Portal features
+
+- **Admin:** pay periods, client registry, Referral Submission (.docx) import, CSV import, invoice queue, generate consolidated **837 EDI** bill, bill history
+- **Therapists:** create/edit/submit invoices, un-submit before billing, attach PDFs, view billed invoices
+
+### Referral Submission import
+
+Upload `.docx` files from client folders. The parser extracts NPI, diagnoses (tolerates label misspellings), claim number, client name, DOB, gender, and VRC contact info.
+
+### 837 generation
+
+Admin selects a pay period cutoff → **Generate 837** combines all submitted invoices (on or before cutoff) into one L&I upload file modeled on your Team Vocational sample. Invoices are marked **Billed** and locked.

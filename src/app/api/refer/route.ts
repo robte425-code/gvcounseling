@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const attachments: { filename: string; content: string }[] = [];
+    const attachments: { filename: string; content: string; contentType?: string }[] = [];
 
     for (const field of fileFields) {
       const file = formData.get(field);
@@ -56,6 +56,7 @@ export async function POST(request: NextRequest) {
         attachments.push({
           filename: file.name,
           content: buffer.toString("base64"),
+          contentType: file.type || undefined,
         });
         lines.push(`${field}: ${file.name} (${Math.round(file.size / 1024)} KB)`);
       }

@@ -1,0 +1,149 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  ADMIN
+  THERAPIST
+}
+
+enum InvoiceStatus {
+  DRAFT
+  SUBMITTED
+  BILLED
+}
+
+enum Gender {
+  M
+  F
+  U
+}
+
+model User {
+  id                 String    @id @default(cuid())
+  email              String    @unique
+  passwordHash       String
+  role               Role
+  firstName          String
+  lastName           String
+  mustChangePassword Boolean   @default(true)
+  lniProviderId      String?
+  npi                String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  clients            Client[]
+  invoices           Invoice[]
+  billsGenerated     Bill[]    @relation("BillGeneratedBy")
+}
+
+model PayPeriod {
+  id          String   @id @default(cuid())
+  cutoffDate  DateTime
+  paymentDate DateTime?
+  label       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  bills       Bill[]
+}
+
+model Client {
+  id             String    @id @default(cuid())
+  lniClaimNumber String    @unique
+  firstName      String
+  lastName       String
+  middleInitial  String?
+  attendingNpi   String?
+  diagnoses      String[]
+  addressLine1   String?
+  addressLine2   String?
+  city           String?
+  state          String    @default("WA")
+  zip            String?
+  dateOfBirth    DateTime?
+  gender         Gender?
+  dateOfInjury   DateTime?
+  vrcName        String?
+  vrcEmail       String?
+  vrcPhone       String?
+  therapistId    String
+  therapist      User      @relation(fields: [therapistId], references: [id])
+  invoices       Invoice[]
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([therapistId])
+}
+
+model Invoice {
+  id               String              @id @default(cuid())
+  invoiceNumber    Int
+  status           InvoiceStatus       @default(DRAFT)
+  therapistId      String
+  therapist        User                @relation(fields: [therapistId], references: [id])
+  clientId         String
+  client           Client              @relation(fields: [clientId], references: [id])
+  billId           String?
+  bill             Bill?               @relation(fields: [billId], references: [id])
+  clmControlNumber String?
+  totalAmount      Decimal             @db.Decimal(10, 2)
+  submittedAt      DateTime?
+  billedAt         DateTime?
+  lineItems        InvoiceLineItem[]
+  attachments      InvoiceAttachment[]
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+
+  @@unique([therapistId, invoiceNumber])
+  @@index([status])
+  @@index([clientId])
+  @@index([billId])
+}
+
+model InvoiceLineItem {
+  id            String   @id @default(cuid())
+  invoiceId     String
+  invoice       Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  serviceDate   DateTime
+  procedureCode String
+  amount        Decimal  @db.Decimal(10, 2)
+  units         Int      @default(1)
+  sortOrder     Int      @default(0)
+
+  @@index([invoiceId])
+}
+
+model InvoiceAttachment {
+  id          String   @id @default(cuid())
+  invoiceId   String
+  invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  filename    String
+  blobUrl     String
+  contentType String
+  size        Int
+  createdAt   DateTime @default(now())
+
+  @@index([invoiceId])
+}
+
+model Bill {
+  id            String    @id @default(cuid())
+  payPeriodId   String
+  payPeriod     PayPeriod @relation(fields: [payPeriodId], references: [id])
+  filename      String
+  isaControl    String
+  gsControl     String
+  invoiceCount  Int
+  totalAmount   Decimal   @db.Decimal(12, 2)
+  ediContent    String    @db.Text
+  generatedAt   DateTime  @default(now())
+  generatedById String
+  generatedBy   User      @relation("BillGeneratedBy", fields: [generatedById], references: [id])
+  invoices      Invoice[]
+
+  @@index([payPeriodId])
+}
