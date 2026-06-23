@@ -67,6 +67,37 @@ export function extractClaimNumber(raw?: string): string | undefined {
   return undefined;
 }
 
+/** Prefer Drive folder claim # when it disagrees with referral or supplement sources. */
+export function resolveImportClaimNumber(
+  folderClaim?: string,
+  referralClaim?: string,
+  supplementClaim?: string,
+): { claimNumber?: string; warnings: string[] } {
+  const warnings: string[] = [];
+  const folder = folderClaim && isLniClaimNumber(folderClaim) ? parseClaimNumber(folderClaim) : undefined;
+  const referral =
+    referralClaim && isLniClaimNumber(referralClaim) ? parseClaimNumber(referralClaim) : undefined;
+  const supplement =
+    supplementClaim && isLniClaimNumber(supplementClaim)
+      ? parseClaimNumber(supplementClaim)
+      : undefined;
+
+  if (folder) {
+    if (referral && referral !== folder) {
+      warnings.push(
+        `Referral claim number ${referral} differs from folder claim ${folder}; using folder claim number.`,
+      );
+    } else if (supplement && supplement !== folder && !referral) {
+      warnings.push(
+        `Supplement claim number ${supplement} differs from folder claim ${folder}; using folder claim number.`,
+      );
+    }
+    return { claimNumber: folder, warnings };
+  }
+
+  return { claimNumber: referral ?? supplement, warnings };
+}
+
 export function isReferralSubmissionFilename(filename: string): boolean {
   const base = filename.replace(/\.[^.]+$/, "").trim();
   return REFERRAL_FILENAME_PATTERN.test(base);

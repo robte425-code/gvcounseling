@@ -1,6 +1,7 @@
 import { parseLniAddressesText } from "../src/lib/parse-lni-addresses";
 import { parseLniClaimStatusText } from "../src/lib/parse-lni-claim-status";
 import { classifyClientDocument } from "../src/lib/client-document-types";
+import { resolveImportClaimNumber } from "../src/lib/constants";
 import { parseReferralSheetText } from "../src/lib/parse-referral-sheet";
 import { parseReferralSubmissionText } from "../src/lib/referral-parser";
 
@@ -83,3 +84,8 @@ console.log("Marcelina employer:", parseLniClaimStatusText(marcelinaClaim).emplo
 
 const merinoAddresses = `Worker mailing address   Worker residence address  710 ST RTE 821 UNIT 89  YAKIMA, WA 98901-9336  710 ST RTE 821 UNIT 89  YAKIMA, WA 98901-9336  509-750-4427`;
 console.log("Merino addresses:", parseLniAddressesText(merinoAddresses));
+
+console.log(
+  "Claim resolve (folder wins):",
+  resolveImportClaimNumber("BL13687", "BL12687", "BL13687"),
+);

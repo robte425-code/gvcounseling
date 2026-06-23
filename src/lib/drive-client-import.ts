@@ -6,6 +6,7 @@ import {
   parseClientFolderName,
   resolveTherapistFolderId,
 } from "@/lib/google-drive";
+import { resolveImportClaimNumber } from "@/lib/constants";
 import { getValidGoogleAccessToken } from "@/lib/google-oauth";
 import { importClientDocumentsFromFolder } from "@/lib/client-document-import";
 import { upsertClientFromReferral } from "@/lib/import-referral-client";
@@ -137,14 +138,15 @@ export async function importDriveClientFolder(
     ]);
     const parsed = await parseReferralDocx(buffer);
 
-    if (!parsed.claimNumber && parsedFolder.claimNumber) {
-      parsed.claimNumber = parsedFolder.claimNumber;
-    }
-    if (!parsed.claimNumber && supplement.claimNumber) {
-      parsed.claimNumber = supplement.claimNumber;
-    }
+    const resolvedClaim = resolveImportClaimNumber(
+      parsedFolder.claimNumber,
+      parsed.claimNumber,
+      supplement.claimNumber,
+    );
+    parsed.claimNumber = resolvedClaim.claimNumber;
+    parsed.warnings.push(...resolvedClaim.warnings);
     if (parsed.claimNumber) {
-      parsed.warnings = parsed.warnings.filter((w) => !/claim number/i.test(w));
+      parsed.warnings = parsed.warnings.filter((w) => !/Could not find L&I claim number/i.test(w));
     }
 
     const importResult = await upsertClientFromReferral(parsed, target.therapistId, {
