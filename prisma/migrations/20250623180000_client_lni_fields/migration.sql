@@ -1,0 +1,13 @@
+-- Add L&I CAC fields to Client
+ALTER TABLE "Client" ADD COLUMN "residenceAddressLine1" TEXT;
+ALTER TABLE "Client" ADD COLUMN "residenceCity" TEXT;
+ALTER TABLE "Client" ADD COLUMN "residenceState" TEXT;
+ALTER TABLE "Client" ADD COLUMN "residenceZip" TEXT;
+ALTER TABLE "Client" ADD COLUMN "workerPhone" TEXT;
+ALTER TABLE "Client" ADD COLUMN "employerName" TEXT;
+ALTER TABLE "Client" ADD COLUMN "attendingDoctorName" TEXT;
+ALTER TABLE "Client" ADD COLUMN "attendingDoctorAddress" TEXT;
+ALTER TABLE "Client" ADD COLUMN "attendingDoctorPhone" TEXT;
+ALTER TABLE "Client" ADD COLUMN "claimManagerName" TEXT;
+ALTER TABLE "Client" ADD COLUMN "claimManagerPhone" TEXT;
+ALTER TABLE "Client" ADD COLUMN "claimManagerFax" TEXT;

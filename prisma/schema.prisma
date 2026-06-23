@@ -65,6 +65,18 @@ model Client {
   city           String?
   state          String    @default("WA")
   zip            String?
+  residenceAddressLine1 String?
+  residenceCity         String?
+  residenceState        String?
+  residenceZip          String?
+  workerPhone           String?
+  employerName          String?
+  attendingDoctorName   String?
+  attendingDoctorAddress String?
+  attendingDoctorPhone  String?
+  claimManagerName      String?
+  claimManagerPhone     String?
+  claimManagerFax       String?
   dateOfBirth    DateTime?
   gender         Gender?
   dateOfInjury   DateTime?

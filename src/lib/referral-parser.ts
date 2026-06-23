@@ -1,5 +1,6 @@
 import mammoth from "mammoth";
 import { DIAGNOSIS_LABEL_PATTERN, extractClaimNumber } from "@/lib/constants";
+import { isPlausiblePersonName } from "@/lib/parse-lni-cac-fields";
 
 export type ParsedReferral = {
   vrcName?: string;
@@ -117,12 +118,24 @@ function isUnknownClientName(firstName: string, lastName: string): boolean {
   return firstName === "Unknown" && lastName === "Unknown";
 }
 
+function pickClientNameSource(
+  parsedName?: string,
+  folderDisplayName?: string,
+): string | undefined {
+  const parsed = parsedName?.trim();
+  if (parsed && isPlausiblePersonName(parsed)) return parsed;
+  const folder = folderDisplayName?.trim();
+  if (folder && isPlausiblePersonName(folder)) return folder;
+  return parsed || folder || undefined;
+}
+
 export function resolveClientName(
   parsed: Pick<ParsedReferral, "clientName">,
   folderDisplayName?: string,
   existing?: { firstName: string; lastName: string } | null,
 ): { firstName: string; lastName: string } {
-  const nameParts = splitClientName(parsed.clientName?.trim() || folderDisplayName?.trim());
+  const nameSource = pickClientNameSource(parsed.clientName, folderDisplayName);
+  const nameParts = splitClientName(nameSource);
   if (nameParts && !isUnknownClientName(nameParts.firstName, nameParts.lastName)) {
     return nameParts;
   }

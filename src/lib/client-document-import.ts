@@ -17,10 +17,24 @@ export type ClientDocumentSupplement = {
   city?: string;
   state?: string;
   zip?: string;
+  residenceAddressLine1?: string;
+  residenceCity?: string;
+  residenceState?: string;
+  residenceZip?: string;
+  workerPhone?: string;
+  employerName?: string;
+  attendingDoctorName?: string;
+  attendingDoctorAddress?: string;
+  attendingDoctorPhone?: string;
+  claimManagerName?: string;
+  claimManagerPhone?: string;
+  claimManagerFax?: string;
   vrcName?: string;
   vrcPhone?: string;
   warnings: string[];
 };
+
+type LniSupplementFields = Omit<ClientDocumentSupplement, "diagnoses" | "warnings">;
 
 function mergeDiagnoses(into: string[], from: string[]) {
   const seen = new Set(into.map((c) => c.toUpperCase()));
@@ -33,15 +47,7 @@ function mergeDiagnoses(into: string[], from: string[]) {
   }
 }
 
-function applyClaimStatus(into: ClientDocumentSupplement, parsed: ParsedClaimStatus, source: string) {
-  into.claimNumber ??= parsed.claimNumber;
-  into.clientName ??= parsed.clientName;
-  into.dateOfInjury ??= parsed.dateOfInjury;
-  mergeDiagnoses(into.diagnoses, parsed.diagnoses);
-  for (const w of parsed.warnings) into.warnings.push(`${source}: ${w}`);
-}
-
-function applyAddresses(into: ClientDocumentSupplement, parsed: ParsedAddressesContacts, source: string) {
+function applyLniFields(into: LniSupplementFields, parsed: LniSupplementFields) {
   into.claimNumber ??= parsed.claimNumber;
   into.clientName ??= parsed.clientName;
   into.dateOfInjury ??= parsed.dateOfInjury;
@@ -49,8 +55,71 @@ function applyAddresses(into: ClientDocumentSupplement, parsed: ParsedAddressesC
   into.city ??= parsed.city;
   into.state ??= parsed.state;
   into.zip ??= parsed.zip;
+  into.residenceAddressLine1 ??= parsed.residenceAddressLine1;
+  into.residenceCity ??= parsed.residenceCity;
+  into.residenceState ??= parsed.residenceState;
+  into.residenceZip ??= parsed.residenceZip;
+  into.workerPhone ??= parsed.workerPhone;
+  into.employerName ??= parsed.employerName;
+  into.attendingDoctorName ??= parsed.attendingDoctorName;
+  into.attendingDoctorAddress ??= parsed.attendingDoctorAddress;
+  into.attendingDoctorPhone ??= parsed.attendingDoctorPhone;
+  into.claimManagerName ??= parsed.claimManagerName;
+  into.claimManagerPhone ??= parsed.claimManagerPhone;
+  into.claimManagerFax ??= parsed.claimManagerFax;
   into.vrcName ??= parsed.vrcName;
   into.vrcPhone ??= parsed.vrcPhone;
+}
+
+function fromClaimStatus(parsed: ParsedClaimStatus): LniSupplementFields {
+  return {
+    claimNumber: parsed.claimNumber,
+    clientName: parsed.clientName,
+    dateOfInjury: parsed.dateOfInjury,
+    employerName: parsed.employerName,
+    attendingDoctorName: parsed.attendingDoctorName,
+    attendingDoctorAddress: parsed.attendingDoctorAddress,
+    attendingDoctorPhone: parsed.attendingDoctorPhone,
+    claimManagerName: parsed.claimManagerName,
+    claimManagerPhone: parsed.claimManagerPhone,
+    claimManagerFax: parsed.claimManagerFax,
+  };
+}
+
+function fromAddresses(parsed: ParsedAddressesContacts): LniSupplementFields {
+  return {
+    claimNumber: parsed.claimNumber,
+    clientName: parsed.clientName,
+    dateOfInjury: parsed.dateOfInjury,
+    addressLine1: parsed.mailingAddressLine1,
+    city: parsed.mailingCity,
+    state: parsed.mailingState,
+    zip: parsed.mailingZip,
+    residenceAddressLine1: parsed.residenceAddressLine1,
+    residenceCity: parsed.residenceCity,
+    residenceState: parsed.residenceState,
+    residenceZip: parsed.residenceZip,
+    workerPhone: parsed.workerPhone,
+    employerName: parsed.employerName,
+    attendingDoctorName: parsed.attendingDoctorName,
+    attendingDoctorAddress: parsed.attendingDoctorAddress,
+    attendingDoctorPhone: parsed.attendingDoctorPhone,
+    claimManagerName: parsed.claimManagerName,
+    claimManagerPhone: parsed.claimManagerPhone,
+    claimManagerFax: parsed.claimManagerFax,
+    vrcName: parsed.vrcName,
+    vrcPhone: parsed.vrcPhone,
+  };
+}
+
+function applyClaimStatus(into: ClientDocumentSupplement, parsed: ParsedClaimStatus, source: string) {
+  applyLniFields(into, fromClaimStatus(parsed));
+  mergeDiagnoses(into.diagnoses, parsed.diagnoses);
+  for (const w of parsed.warnings) into.warnings.push(`${source}: ${w}`);
+}
+
+function applyAddresses(into: ClientDocumentSupplement, parsed: ParsedAddressesContacts, source: string) {
+  applyLniFields(into, fromAddresses(parsed));
   for (const w of parsed.warnings) into.warnings.push(`${source}: ${w}`);
 }
 
@@ -172,15 +241,7 @@ async function parseImportableFile(
 function mergeSupplements(parts: ClientDocumentSupplement[]): ClientDocumentSupplement {
   const merged: ClientDocumentSupplement = { diagnoses: [], warnings: [] };
   for (const part of parts) {
-    merged.claimNumber ??= part.claimNumber;
-    merged.clientName ??= part.clientName;
-    merged.dateOfInjury ??= part.dateOfInjury;
-    merged.addressLine1 ??= part.addressLine1;
-    merged.city ??= part.city;
-    merged.state ??= part.state;
-    merged.zip ??= part.zip;
-    merged.vrcName ??= part.vrcName;
-    merged.vrcPhone ??= part.vrcPhone;
+    applyLniFields(merged, part);
     mergeDiagnoses(merged.diagnoses, part.diagnoses);
     merged.warnings.push(...part.warnings);
   }

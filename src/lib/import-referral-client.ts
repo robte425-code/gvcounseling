@@ -1,6 +1,7 @@
 import type { ClientDocumentSupplement } from "@/lib/client-document-import";
 import type { ParsedReferral } from "@/lib/referral-parser";
 import { resolveClientName } from "@/lib/referral-parser";
+import { isPlausiblePersonName } from "@/lib/parse-lni-cac-fields";
 import { prisma } from "@/lib/prisma";
 
 export type ReferralImportResult = {
@@ -16,6 +17,18 @@ export type ReferralImportOptions = {
   /** Parsed from CAC / Addresses PDFs in the client folder */
   supplement?: ClientDocumentSupplement;
 };
+
+function pickClientName(
+  referralName?: string,
+  supplementName?: string,
+  folderDisplayName?: string,
+): string | undefined {
+  for (const candidate of [referralName, supplementName, folderDisplayName]) {
+    const trimmed = candidate?.trim();
+    if (trimmed && isPlausiblePersonName(trimmed)) return trimmed;
+  }
+  return referralName?.trim() || supplementName?.trim() || folderDisplayName?.trim() || undefined;
+}
 
 export async function upsertClientFromReferral(
   parsed: ParsedReferral,
@@ -37,7 +50,7 @@ export async function upsertClientFromReferral(
   const mergedReferral: ParsedReferral = {
     ...parsed,
     claimNumber,
-    clientName: parsed.clientName ?? supplement?.clientName,
+    clientName: pickClientName(parsed.clientName, supplement?.clientName, options.folderDisplayName),
     vrcName: parsed.vrcName ?? supplement?.vrcName,
     vrcPhone: parsed.vrcPhone ?? supplement?.vrcPhone,
     diagnoses: [...parsed.diagnoses],
@@ -75,6 +88,18 @@ export async function upsertClientFromReferral(
     city: supplement?.city ?? existing?.city ?? null,
     state: supplement?.state ?? existing?.state ?? "WA",
     zip: supplement?.zip ?? existing?.zip ?? null,
+    residenceAddressLine1: supplement?.residenceAddressLine1 ?? existing?.residenceAddressLine1 ?? null,
+    residenceCity: supplement?.residenceCity ?? existing?.residenceCity ?? null,
+    residenceState: supplement?.residenceState ?? existing?.residenceState ?? null,
+    residenceZip: supplement?.residenceZip ?? existing?.residenceZip ?? null,
+    workerPhone: supplement?.workerPhone ?? existing?.workerPhone ?? null,
+    employerName: supplement?.employerName ?? existing?.employerName ?? null,
+    attendingDoctorName: supplement?.attendingDoctorName ?? existing?.attendingDoctorName ?? null,
+    attendingDoctorAddress: supplement?.attendingDoctorAddress ?? existing?.attendingDoctorAddress ?? null,
+    attendingDoctorPhone: supplement?.attendingDoctorPhone ?? existing?.attendingDoctorPhone ?? null,
+    claimManagerName: supplement?.claimManagerName ?? existing?.claimManagerName ?? null,
+    claimManagerPhone: supplement?.claimManagerPhone ?? existing?.claimManagerPhone ?? null,
+    claimManagerFax: supplement?.claimManagerFax ?? existing?.claimManagerFax ?? null,
     dateOfBirth: mergedReferral.dateOfBirth ?? existing?.dateOfBirth ?? null,
     gender: mergedReferral.gender ?? existing?.gender ?? null,
     dateOfInjury: supplement?.dateOfInjury ?? existing?.dateOfInjury ?? null,
