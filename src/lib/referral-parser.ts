@@ -49,9 +49,16 @@ function fieldValue(text: string, label: RegExp | string): string | undefined {
     typeof label === "string"
       ? escapeRegex(label)
       : label.source.replace(/^\^|\$$/g, "");
-  const pattern = new RegExp(`${labelPart}[^:\\n]*:\\s*([^\\n]+)`, "i");
-  const match = text.match(pattern);
-  return match?.[1]?.trim() || undefined;
+  const patterns = [
+    new RegExp(`${labelPart}[^:\\n]*:\\s*([^\\n]+)`, "i"),
+    new RegExp(`${labelPart}\\s*\\n\\s*([^\\n]+)`, "i"),
+  ];
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    const value = match?.[1]?.trim();
+    if (value) return value;
+  }
+  return undefined;
 }
 
 function escapeRegex(s: string): string {
@@ -97,11 +104,35 @@ function parseNpi(text: string): string | undefined {
 function splitClientName(full?: string): { firstName: string; lastName: string } | null {
   if (!full) return null;
   const cleaned = full.split(/Please enter the LNI/i)[0]?.trim() ?? full.trim();
-  const parts = cleaned.split(/\s+/);
-  if (parts.length < 2) return { firstName: parts[0] ?? "", lastName: parts[0] ?? "" };
+  if (!cleaned) return null;
+  const parts = cleaned.split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return null;
+  if (parts.length === 1) return { firstName: parts[0]!, lastName: parts[0]! };
   const lastName = parts[parts.length - 1] ?? "";
   const firstName = parts.slice(0, -1).join(" ");
   return { firstName, lastName };
+}
+
+function isUnknownClientName(firstName: string, lastName: string): boolean {
+  return firstName === "Unknown" && lastName === "Unknown";
+}
+
+export function resolveClientName(
+  parsed: Pick<ParsedReferral, "clientName">,
+  folderDisplayName?: string,
+  existing?: { firstName: string; lastName: string } | null,
+): { firstName: string; lastName: string } {
+  const nameParts = splitClientName(parsed.clientName?.trim() || folderDisplayName?.trim());
+  if (nameParts && !isUnknownClientName(nameParts.firstName, nameParts.lastName)) {
+    return nameParts;
+  }
+  if (existing && !isUnknownClientName(existing.firstName, existing.lastName)) {
+    return { firstName: existing.firstName, lastName: existing.lastName };
+  }
+  return {
+    firstName: nameParts?.firstName ?? "Unknown",
+    lastName: nameParts?.lastName ?? "Unknown",
+  };
 }
 
 export async function parseReferralDocx(buffer: Buffer): Promise<ParsedReferral> {

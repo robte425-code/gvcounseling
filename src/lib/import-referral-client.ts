@@ -1,5 +1,5 @@
 import type { ParsedReferral } from "@/lib/referral-parser";
-import { splitClientName } from "@/lib/referral-parser";
+import { resolveClientName } from "@/lib/referral-parser";
 import { prisma } from "@/lib/prisma";
 
 export type ReferralImportResult = {
@@ -9,9 +9,15 @@ export type ReferralImportResult = {
   error?: string;
 };
 
+export type ReferralImportOptions = {
+  /** From Drive folder name: "<claim #> - <client name>" */
+  folderDisplayName?: string;
+};
+
 export async function upsertClientFromReferral(
   parsed: ParsedReferral,
   therapistId: string,
+  options: ReferralImportOptions = {},
 ): Promise<ReferralImportResult> {
   const warnings = [...parsed.warnings];
 
@@ -19,15 +25,20 @@ export async function upsertClientFromReferral(
     return { created: 0, updated: 0, warnings, error: "Could not parse claim number." };
   }
 
-  const nameParts = splitClientName(parsed.clientName);
   const existing = await prisma.client.findUnique({
     where: { lniClaimNumber: parsed.claimNumber },
   });
 
+  const { firstName, lastName } = resolveClientName(parsed, options.folderDisplayName, existing);
+
+  if (firstName === "Unknown" && lastName === "Unknown" && !parsed.clientName?.trim()) {
+    warnings.push("Could not find client name");
+  }
+
   const data = {
     lniClaimNumber: parsed.claimNumber,
-    firstName: nameParts?.firstName ?? existing?.firstName ?? "Unknown",
-    lastName: nameParts?.lastName ?? existing?.lastName ?? "Unknown",
+    firstName,
+    lastName,
     attendingNpi: parsed.attendingNpi ?? existing?.attendingNpi ?? null,
     diagnoses: parsed.diagnoses.length ? parsed.diagnoses : (existing?.diagnoses ?? []),
     dateOfBirth: parsed.dateOfBirth ?? existing?.dateOfBirth ?? null,

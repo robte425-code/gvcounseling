@@ -140,7 +140,9 @@ export async function importDriveClientFolder(
       parsed.warnings = parsed.warnings.filter((w) => !/claim number/i.test(w));
     }
 
-    const importResult = await upsertClientFromReferral(parsed, target.therapistId);
+    const importResult = await upsertClientFromReferral(parsed, target.therapistId, {
+      folderDisplayName: parsedFolder.displayName,
+    });
     if (importResult.error) {
       result.skipped = 1;
       result.errors.push(`${folderLabel}: ${importResult.error}`);
