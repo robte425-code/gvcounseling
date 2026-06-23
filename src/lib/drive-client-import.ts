@@ -136,6 +136,9 @@ export async function importDriveClientFolder(
     if (!parsed.claimNumber && parsedFolder.claimNumber) {
       parsed.claimNumber = parsedFolder.claimNumber;
     }
+    if (parsed.claimNumber) {
+      parsed.warnings = parsed.warnings.filter((w) => !/claim number/i.test(w));
+    }
 
     const importResult = await upsertClientFromReferral(parsed, target.therapistId);
     if (importResult.error) {

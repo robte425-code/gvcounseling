@@ -1,4 +1,4 @@
-import { isReferralSubmissionFilename, parseClaimNumber } from "@/lib/constants";
+import { isReferralSubmissionFilename, isLniClaimNumber, parseClaimNumber } from "@/lib/constants";
 
 const GOOGLE_DOC_MIME = "application/vnd.google-apps.document";
 const DOCX_MIME = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
@@ -95,7 +95,7 @@ export function parseClientFolderName(name: string): { claimNumber: string; disp
 
   const claimNumber = parseClaimNumber(name.slice(0, dash).trim());
   const displayName = name.slice(dash + 3).trim();
-  if (!claimNumber || !displayName) return null;
+  if (!isLniClaimNumber(claimNumber) || !displayName) return null;
 
   return { claimNumber, displayName };
 }

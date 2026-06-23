@@ -1,5 +1,5 @@
 import mammoth from "mammoth";
-import { DIAGNOSIS_LABEL_PATTERN, parseClaimNumber } from "@/lib/constants";
+import { DIAGNOSIS_LABEL_PATTERN, extractClaimNumber } from "@/lib/constants";
 
 export type ParsedReferral = {
   vrcName?: string;
@@ -92,12 +92,6 @@ function parseNpi(text: string): string | undefined {
   const beforeDiagnosis = text.split(DIAGNOSIS_LABEL_PATTERN)[0] ?? text;
   const anywhere = beforeDiagnosis.match(/\b(\d{10})\b/);
   return anywhere?.[1];
-}
-
-function extractClaimNumber(raw?: string): string | undefined {
-  if (!raw) return undefined;
-  const match = raw.match(/\b([A-Z]{2}\d+)\b/i);
-  return match ? parseClaimNumber(match[1]!) : undefined;
 }
 
 function splitClientName(full?: string): { firstName: string; lastName: string } | null {

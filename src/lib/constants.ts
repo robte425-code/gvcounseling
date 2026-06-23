@@ -48,6 +48,25 @@ export function parseClaimNumber(raw: string): string {
   return raw.trim().toUpperCase().replace(/\s+/g, "");
 }
 
+/** L&I claim numbers are typically 1–2 letters followed by digits (e.g. Y965895, BL12687). */
+export function isLniClaimNumber(raw: string): boolean {
+  return /^[A-Z]{1,2}\d+$/.test(parseClaimNumber(raw));
+}
+
+export function extractClaimNumber(raw?: string): string | undefined {
+  if (!raw) return undefined;
+
+  const tokenMatch = raw.match(/\b([A-Z]{1,2}\d+)\b/i);
+  if (tokenMatch?.[1] && isLniClaimNumber(tokenMatch[1])) {
+    return parseClaimNumber(tokenMatch[1]);
+  }
+
+  const compact = parseClaimNumber(raw.replace(/[^A-Za-z0-9]/g, ""));
+  if (isLniClaimNumber(compact)) return compact;
+
+  return undefined;
+}
+
 export function isReferralSubmissionFilename(filename: string): boolean {
   const base = filename.replace(/\.[^.]+$/, "").trim();
   return REFERRAL_FILENAME_PATTERN.test(base);
