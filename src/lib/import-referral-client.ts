@@ -30,6 +30,30 @@ function pickClientName(
   return referralName?.trim() || supplementName?.trim() || folderDisplayName?.trim() || undefined;
 }
 
+function isPlausibleVrcName(name: string): boolean {
+  const n = name.trim();
+  if (!n || n.length < 3) return false;
+  if (/^(ASSIGNED VRC|VRC OF RECORD)$/i.test(n)) return false;
+  if (/\b(LLC|CONSULTING|SERVICES|VOCATIONAL FIRM)\b/i.test(n) && !isPlausiblePersonName(n)) {
+    return false;
+  }
+  if (/\bVRC\b/i.test(n)) {
+    const withoutVrc = n.replace(/\s+VRC\b/i, "").trim();
+    if (!withoutVrc || withoutVrc.split(/\s+/).length > 4) return false;
+    if (/\b(LLC|CONSULTING|SERVICES)\b/i.test(withoutVrc)) return false;
+    return withoutVrc.length >= 3;
+  }
+  return isPlausiblePersonName(n) || (n.length >= 3 && n.length <= 40);
+}
+
+function pickVrcName(referral?: string, supplement?: string): string | undefined {
+  const ref = referral?.trim();
+  if (ref && isPlausibleVrcName(ref)) return ref;
+  const sup = supplement?.trim();
+  if (sup && isPlausibleVrcName(sup)) return sup;
+  return undefined;
+}
+
 export async function upsertClientFromReferral(
   parsed: ParsedReferral,
   therapistId: string,
@@ -51,8 +75,9 @@ export async function upsertClientFromReferral(
     ...parsed,
     claimNumber,
     clientName: pickClientName(parsed.clientName, supplement?.clientName, options.folderDisplayName),
-    vrcName: parsed.vrcName ?? supplement?.vrcName,
+    vrcName: pickVrcName(parsed.vrcName, supplement?.vrcName),
     vrcPhone: parsed.vrcPhone ?? supplement?.vrcPhone,
+    dateOfInjury: parsed.dateOfInjury ?? supplement?.dateOfInjury,
     diagnoses: [...parsed.diagnoses],
   };
   if (supplement?.diagnoses.length) {
@@ -108,7 +133,7 @@ export async function upsertClientFromReferral(
       supplement?.legalRepresentativePhone ?? existing?.legalRepresentativePhone ?? null,
     dateOfBirth: mergedReferral.dateOfBirth ?? existing?.dateOfBirth ?? null,
     gender: mergedReferral.gender ?? existing?.gender ?? null,
-    dateOfInjury: supplement?.dateOfInjury ?? existing?.dateOfInjury ?? null,
+    dateOfInjury: mergedReferral.dateOfInjury ?? existing?.dateOfInjury ?? null,
     vrcName: mergedReferral.vrcName ?? existing?.vrcName ?? null,
     vrcEmail: mergedReferral.vrcEmail ?? existing?.vrcEmail ?? null,
     vrcPhone: mergedReferral.vrcPhone ?? existing?.vrcPhone ?? null,

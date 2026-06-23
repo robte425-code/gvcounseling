@@ -9,6 +9,7 @@ export type ParsedReferral = {
   clientName?: string;
   claimNumber?: string;
   dateOfBirth?: Date;
+  dateOfInjury?: Date;
   clientEmail?: string;
   gender?: "M" | "F" | "U";
   attendingNpi?: string;
@@ -22,9 +23,12 @@ const FIELD_MARKERS = [
   "Referring VRC Name",
   "Referring VRC Email",
   "Referring VRC Phone",
+  "VRC Email",
   "Preferred method of contact",
+  "Client information",
   "Client name",
   "Please enter the LNI claim number",
+  "Injury date",
   "Client's Date of Birth",
   "Client's Email Address",
   "If client is attending PGAP",
@@ -91,6 +95,36 @@ function parseDiagnoses(text: string): string[] {
     .filter((c) => /^[A-Z]\d/.test(c));
 }
 
+function parseReferralVrcName(text: string): string | undefined {
+  return (
+    fieldValue(text, "Referring VRC Name") ??
+    fieldValue(text, /^VRC$/i) ??
+    text.match(/^VRC:\s*(.+)$/im)?.[1]?.trim()
+  );
+}
+
+function parseReferralVrcEmail(text: string): string | undefined {
+  const raw =
+    fieldValue(text, "Referring VRC Email") ??
+    fieldValue(text, /^VRC Email$/i) ??
+    text.match(/^VRC Email:\s*(.+)$/im)?.[1]?.trim();
+  return raw?.match(/[^\s]+@[^\s]+/)?.[0];
+}
+
+function parseReferralVrcPhone(text: string): string | undefined {
+  const raw =
+    fieldValue(text, "Referring VRC Phone") ??
+    fieldValue(text, /^VRC Phone$/i);
+  return raw?.match(/[\d()\-\s.+]+/)?.[0]?.trim();
+}
+
+function parseReferralInjuryDate(text: string): Date | undefined {
+  const raw =
+    fieldValue(text, /^Injury date$/i) ??
+    text.match(/^Injury date:\s*(.+)$/im)?.[1]?.trim();
+  return parseDob(raw);
+}
+
 function parseNpi(text: string): string | undefined {
   const labeled = fieldValue(text, /^NPI$/i);
   if (labeled) {
@@ -148,8 +182,7 @@ export function resolveClientName(
   };
 }
 
-export async function parseReferralDocx(buffer: Buffer): Promise<ParsedReferral> {
-  const { value: text } = await mammoth.extractRawText({ buffer });
+export function parseReferralSubmissionText(text: string): ParsedReferral {
   const normalized = normalizeReferralText(text);
   const warnings: string[] = [];
 
@@ -164,12 +197,13 @@ export async function parseReferralDocx(buffer: Buffer): Promise<ParsedReferral>
   if (!diagnoses.length) warnings.push("Could not find diagnosis codes");
 
   return {
-    vrcName: fieldValue(normalized, "Referring VRC Name"),
-    vrcEmail: fieldValue(normalized, "Referring VRC Email")?.match(/[^\s]+@[^\s]+/)?.[0],
-    vrcPhone: fieldValue(normalized, "Referring VRC Phone")?.match(/[\d()\-\s.+]+/)?.[0]?.trim(),
+    vrcName: parseReferralVrcName(normalized),
+    vrcEmail: parseReferralVrcEmail(normalized),
+    vrcPhone: parseReferralVrcPhone(normalized),
     clientName: fieldValue(normalized, "Client name"),
     claimNumber,
     dateOfBirth: parseDob(fieldValue(normalized, "Client's Date of Birth")),
+    dateOfInjury: parseReferralInjuryDate(normalized),
     clientEmail: fieldValue(normalized, "Client's Email Address")?.match(/[^\s]+@[^\s]+/)?.[0],
     gender: parseGender(fieldValue(normalized, "Client's Gender Identity")),
     attendingNpi,
@@ -177,6 +211,11 @@ export async function parseReferralDocx(buffer: Buffer): Promise<ParsedReferral>
     clientHistory: fieldValue(normalized, "Please give a brief history"),
     warnings,
   };
+}
+
+export async function parseReferralDocx(buffer: Buffer): Promise<ParsedReferral> {
+  const { value: text } = await mammoth.extractRawText({ buffer });
+  return parseReferralSubmissionText(text);
 }
 
 export { splitClientName };

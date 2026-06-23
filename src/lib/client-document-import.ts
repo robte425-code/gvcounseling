@@ -6,6 +6,7 @@ import {
 import { listClientFolderFiles, downloadFileBuffer, type DriveFile } from "@/lib/google-drive";
 import { parseLniAddressesText, type ParsedAddressesContacts } from "@/lib/parse-lni-addresses";
 import { parseLniClaimStatusText, type ParsedClaimStatus } from "@/lib/parse-lni-claim-status";
+import { parseReferralSheetText, type ParsedReferralSheet } from "@/lib/parse-referral-sheet";
 import { extractPdfText } from "@/lib/pdf-text";
 
 export type ClientDocumentSupplement = {
@@ -124,6 +125,31 @@ function fromAddresses(parsed: ParsedAddressesContacts): LniSupplementFields {
   };
 }
 
+function fromReferralSheet(parsed: ParsedReferralSheet): LniSupplementFields {
+  const fields: LniSupplementFields = {
+    claimNumber: parsed.claimNumber,
+    clientName: parsed.clientName,
+    dateOfInjury: parsed.dateOfInjury,
+    addressLine1: parsed.addressLine1,
+    city: parsed.city,
+    state: parsed.state,
+    zip: parsed.zip,
+    workerPhone: parsed.workerPhone,
+    employerName: parsed.employerName,
+    attendingDoctorName: parsed.attendingDoctorName,
+    attendingDoctorAddress: parsed.attendingDoctorAddress,
+    attendingDoctorPhone: parsed.attendingDoctorPhone,
+    vrcName: parsed.vrcName,
+  };
+  if (parsed.addressLine1) {
+    fields.residenceAddressLine1 = parsed.addressLine1;
+    fields.residenceCity = parsed.city;
+    fields.residenceState = parsed.state;
+    fields.residenceZip = parsed.zip;
+  }
+  return fields;
+}
+
 function applyClaimStatus(into: ClientDocumentSupplement, parsed: ParsedClaimStatus, source: string) {
   applyLniFields(into, fromClaimStatus(parsed));
   mergeDiagnoses(into.diagnoses, parsed.diagnoses);
@@ -225,8 +251,13 @@ async function parseImportableFile(
 ): Promise<ClientDocumentSupplement> {
   const buffer = await downloadFileBuffer(accessToken, file);
 
-  if (category === "word-doc-cac-address") {
+  if (category === "word-doc-cac-address" || category === "referral-sheet") {
     const text = await extractWordText(buffer, file.mimeType, file.name);
+    if (category === "referral-sheet") {
+      const parsed: ClientDocumentSupplement = { diagnoses: [], warnings: [] };
+      applyLniFields(parsed, fromReferralSheet(parseReferralSheetText(text)));
+      return parsed;
+    }
     return routeTextToParser(text, category, file.name);
   }
 

@@ -1,6 +1,8 @@
 import { parseLniAddressesText } from "../src/lib/parse-lni-addresses";
 import { parseLniClaimStatusText } from "../src/lib/parse-lni-claim-status";
 import { classifyClientDocument } from "../src/lib/client-document-types";
+import { parseReferralSheetText } from "../src/lib/parse-referral-sheet";
+import { parseReferralSubmissionText } from "../src/lib/referral-parser";
 
 const claimStatus = `« Back to previous page
 Current claim status
@@ -31,3 +33,47 @@ console.log("Skip BHI:", classifyClientDocument("AP addressed BHI questionnaire.
 console.log("Skip medical:", classifyClientDocument("Medical note.pdf"));
 console.log("Word docx contact:", classifyClientDocument("Valdovino contact info.docx"));
 console.log("Google doc CAC:", classifyClientDocument("Merino-Aviles.Claim & Account Center", "application/vnd.google-apps.document"));
+
+const castellonReferral = `Referral Submission
+VRC: Julie Archangeli
+VRC Email: julie@duo.vocmail.com
+Client name: Jose Castellon
+Please enter the LNI claim number: BB92037
+NPI: 1699423285
+Diagnoses: S46.912A`;
+
+console.log("Castellon referral:", parseReferralSubmissionText(castellonReferral));
+
+const valdovinosSheet = `VR Referral Sheet
+
+Injured Worker Information
+Name:
+Anabel Valdovinos Marin
+Date of birth:
+10/16/1985
+Address:
+1917 N Laventure Rd Apt C3
+Mount Vernon, WA 98273-5928
+Cell phone:
+360-555-1234
+
+Claim Information
+Claim no.:
+BK03975
+Date of injury
+07/25/2023
+VRC of record:
+Sofia E Godinez
+
+Attending Physician
+Yvette Esparza ARNP
+825 Cleveland Ave
+Mount Vernon, WA 98273-4210
+Phone: 360-450-5000
+
+Stakeholders
+Employer
+Skagit Horticulture Llc
+14113 River Bend Rd`;
+
+console.log("Valdovinos sheet:", parseReferralSheetText(valdovinosSheet));

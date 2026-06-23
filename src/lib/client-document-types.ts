@@ -6,6 +6,7 @@ export type ImportableDocCategory =
   | "claim-account-center"
   | "addresses-contacts"
   | "word-doc-cac-address"
+  | "referral-sheet"
   | "claim-number-pdf";
 
 function isWordMime(mimeType?: string): boolean {
@@ -37,8 +38,9 @@ export function classifyClientDocument(
   if (/medical|provider|note|addendum|recs/.test(n)) return null;
   if (/testing report|ld testing/.test(n)) return null;
 
-  // Word / Google Docs before generic "contact" matching (e.g. "contact info.docx").
+  // VR/OSC referral sheets before generic contact info docs.
   if (isWordFilename(filename) || isWordMime(mimeType)) {
+    if (/contact info|referral sheet/i.test(n)) return "referral-sheet";
     if (isRelevantWordDoc(n)) return "word-doc-cac-address";
     return null;
   }
