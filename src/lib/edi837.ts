@@ -20,6 +20,7 @@ export type Edi837Therapist = {
   lastName: string;
   firstName: string;
   lniProviderId: string;
+  npi: string;
 };
 
 export type Edi837Line = {
@@ -136,7 +137,17 @@ function buildClaim(hlNumber: number, claim: Edi837Claim): string {
   );
   out += seg("DTP", "439", "D8", formatDate(injuryDate));
   out += hiSegment(client.primaryDiagnosis, client.additionalDiagnoses);
-  out += seg("NM1", "82", "1", therapist.lastName.toUpperCase(), therapist.firstName.toUpperCase());
+  out += seg(
+    "NM1",
+    "82",
+    "1",
+    therapist.lastName.toUpperCase(),
+    therapist.firstName.toUpperCase(),
+    "",
+    "",
+    "XX",
+    therapist.npi,
+  );
   out += seg("REF", "G2", therapist.lniProviderId);
 
   lines.forEach((line, idx) => {
@@ -184,7 +195,7 @@ export function buildEdi837(claims: Edi837Claim[], now = new Date()): Edi837Resu
   );
   body += seg("NM1", "40", "2", ORG.receiverName, "", "", "", "46", ORG.receiverId);
   body += seg("HL", "1", "", "20", "1");
-  body += seg("NM1", "85", "2", ORG.name);
+  body += seg("NM1", "85", "2", ORG.name, "", "", "", "XX", ORG.npi);
   body += seg("N3", ORG.addressLine1);
   body += seg("N4", ORG.city, ORG.state, ORG.zip);
   body += seg("REF", "EI", ORG.taxId);

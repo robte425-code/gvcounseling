@@ -397,6 +397,9 @@ export async function generateBillAction(formData: FormData) {
     if (!inv.therapist.lniProviderId) {
       blocked.push(`${inv.client.lniClaimNumber} (therapist L&I ID missing)`);
     }
+    if (!inv.therapist.npi) {
+      blocked.push(`${inv.client.lniClaimNumber} (therapist NPI missing)`);
+    }
   }
   if (blocked.length) {
     throw new Error(`Cannot generate bill. Missing data: ${blocked.slice(0, 5).join("; ")}`);
@@ -424,6 +427,7 @@ export async function generateBillAction(formData: FormData) {
         lastName: inv.therapist.lastName,
         firstName: inv.therapist.firstName,
         lniProviderId: inv.therapist.lniProviderId!,
+        npi: inv.therapist.npi!,
       },
       lines: inv.lineItems.map((line) => ({
         procedureCode: line.procedureCode,
