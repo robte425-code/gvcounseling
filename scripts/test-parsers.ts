@@ -77,3 +77,9 @@ Skagit Horticulture Llc
 14113 River Bend Rd`;
 
 console.log("Valdovinos sheet:", parseReferralSheetText(valdovinosSheet));
+
+const marcelinaClaim = `Worker name   MARCELINA LOPEZ  Employer name  Attending doctor   OHMAN CECILIA ARNP  Claim Manager   CHASE HOLT 360-902-5886`;
+console.log("Marcelina employer:", parseLniClaimStatusText(marcelinaClaim).employerName);
+
+const merinoAddresses = `Worker mailing address   Worker residence address  710 ST RTE 821 UNIT 89  YAKIMA, WA 98901-9336  710 ST RTE 821 UNIT 89  YAKIMA, WA 98901-9336  509-750-4427`;
+console.log("Merino addresses:", parseLniAddressesText(merinoAddresses));

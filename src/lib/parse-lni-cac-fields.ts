@@ -53,7 +53,9 @@ function parseInjuryDate(raw?: string): Date | undefined {
 }
 
 const STREET_SUFFIX =
-  "(?:ST|STREET|STE|SUITE|AVE|AVENUE|RD|ROAD|DR|DRIVE|LN|LANE|BLVD|WAY|CT|COURT|PL|PLACE|HWY|PIKE|SW|SE|NW|NE)";
+  "(?:ST|STREET|STE|SUITE|AVE|AVENUE|RD|ROAD|DR|DRIVE|LN|LANE|BLVD|WAY|CT|COURT|PL|PLACE|HWY|PIKE|SW|SE|NW|NE|RTE|ROUTE)";
+
+const ADDRESS_LINE_TAIL = "(?:\\s+(?:UNIT|STE|SUITE|RTE|#|RM|APT|BLDG|[A-Z0-9#-]+))*";
 
 function parseStreetCityStateZip(text: string): {
   addressLine1?: string;
@@ -63,7 +65,7 @@ function parseStreetCityStateZip(text: string): {
 } {
   const match = text.match(
     new RegExp(
-      `(\\d+\\s+[A-Z0-9][A-Z0-9\\s.'#-]*${STREET_SUFFIX}(?:\\s+[A-Z0-9#-]+)?)\\s+([A-Z][A-Z\\s.'-]+),\\s*([A-Z]{2})\\s+(\\d{5}(?:-\\d{4})?)`,
+      `(\\d+\\s+[A-Z0-9][A-Z0-9\\s.'#-]*${STREET_SUFFIX}${ADDRESS_LINE_TAIL})\\s+([A-Z][A-Z\\s.'-]+),\\s*([A-Z]{2})\\s+(\\d{5}(?:-\\d{4})?)`,
       "i",
     ),
   );
@@ -78,7 +80,7 @@ function parseStreetCityStateZip(text: string): {
 
 function parseAllStreetCityStateZip(text: string) {
   const streetPattern = new RegExp(
-    `(\\d+\\s+[A-Z0-9][A-Z0-9\\s.'#-]*${STREET_SUFFIX}(?:\\s+[A-Z0-9#-]+)?)\\s+([A-Z][A-Z\\s.'-]+),\\s*([A-Z]{2})\\s+(\\d{5}(?:-\\d{4})?)`,
+    `(\\d+\\s+[A-Z0-9][A-Z0-9\\s.'#-]*${STREET_SUFFIX}${ADDRESS_LINE_TAIL})\\s+([A-Z][A-Z\\s.'-]+),\\s*([A-Z]{2})\\s+(\\d{5}(?:-\\d{4})?)`,
     "gi",
   );
   const poBoxPattern =
@@ -137,15 +139,40 @@ export function parseWorkerName(text: string): string | undefined {
   return undefined;
 }
 
+const ATTENDING_DOCTOR_NAME =
+  /([A-Z][A-Z]+\s+[A-Z][A-Z]+(?:\s+[A-Z]\.?)?\s+(?:PAC|ARNP|MD|DO|DC|APRN|NP))\b/i;
+
+function isPlausibleEmployerName(name: string): boolean {
+  const n = name.trim().toUpperCase();
+  if (!n || n.length < 2) return false;
+  if (/\bATTENDING DOCTOR\b/.test(n)) return false;
+  if (ATTENDING_DOCTOR_NAME.test(n)) return false;
+  if (/\b(ARNP|MD|DO|DC|PAC|NP|APRN)\b/.test(n)) return false;
+  if (LNI_FIELD_LABEL.test(n)) return false;
+  return true;
+}
+
+function parseEmployerFromLiabilityTable(text: string): string | undefined {
+  const match = text.match(
+    /Employer name\(s\)\s+Percent of liability\s*>\s*([A-Z0-9][A-Z0-9\s&.'-]+?)\s+\d+\s+percent/i,
+  );
+  const name = match?.[1]?.trim().toUpperCase();
+  return name && isPlausibleEmployerName(name) ? name : undefined;
+}
+
 function parseEmployerName(text: string): string | undefined {
+  if (/Employer name\s+Attending doctor/i.test(text)) {
+    return parseEmployerFromLiabilityTable(text);
+  }
+
   const match = text.match(
     /Employer name\s+(?:[A-Z]{1,2}\d+\s+)?([A-Z0-9][A-Z0-9\s&.'-]+?)(?=\s+Attending doctor|\s+Claim Manager|\s+Status|\s+Injury date|\s+Worker name|$)/i,
   );
-  return match?.[1]?.trim().toUpperCase();
-}
+  const name = match?.[1]?.trim().toUpperCase();
+  if (name && isPlausibleEmployerName(name)) return name;
 
-const ATTENDING_DOCTOR_NAME =
-  /([A-Z][A-Z]+\s+[A-Z][A-Z]+(?:\s+[A-Z]\.?)?\s+(?:PAC|ARNP|MD|DO|DC|APRN|NP))\b/i;
+  return parseEmployerFromLiabilityTable(text);
+}
 
 function parseAttendingDoctorName(text: string): string | undefined {
   const header = text.match(
@@ -181,7 +208,7 @@ function parseAttendingDoctor(text: string): Pick<
 
   const addressMatch = section.match(
     new RegExp(
-      `(\\d+\\s+[A-Z0-9][A-Z0-9\\s.'#-]*${STREET_SUFFIX}(?:\\s+[A-Z0-9#-]+)?)\\s+([A-Z][A-Z\\s.'-]+),\\s*([A-Z]{2})\\s+(\\d{5}(?:-\\d{4})?)`,
+      `(\\d+\\s+[A-Z0-9][A-Z0-9\\s.'#-]*${STREET_SUFFIX}${ADDRESS_LINE_TAIL})\\s+([A-Z][A-Z\\s.'-]+),\\s*([A-Z]{2})\\s+(\\d{5}(?:-\\d{4})?)`,
       "i",
     ),
   );

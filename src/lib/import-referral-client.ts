@@ -118,7 +118,9 @@ export async function upsertClientFromReferral(
     residenceState: supplement?.residenceState ?? existing?.residenceState ?? null,
     residenceZip: supplement?.residenceZip ?? existing?.residenceZip ?? null,
     workerPhone: supplement?.workerPhone ?? existing?.workerPhone ?? null,
-    employerName: supplement?.employerName ?? existing?.employerName ?? null,
+    employerName: supplement
+      ? (supplement.employerName ?? null)
+      : (existing?.employerName ?? null),
     attendingDoctorName: supplement?.attendingDoctorName ?? existing?.attendingDoctorName ?? null,
     attendingDoctorAddress: supplement?.attendingDoctorAddress ?? existing?.attendingDoctorAddress ?? null,
     attendingDoctorPhone: supplement?.attendingDoctorPhone ?? existing?.attendingDoctorPhone ?? null,
