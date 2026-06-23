@@ -7,43 +7,73 @@ export type PdfExtractResult = {
   text: string;
   pages: number;
   usedOcr: boolean;
+  parseError?: string;
+  ocrError?: string;
 };
 
 function isPdfBuffer(buffer: Buffer): boolean {
   return buffer.length >= 4 && buffer.subarray(0, 4).toString() === "%PDF";
 }
 
-async function tryPdfParse(buffer: Buffer): Promise<{ text: string; pages: number }> {
+async function tryPdfJsExtract(
+  buffer: Buffer,
+): Promise<{ text: string; pages: number; error?: string }> {
   try {
-    const { PDFParse } = await import("pdf-parse");
-    const parser = new PDFParse({ data: buffer });
-    const result = await parser.getText();
-    await parser.destroy();
-    return { text: result.text ?? "", pages: result.total ?? result.pages?.length ?? 0 };
-  } catch {
-    return { text: "", pages: 0 };
+    const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
+    const doc = await pdfjs
+      .getDocument({ data: new Uint8Array(buffer), useSystemFonts: true })
+      .promise;
+
+    const parts: string[] = [];
+    for (let pageNum = 1; pageNum <= doc.numPages; pageNum++) {
+      const page = await doc.getPage(pageNum);
+      const content = await page.getTextContent();
+      parts.push(
+        content.items
+          .map((item) => ("str" in item && typeof item.str === "string" ? item.str : ""))
+          .join(" "),
+      );
+    }
+
+    const pages = doc.numPages;
+    await doc.destroy();
+    return { text: parts.join("\n"), pages };
+  } catch (e) {
+    return {
+      text: "",
+      pages: 0,
+      error: e instanceof Error ? e.message : "PDF text extraction failed",
+    };
   }
 }
 
 export async function extractPdfText(buffer: Buffer): Promise<PdfExtractResult> {
   if (!isPdfBuffer(buffer)) {
-    return { text: "", pages: 0, usedOcr: false };
+    return { text: "", pages: 0, usedOcr: false, parseError: "Not a PDF file" };
   }
 
-  const parsed = await tryPdfParse(buffer);
+  const parsed = await tryPdfJsExtract(buffer);
 
   if (isTextExtractable(parsed.text, parsed.pages)) {
     return { text: parsed.text, pages: parsed.pages, usedOcr: false };
   }
 
+  let ocrError: string | undefined;
   try {
     const ocrText = await ocrPdfBuffer(buffer, MAX_OCR_PAGES);
     if (ocrText.trim()) {
       return { text: ocrText, pages: parsed.pages, usedOcr: true };
     }
-  } catch {
-    // Fall through to whatever pdf-parse returned.
+    ocrError = "OCR returned no text";
+  } catch (e) {
+    ocrError = e instanceof Error ? e.message : "OCR failed";
   }
 
-  return { text: parsed.text, pages: parsed.pages, usedOcr: false };
+  return {
+    text: parsed.text,
+    pages: parsed.pages,
+    usedOcr: false,
+    parseError: parsed.error,
+    ocrError,
+  };
 }

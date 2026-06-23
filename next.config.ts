@@ -4,7 +4,7 @@ const nextConfig: NextConfig = {
   images: {
     formats: ["image/avif", "image/webp"],
   },
-  serverExternalPackages: ["pdf-parse", "pdfjs-dist"],
+  serverExternalPackages: ["pdfjs-dist", "word-extractor"],
 };
 
 export default nextConfig;

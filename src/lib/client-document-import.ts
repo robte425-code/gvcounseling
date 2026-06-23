@@ -54,33 +54,54 @@ function applyAddresses(into: ClientDocumentSupplement, parsed: ParsedAddressesC
   for (const w of parsed.warnings) into.warnings.push(`${source}: ${w}`);
 }
 
+function isAddressesSource(
+  category: ImportableDocCategory,
+  filename: string,
+  text: string,
+): boolean {
+  if (category === "addresses-contacts") return true;
+  if (category === "claim-account-center" || category === "claim-number-pdf") return false;
+  if (/address|contact/i.test(filename)) return true;
+  return /addresses?\s*&?\s*contacts?/i.test(text);
+}
+
+function isClaimStatusSource(
+  category: ImportableDocCategory,
+  filename: string,
+  text: string,
+): boolean {
+  if (category === "claim-account-center" || category === "claim-number-pdf") return true;
+  if (category === "addresses-contacts") return false;
+  if (/claim|status|\bcac\b|account center/i.test(filename)) return true;
+  return /current claim status/i.test(text);
+}
+
 function routeTextToParser(
   text: string,
   category: ImportableDocCategory,
   filename: string,
 ): ClientDocumentSupplement {
   const empty: ClientDocumentSupplement = { diagnoses: [], warnings: [] };
+  const addressDoc = isAddressesSource(category, filename, text);
+  const claimDoc = isClaimStatusSource(category, filename, text);
 
-  if (category === "addresses-contacts" || /addresses?\s*&?\s*contacts?/i.test(text)) {
+  if (addressDoc && !claimDoc) {
     applyAddresses(empty, parseLniAddressesText(text), filename);
     return empty;
   }
 
-  if (
-    category === "claim-account-center" ||
-    category === "claim-number-pdf" ||
-    /current claim status/i.test(text)
-  ) {
+  if (claimDoc && !addressDoc) {
     applyClaimStatus(empty, parseLniClaimStatusText(text), filename);
     return empty;
   }
 
-  if (category === "word-doc-cac-address") {
-    if (/addresses?\s*&?\s*contacts?/i.test(text)) {
-      applyAddresses(empty, parseLniAddressesText(text), filename);
-    } else {
-      applyClaimStatus(empty, parseLniClaimStatusText(text), filename);
-    }
+  if (addressDoc) {
+    applyAddresses(empty, parseLniAddressesText(text), filename);
+    return empty;
+  }
+
+  if (claimDoc) {
+    applyClaimStatus(empty, parseLniClaimStatusText(text), filename);
     return empty;
   }
 
@@ -88,9 +109,32 @@ function routeTextToParser(
   return empty;
 }
 
-async function extractWordText(buffer: Buffer): Promise<string> {
-  const { value } = await mammoth.extractRawText({ buffer });
-  return value;
+function isDocxBuffer(buffer: Buffer, mimeType?: string, filename?: string): boolean {
+  if (mimeType === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") {
+    return true;
+  }
+  if (mimeType === "application/vnd.google-apps.document") return true;
+  return /\.docx$/i.test(filename ?? "");
+}
+
+async function extractWordText(
+  buffer: Buffer,
+  mimeType?: string,
+  filename?: string,
+): Promise<string> {
+  if (isDocxBuffer(buffer, mimeType, filename)) {
+    const { value } = await mammoth.extractRawText({ buffer });
+    return value;
+  }
+
+  const WordExtractor = (await import("word-extractor")).default;
+  const doc = await new WordExtractor().extract(buffer);
+  const body = doc.getBody().trim();
+  if (body.length > 1) return body;
+
+  throw new Error(
+    "Legacy Word (.doc) file contains no extractable text. Re-save as .docx or PDF.",
+  );
 }
 
 async function parseImportableFile(
@@ -101,15 +145,22 @@ async function parseImportableFile(
   const buffer = await downloadFileBuffer(accessToken, file);
 
   if (category === "word-doc-cac-address") {
-    const text = await extractWordText(buffer);
+    const text = await extractWordText(buffer, file.mimeType, file.name);
     return routeTextToParser(text, category, file.name);
   }
 
-  const { text, usedOcr } = await extractPdfText(buffer);
+  const { text, usedOcr, parseError, ocrError } = await extractPdfText(buffer);
   if (!text.trim()) {
+    const details = [
+      usedOcr ? "OCR attempted" : null,
+      ocrError ? `OCR: ${ocrError.slice(0, 120)}` : null,
+      parseError ? `PDF: ${parseError.slice(0, 120)}` : null,
+    ].filter(Boolean);
     return {
       diagnoses: [],
-      warnings: [`${file.name}: no text extracted${usedOcr ? " (OCR attempted)" : ""}`],
+      warnings: [
+        `${file.name}: no text extracted${details.length ? ` (${details.join("; ")})` : ""}`,
+      ],
     };
   }
 
