@@ -1,4 +1,9 @@
 import type { ClientDocumentSupplement } from "@/lib/client-document-import";
+import type { ClientDocumentPart } from "@/lib/client-import-quality";
+import {
+  isPlausibleVrcName,
+  validateAndRepairClientImport,
+} from "@/lib/client-import-quality";
 import type { ParsedReferral } from "@/lib/referral-parser";
 import { resolveClientName } from "@/lib/referral-parser";
 import { isPlausiblePersonName } from "@/lib/parse-lni-cac-fields";
@@ -14,8 +19,11 @@ export type ReferralImportResult = {
 export type ReferralImportOptions = {
   /** From Drive folder name: "<claim #> - <client name>" */
   folderDisplayName?: string;
+  folderClaimNumber?: string;
   /** Parsed from CAC / Addresses PDFs in the client folder */
   supplement?: ClientDocumentSupplement;
+  /** Per-document parse results for validation and repair */
+  documentParts?: ClientDocumentPart[];
 };
 
 function pickClientName(
@@ -28,22 +36,6 @@ function pickClientName(
     if (trimmed && isPlausiblePersonName(trimmed)) return trimmed;
   }
   return referralName?.trim() || supplementName?.trim() || folderDisplayName?.trim() || undefined;
-}
-
-function isPlausibleVrcName(name: string): boolean {
-  const n = name.trim();
-  if (!n || n.length < 3) return false;
-  if (/^(ASSIGNED VRC|VRC OF RECORD)$/i.test(n)) return false;
-  if (/\b(LLC|CONSULTING|SERVICES|VOCATIONAL FIRM)\b/i.test(n) && !isPlausiblePersonName(n)) {
-    return false;
-  }
-  if (/\bVRC\b/i.test(n)) {
-    const withoutVrc = n.replace(/\s+VRC\b/i, "").trim();
-    if (!withoutVrc || withoutVrc.split(/\s+/).length > 4) return false;
-    if (/\b(LLC|CONSULTING|SERVICES)\b/i.test(withoutVrc)) return false;
-    return withoutVrc.length >= 3;
-  }
-  return isPlausiblePersonName(n) || (n.length >= 3 && n.length <= 40);
 }
 
 function pickVrcName(referral?: string, supplement?: string): string | undefined {
@@ -59,10 +51,24 @@ export async function upsertClientFromReferral(
   therapistId: string,
   options: ReferralImportOptions = {},
 ): Promise<ReferralImportResult> {
-  const supplement = options.supplement;
-  const warnings = [...parsed.warnings, ...(supplement?.warnings ?? [])];
+  const quality = validateAndRepairClientImport(parsed, options.supplement, {
+    folderClaimNumber: options.folderClaimNumber,
+    folderDisplayName: options.folderDisplayName,
+    documentParts: options.documentParts,
+  });
 
-  const claimNumber = parsed.claimNumber ?? supplement?.claimNumber;
+  const repairedReferral = quality.referral;
+  const supplement = quality.supplement;
+  const seenWarnings = new Set<string>();
+  const warnings: string[] = [];
+  for (const w of [...quality.warnings, ...repairedReferral.warnings, ...(supplement?.warnings ?? [])]) {
+    if (!seenWarnings.has(w)) {
+      seenWarnings.add(w);
+      warnings.push(w);
+    }
+  }
+
+  const claimNumber = repairedReferral.claimNumber ?? supplement?.claimNumber;
   if (!claimNumber) {
     return { created: 0, updated: 0, warnings, error: "Could not parse claim number." };
   }
@@ -72,13 +78,17 @@ export async function upsertClientFromReferral(
   });
 
   const mergedReferral: ParsedReferral = {
-    ...parsed,
+    ...repairedReferral,
     claimNumber,
-    clientName: pickClientName(parsed.clientName, supplement?.clientName, options.folderDisplayName),
-    vrcName: pickVrcName(parsed.vrcName, supplement?.vrcName),
-    vrcPhone: parsed.vrcPhone ?? supplement?.vrcPhone,
-    dateOfInjury: parsed.dateOfInjury ?? supplement?.dateOfInjury,
-    diagnoses: [...parsed.diagnoses],
+    clientName: pickClientName(
+      repairedReferral.clientName,
+      supplement?.clientName,
+      options.folderDisplayName,
+    ),
+    vrcName: pickVrcName(repairedReferral.vrcName, supplement?.vrcName),
+    vrcPhone: repairedReferral.vrcPhone ?? supplement?.vrcPhone,
+    dateOfInjury: repairedReferral.dateOfInjury ?? supplement?.dateOfInjury,
+    diagnoses: [...repairedReferral.diagnoses],
   };
   if (supplement?.diagnoses.length) {
     const seen = new Set(mergedReferral.diagnoses.map((c) => c.toUpperCase()));

@@ -8,6 +8,7 @@ import { parseLniAddressesText, type ParsedAddressesContacts } from "@/lib/parse
 import { parseLniClaimStatusText, type ParsedClaimStatus } from "@/lib/parse-lni-claim-status";
 import { parseReferralSheetText, type ParsedReferralSheet } from "@/lib/parse-referral-sheet";
 import { extractPdfText } from "@/lib/pdf-text";
+import type { ClientDocumentPart } from "@/lib/client-import-quality";
 
 export type ClientDocumentSupplement = {
   claimNumber?: string;
@@ -295,24 +296,36 @@ export async function importClientDocumentsFromFolder(
   accessToken: string,
   clientFolderId: string,
 ): Promise<ClientDocumentSupplement> {
+  const { merged } = await importClientDocumentsFromFolderDetailed(accessToken, clientFolderId);
+  return merged;
+}
+
+export async function importClientDocumentsFromFolderDetailed(
+  accessToken: string,
+  clientFolderId: string,
+): Promise<{ merged: ClientDocumentSupplement; parts: ClientDocumentPart[] }> {
   const files = await listClientFolderFiles(accessToken, clientFolderId);
   const importable = files
     .map((f) => ({ file: f, category: classifyClientDocument(f.name, f.mimeType) }))
     .filter((x): x is { file: DriveFile; category: ImportableDocCategory } => x.category !== null);
 
-  const parts: ClientDocumentSupplement[] = [];
+  const parts: ClientDocumentPart[] = [];
   for (const { file, category } of importable) {
     try {
-      parts.push(await parseImportableFile(accessToken, file, category));
+      const supplement = await parseImportableFile(accessToken, file, category);
+      parts.push({ filename: file.name, supplement });
     } catch (e) {
       parts.push({
-        diagnoses: [],
-        warnings: [
-          `${file.name}: ${e instanceof Error ? e.message : "Could not parse file."}`,
-        ],
+        filename: file.name,
+        supplement: {
+          diagnoses: [],
+          warnings: [
+            `${file.name}: ${e instanceof Error ? e.message : "Could not parse file."}`,
+          ],
+        },
       });
     }
   }
 
-  return mergeSupplements(parts);
+  return { merged: mergeSupplements(parts.map((p) => p.supplement)), parts };
 }

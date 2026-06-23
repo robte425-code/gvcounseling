@@ -8,7 +8,7 @@ import {
 } from "@/lib/google-drive";
 import { resolveImportClaimNumber } from "@/lib/constants";
 import { getValidGoogleAccessToken } from "@/lib/google-oauth";
-import { importClientDocumentsFromFolder } from "@/lib/client-document-import";
+import { importClientDocumentsFromFolderDetailed } from "@/lib/client-document-import";
 import { upsertClientFromReferral } from "@/lib/import-referral-client";
 import { parseReferralDocx } from "@/lib/referral-parser";
 import { prisma } from "@/lib/prisma";
@@ -132,9 +132,9 @@ export async function importDriveClientFolder(
       return result;
     }
 
-    const [buffer, supplement] = await Promise.all([
+    const [buffer, { merged: supplement, parts }] = await Promise.all([
       downloadReferralDocx(accessToken, referralFile),
-      importClientDocumentsFromFolder(accessToken, target.folderId),
+      importClientDocumentsFromFolderDetailed(accessToken, target.folderId),
     ]);
     const parsed = await parseReferralDocx(buffer);
 
@@ -151,7 +151,9 @@ export async function importDriveClientFolder(
 
     const importResult = await upsertClientFromReferral(parsed, target.therapistId, {
       folderDisplayName: parsedFolder.displayName,
+      folderClaimNumber: parsedFolder.claimNumber,
       supplement,
+      documentParts: parts,
     });
     if (importResult.error) {
       result.skipped = 1;

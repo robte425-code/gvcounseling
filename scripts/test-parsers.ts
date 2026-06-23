@@ -2,6 +2,7 @@ import { parseLniAddressesText } from "../src/lib/parse-lni-addresses";
 import { parseLniClaimStatusText } from "../src/lib/parse-lni-claim-status";
 import { classifyClientDocument } from "../src/lib/client-document-types";
 import { resolveImportClaimNumber } from "../src/lib/constants";
+import { validateAndRepairClientImport } from "../src/lib/client-import-quality";
 import { parseReferralSheetText } from "../src/lib/parse-referral-sheet";
 import { parseReferralSubmissionText } from "../src/lib/referral-parser";
 
@@ -92,3 +93,42 @@ console.log(
 
 const alonsoContacts = `Worker mailing address Worker residence address 1505 S ROAD 40 E TRLR 36 PASCO, WA 99301-6414 509-551-1130 Percent of liability 100 percent Vocational counselor THOMAS NATHAN W VRC 7401 W HOOD PLACE STE 115 KENNEWICK, WA 99336 Attending doctor DECHTER STEPHEN M DO BENTON FRANKLIN ORTHOPEDICO 8200 W GAGE BLVD KENNEWICK, WA 99336 Location Phone: 509-586-2828 Employer name(s) > TSCHIRKY TED Vocational firm`;
 console.log("Alonso contacts:", parseLniAddressesText(alonsoContacts));
+
+const badMerge = validateAndRepairClientImport(
+  {
+    vrcName: "Lisa Larsen",
+    vrcEmail: "llarsen@soundvoc.com",
+    diagnoses: ["S39.012A"],
+    warnings: [],
+  },
+  {
+    employerName: "ATTENDING DOCTOR OHMAN CECILIA ARNP",
+    addressLine1: "1505 S ROAD 40 E TRLR 36",
+    city: "PASCO",
+    state: "WA",
+    zip: "99301",
+    residenceAddressLine1:
+      "1130 PERCENT OF LIABILITY 100 PERCENT VOCATIONAL COUNSELOR THOMAS NATHAN W VRC",
+    residenceCity: "KENNEWICK",
+    residenceState: "WA",
+    residenceZip: "99336",
+    attendingDoctorAddress: "8200 W GAGE BLVD, KENNEWICK, WA 99336",
+    attendingDoctorPhone: "509-586-2828",
+    vrcName: "VOCATIONAL COUNSELOR THOMAS NATHAN W VRC",
+    diagnoses: [],
+    warnings: [],
+  },
+  {
+    folderClaimNumber: "BL13687",
+    documentParts: [
+      { filename: "contacts.pdf", supplement: parseLniAddressesText(alonsoContacts) as never },
+    ],
+  },
+);
+console.log("Quality repair:", {
+  employer: badMerge.supplement?.employerName,
+  residence: badMerge.supplement?.residenceAddressLine1,
+  doctor: badMerge.supplement?.attendingDoctorName,
+  vrc: badMerge.referral.vrcName,
+  warnings: badMerge.warnings.filter((w) => w.startsWith("Data quality")),
+});

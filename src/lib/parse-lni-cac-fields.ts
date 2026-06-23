@@ -142,7 +142,7 @@ export function parseWorkerName(text: string): string | undefined {
 const ATTENDING_DOCTOR_NAME =
   /([A-Z][A-Z]+\s+[A-Z][A-Z]+(?:\s+[A-Z]\.?)?\s+(?:PAC|ARNP|MD|DO|DC|APRN|NP))\b/i;
 
-function isPlausibleEmployerName(name: string): boolean {
+export function isPlausibleEmployerName(name: string): boolean {
   const n = name.trim().toUpperCase();
   if (!n || n.length < 2) return false;
   if (/\bATTENDING DOCTOR\b/.test(n)) return false;
@@ -333,7 +333,7 @@ function parseClaimManager(text: string): Pick<
   };
 }
 
-function isPlausibleWorkerAddress(addressLine1?: string): boolean {
+export function isPlausibleWorkerAddress(addressLine1?: string): boolean {
   if (!addressLine1) return false;
   const line = addressLine1.trim().toUpperCase();
   if (
