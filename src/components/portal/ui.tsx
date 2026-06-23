@@ -15,6 +15,7 @@ export const statusBadge: Record<string, string> = {
   DRAFT: "bg-muted/15 text-muted",
   SUBMITTED: "bg-amber-100 text-amber-900",
   BILLED: "bg-primary/10 text-primary-dark",
+  READY: "bg-primary/10 text-primary-dark",
 };
 
 export function StatusBadge({ status }: { status: string }) {

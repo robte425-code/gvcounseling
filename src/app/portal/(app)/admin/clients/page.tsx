@@ -53,7 +53,7 @@ export default async function AdminClientsPage() {
                   </td>
                   <td className="py-3 pr-4">
                     {readiness.ready ? (
-                      <StatusBadge status="BILLED" />
+                      <StatusBadge status="READY" />
                     ) : (
                       <span className="text-xs text-amber-800">{readiness.missing.join(", ")}</span>
                     )}
