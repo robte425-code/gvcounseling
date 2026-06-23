@@ -61,6 +61,7 @@ export function ClientImportForms({
   const [referralResult, setReferralResult] = useState<ImportResult | null>(null);
   const [csvResult, setCsvResult] = useState<ImportResult | null>(null);
   const [driveResult, setDriveResult] = useState<ImportResult | null>(null);
+  const [driveProgress, setDriveProgress] = useState<string | null>(null);
   const [loading, setLoading] = useState<string | null>(null);
   const [connected, setConnected] = useState(driveStatus.connected);
   const [googleEmail, setGoogleEmail] = useState(driveStatus.googleEmail ?? null);
@@ -94,10 +95,73 @@ export function ClientImportForms({
   async function syncFromDrive() {
     setLoading("drive");
     setDriveResult(null);
-    const res = await fetch("/api/portal/clients/import-drive", { method: "POST" });
-    const body = (await res.json()) as ImportResult;
-    setLoading(null);
-    setDriveResult(body);
+    setDriveProgress("Scanning Google Drive…");
+
+    try {
+      const scanRes = await fetch("/api/portal/clients/import-drive", {
+        method: "GET",
+        credentials: "same-origin",
+      });
+      const scanBody = (await scanRes.json()) as {
+        folders?: Array<{
+          folderId: string;
+          folderName: string;
+          therapistId: string;
+          therapistName: string;
+        }>;
+        errors?: string[];
+        error?: string;
+      };
+
+      if (!scanRes.ok) {
+        setDriveResult({ error: scanBody.error ?? "Could not scan Google Drive folders." });
+        return;
+      }
+
+      const aggregate: ImportResult = {
+        created: 0,
+        updated: 0,
+        skipped: 0,
+        errors: [...(scanBody.errors ?? [])],
+        warnings: [],
+      };
+
+      const folders = scanBody.folders ?? [];
+      if (!folders.length) {
+        setDriveResult(aggregate);
+        return;
+      }
+
+      for (const [index, folder] of folders.entries()) {
+        setDriveProgress(`Importing ${index + 1} of ${folders.length}: ${folder.folderName}`);
+        const res = await fetch("/api/portal/clients/import-drive", {
+          method: "POST",
+          credentials: "same-origin",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(folder),
+        });
+        const body = (await res.json()) as ImportResult;
+
+        if (!res.ok) {
+          aggregate.errors?.push(body.error ?? `Failed on ${folder.folderName}.`);
+          aggregate.skipped = (aggregate.skipped ?? 0) + 1;
+          continue;
+        }
+
+        aggregate.created = (aggregate.created ?? 0) + (body.created ?? 0);
+        aggregate.updated = (aggregate.updated ?? 0) + (body.updated ?? 0);
+        aggregate.skipped = (aggregate.skipped ?? 0) + (body.skipped ?? 0);
+        if (body.errors?.length) aggregate.errors?.push(...body.errors);
+        if (body.warnings?.length) aggregate.warnings?.push(...body.warnings);
+      }
+
+      setDriveResult(aggregate);
+    } catch {
+      setDriveResult({ error: "Drive sync failed. Check your connection and try again." });
+    } finally {
+      setDriveProgress(null);
+      setLoading(null);
+    }
   }
 
   async function disconnectDrive() {
@@ -154,7 +218,7 @@ export function ClientImportForms({
               disabled={loading !== null}
               className={portalButtonClass}
             >
-              {loading === "drive" ? "Syncing…" : "Sync from Drive"}
+              {loading === "drive" ? driveProgress ?? "Syncing…" : "Sync from Drive"}
             </button>
             <button
               type="button"

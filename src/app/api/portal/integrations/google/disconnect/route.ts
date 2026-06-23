@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
-import { requireAdmin } from "@/auth";
+import { requireAdminApi } from "@/auth";
 import { prisma } from "@/lib/prisma";
 
 export async function POST() {
-  const session = await requireAdmin();
+  const auth = await requireAdminApi();
+  if (!auth.ok) return auth.response;
 
-  await prisma.googleDriveConnection.deleteMany({ where: { userId: session.user.id } });
+  await prisma.googleDriveConnection.deleteMany({ where: { userId: auth.session.user.id } });
 
   return NextResponse.json({ ok: true });
 }

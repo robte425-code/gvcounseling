@@ -19,6 +19,13 @@ export type DriveImportResult = {
   warnings: string[];
 };
 
+export type DriveFolderTarget = {
+  folderId: string;
+  folderName: string;
+  therapistId: string;
+  therapistName: string;
+};
+
 type TherapistFolder = {
   therapistId: string;
   therapistName: string;
@@ -26,10 +33,8 @@ type TherapistFolder = {
   folderName: string;
 };
 
-export async function importClientsFromGoogleDrive(userId: string): Promise<DriveImportResult> {
-  const accessToken = await getValidGoogleAccessToken(userId);
+async function getTherapistSources(): Promise<TherapistFolder[]> {
   const folderConfig = getTherapistFolderConfig();
-
   const therapists = await prisma.user.findMany({
     where: { role: "THERAPIST" },
     select: { id: true, firstName: true, lastName: true, email: true },
@@ -42,7 +47,7 @@ export async function importClientsFromGoogleDrive(userId: string): Promise<Driv
     throw new Error("Maria and Steven therapist accounts must exist before importing from Drive.");
   }
 
-  const sources: TherapistFolder[] = [
+  return [
     {
       therapistId: maria.id,
       therapistName: `${maria.firstName} ${maria.lastName}`,
@@ -56,6 +61,52 @@ export async function importClientsFromGoogleDrive(userId: string): Promise<Driv
       folderName: folderConfig.steven.folderName,
     },
   ];
+}
+
+export async function scanDriveClientFolders(userId: string): Promise<{
+  folders: DriveFolderTarget[];
+  errors: string[];
+}> {
+  const accessToken = await getValidGoogleAccessToken(userId);
+  const sources = await getTherapistSources();
+  const folders: DriveFolderTarget[] = [];
+  const errors: string[] = [];
+
+  for (const source of sources) {
+    try {
+      const parentFolderId = await resolveTherapistFolderId(
+        accessToken,
+        source.folderId,
+        source.folderName,
+      );
+      const clientFolders = await listClientFolders(accessToken, parentFolderId);
+
+      for (const folder of clientFolders) {
+        if (!parseClientFolderName(folder.name)) continue;
+        folders.push({
+          folderId: folder.id,
+          folderName: folder.name,
+          therapistId: source.therapistId,
+          therapistName: source.therapistName,
+        });
+      }
+    } catch (e) {
+      errors.push(
+        `${source.therapistName}: ${e instanceof Error ? e.message : "Could not list client folders."}`,
+      );
+    }
+  }
+
+  return { folders, errors };
+}
+
+export async function importDriveClientFolder(
+  userId: string,
+  target: Pick<DriveFolderTarget, "folderId" | "folderName" | "therapistId" | "therapistName">,
+): Promise<DriveImportResult> {
+  const accessToken = await getValidGoogleAccessToken(userId);
+  const folderLabel = `${target.therapistName}/${target.folderName}`;
+  const parsedFolder = parseClientFolderName(target.folderName);
 
   const result: DriveImportResult = {
     created: 0,
@@ -65,61 +116,67 @@ export async function importClientsFromGoogleDrive(userId: string): Promise<Driv
     warnings: [],
   };
 
-  for (const source of sources) {
-    let parentFolderId: string;
-    try {
-      parentFolderId = await resolveTherapistFolderId(accessToken, source.folderId, source.folderName);
-    } catch (e) {
-      result.errors.push(
-        `${source.therapistName}: ${e instanceof Error ? e.message : "Could not find client folder."}`,
-      );
-      continue;
+  if (!parsedFolder) {
+    result.skipped = 1;
+    result.warnings.push(`${folderLabel}: skipped (folder name is not "<claim #> - <client name>").`);
+    return result;
+  }
+
+  try {
+    const referralFile = await findReferralSubmissionFile(accessToken, target.folderId);
+    if (!referralFile) {
+      result.skipped = 1;
+      result.warnings.push(`${folderLabel}: no Referral Submission file found.`);
+      return result;
     }
 
-    const clientFolders = await listClientFolders(accessToken, parentFolderId);
+    const buffer = await downloadReferralDocx(accessToken, referralFile);
+    const parsed = await parseReferralDocx(buffer);
 
-    for (const folder of clientFolders) {
-      const folderLabel = `${source.therapistName}/${folder.name}`;
-      const parsedFolder = parseClientFolderName(folder.name);
-
-      if (!parsedFolder) {
-        result.skipped++;
-        result.warnings.push(`${folderLabel}: skipped (folder name is not "<claim #> - <client name>").`);
-        continue;
-      }
-
-      try {
-        const referralFile = await findReferralSubmissionFile(accessToken, folder.id);
-        if (!referralFile) {
-          result.skipped++;
-          result.warnings.push(`${folderLabel}: no Referral Submission file found.`);
-          continue;
-        }
-
-        const buffer = await downloadReferralDocx(accessToken, referralFile);
-        const parsed = await parseReferralDocx(buffer);
-
-        if (!parsed.claimNumber && parsedFolder.claimNumber) {
-          parsed.claimNumber = parsedFolder.claimNumber;
-        }
-
-        const importResult = await upsertClientFromReferral(parsed, source.therapistId);
-        if (importResult.error) {
-          result.skipped++;
-          result.errors.push(`${folderLabel}: ${importResult.error}`);
-          continue;
-        }
-
-        result.created += importResult.created;
-        result.updated += importResult.updated;
-        for (const warning of importResult.warnings) {
-          result.warnings.push(`${folderLabel}: ${warning}`);
-        }
-      } catch (e) {
-        result.skipped++;
-        result.errors.push(`${folderLabel}: ${e instanceof Error ? e.message : "Import failed."}`);
-      }
+    if (!parsed.claimNumber && parsedFolder.claimNumber) {
+      parsed.claimNumber = parsedFolder.claimNumber;
     }
+
+    const importResult = await upsertClientFromReferral(parsed, target.therapistId);
+    if (importResult.error) {
+      result.skipped = 1;
+      result.errors.push(`${folderLabel}: ${importResult.error}`);
+      return result;
+    }
+
+    result.created = importResult.created;
+    result.updated = importResult.updated;
+    for (const warning of importResult.warnings) {
+      result.warnings.push(`${folderLabel}: ${warning}`);
+    }
+  } catch (e) {
+    result.skipped = 1;
+    result.errors.push(`${folderLabel}: ${e instanceof Error ? e.message : "Import failed."}`);
+  }
+
+  return result;
+}
+
+function mergeResults(into: DriveImportResult, part: DriveImportResult) {
+  into.created += part.created;
+  into.updated += part.updated;
+  into.skipped += part.skipped;
+  into.errors.push(...part.errors);
+  into.warnings.push(...part.warnings);
+}
+
+export async function importClientsFromGoogleDrive(userId: string): Promise<DriveImportResult> {
+  const { folders, errors } = await scanDriveClientFolders(userId);
+  const result: DriveImportResult = {
+    created: 0,
+    updated: 0,
+    skipped: 0,
+    errors: [...errors],
+    warnings: [],
+  };
+
+  for (const folder of folders) {
+    mergeResults(result, await importDriveClientFolder(userId, folder));
   }
 
   return result;

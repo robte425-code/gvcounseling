@@ -62,3 +62,15 @@ export async function requireTherapist() {
   }
   return session;
 }
+
+/** Use in Route Handlers instead of requireAdmin() — returns JSON errors, never redirect(). */
+export async function requireAdminApi() {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return { ok: false as const, response: Response.json({ error: "Unauthorized." }, { status: 401 }) };
+  }
+  if (session.user.role !== "ADMIN") {
+    return { ok: false as const, response: Response.json({ error: "Forbidden." }, { status: 403 }) };
+  }
+  return { ok: true as const, session };
+}
