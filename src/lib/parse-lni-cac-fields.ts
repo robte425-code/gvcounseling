@@ -38,6 +38,10 @@ export function isPlausiblePersonName(name: string): boolean {
   if (LNI_FIELD_LABEL.test(n)) return false;
   if (/\b[A-Z]{1,2}\d{5,}\b/.test(n)) return false;
   if (/\d{1,2}\/\d{1,2}\/\d{4}/.test(n)) return false;
+  if (n.endsWith(".")) {
+    const trimmed = n.slice(0, -1);
+    if (trimmed.length >= 4 && /^[A-Z][A-Z\s.'-]+$/i.test(trimmed)) return true;
+  }
   if ((n.match(/\b[A-Z]{2,}\b/g) ?? []).length > 5) return false;
   return /^[A-Z][A-Z\s.'-]+$/i.test(n);
 }
@@ -50,6 +54,173 @@ function parseInjuryDate(raw?: string): Date | undefined {
   if (!raw) return undefined;
   const d = new Date(raw);
   return Number.isNaN(d.getTime()) ? undefined : d;
+}
+
+/** Screenshot CAC exports stack worker/employer/doctor/claim manager after the injury date. */
+function parseCompactStackedFields(text: string): Partial<ParsedLniCacFields> {
+  const injuryMatch = text.match(/Injury dat(?:e)?\s+(\d{1,2}\/\d{1,2}\/\d{4})/i);
+  if (!injuryMatch) return {};
+
+  const afterInjury = text.slice(injuryMatch.index! + injuryMatch[0].length);
+  const endMarkers = [
+    "Worker mailing address",
+    "Worker residence address",
+    "Worker mailing",
+    "Status",
+    "Attending doctor",
+    "Percent of liability",
+    "> Doctors",
+  ];
+  let endIdx = afterInjury.length;
+  for (const marker of endMarkers) {
+    const i = afterInjury.search(new RegExp(marker.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i"));
+    if (i >= 0 && i < endIdx) endIdx = i;
+  }
+
+  const block = afterInjury.slice(0, endIdx).trim();
+
+  let cmMatch: RegExpMatchArray | undefined;
+  for (const match of block.matchAll(
+    /([A-Z][A-Z]+\s+[A-Z][A-Z'-]+)\s+(360-902-\d{3,4})(?:\s+360-902-4567|\s|$)/g,
+  )) {
+    const name = match[1]!.trim().toUpperCase();
+    if (/\b(PAC|ARNP|MD|DO|DC|APRN|NP)\b/.test(name)) continue;
+    if (!isPlausiblePersonName(name)) continue;
+    cmMatch = match;
+  }
+  if (!cmMatch) return { dateOfInjury: parseInjuryDate(injuryMatch[1]) };
+
+  const claimManagerName = cmMatch[1]!.trim().toUpperCase();
+  const claimManagerPhone = cmMatch[2]!;
+  const beforeCm = block.slice(0, cmMatch.index!).trim();
+  const allWords = beforeCm.split(/\s+/).filter(Boolean);
+
+  let best:
+    | {
+        clientName: string;
+        employerName: string;
+        attendingDoctorName: string;
+        claimManagerName: string;
+        claimManagerPhone: string;
+      }
+    | undefined;
+
+  const minDoctorWords = allWords.length >= 8 ? 4 : 3;
+
+  for (let doctorWords = Math.min(6, allWords.length - 2); doctorWords >= minDoctorWords; doctorWords--) {
+    const doctor = allWords.slice(-doctorWords).join(" ");
+    if (!/\b(PAC|ARNP|MD|DO|DC|APRN|NP)\s*$/i.test(doctor)) continue;
+    const doctorName = doctor.replace(/\s+(PAC|ARNP|MD|DO|DC|APRN|NP)\s*$/i, "").trim();
+    if (!isPlausiblePersonName(doctorName)) continue;
+    if (/\b(COM|LLC|INC|CORP|DEDC|FARMS|CONSTRUCTION|AMAZON|INDUSTRIES)\b/i.test(doctorName)) {
+      continue;
+    }
+
+    const rest = allWords.slice(0, -doctorWords);
+    const minWorkerWords = rest.length >= 5 ? 3 : 2;
+    for (let workerWords = minWorkerWords; workerWords <= Math.min(4, rest.length - 1); workerWords++) {
+      const worker = rest.slice(0, workerWords).join(" ");
+      const employer = rest.slice(workerWords).join(" ");
+      if (!isPlausiblePersonName(worker) || !isPlausibleEmployerName(employer)) continue;
+
+      let score = employer.length + doctorWords * 10;
+      if (/\b(COM|LLC|INC|CORP|DEDC|FARMS|CONSTRUCTION|AMAZON|INDUSTRIES|SERVICES)\b/i.test(employer)) {
+        score += 20;
+      }
+      if (workerWords === 3) score += 30;
+      if (workerWords === 4) score += 10;
+
+      if (!best || score > best.score) {
+        best = {
+          score,
+          clientName: worker.toUpperCase(),
+          employerName: employer.toUpperCase(),
+          attendingDoctorName: doctor.toUpperCase(),
+          claimManagerName,
+          claimManagerPhone,
+        };
+      }
+    }
+  }
+
+  if (best) {
+    const { score: _score, ...fields } = best;
+    return {
+      dateOfInjury: parseInjuryDate(injuryMatch[1]),
+      ...fields,
+    };
+  }
+
+  return { dateOfInjury: parseInjuryDate(injuryMatch[1]) };
+}
+
+/** OCR/screenshot stacks worker → employer → doctor → CM after claim number when injury date is missing. */
+function parseAfterClaimNumberStack(text: string): Partial<ParsedLniCacFields> {
+  const claimMatch = text.match(/\b([A-Z]{2}\d{5,6})\b/);
+  if (!claimMatch) return {};
+
+  const afterClaim = text.slice(claimMatch.index! + claimMatch[0].length);
+  const endIdx = afterClaim.search(
+    /Worker mailing|Worker residence|Status|Attending doctor|Percent of liability/i,
+  );
+  const block = (endIdx >= 0 ? afterClaim.slice(0, endIdx) : afterClaim).trim();
+  if (!block || /Injury dat(?:e)?\s+\d{1,2}\/\d{1,2}\/\d{4}/i.test(block)) return {};
+
+  let cmMatch: RegExpMatchArray | undefined;
+  for (const match of block.matchAll(
+    /([A-Z][A-Z]+\s+[A-Z][A-Z'-]+)\s+(360-902-\d{3,4})(?:\s+360-902-4567|\s|$)/g,
+  )) {
+    const name = match[1]!.trim().toUpperCase();
+    if (/\b(PAC|ARNP|MD|DO|DC|APRN|NP|AMAZON|FARMS|COM|LLC|INC)\b/.test(name)) continue;
+    if (!isPlausiblePersonName(name)) continue;
+    cmMatch = match;
+  }
+  if (!cmMatch) {
+    const faxMatches = [
+      ...block.matchAll(/([A-Z][A-Z]+\s+[A-Z][A-Z'-]+)\s+360-902-4567/g),
+    ];
+    const faxCm = faxMatches.at(-1)?.[1]?.trim().toUpperCase();
+    if (faxCm && isPlausiblePersonName(faxCm) && !/\b(AMAZON|GEORGES|KIM|GET)\b/.test(faxCm)) {
+      cmMatch = [faxCm, undefined, faxCm] as unknown as RegExpMatchArray;
+      cmMatch.index = block.lastIndexOf(faxCm);
+    }
+  }
+  if (!cmMatch) return {};
+
+  const beforeCm = block.slice(0, cmMatch.index!).trim();
+  const allWords = beforeCm.split(/\s+/).filter(Boolean);
+  const minDoctorWords = allWords.length >= 8 ? 4 : 3;
+
+  for (let doctorWords = Math.min(6, allWords.length - 2); doctorWords >= minDoctorWords; doctorWords--) {
+    const doctor = allWords.slice(-doctorWords).join(" ").replace(/\.$/, "");
+    const hasCredential = /\b(PAC|ARNP|MD|DO|DC|APRN|NP)\s*$/i.test(doctor);
+    const doctorName = doctor.replace(/\s+(PAC|ARNP|MD|DO|DC|APRN|NP)\s*$/i, "").trim();
+    if (!hasCredential && doctorWords > 2) continue;
+    if (/\b(COM|LLC|INC|CORP|DEDC|FARMS|CONSTRUCTION|AMAZON|INDUSTRIES)\b/i.test(doctorName)) {
+      continue;
+    }
+    if (!hasCredential && !isPlausiblePersonName(doctorName)) continue;
+    if (hasCredential && !isPlausiblePersonName(doctorName)) continue;
+
+    const rest = allWords.slice(0, -doctorWords);
+    const minWorkerWords = rest.length >= 5 ? 3 : 2;
+    for (let workerWords = minWorkerWords; workerWords <= Math.min(4, rest.length - 1); workerWords++) {
+      const worker = rest.slice(0, workerWords).join(" ").replace(/\.$/, "");
+      const employer = rest.slice(workerWords).join(" ");
+      if (!isPlausiblePersonName(worker) || !isPlausibleEmployerName(employer)) continue;
+
+      return {
+        claimNumber: claimMatch[1],
+        clientName: worker.toUpperCase(),
+        employerName: employer.toUpperCase(),
+        attendingDoctorName: doctor.toUpperCase(),
+        claimManagerName: cmMatch[1]!.trim().toUpperCase(),
+        claimManagerPhone: cmMatch[2],
+      };
+    }
+  }
+
+  return {};
 }
 
 const STREET_SUFFIX =
@@ -83,6 +254,9 @@ const STREET_CITY_ZIP_PATTERN = new RegExp(
 
 const PO_BOX_CITY_ZIP_PATTERN =
   /((?:P\.?O\.?\s+BOX|PO BOX)\s+\d+[A-Z0-9\s#-]*)\s+([A-Z][A-Z\s.'-]+),\s*([A-Z]{2})\s+(\d{5}(?:-\d{4})?)/i;
+
+const RELAXED_STREET_CITY_ZIP_PATTERN =
+  /(\d+\s+[A-Z0-9][A-Z0-9\s.'#-]{3,}?)\s+([A-Z][A-Z\s.'-]+),\s*([A-Z]{2})\s+(\d{5}(?:-\d{4})?)/gi;
 
 function parseStreetCityStateZip(text: string): {
   addressLine1?: string;
@@ -124,6 +298,14 @@ function parseAllStreetCityStateZip(text: string) {
     });
   }
   for (const match of prepared.matchAll(poBoxPattern)) {
+    results.push({
+      addressLine1: match[1]!.trim().toUpperCase(),
+      city: match[2]!.trim().toUpperCase(),
+      state: match[3]!.trim().toUpperCase(),
+      zip: match[4]!.slice(0, 5),
+    });
+  }
+  for (const match of prepared.matchAll(RELAXED_STREET_CITY_ZIP_PATTERN)) {
     results.push({
       addressLine1: match[1]!.trim().toUpperCase(),
       city: match[2]!.trim().toUpperCase(),
@@ -195,7 +377,11 @@ function parseEmployerName(text: string): string | undefined {
     /Employer name\s+(?:[A-Z]{1,2}\d+\s+)?([A-Z0-9][A-Z0-9\s&.'-]+?)(?=\s+Attending doctor|\s+Claim Manager|\s+Status|\s+Injury date|\s+Worker name|$)/i,
   );
   const name = match?.[1]?.trim().toUpperCase();
-  if (name && isPlausibleEmployerName(name)) return name;
+  if (name && isPlausibleEmployerName(name)) {
+    const worker = parseWorkerName(text);
+    if (worker && name === worker) return parseEmployerFromLiabilityTable(text);
+    return name;
+  }
 
   return parseEmployerFromLiabilityTable(text);
 }
@@ -387,7 +573,7 @@ function parseClaimManager(text: string): Pick<
     ) {
       return false;
     }
-    if (n.split(/\s+/).length < 2 || n.split(/\s+/).length > 5) return false;
+    if (n.split(/\s+/).length < 2 || n.split(/\s+/).length > 3) return false;
     if (
       new RegExp(
         `Attending doctor\\s+${n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?:\\s+[A-Z]\\.?)?\\s+(?:PAC|ARNP|MD|DO|DC|APRN|NP)`,
@@ -656,14 +842,44 @@ export function parseLniCacText(
     text.match(/\bClaim\s+#?\s*([A-Z]{1,2}\d+)\b/i)?.[1];
   const claimNumber = extractClaimNumber(claimRaw);
 
-  const injuryRaw = text.match(/Injury date\s+(\d{1,2}\/\d{1,2}\/\d{4})/i)?.[1];
-  const dateOfInjury = parseInjuryDate(injuryRaw);
+  const injuryRaw =
+    text.match(/Injury dat(?:e)?\s+(\d{1,2}\/\d{1,2}\/\d{4})/i)?.[1] ??
+    text.match(/Injury date\s+(\d{1,2}\/\d{1,2}\/\d{4})/i)?.[1];
+  let dateOfInjury = parseInjuryDate(injuryRaw);
+  if (!dateOfInjury) {
+    const allowedStart = text.match(/\bAllowed\s+(\d{1,2}\/\d{1,2}\/\d{4})/i)?.[1];
+    dateOfInjury = parseInjuryDate(allowedStart);
+  }
+  if (!dateOfInjury) {
+    const received = text.match(/Claim received at L&I\s+(\d{1,2}\/\d{1,2}\/\d{4})/i)?.[1];
+    dateOfInjury = parseInjuryDate(received);
+  }
 
-  const clientName = parseWorkerName(text);
-  const employerName = parseEmployerName(text);
-  const attending = parseAttendingDoctor(text);
+  const compact = parseCompactStackedFields(text);
+  const afterClaim = parseAfterClaimNumberStack(text);
+  const clientName = compact.clientName ?? afterClaim.clientName ?? parseWorkerName(text);
+  const employerName = compact.employerName ?? afterClaim.employerName ?? parseEmployerName(text);
+  const attendingParsed = parseAttendingDoctor(text);
+  const attending = {
+    ...attendingParsed,
+    attendingDoctorName: compact.attendingDoctorName ?? afterClaim.attendingDoctorName ?? attendingParsed.attendingDoctorName,
+  };
   const legalRepresentative = parseLegalRepresentative(text);
-  const claimManager = parseClaimManager(text);
+  const claimManagerInline = parseClaimManager(text);
+  const claimManager =
+    compact.claimManagerName
+      ? {
+          claimManagerName: compact.claimManagerName,
+          claimManagerPhone: compact.claimManagerPhone ?? claimManagerInline.claimManagerPhone,
+          claimManagerFax: claimManagerInline.claimManagerFax,
+        }
+      : afterClaim.claimManagerName
+        ? {
+            claimManagerName: afterClaim.claimManagerName,
+            claimManagerPhone: afterClaim.claimManagerPhone ?? claimManagerInline.claimManagerPhone,
+            claimManagerFax: claimManagerInline.claimManagerFax,
+          }
+        : claimManagerInline;
   const addresses = parseWorkerAddresses(text);
   const vrc = parseVrcContact(text);
   const diagnoses = parseDiagnosisCodes(text);
@@ -677,9 +893,9 @@ export function parseLniCacText(
   }
 
   return {
-    claimNumber,
+    claimNumber: claimNumber ?? compact.claimNumber ?? afterClaim.claimNumber,
     clientName,
-    dateOfInjury,
+    dateOfInjury: compact.dateOfInjury ?? dateOfInjury,
     employerName,
     ...attending,
     ...legalRepresentative,

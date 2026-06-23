@@ -32,8 +32,16 @@ export function classifyClientDocument(
   const n = filename.toLowerCase();
 
   if (/referral submission/.test(n)) return null;
-  if (/bhi.*(approv|response|referral|request|letter)|ap response.*bhi|approval.*bhi|\bbhi\b/i.test(n))
+  if (
+    /bhi.*(approv|response|referral|request|letter|questionnaire|authorization)|ap response.*bhi|approval.*bhi/i.test(
+      n,
+    )
+  ) {
     return null;
+  }
+  if (/\bbhi\b/i.test(n) && !/cac|claim status|address|contact|account center/i.test(n)) {
+    return null;
+  }
   if (/consent/.test(n)) return null;
   if (/medical|provider|note|addendum|recs/.test(n)) return null;
   if (/testing report|ld testing/.test(n)) return null;

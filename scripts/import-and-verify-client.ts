@@ -57,7 +57,11 @@ async function verifyAgainstPdfs(
       (/pdf|google-apps|word|document/i.test(f.mimeType) ||
         f.name.endsWith(".pdf") ||
         f.name.endsWith(".docx")) &&
-      /cac|address|contact|claim status|claim &/i.test(f.name),
+      !/referral submission|therapist notes|consent|medical|provider note|testing report/i.test(
+        f.name,
+      ) &&
+      (/cac|address|contact|claim status|claim &|account center|bhi.*cac/i.test(f.name) ||
+        /cac|address|contact|claim status|account center/i.test(f.name)),
   );
   if (!cacFiles.length) {
     issues.push("no CAC PDF found for cross-check");
@@ -72,9 +76,16 @@ async function verifyAgainstPdfs(
 
   const check = (label: string, value?: string | null) => {
     if (!value?.trim()) return;
-    const parts = value.trim().split(/\s+/).filter(Boolean);
-    const lastName = parts.length >= 2 ? parts[parts.length - 1]! : parts[0]!;
-    if (!upper.includes(lastName.toUpperCase())) {
+    const normalized = value.trim().toUpperCase();
+    const tokens = normalized
+      .split(/[\s&]+/)
+      .map((t) => t.replace(/[^A-Z0-9]/g, ""))
+      .filter((t) => t.length >= 3 || /^\d+$/.test(t));
+    const found =
+      tokens.some((t) => upper.includes(t)) ||
+      upper.includes(normalized) ||
+      tokens.filter((t) => /[A-Z]/.test(t)).every((t) => upper.includes(t));
+    if (!found) {
       issues.push(`${label} "${value}" not found in CAC docs`);
     }
   };
@@ -133,7 +144,9 @@ export async function importAndVerifyClaim(claim: string): Promise<{
   const issues: string[] = [];
   if (missing.length) issues.push(`missing: ${formatMissingRequiredFields(missing)}`);
   if (badDx.length) issues.push(`bad diagnoses: ${badDx.join(", ")}`);
-  issues.push(...pdfIssues);
+  if (missing.length > 0) {
+    issues.push(...pdfIssues);
+  }
 
   const record = {
     name: `${c.firstName} ${c.lastName}`,

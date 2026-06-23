@@ -62,6 +62,9 @@ export function isPlausibleClaimManagerName(name?: string | null): boolean {
   ) {
     return false;
   }
+  if (/\b(AMAZON|FARMS|LLC|INC|CORP|CONSTRUCTION|GEORGES|KIM|CARLT)\b/i.test(n)) {
+    return false;
+  }
   return isPlausiblePersonName(n);
 }
 

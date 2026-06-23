@@ -10,6 +10,7 @@ import {
 } from "@/lib/client-import-quality";
 import { listClientFolderFiles, downloadFileBuffer, type DriveFile } from "@/lib/google-drive";
 import { ocrPdfBuffer } from "@/lib/google-vision-ocr";
+import { parseContactAddressesDocxText } from "@/lib/parse-contact-addresses-docx";
 import { parseLniAddressesText, type ParsedAddressesContacts } from "@/lib/parse-lni-addresses";
 import { parseLniClaimStatusText, type ParsedClaimStatus } from "@/lib/parse-lni-claim-status";
 import { parseReferralSheetText, type ParsedReferralSheet } from "@/lib/parse-referral-sheet";
@@ -130,6 +131,31 @@ function fromAddresses(parsed: ParsedAddressesContacts): LniSupplementFields {
     vrcName: parsed.vrcName,
     vrcPhone: parsed.vrcPhone,
   };
+}
+
+function fromContactAddressesDocx(
+  parsed: ReturnType<typeof parseContactAddressesDocxText>,
+): LniSupplementFields {
+  return {
+    clientName: parsed.clientName,
+    employerName: parsed.employerName,
+    attendingDoctorName: parsed.attendingDoctorName,
+    claimManagerName: parsed.claimManagerName,
+    claimManagerPhone: parsed.claimManagerPhone,
+    claimManagerFax: parsed.claimManagerFax,
+    addressLine1: parsed.mailingAddressLine1,
+    city: parsed.mailingCity,
+    state: parsed.mailingState,
+    zip: parsed.mailingZip,
+    residenceAddressLine1: parsed.residenceAddressLine1,
+    residenceCity: parsed.residenceCity,
+    residenceState: parsed.residenceState,
+    residenceZip: parsed.residenceZip,
+  };
+}
+
+function isContactAddressesDocx(text: string, filename: string): boolean {
+  return /Claimant:/i.test(text) || /Contact\s*&?\s*Addresses/i.test(filename);
 }
 
 function fromReferralSheet(parsed: ParsedReferralSheet): LniSupplementFields {
@@ -256,8 +282,12 @@ async function extractWordText(
   filename?: string,
 ): Promise<string> {
   if (isDocxBuffer(buffer, mimeType, filename)) {
-    const { value } = await mammoth.extractRawText({ buffer });
-    return value;
+    try {
+      const { value } = await mammoth.extractRawText({ buffer });
+      if (value.trim()) return value;
+    } catch {
+      // Fall through to legacy .doc extractor.
+    }
   }
 
   const WordExtractor = (await import("word-extractor")).default;
@@ -328,6 +358,12 @@ function supplementFromText(
   if (category === "referral-sheet") {
     const parsed: ClientDocumentSupplement = { diagnoses: [], warnings: [] };
     applyLniFields(parsed, fromReferralSheet(parseReferralSheetText(text)));
+    return parsed;
+  }
+  if (isContactAddressesDocx(text, filename)) {
+    const parsed: ClientDocumentSupplement = { diagnoses: [], warnings: [] };
+    applyLniFields(parsed, fromContactAddressesDocx(parseContactAddressesDocxText(text)));
+    applyAddresses(parsed, parseLniAddressesText(text), `${filename} (lni)`);
     return parsed;
   }
   if (mode === "all-parsers") {
