@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 
-export const GOOGLE_DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.readonly";
+export const GOOGLE_DRIVE_SCOPE = "https://www.googleapis.com/auth/drive";
 
 const OAUTH_STATE_COOKIE = "google_oauth_state";
 

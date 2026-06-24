@@ -24,9 +24,8 @@ function contentTypeFor(filename: string): string {
   return types[ext ?? ""] ?? "application/octet-stream";
 }
 
-export async function sendEmail({ subject, text, replyTo, attachments = [] }: SendEmailOptions) {
+async function postmarkSend(to: string, options: SendEmailOptions) {
   const serverToken = process.env.POSTMARK_SERVER_TOKEN;
-  const to = process.env.CONTACT_EMAIL || "info@gvcounseling.com";
   const from = process.env.EMAIL_FROM || "info@gvcounseling.com";
 
   if (!serverToken) {
@@ -45,12 +44,12 @@ export async function sendEmail({ subject, text, replyTo, attachments = [] }: Se
     body: JSON.stringify({
       From: from,
       To: to,
-      Subject: subject,
-      TextBody: text,
-      ReplyTo: replyTo || undefined,
+      Subject: options.subject,
+      TextBody: options.text,
+      ReplyTo: options.replyTo || undefined,
       MessageStream: "outbound",
-      Attachments: attachments.length
-        ? attachments.map((a) => ({
+      Attachments: options.attachments?.length
+        ? options.attachments.map((a) => ({
             Name: a.filename,
             Content: a.content,
             ContentType: a.contentType ?? contentTypeFor(a.filename),
@@ -63,4 +62,13 @@ export async function sendEmail({ subject, text, replyTo, attachments = [] }: Se
     const body = await res.text();
     throw new Error(`Email delivery failed: ${body}`);
   }
+}
+
+export async function sendEmail({ subject, text, replyTo, attachments = [] }: SendEmailOptions) {
+  const to = process.env.CONTACT_EMAIL || "info@gvcounseling.com";
+  await postmarkSend(to, { subject, text, replyTo, attachments });
+}
+
+export async function sendEmailTo(to: string, options: SendEmailOptions) {
+  await postmarkSend(to, options);
 }

@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { collectReferralUploads, processReferralIntake } from "@/lib/referral-intake";
 import { sendEmail } from "@/lib/email";
+import { sendReferralIntakeAdminNotice } from "@/lib/referral-emails";
 
 const textFields = [
   "vrcName",
@@ -15,16 +17,6 @@ const textFields = [
   "genderIdentity",
   "priorServices",
   "clientHistory",
-] as const;
-
-const fileFields = [
-  "claimStatusFile",
-  "addressesFile",
-  "bhiApprovalFile",
-  "attachment1",
-  "attachment2",
-  "attachment3",
-  "attachment4",
 ] as const;
 
 export async function POST(request: NextRequest) {
@@ -48,18 +40,15 @@ export async function POST(request: NextRequest) {
     }
 
     const attachments: { filename: string; content: string; contentType?: string }[] = [];
+    const uploads = await collectReferralUploads(formData);
 
-    for (const field of fileFields) {
-      const file = formData.get(field);
-      if (file instanceof File && file.size > 0) {
-        const buffer = Buffer.from(await file.arrayBuffer());
-        attachments.push({
-          filename: file.name,
-          content: buffer.toString("base64"),
-          contentType: file.type || undefined,
-        });
-        lines.push(`${field}: ${file.name} (${Math.round(file.size / 1024)} KB)`);
-      }
+    for (const upload of uploads) {
+      attachments.push({
+        filename: upload.filename,
+        content: upload.buffer.toString("base64"),
+        contentType: upload.mimeType || undefined,
+      });
+      lines.push(`${upload.fieldName}: ${upload.filename} (${Math.round(upload.buffer.length / 1024)} KB)`);
     }
 
     await sendEmail({
@@ -69,7 +58,32 @@ export async function POST(request: NextRequest) {
       attachments,
     });
 
-    return NextResponse.json({ ok: true });
+    let intakeWarnings: string[] = [];
+    try {
+      const intake = await processReferralIntake(formData, uploads);
+      intakeWarnings = intake.warnings;
+      await sendReferralIntakeAdminNotice({
+        clientName: String(clientName),
+        claimNumber: intake.claimNumber,
+        clientId: intake.clientId,
+        warnings: intake.warnings,
+      });
+    } catch (intakeError) {
+      console.error("Referral intake error:", intakeError);
+      intakeWarnings = [
+        intakeError instanceof Error ? intakeError.message : "Client record creation failed.",
+      ];
+      await sendEmail({
+        subject: `Referral intake failed: ${clientName}`,
+        text: [
+          "The referral notification email was sent, but automatic client creation failed.",
+          "",
+          intakeError instanceof Error ? intakeError.message : String(intakeError),
+        ].join("\n"),
+      });
+    }
+
+    return NextResponse.json({ ok: true, warnings: intakeWarnings });
   } catch (error) {
     console.error("Referral form error:", error);
     return NextResponse.json(

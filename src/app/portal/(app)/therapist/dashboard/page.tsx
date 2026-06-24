@@ -6,9 +6,13 @@ import { prisma } from "@/lib/prisma";
 
 export default async function TherapistDashboardPage() {
   const session = await requireTherapist();
-  const [draftCount, submittedCount, recent] = await Promise.all([
+  const [draftCount, submittedCount, pendingReferrals, recent] = await Promise.all([
     prisma.invoice.count({ where: { therapistId: session.user.id, status: "DRAFT" } }),
     prisma.invoice.count({ where: { therapistId: session.user.id, status: "SUBMITTED" } }),
+    prisma.client.findMany({
+      where: { therapistId: session.user.id, assignmentStatus: "PENDING_THERAPIST" },
+      orderBy: { updatedAt: "desc" },
+    }),
     prisma.invoice.findMany({
       where: { therapistId: session.user.id },
       take: 5,
@@ -33,6 +37,31 @@ export default async function TherapistDashboardPage() {
           <p className="mt-2 text-3xl font-semibold">{submittedCount}</p>
         </div>
       </div>
+      {pendingReferrals.length > 0 && (
+        <section className={`${portalCardClass} border-amber-200 bg-amber-50/50`}>
+          <h2 className="font-serif text-xl font-semibold text-primary-dark">
+            Pending referrals ({pendingReferrals.length})
+          </h2>
+          <p className="mt-1 text-sm text-muted">
+            Review and accept or decline new client assignments.
+          </p>
+          <ul className="mt-4 divide-y divide-border">
+            {pendingReferrals.map((client) => (
+              <li key={client.id} className="flex items-center justify-between py-3">
+                <div>
+                  <p className="font-medium">
+                    {client.lastName}, {client.firstName}
+                  </p>
+                  <p className="font-mono text-xs text-muted">{client.lniClaimNumber}</p>
+                </div>
+                <Link href={`/portal/therapist/referrals/${client.id}`} className={portalButtonClass}>
+                  Review
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
       <Link href="/portal/therapist/invoices/new" className={portalButtonClass}>
         New invoice
       </Link>

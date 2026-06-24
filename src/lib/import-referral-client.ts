@@ -1,3 +1,4 @@
+import { ClientAssignmentStatus } from "@/generated/prisma/client";
 import type { ClientDocumentSupplement } from "@/lib/client-document-import";
 import type { ClientDocumentPart } from "@/lib/client-import-quality";
 import {
@@ -120,9 +121,8 @@ export async function upsertClientFromReferral(
     );
   }
 
-  const fromSupplement = supplement != null;
   const supplementOrExisting = <T>(value: T | undefined, existing: T | null | undefined): T | null =>
-    fromSupplement ? (value ?? null) : (existing ?? null);
+    value !== undefined ? (value ?? null) : (existing ?? null);
 
   const data = {
     lniClaimNumber: claimNumber,
@@ -134,7 +134,7 @@ export async function upsertClientFromReferral(
       : (existing?.diagnoses ?? []),
     addressLine1: supplementOrExisting(supplement?.addressLine1, existing?.addressLine1),
     city: supplementOrExisting(supplement?.city, existing?.city),
-    state: fromSupplement ? (supplement?.state ?? "WA") : (existing?.state ?? "WA"),
+    state: supplement?.state ?? existing?.state ?? "WA",
     zip: supplementOrExisting(supplement?.zip, existing?.zip),
     residenceAddressLine1: supplementOrExisting(
       supplement?.residenceAddressLine1,
@@ -179,11 +179,14 @@ export async function upsertClientFromReferral(
     gender: mergedReferral.gender ?? existing?.gender ?? null,
     dateOfInjury:
       mergedReferral.dateOfInjury ??
-      (fromSupplement ? (supplement?.dateOfInjury ?? null) : existing?.dateOfInjury ?? null),
+      supplement?.dateOfInjury ??
+      existing?.dateOfInjury ??
+      null,
     vrcName: mergedReferral.vrcName ?? existing?.vrcName ?? null,
     vrcEmail: mergedReferral.vrcEmail ?? existing?.vrcEmail ?? null,
     vrcPhone: mergedReferral.vrcPhone ?? existing?.vrcPhone ?? null,
     therapistId: existing?.therapistId ?? therapistId,
+    assignmentStatus: existing?.assignmentStatus ?? ClientAssignmentStatus.ACTIVE,
   };
 
   if (existing) {

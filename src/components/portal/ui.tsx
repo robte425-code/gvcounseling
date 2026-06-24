@@ -16,14 +16,24 @@ export const statusBadge: Record<string, string> = {
   SUBMITTED: "bg-amber-100 text-amber-900",
   BILLED: "bg-primary/10 text-primary-dark",
   READY: "bg-primary/10 text-primary-dark",
+  UNASSIGNED: "bg-slate-100 text-slate-800",
+  PENDING_THERAPIST: "bg-amber-100 text-amber-900",
+  ACTIVE: "bg-primary/10 text-primary-dark",
+  REJECTED_BY_ADMIN: "bg-red-100 text-red-800",
 };
 
 export function StatusBadge({ status }: { status: string }) {
+  const labels: Record<string, string> = {
+    UNASSIGNED: "Unassigned",
+    PENDING_THERAPIST: "Pending therapist",
+    REJECTED_BY_ADMIN: "Rejected",
+  };
+  const label = labels[status] ?? status.toLowerCase().replace(/_/g, " ");
   return (
     <span
       className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wide ${statusBadge[status] ?? "bg-muted/15 text-muted"}`}
     >
-      {status.toLowerCase()}
+      {label}
     </span>
   );
 }

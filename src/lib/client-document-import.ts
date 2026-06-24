@@ -9,7 +9,7 @@ import {
   mergeDocumentPartsPreferValid,
 } from "@/lib/client-import-quality";
 import { listClientFolderFiles, downloadFileBuffer, type DriveFile } from "@/lib/google-drive";
-import { ocrPdfBuffer } from "@/lib/google-vision-ocr";
+import { ocrImageBuffer, ocrPdfBuffer } from "@/lib/google-vision-ocr";
 import { parseContactAddressesDocxText } from "@/lib/parse-contact-addresses-docx";
 import { parseLniAddressesText, type ParsedAddressesContacts } from "@/lib/parse-lni-addresses";
 import { parseLniClaimStatusText, type ParsedClaimStatus } from "@/lib/parse-lni-claim-status";
@@ -264,6 +264,13 @@ function isPdfFile(file: DriveFile): boolean {
   );
 }
 
+function isImageFile(file: DriveFile): boolean {
+  return (
+    /^image\//.test(file.mimeType) ||
+    /\.(png|jpe?g|webp|gif)$/i.test(file.name)
+  );
+}
+
 function isWordCategory(category: ImportableDocCategory): boolean {
   return category === "word-doc-cac-address" || category === "referral-sheet";
 }
@@ -309,6 +316,24 @@ async function extractFileText(
   if (isWordCategory(category)) {
     const text = await extractWordText(buffer, file.mimeType, file.name);
     return { text, usedOcr: false, warnings: [] };
+  }
+
+  if (isImageFile(file)) {
+    try {
+      const ocrText = await ocrImageBuffer(buffer);
+      if (ocrText.trim()) {
+        return { text: ocrText, usedOcr: true, warnings: [`${file.name}: image OCR`] };
+      }
+      return { text: "", usedOcr: true, warnings: [`${file.name}: image OCR returned no text`] };
+    } catch (e) {
+      return {
+        text: "",
+        usedOcr: true,
+        warnings: [
+          `${file.name}: image OCR failed (${e instanceof Error ? e.message : "unknown error"})`,
+        ],
+      };
+    }
   }
 
   if (options?.forceOcr && isPdfFile(file)) {
@@ -516,4 +541,65 @@ export async function importClientDocumentsFromFolderDetailed(
   }
 
   return { merged, parts: retriedParts };
+}
+
+export type UploadedReferralFile = {
+  fieldName: string;
+  filename: string;
+  buffer: Buffer;
+  mimeType: string;
+};
+
+function categoryForReferralUpload(
+  fieldName: string,
+  filename: string,
+  mimeType: string,
+): ImportableDocCategory {
+  if (fieldName === "claimStatusFile") return "claim-account-center";
+  if (fieldName === "addressesFile") return "addresses-contacts";
+  return classifyClientDocument(filename, mimeType) ?? "addresses-contacts";
+}
+
+export async function parseUploadedReferralDocuments(
+  files: UploadedReferralFile[],
+): Promise<{ merged: ClientDocumentSupplement; parts: ClientDocumentPart[] }> {
+  const parts: ClientDocumentPart[] = [];
+
+  for (const file of files) {
+    const category = categoryForReferralUpload(file.fieldName, file.filename, file.mimeType);
+    const driveFile: DriveFile = {
+      id: "",
+      name: file.filename,
+      mimeType: file.mimeType,
+    };
+
+    try {
+      const { text, warnings: extractWarnings } = await extractFileText(
+        file.buffer,
+        driveFile,
+        category,
+        { forceOcr: true },
+      );
+      let supplement: ClientDocumentSupplement;
+      if (!text.trim()) {
+        supplement = { diagnoses: [], warnings: extractWarnings };
+      } else {
+        supplement = supplementFromText(text, category, file.filename, "all-parsers");
+        supplement.warnings.push(...extractWarnings);
+      }
+      parts.push({ filename: file.filename, supplement });
+    } catch (e) {
+      parts.push({
+        filename: file.filename,
+        supplement: {
+          diagnoses: [],
+          warnings: [
+            `${file.filename}: ${e instanceof Error ? e.message : "Could not parse file."}`,
+          ],
+        },
+      });
+    }
+  }
+
+  return { merged: mergeDocumentPartsPreferValid(parts), parts };
 }

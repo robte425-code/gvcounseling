@@ -176,7 +176,9 @@ export async function syncPayPeriodsFromLniAction() {
 export async function saveClientAction(formData: FormData) {
   await requireAdmin();
   const id = String(formData.get("id") ?? "").trim();
-  const therapistId = String(formData.get("therapistId") ?? "");
+  const existing = id ? await prisma.client.findUnique({ where: { id } }) : null;
+  const therapistIdRaw = String(formData.get("therapistId") ?? "").trim();
+  const therapistId = therapistIdRaw || existing?.therapistId || null;
   const claimNumber = parseClaimNumber(String(formData.get("lniClaimNumber") ?? ""));
   const diagnosesRaw = String(formData.get("diagnoses") ?? "");
   const diagnoses = diagnosesRaw
@@ -225,15 +227,20 @@ export async function saveClientAction(formData: FormData) {
     therapistId,
   };
 
-  if (!data.firstName || !data.lastName || !claimNumber || !therapistId) {
-    throw new Error("Claim number, name, and therapist are required.");
+  if (!data.firstName || !data.lastName || !claimNumber) {
+    throw new Error("Claim number and name are required.");
+  }
+  if (!id && !therapistId) {
+    throw new Error("Therapist is required for new clients.");
   }
 
   if (id) {
-    await prisma.client.update({ where: { id }, data });
+    await prisma.client.update({ where: { id }, data: { ...data, therapistId } });
     revalidatePath(`/portal/admin/clients/${id}`);
   } else {
-    await prisma.client.create({ data });
+    await prisma.client.create({
+      data: { ...data, therapistId: therapistId!, assignmentStatus: "ACTIVE" },
+    });
   }
   revalidatePath("/portal/admin/clients");
   redirect("/portal/admin/clients");
@@ -264,7 +271,11 @@ export async function createInvoiceAction(formData: FormData) {
   const session = await requireTherapist();
   const clientId = String(formData.get("clientId") ?? "");
   const client = await prisma.client.findFirst({
-    where: { id: clientId, therapistId: session.user.id },
+    where: {
+      id: clientId,
+      therapistId: session.user.id,
+      assignmentStatus: "ACTIVE",
+    },
   });
   if (!client) throw new Error("Client not found.");
 
@@ -493,4 +504,171 @@ export async function generateBillAction(formData: FormData) {
   revalidatePath("/portal/admin/invoices");
   revalidatePath("/portal/admin/generate-bill");
   redirect(`/portal/admin/bills/${bill.id}?generated=1`);
+}
+
+export async function assignClientTherapistAction(formData: FormData) {
+  await requireAdmin();
+  const clientId = String(formData.get("clientId") ?? "").trim();
+  const therapistId = String(formData.get("therapistId") ?? "").trim();
+  if (!clientId || !therapistId) throw new Error("Client and therapist are required.");
+
+  const [client, therapist] = await Promise.all([
+    prisma.client.findUnique({ where: { id: clientId } }),
+    prisma.user.findUnique({ where: { id: therapistId, role: "THERAPIST" } }),
+  ]);
+  if (!client) throw new Error("Client not found.");
+  if (!therapist) throw new Error("Therapist not found.");
+  if (
+    client.assignmentStatus !== "UNASSIGNED" &&
+    client.assignmentStatus !== "REJECTED_BY_ADMIN"
+  ) {
+    throw new Error("This client is not awaiting therapist assignment.");
+  }
+
+  await prisma.client.update({
+    where: { id: clientId },
+    data: {
+      therapistId,
+      assignmentStatus: "PENDING_THERAPIST",
+      rejectionReason: null,
+      rejectedAt: null,
+    },
+  });
+
+  const { sendTherapistAssignmentEmail } = await import("@/lib/referral-emails");
+  await sendTherapistAssignmentEmail({
+    therapistEmail: therapist.email,
+    therapistName: `${therapist.firstName} ${therapist.lastName}`,
+    clientName: `${client.firstName} ${client.lastName}`,
+    claimNumber: client.lniClaimNumber,
+    clientId: client.id,
+  });
+
+  revalidatePath("/portal/admin/clients");
+  revalidatePath(`/portal/admin/clients/${clientId}`);
+  redirect(`/portal/admin/clients/${clientId}?assigned=1`);
+}
+
+export async function adminRejectReferralAction(formData: FormData) {
+  await requireAdmin();
+  const clientId = String(formData.get("clientId") ?? "").trim();
+  const reason = String(formData.get("reason") ?? "").trim();
+  const client = await prisma.client.findUnique({ where: { id: clientId } });
+  if (!client) throw new Error("Client not found.");
+  if (client.assignmentStatus !== "UNASSIGNED") {
+    throw new Error("Only unassigned referrals can be rejected this way.");
+  }
+
+  const invoiceCount = await prisma.invoice.count({ where: { clientId } });
+  if (invoiceCount > 0) {
+    await prisma.client.update({
+      where: { id: clientId },
+      data: {
+        assignmentStatus: "REJECTED_BY_ADMIN",
+        rejectionReason: reason || "Rejected by admin",
+        rejectedAt: new Date(),
+        therapistId: null,
+      },
+    });
+  } else {
+    await prisma.client.delete({ where: { id: clientId } });
+  }
+
+  revalidatePath("/portal/admin/clients");
+  redirect("/portal/admin/clients?rejected=1");
+}
+
+export async function therapistAcceptReferralAction(formData: FormData) {
+  const session = await requireTherapist();
+  const clientId = String(formData.get("clientId") ?? "").trim();
+  const client = await prisma.client.findFirst({
+    where: {
+      id: clientId,
+      therapistId: session.user.id,
+      assignmentStatus: "PENDING_THERAPIST",
+    },
+  });
+  if (!client) throw new Error("Referral not found or not pending your acceptance.");
+
+  if (client.driveFolderId) {
+    try {
+      const { accessToken } = await import("@/lib/google-drive-system").then((m) =>
+        m.getSystemDriveAccessToken(),
+      );
+      const therapist = await prisma.user.findUniqueOrThrow({
+        where: { id: session.user.id },
+        select: { email: true, firstName: true },
+      });
+      const { moveDriveFolder, resolveTherapistFolderForUser } = await import(
+        "@/lib/google-drive"
+      );
+      const therapistFolderId = await resolveTherapistFolderForUser(accessToken, therapist);
+      await moveDriveFolder(accessToken, client.driveFolderId, therapistFolderId);
+    } catch (e) {
+      console.error("Drive folder move on accept failed:", e);
+    }
+  }
+
+  await prisma.client.update({
+    where: { id: clientId },
+    data: { assignmentStatus: "ACTIVE" },
+  });
+
+  revalidatePath("/portal/therapist/dashboard");
+  redirect("/portal/therapist/dashboard?referralAccepted=1");
+}
+
+export async function therapistRejectReferralAction(formData: FormData) {
+  const session = await requireTherapist();
+  const clientId = String(formData.get("clientId") ?? "").trim();
+  const reason = String(formData.get("reason") ?? "").trim();
+  if (!reason) throw new Error("Please provide a reason for declining this referral.");
+
+  const client = await prisma.client.findFirst({
+    where: {
+      id: clientId,
+      therapistId: session.user.id,
+      assignmentStatus: "PENDING_THERAPIST",
+    },
+    include: { therapist: { select: { firstName: true, lastName: true } } },
+  });
+  if (!client) throw new Error("Referral not found or not pending your acceptance.");
+
+  if (client.driveFolderId) {
+    try {
+      const { accessToken } = await import("@/lib/google-drive-system").then((m) =>
+        m.getSystemDriveAccessToken(),
+      );
+      const { moveDriveFolder, resolveNewReferralsFolderId } = await import("@/lib/google-drive");
+      const newReferralsId = await resolveNewReferralsFolderId(accessToken);
+      await moveDriveFolder(accessToken, client.driveFolderId, newReferralsId);
+    } catch (e) {
+      console.error("Drive folder move on reject failed:", e);
+    }
+  }
+
+  await prisma.client.update({
+    where: { id: clientId },
+    data: {
+      therapistId: null,
+      assignmentStatus: "UNASSIGNED",
+      rejectionReason: reason,
+      rejectedAt: new Date(),
+    },
+  });
+
+  const adminEmail = process.env.CONTACT_EMAIL || "ghim@gvcounseling.com";
+  const { sendAdminTherapistRejectionEmail } = await import("@/lib/referral-emails");
+  await sendAdminTherapistRejectionEmail({
+    adminEmail,
+    therapistName: `${client.therapist!.firstName} ${client.therapist!.lastName}`,
+    clientName: `${client.firstName} ${client.lastName}`,
+    claimNumber: client.lniClaimNumber,
+    reason,
+    clientId: client.id,
+  });
+
+  revalidatePath("/portal/admin/clients");
+  revalidatePath(`/portal/admin/clients/${clientId}`);
+  redirect("/portal/therapist/dashboard?referralDeclined=1");
 }

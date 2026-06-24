@@ -7,7 +7,7 @@ import { prisma } from "@/lib/prisma";
 export default async function NewInvoicePage() {
   const session = await requireTherapist();
   const clients = await prisma.client.findMany({
-    where: { therapistId: session.user.id },
+    where: { therapistId: session.user.id, assignmentStatus: "ACTIVE" },
     orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
   });
 

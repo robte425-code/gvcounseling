@@ -57,7 +57,7 @@ async function main() {
   const { parts, merged } = await importClientDocumentsFromFolderDetailed(token, folder.folderId);
   console.log("\nDocument parts:", parts.length);
   for (const p of parts) {
-    console.log(`  [${p.kind}] ${p.fileName}:`, JSON.stringify(p, null, 2).slice(0, 800));
+    console.log(`  ${p.filename}:`, JSON.stringify(p, null, 2).slice(0, 800));
   }
   console.log("\nMerged supplement:", JSON.stringify(merged, null, 2));
 

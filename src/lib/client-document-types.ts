@@ -58,6 +58,13 @@ export function classifyClientDocument(
   if (/^([a-z]{1,2}\d+)\.pdf$/i.test(filename.trim())) return "claim-number-pdf";
   if (/address|contact/.test(n)) return "addresses-contacts";
 
+  if (/\.(png|jpe?g|webp|gif)$/i.test(n) || /^image\//.test(mimeType ?? "")) {
+    return "addresses-contacts";
+  }
+
+  if (/^fax\d+\.pdf$/i.test(filename.trim())) return "addresses-contacts";
+  if (/^\d{10,}\.pdf$/i.test(filename.trim())) return "addresses-contacts";
+
   if (/\.pdf$/i.test(n)) return null;
 
   return null;

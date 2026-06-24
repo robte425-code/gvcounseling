@@ -36,6 +36,7 @@ export default async function AdminClientsPage() {
               <th className="py-2 pr-4">Claim #</th>
               <th className="py-2 pr-4">Name</th>
               <th className="py-2 pr-4">Therapist</th>
+              <th className="py-2 pr-4">Status</th>
               <th className="py-2 pr-4">837 ready</th>
             </tr>
           </thead>
@@ -49,7 +50,16 @@ export default async function AdminClientsPage() {
                     {c.lastName}, {c.firstName}
                   </td>
                   <td className="py-3 pr-4">
-                    {c.therapist.firstName} {c.therapist.lastName}
+                    {c.therapist
+                      ? `${c.therapist.firstName} ${c.therapist.lastName}`
+                      : "—"}
+                  </td>
+                  <td className="py-3 pr-4">
+                    {c.assignmentStatus === "ACTIVE" ? (
+                      <span className="text-xs text-muted">Active</span>
+                    ) : (
+                      <StatusBadge status={c.assignmentStatus} />
+                    )}
                   </td>
                   <td className="py-3 pr-4">
                     {readiness.ready ? (

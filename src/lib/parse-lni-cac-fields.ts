@@ -56,6 +56,79 @@ function parseInjuryDate(raw?: string): Date | undefined {
   return Number.isNaN(d.getTime()) ? undefined : d;
 }
 
+/** OCR/screenshots often put worker, employer, doctor, and CM on separate lines after injury date. */
+function parseLineStackedFields(rawText: string): Partial<ParsedLniCacFields> {
+  const injuryMatch =
+    rawText.match(/Injury dat(?:e)?\s+(\d{1,2}\/\d{1,2}\/\d{4})/i) ??
+    rawText.match(/Injury dat(?:e)?\s*\n\s*(\d{1,2}\/\d{1,2}\/\d{4})/i);
+  if (!injuryMatch) return {};
+
+  const afterInjury = rawText.slice(injuryMatch.index! + injuryMatch[0].length);
+  const section = afterInjury.split(
+    /Worker mailing address|Worker residence address|Worker's mail will be sent to/i,
+  )[0] ?? "";
+  const lines = section
+    .split(/\n/)
+    .map((l) => l.trim())
+    .filter(
+      (l) =>
+        l &&
+        !/^(Get Claim|Enter Claim|Claim number|Worker name|Employer name|Attending doctor|Claim Manager|Claim Manager fax)$/i.test(
+          l,
+        ) &&
+        !/^[A-Z]{2}\d{5,6}$/.test(l),
+    );
+
+  let cmIdx = -1;
+  let claimManagerName = "";
+  let claimManagerPhone = "";
+  let claimManagerFax = "";
+  for (let i = 0; i < lines.length; i++) {
+    const match = lines[i]!.match(/^([A-Z][A-Z\s.'-]+?)\s+(360-902-\d{3,4})\s*$/);
+    if (!match) continue;
+    const name = match[1]!.trim().toUpperCase();
+    if (/\b(PAC|ARNP|MD|DO|DC|APRN|NP)\b/.test(name)) continue;
+    if (!isPlausiblePersonName(name)) continue;
+    cmIdx = i;
+    claimManagerName = name;
+    claimManagerPhone = match[2]!;
+    const nextLine = lines[i + 1]?.trim();
+    if (
+      nextLine &&
+      /^\d{3}-\d{3}-\d{4}$/.test(nextLine) &&
+      nextLine !== claimManagerPhone &&
+      nextLine.startsWith("360-902")
+    ) {
+      claimManagerFax = nextLine;
+    }
+    break;
+  }
+  if (cmIdx < 0) return { dateOfInjury: parseInjuryDate(injuryMatch[1]) };
+
+  let doctorIdx = cmIdx - 1;
+  while (doctorIdx >= 0 && /^\d{3}-\d{3}-\d{4}$/.test(lines[doctorIdx]!)) doctorIdx--;
+  const doctorRaw = lines[doctorIdx]?.toUpperCase().replace(/\s+AMD\s*$/i, " MD") ?? "";
+  if (!/\b(PAC|ARNP|MD|DO|DC|APRN|NP)\b/i.test(doctorRaw)) {
+    return { dateOfInjury: parseInjuryDate(injuryMatch[1]) };
+  }
+
+  const worker = lines[0]?.toUpperCase() ?? "";
+  const employer = lines.slice(1, doctorIdx).join(" ").toUpperCase();
+  if (!isPlausiblePersonName(worker) || !isPlausibleEmployerName(employer)) {
+    return { dateOfInjury: parseInjuryDate(injuryMatch[1]) };
+  }
+
+  return {
+    dateOfInjury: parseInjuryDate(injuryMatch[1]),
+    clientName: worker,
+    employerName: employer,
+    attendingDoctorName: doctorRaw,
+    claimManagerName,
+    claimManagerPhone,
+    claimManagerFax: claimManagerFax || undefined,
+  };
+}
+
 /** Screenshot CAC exports stack worker/employer/doctor/claim manager after the injury date. */
 function parseCompactStackedFields(text: string): Partial<ParsedLniCacFields> {
   const injuryMatch = text.match(/Injury dat(?:e)?\s+(\d{1,2}\/\d{1,2}\/\d{4})/i);
@@ -97,6 +170,7 @@ function parseCompactStackedFields(text: string): Partial<ParsedLniCacFields> {
 
   let best:
     | {
+        score: number;
         clientName: string;
         employerName: string;
         attendingDoctorName: string;
@@ -161,7 +235,7 @@ function parseAfterClaimNumberStack(text: string): Partial<ParsedLniCacFields> {
 
   const afterClaim = text.slice(claimMatch.index! + claimMatch[0].length);
   const endIdx = afterClaim.search(
-    /Worker mailing|Worker residence|Status|Attending doctor|Percent of liability/i,
+    /Worker(?:'s)? mail(?:ing)?|Worker residence|Percent of liability/i,
   );
   const block = (endIdx >= 0 ? afterClaim.slice(0, endIdx) : afterClaim).trim();
   if (!block || /Injury dat(?:e)?\s+\d{1,2}\/\d{1,2}\/\d{4}/i.test(block)) return {};
@@ -224,10 +298,10 @@ function parseAfterClaimNumberStack(text: string): Partial<ParsedLniCacFields> {
 }
 
 const STREET_SUFFIX =
-  "(?:ST|STREET|STE|SUITE|AVE|AVENUE|RD|ROAD|DR|DRIVE|LN|LANE|BLVD|WAY|CT|COURT|PL|PLACE|HWY|PIKE|SW|SE|NW|NE|RTE|ROUTE)";
+  "(?:STREET|SUITE|AVENUE|DRIVE|LANE|COURT|PLACE|ROUTE|ROAD|BLVD|WAY|HWY|PIKE|ST\\b|STE\\b|AVE\\b|RD\\b|DR\\b|LN\\b|CT\\b|PL\\b|SW\\b|SE\\b|NW\\b|NE\\b|RTE\\b)";
 
 const ADDRESS_LINE_TAIL =
-  "(?:\\s+(?:UNIT|STE|SUITE|RTE|RM|APT|BLDG)\\s+[A-Z0-9#-]+|\\s+#\\d+|\\s+(?:N|S|E|W|NE|NW|SE|SW)\\b)*";
+  "(?:\\s+(?:UNIT|STE|SUITE|RTE|RM|APT|BLDG|DEPT)\\s+[A-Z0-9#-]+|\\s+#\\d+|\\s+(?:N|S|E|W|NE|NW|SE|SW)\\b)*";
 
 /** Word exports often run street suffixes into city names (e.g. STSUNNYSIDE). */
 function preprocessAddressText(text: string): string {
@@ -344,14 +418,14 @@ export function parseWorkerName(text: string): string | undefined {
 }
 
 const ATTENDING_DOCTOR_NAME =
-  /([A-Z][A-Z]+\s+[A-Z][A-Z]+(?:\s+[A-Z]\.?)?\s+(?:PAC|ARNP|MD|DO|DC|APRN|NP))\b/i;
+  /([A-Z][A-Z]+\s+[A-Z][A-Z]+(?:\s+[A-Z]\.?)?\s+(?:PAC|ARNP|MD|DO|DC|APRN|NP|ND))\b/i;
 
 export function isPlausibleEmployerName(name: string): boolean {
   const n = name.trim().toUpperCase();
   if (!n || n.length < 2) return false;
   if (/\bATTENDING DOCTOR\b/.test(n)) return false;
   if (ATTENDING_DOCTOR_NAME.test(n)) return false;
-  if (/\b(ARNP|MD|DO|DC|PAC|NP|APRN)\b/.test(n)) return false;
+  if (/\b(ARNP|MD|DO|DC|PAC|NP|APRN|ND)\b/.test(n)) return false;
   if (LNI_FIELD_LABEL.test(n)) return false;
   return true;
 }
@@ -415,8 +489,24 @@ function parseAttendingDoctorName(text: string): string | undefined {
     return headerSimple[1].trim().toUpperCase();
   }
 
-  for (const section of text.split(/Attending doctor/i).slice(1)) {
+  const sections = text.split(/Attending doctor/i).slice(1);
+
+  for (const section of sections) {
+    if (!/(?:Billing Phone|Location Phone)/i.test(section)) continue;
+    const trimmed = trimAttendingDoctorSection(section);
+    const atStart = trimmed.match(
+      new RegExp(`^\\s*(${ATTENDING_DOCTOR_NAME.source})`, "im"),
+    );
+    if (atStart?.[1]) return atStart[1].trim().toUpperCase();
+    const inSection = trimmed.match(ATTENDING_DOCTOR_NAME);
+    if (inSection?.[1]) return inSection[1].trim().toUpperCase();
+  }
+
+  for (const section of sections) {
     const cleaned = section.replace(/^\s*Legal representative\s+/i, "");
+    const credInSection = cleaned.match(ATTENDING_DOCTOR_NAME);
+    if (credInSection?.[1]) return credInSection[1].trim().toUpperCase();
+
     const atStart = cleaned.match(
       new RegExp(`^\\s*(${ATTENDING_DOCTOR_NAME.source})`, "i"),
     );
@@ -424,20 +514,34 @@ function parseAttendingDoctorName(text: string): string | undefined {
 
     const simpleStart = cleaned.match(/^\s*([A-Z][A-Z]+\s+[A-Z][A-Z]+(?:\s+[A-Z]\.?)?)\b/i);
     if (simpleStart?.[1] && isPlausibleAttendingDoctorSimple(simpleStart[1])) {
+      if (
+        /\b(GOURMET|SANDWICH|RESTAUR|FIRE PROTECTION|COUNTY|LLC|INC|CORP|SERVICES|HEALTH|HOSPITAL|CLINIC|INDUSTRIES|CONSTRUCTION|AMAZON|FARMS)\b/i.test(
+          cleaned.slice(0, 250),
+        )
+      ) {
+        continue;
+      }
       return simpleStart[1].trim().toUpperCase();
-    }
-
-    if (/(?:Billing Phone|Location Phone)/i.test(section)) {
-      const inSection =
-        section.match(ATTENDING_DOCTOR_NAME) ??
-        (isPlausibleAttendingDoctorSimple(section.match(ATTENDING_DOCTOR_SIMPLE)?.[1] ?? "")
-          ? section.match(ATTENDING_DOCTOR_SIMPLE)
-          : null);
-      if (inSection?.[1]) return inSection[1].trim().toUpperCase();
     }
   }
 
   return undefined;
+}
+
+function trimAttendingDoctorSection(section: string): string {
+  const endMarkers = [
+    /View\s*>/i,
+    /Employer name/i,
+    /Vocational firm/i,
+    /Percent of liability/i,
+    /Surgical Coordinator/i,
+  ];
+  let end = section.length;
+  for (const marker of endMarkers) {
+    const i = section.search(marker);
+    if (i >= 0 && i < end) end = i;
+  }
+  return section.slice(0, end);
 }
 
 function parseAttendingDoctor(text: string): Pick<
@@ -445,9 +549,10 @@ function parseAttendingDoctor(text: string): Pick<
   "attendingDoctorName" | "attendingDoctorAddress" | "attendingDoctorPhone"
 > {
   const sections = text.split(/Attending doctor/i).slice(1);
-  const section =
+  const rawSection =
     sections.find((s) => /(?:Billing Phone|Location Phone)/i.test(s)) ??
     sections[sections.length - 1];
+  const section = rawSection ? trimAttendingDoctorSection(rawSection) : undefined;
 
   const name = parseAttendingDoctorName(text);
   if (!section) return { attendingDoctorName: name };
@@ -655,13 +760,51 @@ export function isPlausibleWorkerAddress(addressLine1?: string): boolean {
   return true;
 }
 
-function firstPlausibleAddress(text: string) {
+function parseOcrLinePairAddresses(rawText: string) {
+  const results: {
+    addressLine1?: string;
+    city?: string;
+    state?: string;
+    zip?: string;
+  }[] = [];
+  const lines = rawText.split(/\n/).map((l) => l.trim()).filter(Boolean);
+  for (let i = 0; i < lines.length - 1; i++) {
+    const cityMatch = lines[i + 1]!.match(
+      /^([A-Z][A-Z\s.'-]+),\s*(WA|OR|ID)\s+(\d{5}(?:-\d{4})?)$/i,
+    );
+    if (!cityMatch) continue;
+    const street = lines[i]!;
+    if (!/^\d+\s+/.test(street)) continue;
+    if (
+      !/(?:STREET|SUITE|AVENUE|DRIVE|LANE|COURT|PLACE|ROAD|BLVD|WAY|HWY|ST\b|STE\b|AVE\b|RD\b|DR\b|LN\b|CT\b|PL\b|SW\b|SE\b|NW\b|NE\b)/i.test(
+        street,
+      )
+    ) {
+      continue;
+    }
+    results.push({
+      addressLine1: street.toUpperCase(),
+      city: cityMatch[1]!.trim().toUpperCase(),
+      state: cityMatch[2]!.trim().toUpperCase(),
+      zip: cityMatch[3]!.slice(0, 5),
+    });
+  }
+  return results;
+}
+
+function firstPlausibleAddress(text: string, rawText?: string) {
+  const fromLines = rawText ? parseOcrLinePairAddresses(rawText) : [];
+  const lineHit = fromLines.find((a) => isPlausibleWorkerAddress(a.addressLine1));
+  if (lineHit) return lineHit;
   return parseAllStreetCityStateZip(text).find((a) =>
     isPlausibleWorkerAddress(a.addressLine1),
   );
 }
 
-function parseWorkerAddresses(text: string): Pick<
+function parseWorkerAddresses(
+  text: string,
+  rawText?: string,
+): Pick<
   ParsedLniCacFields,
   | "mailingAddressLine1"
   | "mailingCity"
@@ -682,10 +825,10 @@ function parseWorkerAddresses(text: string): Pick<
 
   if (mailingBlock || residenceBlock) {
     const mailing =
-      firstPlausibleAddress(mailingBlock ?? "") ??
-      firstPlausibleAddress(residenceBlock ?? "");
+      firstPlausibleAddress(mailingBlock ?? "", rawText) ??
+      firstPlausibleAddress(residenceBlock ?? "", rawText);
     const residence =
-      firstPlausibleAddress(residenceBlock ?? "") ?? mailing;
+      firstPlausibleAddress(residenceBlock ?? "", rawText) ?? mailing;
     const phoneSource = residenceBlock ?? mailingBlock ?? "";
     const workerPhone = phoneSource.match(/\b(\d{3}-\d{3}-\d{4})\b/)?.[1];
 
@@ -711,9 +854,12 @@ function parseWorkerAddresses(text: string): Pick<
   if (!section) return {};
 
   const beforeAttending = section.split(/Attending doctor/i)[0] ?? section;
-  const addresses = parseAllStreetCityStateZip(beforeAttending).filter((a) =>
-    isPlausibleWorkerAddress(a.addressLine1),
-  );
+  const linePairAddresses = rawText ? parseOcrLinePairAddresses(rawText) : [];
+  const addresses = (
+    linePairAddresses.length
+      ? linePairAddresses
+      : parseAllStreetCityStateZip(beforeAttending)
+  ).filter((a) => isPlausibleWorkerAddress(a.addressLine1));
   const workerPhone = beforeAttending.match(/\b(\d{3}-\d{3}-\d{4})\b/)?.[1];
 
   const mailing = addresses[0];
@@ -830,10 +976,132 @@ function parseDiagnosisCodes(text: string): string[] {
   return [...codes];
 }
 
+function pickStackedFields(
+  lineStacked: Partial<ParsedLniCacFields>,
+  compact: Partial<ParsedLniCacFields>,
+): Partial<ParsedLniCacFields> {
+  const pick = <K extends keyof ParsedLniCacFields>(key: K): ParsedLniCacFields[K] | undefined =>
+    lineStacked[key] ?? compact[key];
+
+  return {
+    claimNumber: pick("claimNumber"),
+    clientName: pick("clientName"),
+    dateOfInjury: pick("dateOfInjury"),
+    employerName: pick("employerName"),
+    attendingDoctorName: pick("attendingDoctorName"),
+    claimManagerName: pick("claimManagerName"),
+    claimManagerPhone: pick("claimManagerPhone"),
+    claimManagerFax: pick("claimManagerFax"),
+  };
+}
+
+/** Medical clinic fax cover sheets with inline L&I claim fields (e.g. Kareo referral PDFs). */
+function parseMedicalReferralFaxFields(rawText: string): Partial<ParsedLniCacFields> {
+  if (!/Claim number\s+[A-Z]{1,2}\d+\s+Injury date\s+\d/i.test(rawText)) return {};
+
+  const claimNumber = extractClaimNumber(
+    rawText.match(/Claim number\s+([A-Z0-9]+)\s+Injury date/i)?.[1],
+  );
+  const injuryRaw = rawText.match(
+    /Claim number\s+[A-Z0-9]+\s+Injury date\s+(\d{1,2}\/\d{1,2}\/\d{4})/i,
+  )?.[1];
+  const employerRaw = rawText.match(/Employer name\s+([^\n]+)/i)?.[1]?.trim().toUpperCase();
+  const attendingDoctorName = rawText
+    .match(/Attending doctor\s+([^\n]+)/i)?.[1]
+    ?.trim()
+    .toUpperCase();
+  const cmMatch = rawText.match(/Claim Manager\s+([A-Z][A-Z\s.'-]+?)\s+(\d{3}-\d{3}-\d{4})/i);
+  const claimManagerFax = rawText.match(/Claim Manager fax:?\s*(\d{3}-\d{3}-\d{4})/i)?.[1];
+  const clientName = rawText
+    .match(/patient,?\s+([A-Za-z]+(?:\s+[A-Za-z]+)+)\s*\(/i)?.[1]
+    ?.trim()
+    .toUpperCase();
+
+  const clinicMatch = rawText.match(
+    /\n([A-Z][A-Z\s&.'-]*(?:CLINIC|MEDICAL|HEALTH|HOSPITAL))\s*\n\s*(\d+[^\n]+?)\s*,?\s*([A-Za-z\s]+),\s*(WA|OR|ID)\s+(\d{5}(?:-\d{4})?)/i,
+  );
+  const clinicPhoneRaw = rawText.match(/\bP:\s*([\d().\-\s]+)/i)?.[1]?.replace(/\D/g, "");
+  const attendingDoctorPhone =
+    clinicPhoneRaw?.length === 10
+      ? `${clinicPhoneRaw.slice(0, 3)}-${clinicPhoneRaw.slice(3, 6)}-${clinicPhoneRaw.slice(6)}`
+      : undefined;
+
+  return {
+    claimNumber,
+    clientName,
+    dateOfInjury: parseInjuryDate(injuryRaw),
+    employerName:
+      employerRaw && isPlausibleEmployerName(employerRaw) ? employerRaw : undefined,
+    attendingDoctorName,
+    attendingDoctorAddress: clinicMatch
+      ? `${clinicMatch[2]!.trim()}, ${clinicMatch[3]!.trim()}, ${clinicMatch[4]!} ${clinicMatch[5]!}`.toUpperCase()
+      : undefined,
+    attendingDoctorPhone,
+    claimManagerName: cmMatch?.[1]?.trim().toUpperCase(),
+    claimManagerPhone: cmMatch?.[2],
+    claimManagerFax,
+    diagnoses: parseDiagnosisCodes(rawText),
+  };
+}
+
+/** Occupational health / AP visit notes with claim header fields. */
+function parseOccupationalHealthNoteFields(rawText: string): Partial<ParsedLniCacFields> {
+  if (!/Company of Injury:/i.test(rawText) || !/Claim No\.:/i.test(rawText)) return {};
+
+  const claimNumber = extractClaimNumber(rawText.match(/Claim No\.:\s*([A-Z0-9]+)/i)?.[1]);
+  const employerRaw = rawText.match(/Company of Injury:\s*([^\n]+)/i)?.[1]?.trim().toUpperCase();
+  const nameMatch = rawText.match(/Name:\s*([A-Z]+),\s*([A-Za-z]+)\b/i);
+  const clientName = nameMatch
+    ? `${nameMatch[2]!.trim()} ${nameMatch[1]!.trim()}`.toUpperCase()
+    : undefined;
+  const injuryRaw = rawText.match(/Date of Injury:\s*(\d{1,2}\/\d{1,2}\/\d{4})/i)?.[1];
+
+  const doctorRaw =
+    rawText.match(
+      /([A-Z][a-z]+(?:\s+[A-Z]\.?)?\s+[A-Z][a-z]+),\s*M\.?\s*D\.?(?:,\s*Medical Director)?/i,
+    )?.[0] ??
+    rawText.match(/\n([A-Z][a-z]+(?:\s+[A-Z]\.?)?\s+[A-Z][a-z]+),\s*M\.?\s*D\.?\s*\n/i)?.[0];
+  const attendingDoctorName = doctorRaw
+    ? doctorRaw
+        .replace(/,?\s*Medical Director.*$/i, "")
+        .replace(/,?\s*M\.?\s*D\.?/i, " MD")
+        .replace(/\./g, "")
+        .replace(/\s+/g, " ")
+        .trim()
+        .toUpperCase()
+    : undefined;
+
+  const clinicMatch = rawText.match(
+    /\n([A-Z][A-Z\s&.'-]+(?:OCCUPATIONAL HEALTH|CLINIC|MEDICAL CENTERS?|HEALTH))\s*\n\s*(\d+[^\n]+)\s*\n\s*([A-Za-z\s]+),\s*(WA|OR|ID)\s+(\d{5}(?:-\d{4})?)\s*\n\s*([\d-]+)/i,
+  );
+  const phoneRaw = clinicMatch?.[6]?.replace(/\D/g, "");
+  const attendingDoctorPhone =
+    phoneRaw?.length === 10
+      ? `${phoneRaw.slice(0, 3)}-${phoneRaw.slice(3, 6)}-${phoneRaw.slice(6)}`
+      : clinicMatch?.[6];
+
+  return {
+    claimNumber,
+    clientName,
+    dateOfInjury: parseInjuryDate(injuryRaw),
+    employerName:
+      employerRaw && isPlausibleEmployerName(employerRaw) ? employerRaw : undefined,
+    attendingDoctorName,
+    attendingDoctorAddress: clinicMatch
+      ? `${clinicMatch[2]!.trim()}, ${clinicMatch[3]!.trim()}, ${clinicMatch[4]!} ${clinicMatch[5]!}`.toUpperCase()
+      : undefined,
+    attendingDoctorPhone,
+    diagnoses: parseDiagnosisCodes(rawText),
+  };
+}
+
 export function parseLniCacText(
   rawText: string,
   options?: { requireDiagnoses?: boolean; requireMailingAddress?: boolean },
 ): ParsedLniCacFields {
+  const lineStacked = parseLineStackedFields(rawText);
+  const faxReferral = parseMedicalReferralFaxFields(rawText);
+  const occHealth = parseOccupationalHealthNoteFields(rawText);
   const text = normalizeText(rawText);
   const warnings: string[] = [];
 
@@ -856,33 +1124,68 @@ export function parseLniCacText(
   }
 
   const compact = parseCompactStackedFields(text);
+  const stacked = pickStackedFields(lineStacked, compact);
   const afterClaim = parseAfterClaimNumberStack(text);
-  const clientName = compact.clientName ?? afterClaim.clientName ?? parseWorkerName(text);
-  const employerName = compact.employerName ?? afterClaim.employerName ?? parseEmployerName(text);
+  const clientName =
+    faxReferral.clientName ??
+    occHealth.clientName ??
+    stacked.clientName ??
+    afterClaim.clientName ??
+    parseWorkerName(text);
+  const employerName =
+    faxReferral.employerName ??
+    occHealth.employerName ??
+    stacked.employerName ??
+    afterClaim.employerName ??
+    parseEmployerName(text);
   const attendingParsed = parseAttendingDoctor(text);
   const attending = {
     ...attendingParsed,
-    attendingDoctorName: compact.attendingDoctorName ?? afterClaim.attendingDoctorName ?? attendingParsed.attendingDoctorName,
+    attendingDoctorName:
+      faxReferral.attendingDoctorName ??
+      occHealth.attendingDoctorName ??
+      stacked.attendingDoctorName ??
+      afterClaim.attendingDoctorName ??
+      attendingParsed.attendingDoctorName,
+    attendingDoctorAddress:
+      faxReferral.attendingDoctorAddress ??
+      occHealth.attendingDoctorAddress ??
+      attendingParsed.attendingDoctorAddress,
+    attendingDoctorPhone:
+      faxReferral.attendingDoctorPhone ??
+      occHealth.attendingDoctorPhone ??
+      attendingParsed.attendingDoctorPhone,
   };
   const legalRepresentative = parseLegalRepresentative(text);
   const claimManagerInline = parseClaimManager(text);
-  const claimManager =
-    compact.claimManagerName
+  const claimManager = faxReferral.claimManagerName
+    ? {
+        claimManagerName: faxReferral.claimManagerName,
+        claimManagerPhone: faxReferral.claimManagerPhone ?? claimManagerInline.claimManagerPhone,
+        claimManagerFax: faxReferral.claimManagerFax ?? claimManagerInline.claimManagerFax,
+      }
+    : stacked.claimManagerName
       ? {
-          claimManagerName: compact.claimManagerName,
-          claimManagerPhone: compact.claimManagerPhone ?? claimManagerInline.claimManagerPhone,
-          claimManagerFax: claimManagerInline.claimManagerFax,
+          claimManagerName: stacked.claimManagerName,
+          claimManagerPhone: stacked.claimManagerPhone ?? claimManagerInline.claimManagerPhone,
+          claimManagerFax: stacked.claimManagerFax ?? claimManagerInline.claimManagerFax,
         }
       : afterClaim.claimManagerName
         ? {
             claimManagerName: afterClaim.claimManagerName,
             claimManagerPhone: afterClaim.claimManagerPhone ?? claimManagerInline.claimManagerPhone,
-            claimManagerFax: claimManagerInline.claimManagerFax,
+            claimManagerFax: afterClaim.claimManagerFax ?? claimManagerInline.claimManagerFax,
           }
         : claimManagerInline;
-  const addresses = parseWorkerAddresses(text);
+  const addresses = parseWorkerAddresses(text, rawText);
   const vrc = parseVrcContact(text);
-  const diagnoses = parseDiagnosisCodes(text);
+  const diagnoses = [
+    ...new Set([
+      ...parseDiagnosisCodes(text),
+      ...(faxReferral.diagnoses ?? []),
+      ...(occHealth.diagnoses ?? []),
+    ]),
+  ];
 
   if (options?.requireDiagnoses && !diagnoses.length) {
     warnings.push("Could not find diagnosis codes in claim status PDF");
@@ -893,9 +1196,11 @@ export function parseLniCacText(
   }
 
   return {
-    claimNumber: claimNumber ?? compact.claimNumber ?? afterClaim.claimNumber,
+    claimNumber:
+      claimNumber ?? faxReferral.claimNumber ?? occHealth.claimNumber ?? stacked.claimNumber ?? afterClaim.claimNumber,
     clientName,
-    dateOfInjury: compact.dateOfInjury ?? dateOfInjury,
+    dateOfInjury:
+      faxReferral.dateOfInjury ?? occHealth.dateOfInjury ?? stacked.dateOfInjury ?? dateOfInjury,
     employerName,
     ...attending,
     ...legalRepresentative,

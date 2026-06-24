@@ -171,3 +171,147 @@ export async function downloadReferralDocx(accessToken: string, file: DriveFile)
 
   return Buffer.from(await res.arrayBuffer());
 }
+
+export function getNewReferralsFolderConfig() {
+  return {
+    folderId: process.env.GOOGLE_DRIVE_NEW_REFERRALS_FOLDER_ID?.trim() || null,
+    folderName:
+      process.env.GOOGLE_DRIVE_NEW_REFERRALS_FOLDER_NAME?.trim() || "New Referrals",
+  };
+}
+
+export async function resolveNewReferralsFolderId(accessToken: string): Promise<string> {
+  const config = getNewReferralsFolderConfig();
+  return resolveTherapistFolderId(accessToken, config.folderId, config.folderName);
+}
+
+export async function resolveTherapistFolderForUser(
+  accessToken: string,
+  therapist: { email: string; firstName: string },
+): Promise<string> {
+  const config = getTherapistFolderConfig();
+  if (therapist.email === "maria@gvcounseling.com") {
+    return resolveTherapistFolderId(accessToken, config.maria.folderId, config.maria.folderName);
+  }
+  if (therapist.email === "steven@gvcounseling.com") {
+    return resolveTherapistFolderId(accessToken, config.steven.folderId, config.steven.folderName);
+  }
+  return resolveTherapistFolderId(
+    accessToken,
+    null,
+    `${therapist.firstName}: Client files`,
+  );
+}
+
+async function driveJson<T>(
+  accessToken: string,
+  path: string,
+  init?: RequestInit,
+): Promise<T> {
+  const res = await fetch(`https://www.googleapis.com/drive/v3${path}`, {
+    ...init,
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+      ...(init?.headers ?? {}),
+    },
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Google Drive API error (${res.status}): ${text.slice(0, 300)}`);
+  }
+  if (res.status === 204) return undefined as T;
+  return res.json() as Promise<T>;
+}
+
+export async function createDriveFolder(
+  accessToken: string,
+  name: string,
+  parentFolderId: string,
+): Promise<string> {
+  const data = await driveJson<{ id: string }>(
+    accessToken,
+    "/files?supportsAllDrives=true",
+    {
+      method: "POST",
+      body: JSON.stringify({
+        name,
+        mimeType: "application/vnd.google-apps.folder",
+        parents: [parentFolderId],
+      }),
+    },
+  );
+  return data.id;
+}
+
+export async function moveDriveFolder(
+  accessToken: string,
+  folderId: string,
+  newParentFolderId: string,
+): Promise<void> {
+  const meta = await driveJson<{ parents?: string[] }>(
+    accessToken,
+    `/files/${folderId}?fields=parents&supportsAllDrives=true`,
+  );
+  const previousParents = (meta.parents ?? []).join(",");
+  const params = new URLSearchParams({
+    addParents: newParentFolderId,
+    removeParents: previousParents,
+    supportsAllDrives: "true",
+  });
+  await driveJson(
+    accessToken,
+    `/files/${folderId}?${params.toString()}`,
+    { method: "PATCH", body: JSON.stringify({}) },
+  );
+}
+
+function mimeTypeForFilename(filename: string): string {
+  const ext = filename.split(".").pop()?.toLowerCase();
+  const types: Record<string, string> = {
+    pdf: "application/pdf",
+    doc: "application/msword",
+    docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    jpg: "image/jpeg",
+    jpeg: "image/jpeg",
+    png: "image/png",
+  };
+  return types[ext ?? ""] ?? "application/octet-stream";
+}
+
+export async function uploadDriveFile(
+  accessToken: string,
+  parentFolderId: string,
+  filename: string,
+  buffer: Buffer,
+  mimeType?: string,
+): Promise<void> {
+  const type = mimeType || mimeTypeForFilename(filename);
+  const metadata = JSON.stringify({ name: filename, parents: [parentFolderId] });
+  const boundary = "gc_referral_upload_boundary";
+  const bodyParts = [
+    `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${metadata}\r\n`,
+    `--${boundary}\r\nContent-Type: ${type}\r\n\r\n`,
+    buffer,
+    `\r\n--${boundary}--`,
+  ];
+  const body = Buffer.concat(
+    bodyParts.map((part) => (typeof part === "string" ? Buffer.from(part) : part)),
+  );
+
+  const res = await fetch(
+    "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true",
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": `multipart/related; boundary=${boundary}`,
+      },
+      body,
+    },
+  );
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Failed to upload "${filename}" (${res.status}): ${text.slice(0, 200)}`);
+  }
+}

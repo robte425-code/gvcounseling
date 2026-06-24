@@ -47,7 +47,8 @@ type ClientFormProps = {
     vrcName: string | null;
     vrcEmail: string | null;
     vrcPhone: string | null;
-    therapistId: string;
+    therapistId: string | null;
+    assignmentStatus?: "UNASSIGNED" | "PENDING_THERAPIST" | "ACTIVE" | "REJECTED_BY_ADMIN";
   };
 };
 
@@ -89,11 +90,12 @@ export async function ClientForm({ client }: ClientFormProps) {
               className={portalInputClass}
             />
           </div>
+          {( !client || client.assignmentStatus === "ACTIVE") && (
           <div>
             <label className={portalLabelClass}>Therapist</label>
             <select
               name="therapistId"
-              required
+              required={!client}
               defaultValue={client?.therapistId ?? therapists[0]?.id}
               className={portalInputClass}
             >
@@ -104,6 +106,7 @@ export async function ClientForm({ client }: ClientFormProps) {
               ))}
             </select>
           </div>
+          )}
           <div>
             <label className={portalLabelClass}>First name</label>
             <input name="firstName" required defaultValue={client?.firstName} className={portalInputClass} />
