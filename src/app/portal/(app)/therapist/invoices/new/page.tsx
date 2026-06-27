@@ -4,12 +4,22 @@ import { createInvoiceAction } from "@/lib/portal-actions";
 import { portalButtonClass, portalCardClass, portalInputClass, portalLabelClass } from "@/components/portal/ui";
 import { prisma } from "@/lib/prisma";
 
-export default async function NewInvoicePage() {
+export default async function NewInvoicePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ clientId?: string }>;
+}) {
   const session = await requireTherapist();
+  const { clientId: preselectedClientId } = await searchParams;
   const clients = await prisma.client.findMany({
     where: { therapistId: session.user.id, assignmentStatus: "ACTIVE" },
     orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
   });
+
+  const selectedClientId =
+    preselectedClientId && clients.some((c) => c.id === preselectedClientId)
+      ? preselectedClientId
+      : clients[0]?.id;
 
   return (
     <div className="space-y-8">
@@ -29,7 +39,13 @@ export default async function NewInvoicePage() {
             <label htmlFor="clientId" className={portalLabelClass}>
               Client
             </label>
-            <select id="clientId" name="clientId" required className={portalInputClass}>
+            <select
+              id="clientId"
+              name="clientId"
+              required
+              defaultValue={selectedClientId}
+              className={portalInputClass}
+            >
               {clients.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.lniClaimNumber} — {c.lastName}, {c.firstName}

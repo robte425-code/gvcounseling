@@ -2,8 +2,9 @@
 
 import { useMemo, useState } from "react";
 import {
-  BHI_PROCEDURE_CODES,
   formatCurrency,
+  formatProcedureCodeLabel,
+  PROCEDURE_CODES,
 } from "@/lib/constants";
 import { saveInvoiceAction } from "@/lib/portal-actions";
 import {
@@ -28,7 +29,7 @@ type Props = {
 
 const emptyLine = (): LineItem => ({
   serviceDate: new Date().toISOString().slice(0, 10),
-  procedureCode: BHI_PROCEDURE_CODES[0],
+  procedureCode: "96156",
   amount: "",
 });
 
@@ -61,7 +62,7 @@ export function InvoiceEditor({ invoiceId, readOnly, initialLines, actions }: Pr
           <thead>
             <tr className="border-b border-border text-muted">
               <th className="py-2 pr-4">Service date</th>
-              <th className="py-2 pr-4">Code</th>
+              <th className="py-2 pr-4">Procedure</th>
               <th className="py-2 pr-4">Amount</th>
             </tr>
           </thead>
@@ -69,7 +70,7 @@ export function InvoiceEditor({ invoiceId, readOnly, initialLines, actions }: Pr
             {lines.map((line, i) => (
               <tr key={i} className="border-b border-border/60">
                 <td className="py-2 pr-4">{line.serviceDate}</td>
-                <td className="py-2 pr-4 font-mono">{line.procedureCode}</td>
+                <td className="py-2 pr-4">{formatProcedureCodeLabel(line.procedureCode)}</td>
                 <td className="py-2 pr-4">{formatCurrency(line.amount || 0)}</td>
               </tr>
             ))}
@@ -101,7 +102,7 @@ export function InvoiceEditor({ invoiceId, readOnly, initialLines, actions }: Pr
                 className={portalInputClass}
               />
             </div>
-            <div>
+            <div className="sm:col-span-2">
               <label className={portalLabelClass}>Procedure code</label>
               <select
                 required
@@ -109,9 +110,9 @@ export function InvoiceEditor({ invoiceId, readOnly, initialLines, actions }: Pr
                 onChange={(e) => updateLine(index, { procedureCode: e.target.value })}
                 className={portalInputClass}
               >
-                {BHI_PROCEDURE_CODES.map((code) => (
+                {PROCEDURE_CODES.map(({ code, description }) => (
                   <option key={code} value={code}>
-                    {code}
+                    {code} — {description}
                   </option>
                 ))}
               </select>
