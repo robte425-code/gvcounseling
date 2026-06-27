@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Suspense } from "react";
 import { requireAdmin } from "@/auth";
 import { ClientAssignmentPanel } from "@/components/portal/ClientAssignmentPanel";
 import { ClientDetailView } from "@/components/portal/ClientDetailView";
-import { ClientDriveFiles } from "@/components/portal/ClientDriveFiles";
+import { ClientDriveFilesLoading } from "@/components/portal/ClientDriveFilesLoading";
+import { ClientDriveFilesSection } from "@/components/portal/ClientDriveFilesSection";
 import { portalButtonClass, portalButtonSecondaryClass } from "@/components/portal/ui";
-import { loadClientDriveContents } from "@/lib/client-drive-contents";
 import { deleteClientAction } from "@/lib/portal-actions";
 import { prisma } from "@/lib/prisma";
 
@@ -31,8 +32,6 @@ export default async function AdminClientDetailPage({
     }),
   ]);
   if (!client) notFound();
-
-  const drive = await loadClientDriveContents(client.driveFolderId);
 
   return (
     <div className="space-y-4">
@@ -85,7 +84,9 @@ export default async function AdminClientDetailPage({
       />
 
       <ClientDetailView client={client} />
-      <ClientDriveFiles drive={drive} />
+      <Suspense fallback={<ClientDriveFilesLoading />}>
+        <ClientDriveFilesSection driveFolderId={client.driveFolderId} />
+      </Suspense>
     </div>
   );
 }
