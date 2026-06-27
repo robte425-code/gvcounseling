@@ -16,6 +16,8 @@ import { prisma } from "@/lib/prisma";
 export type DriveImportResult = {
   created: number;
   updated: number;
+  deleted: number;
+  unchanged: number;
   skipped: number;
   errors: string[];
   warnings: string[];
@@ -113,6 +115,8 @@ export async function importDriveClientFolder(
   const result: DriveImportResult = {
     created: 0,
     updated: 0,
+    deleted: 0,
+    unchanged: 0,
     skipped: 0,
     errors: [],
     warnings: [],
@@ -152,6 +156,7 @@ export async function importDriveClientFolder(
     const importResult = await upsertClientFromReferral(parsed, target.therapistId, {
       folderDisplayName: parsedFolder.displayName,
       folderClaimNumber: parsedFolder.claimNumber,
+      driveFolderId: target.folderId,
       supplement,
       documentParts: parts,
     });
@@ -177,24 +182,125 @@ export async function importDriveClientFolder(
 function mergeResults(into: DriveImportResult, part: DriveImportResult) {
   into.created += part.created;
   into.updated += part.updated;
+  into.deleted += part.deleted;
+  into.unchanged += part.unchanged;
   into.skipped += part.skipped;
   into.errors.push(...part.errors);
   into.warnings.push(...part.warnings);
 }
 
-export async function importClientsFromGoogleDrive(userId: string): Promise<DriveImportResult> {
-  const { folders, errors } = await scanDriveClientFolders(userId);
-  const result: DriveImportResult = {
+function emptyDriveImportResult(errors: string[] = []): DriveImportResult {
+  return {
     created: 0,
     updated: 0,
+    deleted: 0,
+    unchanged: 0,
     skipped: 0,
-    errors: [...errors],
+    errors,
     warnings: [],
   };
+}
+
+async function removeClientMissingFromDrive(client: {
+  id: string;
+  lniClaimNumber: string;
+}): Promise<"deleted" | "blocked"> {
+  const invoiceCount = await prisma.invoice.count({ where: { clientId: client.id } });
+  if (invoiceCount > 0) return "blocked";
+  await prisma.client.delete({ where: { id: client.id } });
+  return "deleted";
+}
+
+/** Import new Drive folders and remove clients whose Drive folder was deleted. Skips unchanged folders. */
+export async function syncClientsFromGoogleDrive(userId: string): Promise<DriveImportResult> {
+  const { folders, errors } = await scanDriveClientFolders(userId);
+  const result = emptyDriveImportResult([...errors]);
+
+  if (!folders.length && !errors.length) {
+    return result;
+  }
+
+  const sources = await getTherapistSources();
+  const therapistIds = sources.map((s) => s.therapistId);
+  const driveFolderIds = new Set(folders.map((f) => f.folderId));
+
+  const trackedClients = await prisma.client.findMany({
+    where: {
+      OR: [
+        { driveFolderId: { not: null } },
+        { therapistId: { in: therapistIds } },
+      ],
+    },
+    select: {
+      id: true,
+      lniClaimNumber: true,
+      therapistId: true,
+      driveFolderId: true,
+    },
+  });
+
+  const clientByClaim = new Map(trackedClients.map((c) => [c.lniClaimNumber, c]));
 
   for (const folder of folders) {
+    const parsedFolder = parseClientFolderName(folder.folderName);
+    if (!parsedFolder) {
+      result.skipped++;
+      continue;
+    }
+
+    const existing = clientByClaim.get(parsedFolder.claimNumber);
+
+    if (existing?.driveFolderId === folder.folderId) {
+      result.unchanged++;
+      continue;
+    }
+
+    if (existing) {
+      if (!existing.driveFolderId) {
+        await prisma.client.update({
+          where: { id: existing.id },
+          data: { driveFolderId: folder.folderId },
+        });
+        existing.driveFolderId = folder.folderId;
+        result.unchanged++;
+        continue;
+      }
+
+      result.skipped++;
+      result.warnings.push(
+        `${folder.folderName}: claim ${parsedFolder.claimNumber} is linked to a different Drive folder; skipped.`,
+      );
+      continue;
+    }
+
     mergeResults(result, await importDriveClientFolder(userId, folder));
+    const created = await prisma.client.findUnique({
+      where: { lniClaimNumber: parsedFolder.claimNumber },
+      select: { id: true, lniClaimNumber: true, therapistId: true, driveFolderId: true },
+    });
+    if (created) clientByClaim.set(created.lniClaimNumber, created);
+  }
+
+  for (const client of trackedClients) {
+    if (!client.driveFolderId || !client.therapistId || !therapistIds.includes(client.therapistId)) {
+      continue;
+    }
+    if (driveFolderIds.has(client.driveFolderId)) continue;
+
+    const outcome = await removeClientMissingFromDrive(client);
+    if (outcome === "deleted") {
+      result.deleted++;
+      clientByClaim.delete(client.lniClaimNumber);
+    } else {
+      result.warnings.push(
+        `${client.lniClaimNumber}: Drive folder removed but client has invoices — not deleted.`,
+      );
+    }
   }
 
   return result;
+}
+
+export async function importClientsFromGoogleDrive(userId: string): Promise<DriveImportResult> {
+  return syncClientsFromGoogleDrive(userId);
 }

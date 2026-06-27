@@ -23,6 +23,8 @@ export type ReferralImportOptions = {
   /** From Drive folder name: "<claim #> - <client name>" */
   folderDisplayName?: string;
   folderClaimNumber?: string;
+  /** Google Drive folder id for incremental sync tracking */
+  driveFolderId?: string;
   /** Parsed from CAC / Addresses PDFs in the client folder */
   supplement?: ClientDocumentSupplement;
   /** Per-document parse results for validation and repair */
@@ -187,6 +189,7 @@ export async function upsertClientFromReferral(
     vrcPhone: mergedReferral.vrcPhone ?? existing?.vrcPhone ?? null,
     therapistId: existing?.therapistId ?? therapistId,
     assignmentStatus: existing?.assignmentStatus ?? ClientAssignmentStatus.ACTIVE,
+    driveFolderId: options.driveFolderId ?? existing?.driveFolderId ?? null,
   };
 
   if (existing) {

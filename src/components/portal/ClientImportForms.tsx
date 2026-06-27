@@ -14,6 +14,8 @@ type Therapist = { id: string; firstName: string; lastName: string };
 type ImportResult = {
   created?: number;
   updated?: number;
+  deleted?: number;
+  unchanged?: number;
   skipped?: number;
   errors?: string[];
   warnings?: string[];
@@ -32,11 +34,34 @@ function ResultBox({ result }: { result: ImportResult | null }) {
   if (result.error) {
     return <p className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-800">{result.error}</p>;
   }
+  const hasActivity =
+    (result.created ?? 0) > 0 ||
+    (result.updated ?? 0) > 0 ||
+    (result.deleted ?? 0) > 0 ||
+    (result.skipped ?? 0) > 0 ||
+    (result.warnings?.length ?? 0) > 0 ||
+    (result.errors?.length ?? 0) > 0;
+  if (!hasActivity && (result.unchanged ?? 0) > 0) {
+    return (
+      <p className="mt-4 rounded-xl bg-primary/5 px-4 py-3 text-sm text-muted">
+        No changes. {result.unchanged} client folder{result.unchanged === 1 ? "" : "s"} already in sync.
+      </p>
+    );
+  }
+  if (!hasActivity) {
+    return (
+      <p className="mt-4 rounded-xl bg-primary/5 px-4 py-3 text-sm text-muted">No changes found.</p>
+    );
+  }
   return (
     <div className="mt-4 space-y-2 rounded-xl bg-primary/5 px-4 py-3 text-sm">
       {result.created != null && <p>Created: {result.created}</p>}
-      {result.updated != null && <p>Updated: {result.updated}</p>}
-      {result.skipped != null && <p>Skipped: {result.skipped}</p>}
+      {result.updated != null && result.updated > 0 && <p>Updated: {result.updated}</p>}
+      {result.deleted != null && result.deleted > 0 && <p>Removed: {result.deleted}</p>}
+      {result.unchanged != null && result.unchanged > 0 && (
+        <p className="text-muted">Unchanged: {result.unchanged}</p>
+      )}
+      {result.skipped != null && result.skipped > 0 && <p>Skipped: {result.skipped}</p>}
       {result.warnings?.map((w) => (
         <p key={w} className="text-amber-900">
           {w}
@@ -95,67 +120,23 @@ export function ClientImportForms({
   async function syncFromDrive() {
     setLoading("drive");
     setDriveResult(null);
-    setDriveProgress("Scanning Google Drive…");
+    setDriveProgress("Syncing Google Drive…");
 
     try {
-      const scanRes = await fetch("/api/portal/clients/import-drive", {
-        method: "GET",
+      const res = await fetch("/api/portal/clients/import-drive", {
+        method: "POST",
         credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
       });
-      const scanBody = (await scanRes.json()) as {
-        folders?: Array<{
-          folderId: string;
-          folderName: string;
-          therapistId: string;
-          therapistName: string;
-        }>;
-        errors?: string[];
-        error?: string;
-      };
+      const body = (await res.json()) as ImportResult;
 
-      if (!scanRes.ok) {
-        setDriveResult({ error: scanBody.error ?? "Could not scan Google Drive folders." });
+      if (!res.ok) {
+        setDriveResult({ error: body.error ?? "Drive sync failed." });
         return;
       }
 
-      const aggregate: ImportResult = {
-        created: 0,
-        updated: 0,
-        skipped: 0,
-        errors: [...(scanBody.errors ?? [])],
-        warnings: [],
-      };
-
-      const folders = scanBody.folders ?? [];
-      if (!folders.length) {
-        setDriveResult(aggregate);
-        return;
-      }
-
-      for (const [index, folder] of folders.entries()) {
-        setDriveProgress(`Importing ${index + 1} of ${folders.length}: ${folder.folderName}`);
-        const res = await fetch("/api/portal/clients/import-drive", {
-          method: "POST",
-          credentials: "same-origin",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(folder),
-        });
-        const body = (await res.json()) as ImportResult;
-
-        if (!res.ok) {
-          aggregate.errors?.push(body.error ?? `Failed on ${folder.folderName}.`);
-          aggregate.skipped = (aggregate.skipped ?? 0) + 1;
-          continue;
-        }
-
-        aggregate.created = (aggregate.created ?? 0) + (body.created ?? 0);
-        aggregate.updated = (aggregate.updated ?? 0) + (body.updated ?? 0);
-        aggregate.skipped = (aggregate.skipped ?? 0) + (body.skipped ?? 0);
-        if (body.errors?.length) aggregate.errors?.push(...body.errors);
-        if (body.warnings?.length) aggregate.warnings?.push(...body.warnings);
-      }
-
-      setDriveResult(aggregate);
+      setDriveResult(body);
     } catch {
       setDriveResult({ error: "Drive sync failed. Check your connection and try again." });
     } finally {
@@ -191,7 +172,8 @@ export function ClientImportForms({
         <h2 className="font-serif text-xl font-semibold text-primary-dark">Google Drive</h2>
         <p className="text-sm text-muted">
           Import clients from <strong>Maria: Client files</strong> and{" "}
-          <strong>Steven: Client files</strong>. Each client folder should be named{" "}
+          <strong>Steven: Client files</strong>. Sync checks for new or removed folders only —
+          existing clients are not re-imported. Each client folder should be named{" "}
           <code className="text-xs">&lt;claim #&gt; - &lt;client name&gt;</code> and contain a{" "}
           <strong>Referral Submission</strong> Google Doc.
         </p>

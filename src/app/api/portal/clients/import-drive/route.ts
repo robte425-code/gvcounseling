@@ -4,6 +4,7 @@ import { getRealUserId, requireAdminApi } from "@/auth";
 import {
   importDriveClientFolder,
   scanDriveClientFolders,
+  syncClientsFromGoogleDrive,
   type DriveFolderTarget,
 } from "@/lib/drive-client-import";
 
@@ -56,42 +57,10 @@ export async function POST(request: Request) {
       return NextResponse.json(result);
     }
 
-    const scan = await scanDriveClientFolders(getRealUserId(auth.session));
-    if (!scan.folders.length) {
-      revalidatePath("/portal/admin/clients");
-      return NextResponse.json({
-        created: 0,
-        updated: 0,
-        skipped: 0,
-        errors: scan.errors,
-        warnings: [],
-      });
-    }
-
-    const aggregate = {
-      created: 0,
-      updated: 0,
-      skipped: 0,
-      errors: [...scan.errors],
-      warnings: [] as string[],
-      total: scan.folders.length,
-      processed: 0,
-    };
-
-    for (const folder of scan.folders) {
-      const part = await importDriveClientFolder(getRealUserId(auth.session), folder);
-      aggregate.created += part.created;
-      aggregate.updated += part.updated;
-      aggregate.skipped += part.skipped;
-      aggregate.errors.push(...part.errors);
-      aggregate.warnings.push(...part.warnings);
-      aggregate.processed++;
-    }
-
+    const result = await syncClientsFromGoogleDrive(getRealUserId(auth.session));
     revalidatePath("/portal/admin/clients");
     revalidatePath("/portal/admin/clients/import");
-
-    return NextResponse.json(aggregate);
+    return NextResponse.json(result);
   } catch (e) {
     console.error("Drive import failed:", e);
     return NextResponse.json(
