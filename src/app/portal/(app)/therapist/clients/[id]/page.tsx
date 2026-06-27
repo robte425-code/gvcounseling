@@ -7,11 +7,14 @@ import { prisma } from "@/lib/prisma";
 
 export default async function TherapistClientDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ saved?: string }>;
 }) {
   const session = await requireTherapist();
   const { id } = await params;
+  const { saved } = await searchParams;
 
   const client = await prisma.client.findFirst({
     where: { id, therapistId: session.user.id },
@@ -19,25 +22,33 @@ export default async function TherapistClientDetailPage({
   if (!client) notFound();
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
+      {saved === "1" && (
+        <p className="rounded-lg bg-primary/10 px-3 py-2 text-sm text-primary-dark">
+          Client saved successfully.
+        </p>
+      )}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <Link href="/portal/therapist/clients" className={`${portalButtonSecondaryClass} text-xs`}>
             ← Back to clients
           </Link>
-          <h1 className="mt-4 font-serif text-3xl font-semibold text-primary-dark">
+          <h1 className="mt-3 font-serif text-2xl font-semibold text-primary-dark">
             {client.lastName}, {client.firstName}
           </h1>
           <p className="mt-1 font-mono text-sm text-muted">{client.lniClaimNumber}</p>
         </div>
         <div className="flex flex-wrap gap-3">
+          <Link href={`/portal/therapist/clients/${client.id}/edit`} className={portalButtonClass}>
+            Edit client
+          </Link>
           {client.assignmentStatus === "PENDING_THERAPIST" && (
-            <Link href={`/portal/therapist/referrals/${client.id}`} className={portalButtonClass}>
+            <Link href={`/portal/therapist/referrals/${client.id}`} className={portalButtonSecondaryClass}>
               Review referral
             </Link>
           )}
           {client.assignmentStatus === "ACTIVE" && (
-            <Link href="/portal/therapist/invoices/new" className={portalButtonClass}>
+            <Link href="/portal/therapist/invoices/new" className={portalButtonSecondaryClass}>
               New invoice
             </Link>
           )}

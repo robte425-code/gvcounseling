@@ -1,5 +1,9 @@
 import type { Gender } from "@/generated/prisma/client";
-import { portalCardClass, StatusBadge } from "@/components/portal/ui";
+import {
+  portalCardCompactClass,
+  portalSectionHeadingClass,
+  StatusBadge,
+} from "@/components/portal/ui";
 import { client837Ready, formatDate } from "@/lib/constants";
 
 export type ClientDetailData = {
@@ -42,137 +46,132 @@ export type ClientDetailData = {
   priorServices: string | null;
 };
 
-function DetailField({ label, value }: { label: string; value: React.ReactNode }) {
+function DetailField({ label, value, wide }: { label: string; value: React.ReactNode; wide?: boolean }) {
+  if (value === null || value === undefined || value === "" || value === "—") return null;
   return (
-    <div>
-      <dt className="text-muted">{label}</dt>
-      <dd className="font-medium">{value ?? "—"}</dd>
+    <div className={wide ? "sm:col-span-2 lg:col-span-3" : undefined}>
+      <dt className="text-xs text-muted">{label}</dt>
+      <dd className="text-sm leading-snug">{value}</dd>
     </div>
   );
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function DetailSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className={`${portalCardClass} space-y-4`}>
-      <h2 className="border-b border-primary/10 pb-2 font-serif text-xl text-primary-dark">{title}</h2>
-      <dl className="grid gap-3 text-sm sm:grid-cols-2">{children}</dl>
-    </section>
+    <div className="border-t border-border pt-3 first:border-t-0 first:pt-0">
+      <h3 className={`${portalSectionHeadingClass} mb-2`}>{title}</h3>
+      <dl className="grid gap-x-4 gap-y-2 sm:grid-cols-2 lg:grid-cols-3">{children}</dl>
+    </div>
   );
 }
 
-function formatGender(gender: Gender | null): string {
+function formatGender(gender: Gender | null): string | null {
   if (gender === "F") return "Female";
   if (gender === "M") return "Male";
-  if (gender === "U") return "Unknown / Other";
-  return "—";
+  if (gender === "U") return "Unknown";
+  return null;
 }
 
-function formatAddress(line1: string | null, line2: string | null, city: string | null, state: string | null, zip: string | null): string {
+function formatAddress(
+  line1: string | null,
+  line2: string | null,
+  city: string | null,
+  state: string | null,
+  zip: string | null,
+): string | null {
   const parts = [line1, line2, [city, state].filter(Boolean).join(", "), zip].filter(Boolean);
-  return parts.length ? parts.join(", ") : "—";
+  return parts.length ? parts.join(", ") : null;
+}
+
+function display(value: string | null | undefined): React.ReactNode {
+  return value?.trim() || null;
 }
 
 export function ClientDetailView({ client }: { client: ClientDetailData }) {
   const readiness = client837Ready(client);
+  const mailing = formatAddress(client.addressLine1, client.addressLine2, client.city, client.state, client.zip);
+  const residence = formatAddress(
+    client.residenceAddressLine1,
+    null,
+    client.residenceCity,
+    client.residenceState,
+    client.residenceZip,
+  );
+  const fullName = `${client.lastName}, ${client.firstName}${client.middleInitial ? ` ${client.middleInitial}.` : ""}`;
 
   return (
-    <div className="space-y-6">
-      <div className={portalCardClass}>
-        <div className="flex flex-wrap items-center gap-3">
-          {client.assignmentStatus === "ACTIVE" ? (
-            <span className="text-sm text-muted">Active</span>
-          ) : (
-            <StatusBadge status={client.assignmentStatus} />
-          )}
-          {readiness.ready ? (
-            <StatusBadge status="READY" />
-          ) : (
-            <span className="text-sm text-amber-800">837 missing: {readiness.missing.join(", ")}</span>
-          )}
-        </div>
+    <div className={`${portalCardCompactClass} space-y-3`}>
+      <div className="flex flex-wrap items-center gap-2">
+        {client.assignmentStatus === "ACTIVE" ? (
+          <span className="text-xs text-muted">Active</span>
+        ) : (
+          <StatusBadge status={client.assignmentStatus} />
+        )}
+        {readiness.ready ? (
+          <StatusBadge status="READY" />
+        ) : (
+          <span className="text-xs text-amber-800">837: {readiness.missing.join(", ")}</span>
+        )}
       </div>
 
-      <Section title="Claim & client">
-        <DetailField label="L&I claim #" value={<span className="font-mono">{client.lniClaimNumber}</span>} />
-        <DetailField label="Name" value={`${client.lastName}, ${client.firstName}${client.middleInitial ? ` ${client.middleInitial}.` : ""}`} />
-        <DetailField label="Date of birth" value={formatDate(client.dateOfBirth)} />
+      <DetailSection title="Client">
+        <DetailField label="Claim #" value={<span className="font-mono">{client.lniClaimNumber}</span>} />
+        <DetailField label="Name" value={fullName} />
+        <DetailField label="DOB" value={formatDate(client.dateOfBirth)} />
         <DetailField label="Gender" value={formatGender(client.gender)} />
-        <DetailField label="Date of injury" value={formatDate(client.dateOfInjury)} />
-        <DetailField label="Employer" value={client.employerName} />
-        <DetailField label="Worker phone" value={client.workerPhone} />
-        <DetailField label="Diagnoses" value={client.diagnoses.length ? client.diagnoses.join(", ") : "—"} />
-      </Section>
+        <DetailField label="Injury date" value={formatDate(client.dateOfInjury)} />
+        <DetailField label="Phone" value={display(client.workerPhone)} />
+        <DetailField label="Employer" value={display(client.employerName)} />
+        <DetailField
+          label="Diagnoses"
+          value={client.diagnoses.length ? client.diagnoses.join(", ") : null}
+          wide
+        />
+      </DetailSection>
 
-      <Section title="Worker mailing address">
-        <div className="sm:col-span-2">
-          <DetailField
-            label="Address"
-            value={formatAddress(client.addressLine1, client.addressLine2, client.city, client.state, client.zip)}
-          />
-        </div>
-      </Section>
-
-      {(client.residenceAddressLine1 || client.residenceCity) && (
-        <Section title="Worker residence address">
-          <div className="sm:col-span-2">
-            <DetailField
-              label="Address"
-              value={formatAddress(
-                client.residenceAddressLine1,
-                null,
-                client.residenceCity,
-                client.residenceState,
-                client.residenceZip,
-              )}
-            />
-          </div>
-        </Section>
+      {(mailing || residence) && (
+        <DetailSection title="Addresses">
+          <DetailField label="Mailing" value={mailing} wide />
+          <DetailField label="Residence" value={residence} wide />
+        </DetailSection>
       )}
 
-      <Section title="Attending doctor">
-        <DetailField label="Attending NPI" value={client.attendingNpi} />
-        <DetailField label="Doctor name" value={client.attendingDoctorName} />
-        <DetailField label="Doctor phone" value={client.attendingDoctorPhone} />
-        <div className="sm:col-span-2">
-          <DetailField label="Doctor address" value={client.attendingDoctorAddress} />
-        </div>
-      </Section>
+      <DetailSection title="Medical & claims">
+        <DetailField label="Attending NPI" value={display(client.attendingNpi)} />
+        <DetailField label="Doctor" value={display(client.attendingDoctorName)} />
+        <DetailField label="Doctor phone" value={display(client.attendingDoctorPhone)} />
+        <DetailField label="Doctor address" value={display(client.attendingDoctorAddress)} wide />
+        <DetailField label="Claim manager" value={display(client.claimManagerName)} />
+        <DetailField label="CM phone" value={display(client.claimManagerPhone)} />
+        <DetailField label="CM fax" value={display(client.claimManagerFax)} />
+        <DetailField label="Legal rep" value={display(client.legalRepresentativeName)} />
+        <DetailField label="Legal phone" value={display(client.legalRepresentativePhone)} />
+        <DetailField label="Legal address" value={display(client.legalRepresentativeAddress)} wide />
+      </DetailSection>
 
-      <Section title="Claim manager">
-        <DetailField label="Name" value={client.claimManagerName} />
-        <DetailField label="Phone" value={client.claimManagerPhone} />
-        <DetailField label="Fax" value={client.claimManagerFax} />
-      </Section>
-
-      {(client.legalRepresentativeName || client.legalRepresentativePhone) && (
-        <Section title="Legal representative">
-          <div className="sm:col-span-2">
-            <DetailField label="Name / firm" value={client.legalRepresentativeName} />
-          </div>
-          <div className="sm:col-span-2">
-            <DetailField label="Address" value={client.legalRepresentativeAddress} />
-          </div>
-          <DetailField label="Phone" value={client.legalRepresentativePhone} />
-        </Section>
+      {(client.vrcName || client.vrcEmail || client.vrcPhone) && (
+        <DetailSection title="VRC">
+          <DetailField label="Name" value={display(client.vrcName)} />
+          <DetailField label="Email" value={display(client.vrcEmail)} />
+          <DetailField label="Phone" value={display(client.vrcPhone)} />
+        </DetailSection>
       )}
-
-      <Section title="VRC">
-        <DetailField label="VRC name" value={client.vrcName} />
-        <DetailField label="VRC email" value={client.vrcEmail} />
-        <DetailField label="VRC phone" value={client.vrcPhone} />
-      </Section>
 
       {(client.clientHistory || client.pgapCoach || client.languages || client.priorServices) && (
-        <Section title="Referral notes">
-          {client.pgapCoach && <DetailField label="PGAP coach" value={client.pgapCoach} />}
-          {client.languages && <DetailField label="Languages" value={client.languages} />}
-          {client.priorServices && <DetailField label="Prior services" value={client.priorServices} />}
-          {client.clientHistory && (
-            <div className="sm:col-span-2">
-              <DetailField label="Client history" value={<span className="whitespace-pre-wrap font-normal">{client.clientHistory}</span>} />
-            </div>
-          )}
-        </Section>
+        <DetailSection title="Referral notes">
+          <DetailField label="PGAP coach" value={display(client.pgapCoach)} />
+          <DetailField label="Languages" value={display(client.languages)} />
+          <DetailField label="Prior services" value={display(client.priorServices)} />
+          <DetailField
+            label="History"
+            value={
+              client.clientHistory ? (
+                <span className="whitespace-pre-wrap">{client.clientHistory}</span>
+              ) : null
+            }
+            wide
+          />
+        </DetailSection>
       )}
     </div>
   );

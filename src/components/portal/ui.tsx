@@ -11,6 +11,18 @@ export const portalButtonSecondaryClass =
 
 export const portalCardClass = "rounded-2xl border border-border bg-surface p-6 shadow-sm";
 
+export const portalCardCompactClass = "rounded-xl border border-border bg-surface p-4 shadow-sm";
+
+export const portalInputCompactClass =
+  "w-full rounded-lg border border-border bg-surface px-3 py-1.5 text-sm text-foreground outline-none transition-shadow focus:border-primary focus:ring-2 focus:ring-primary/20";
+
+export const portalLabelCompactClass = "mb-0.5 block text-xs font-medium text-muted";
+
+export const portalFormGridClass = "grid gap-x-3 gap-y-2 sm:grid-cols-2 lg:grid-cols-3";
+
+export const portalSectionHeadingClass =
+  "text-xs font-semibold uppercase tracking-wide text-muted";
+
 export const statusBadge: Record<string, string> = {
   DRAFT: "bg-muted/15 text-muted",
   SUBMITTED: "bg-amber-100 text-amber-900",

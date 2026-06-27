@@ -1,0 +1,33 @@
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { requireTherapist } from "@/auth";
+import { ClientForm } from "@/components/portal/ClientForm";
+import { portalButtonSecondaryClass } from "@/components/portal/ui";
+import { prisma } from "@/lib/prisma";
+
+export default async function TherapistClientEditPage({ params }: { params: Promise<{ id: string }> }) {
+  const session = await requireTherapist();
+  const { id } = await params;
+
+  const client = await prisma.client.findFirst({
+    where: { id, therapistId: session.user.id },
+  });
+  if (!client) notFound();
+
+  const detailHref = `/portal/therapist/clients/${client.id}`;
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <Link href={detailHref} className={`${portalButtonSecondaryClass} text-xs`}>
+          ← Back to client
+        </Link>
+        <h1 className="mt-3 font-serif text-2xl font-semibold text-primary-dark">
+          Edit {client.lastName}, {client.firstName}
+        </h1>
+        <p className="mt-1 font-mono text-sm text-muted">{client.lniClaimNumber}</p>
+      </div>
+      <ClientForm client={client} mode="therapist-edit" cancelHref={detailHref} />
+    </div>
+  );
+}

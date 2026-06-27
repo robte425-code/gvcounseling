@@ -174,11 +174,31 @@ export async function syncPayPeriodsFromLniAction() {
 }
 
 export async function saveClientAction(formData: FormData) {
-  await requireAdmin();
+  const session = await requireSession();
+  const isAdmin = getRealRole(session) === "ADMIN" && !isImpersonating(session);
   const id = String(formData.get("id") ?? "").trim();
+  const returnToRaw = String(formData.get("returnTo") ?? "").trim();
+
+  if (!id && !isAdmin) {
+    throw new Error("Only admins can create clients.");
+  }
+
   const existing = id ? await prisma.client.findUnique({ where: { id } }) : null;
-  const therapistIdRaw = String(formData.get("therapistId") ?? "").trim();
-  const therapistId = therapistIdRaw || existing?.therapistId || null;
+  if (id && !existing) {
+    throw new Error("Client not found.");
+  }
+
+  if (id && !isAdmin) {
+    if (session.user.role !== "THERAPIST" || existing!.therapistId !== session.user.id) {
+      throw new Error("You cannot edit this client.");
+    }
+  }
+
+  let therapistId = existing?.therapistId ?? null;
+  if (isAdmin) {
+    const therapistIdRaw = String(formData.get("therapistId") ?? "").trim();
+    therapistId = therapistIdRaw || therapistId;
+  }
   const claimNumber = parseClaimNumber(String(formData.get("lniClaimNumber") ?? ""));
   const diagnosesRaw = String(formData.get("diagnoses") ?? "");
   const diagnoses = diagnosesRaw
@@ -236,7 +256,14 @@ export async function saveClientAction(formData: FormData) {
 
   if (id) {
     await prisma.client.update({ where: { id }, data: { ...data, therapistId } });
+    revalidatePath("/portal/admin/clients");
     revalidatePath(`/portal/admin/clients/${id}`);
+    revalidatePath(`/portal/admin/clients/${id}/edit`);
+    revalidatePath("/portal/therapist/clients");
+    revalidatePath(`/portal/therapist/clients/${id}`);
+    revalidatePath(`/portal/therapist/clients/${id}/edit`);
+    const returnTo = returnToRaw || `/portal/admin/clients/${id}`;
+    redirect(returnTo.includes("?") ? `${returnTo}&saved=1` : `${returnTo}?saved=1`);
   } else {
     await prisma.client.create({
       data: { ...data, therapistId: therapistId!, assignmentStatus: "ACTIVE" },
