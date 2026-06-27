@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requireTherapist } from "@/auth";
 import { StatusBadge, portalButtonClass, portalCardClass } from "@/components/portal/ui";
 import { formatCurrency, formatDate } from "@/lib/constants";
+import { deleteInvoiceAction } from "@/lib/portal-actions";
 import { prisma } from "@/lib/prisma";
 
 export default async function TherapistInvoicesPage({
@@ -54,9 +55,19 @@ export default async function TherapistInvoicesPage({
                 <td className="py-3 pr-4">{formatCurrency(Number(inv.totalAmount))}</td>
                 <td className="py-3 pr-4">{formatDate(inv.updatedAt)}</td>
                 <td className="py-3 text-right">
-                  <Link href={`/portal/therapist/invoices/${inv.id}`} className="text-primary hover:underline">
-                    Open
-                  </Link>
+                  <div className="flex items-center justify-end gap-4">
+                    <Link href={`/portal/therapist/invoices/${inv.id}`} className="text-primary hover:underline">
+                      Open
+                    </Link>
+                    {inv.status === "DRAFT" && (
+                      <form action={deleteInvoiceAction}>
+                        <input type="hidden" name="invoiceId" value={inv.id} />
+                        <button type="submit" className="text-sm text-red-700 hover:underline">
+                          Delete
+                        </button>
+                      </form>
+                    )}
+                  </div>
                 </td>
               </tr>
             ))}

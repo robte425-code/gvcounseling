@@ -5,7 +5,6 @@ import { requireTherapist } from "@/auth";
 import { ClientDetailView } from "@/components/portal/ClientDetailView";
 import { ClientDriveFilesLoading } from "@/components/portal/ClientDriveFilesLoading";
 import { ClientDriveFilesSection } from "@/components/portal/ClientDriveFilesSection";
-import { createInvoiceAction } from "@/lib/portal-actions";
 import { portalButtonClass, portalButtonSecondaryClass } from "@/components/portal/ui";
 import { prisma } from "@/lib/prisma";
 
@@ -52,12 +51,12 @@ export default async function TherapistClientDetailPage({
             </Link>
           )}
           {client.assignmentStatus === "ACTIVE" && (
-            <form action={createInvoiceAction}>
-              <input type="hidden" name="clientId" value={client.id} />
-              <button type="submit" className={portalButtonSecondaryClass}>
-                New invoice
-              </button>
-            </form>
+            <Link
+              href={`/portal/therapist/invoices/new?clientId=${client.id}`}
+              className={portalButtonSecondaryClass}
+            >
+              New invoice
+            </Link>
           )}
         </div>
       </div>

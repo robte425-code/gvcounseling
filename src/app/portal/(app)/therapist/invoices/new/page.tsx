@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { requireTherapist } from "@/auth";
-import { createInvoiceAction } from "@/lib/portal-actions";
-import { portalButtonClass, portalCardClass, portalInputClass, portalLabelClass } from "@/components/portal/ui";
+import { InvoiceEditor } from "@/components/portal/InvoiceEditor";
+import { portalCardClass } from "@/components/portal/ui";
 import { prisma } from "@/lib/prisma";
 
 export default async function NewInvoicePage({
@@ -34,29 +34,18 @@ export default async function NewInvoicePage({
           No clients assigned to you yet. Ask the admin to add clients or import Referral Submission files.
         </p>
       ) : (
-        <form action={createInvoiceAction} className={`${portalCardClass} max-w-lg space-y-4`}>
-          <div>
-            <label htmlFor="clientId" className={portalLabelClass}>
-              Client
-            </label>
-            <select
-              id="clientId"
-              name="clientId"
-              required
-              defaultValue={selectedClientId}
-              className={portalInputClass}
-            >
-              {clients.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.lniClaimNumber} — {c.lastName}, {c.firstName}
-                </option>
-              ))}
-            </select>
-          </div>
-          <button type="submit" className={portalButtonClass}>
-            Create draft invoice
-          </button>
-        </form>
+        <div className={portalCardClass}>
+          <h2 className="mb-4 font-serif text-xl font-semibold text-primary-dark">Service lines</h2>
+          <InvoiceEditor
+            readOnly={false}
+            initialLines={[]}
+            clients={clients.map((c) => ({
+              id: c.id,
+              label: `${c.lniClaimNumber} — ${c.lastName}, ${c.firstName}`,
+            }))}
+            initialClientId={selectedClientId}
+          />
+        </div>
       )}
     </div>
   );

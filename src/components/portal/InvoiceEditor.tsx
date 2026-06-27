@@ -20,11 +20,18 @@ type LineItem = {
   amount: string;
 };
 
+type ClientOption = {
+  id: string;
+  label: string;
+};
+
 type Props = {
-  invoiceId: string;
+  invoiceId?: string;
   readOnly: boolean;
   initialLines: LineItem[];
   actions?: React.ReactNode;
+  clients?: ClientOption[];
+  initialClientId?: string;
 };
 
 const emptyLine = (): LineItem => ({
@@ -33,7 +40,17 @@ const emptyLine = (): LineItem => ({
   amount: "",
 });
 
-export function InvoiceEditor({ invoiceId, readOnly, initialLines, actions }: Props) {
+export function InvoiceEditor({
+  invoiceId,
+  readOnly,
+  initialLines,
+  actions,
+  clients,
+  initialClientId,
+}: Props) {
+  const [clientId, setClientId] = useState(
+    initialClientId ?? clients?.[0]?.id ?? "",
+  );
   const [lines, setLines] = useState<LineItem[]>(
     initialLines.length ? initialLines : [emptyLine()],
   );
@@ -84,7 +101,25 @@ export function InvoiceEditor({ invoiceId, readOnly, initialLines, actions }: Pr
 
   return (
     <form action={saveInvoiceAction} className="space-y-4">
-      <input type="hidden" name="invoiceId" value={invoiceId} />
+      {invoiceId ? <input type="hidden" name="invoiceId" value={invoiceId} /> : null}
+      {clients ? (
+        <div>
+          <label className={portalLabelClass}>Client</label>
+          <select
+            name="clientId"
+            required
+            value={clientId}
+            onChange={(e) => setClientId(e.target.value)}
+            className={portalInputClass}
+          >
+            {clients.map((client) => (
+              <option key={client.id} value={client.id}>
+                {client.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      ) : null}
       <input type="hidden" name="lineCount" value={lines.length} />
       <div className="space-y-3">
         {lines.map((line, index) => (

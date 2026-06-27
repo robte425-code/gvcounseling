@@ -294,44 +294,9 @@ async function nextInvoiceNumber(therapistId: string): Promise<number> {
   return (last?.invoiceNumber ?? 0) + 1;
 }
 
-export async function createInvoiceAction(formData: FormData) {
-  const session = await requireTherapist();
-  const clientId = String(formData.get("clientId") ?? "");
-  const client = await prisma.client.findFirst({
-    where: {
-      id: clientId,
-      therapistId: session.user.id,
-      assignmentStatus: "ACTIVE",
-    },
-  });
-  if (!client) throw new Error("Client not found.");
-
-  const invoice = await prisma.invoice.create({
-    data: {
-      therapistId: session.user.id,
-      clientId,
-      invoiceNumber: await nextInvoiceNumber(session.user.id),
-      totalAmount: 0,
-      status: "DRAFT",
-    },
-  });
-  redirect(`/portal/therapist/invoices/${invoice.id}`);
-}
-
 export async function saveInvoiceAction(formData: FormData) {
   const session = await requireSession();
-  const invoiceId = String(formData.get("invoiceId") ?? "");
-  const invoice = await prisma.invoice.findUnique({
-    where: { id: invoiceId },
-    include: { lineItems: true },
-  });
-  if (!invoice) throw new Error("Invoice not found.");
-  if (session.user.role === "THERAPIST" && invoice.therapistId !== session.user.id) {
-    throw new Error("Forbidden.");
-  }
-  if (invoice.status !== "DRAFT" && session.user.role === "THERAPIST") {
-    throw new Error("Only draft invoices can be edited.");
-  }
+  const invoiceId = String(formData.get("invoiceId") ?? "").trim();
 
   const lineCount = parseInt(String(formData.get("lineCount") ?? "0"), 10);
   const lineItems: { serviceDate: Date; procedureCode: string; amount: number; sortOrder: number }[] =
@@ -350,6 +315,51 @@ export async function saveInvoiceAction(formData: FormData) {
   }
 
   const totalAmount = lineItems.reduce((s, l) => s + l.amount, 0);
+
+  if (!invoiceId) {
+    if (session.user.role !== "THERAPIST") {
+      throw new Error("Only therapists can create invoices.");
+    }
+
+    const clientId = String(formData.get("clientId") ?? "").trim();
+    const client = await prisma.client.findFirst({
+      where: {
+        id: clientId,
+        therapistId: session.user.id,
+        assignmentStatus: "ACTIVE",
+      },
+    });
+    if (!client) throw new Error("Client not found.");
+
+    const invoice = await prisma.invoice.create({
+      data: {
+        therapistId: session.user.id,
+        clientId,
+        invoiceNumber: await nextInvoiceNumber(session.user.id),
+        totalAmount,
+        status: "DRAFT",
+        lineItems: {
+          create: lineItems.map((line) => ({ ...line, units: 1 })),
+        },
+      },
+    });
+
+    revalidatePath("/portal/therapist/invoices");
+    revalidatePath("/portal/admin/invoices");
+    redirect(`/portal/therapist/invoices/${invoice.id}`);
+  }
+
+  const invoice = await prisma.invoice.findUnique({
+    where: { id: invoiceId },
+    include: { lineItems: true },
+  });
+  if (!invoice) throw new Error("Invoice not found.");
+  if (session.user.role === "THERAPIST" && invoice.therapistId !== session.user.id) {
+    throw new Error("Forbidden.");
+  }
+  if (invoice.status !== "DRAFT" && session.user.role === "THERAPIST") {
+    throw new Error("Only draft invoices can be edited.");
+  }
 
   await prisma.$transaction([
     prisma.invoiceLineItem.deleteMany({ where: { invoiceId } }),
