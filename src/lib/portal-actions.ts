@@ -578,6 +578,28 @@ export async function adminRejectReferralAction(formData: FormData) {
   redirect("/portal/admin/clients?rejected=1");
 }
 
+export async function reopenClientAction(formData: FormData) {
+  await requireAdmin();
+  const clientId = String(formData.get("clientId") ?? "").trim();
+  const client = await prisma.client.findUnique({ where: { id: clientId } });
+  if (!client) throw new Error("Client not found.");
+  if (client.assignmentStatus !== "CLOSED") {
+    throw new Error("Only closed clients can be reopened.");
+  }
+
+  await prisma.client.update({
+    where: { id: clientId },
+    data: {
+      assignmentStatus: client.therapistId ? "ACTIVE" : "UNASSIGNED",
+      closedAt: null,
+    },
+  });
+
+  revalidatePath("/portal/admin/clients");
+  revalidatePath(`/portal/admin/clients/${clientId}`);
+  redirect(`/portal/admin/clients/${clientId}?reopened=1`);
+}
+
 export async function therapistAcceptReferralAction(formData: FormData) {
   const session = await requireTherapist();
   const clientId = String(formData.get("clientId") ?? "").trim();

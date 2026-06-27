@@ -29,6 +29,7 @@ enum ClientAssignmentStatus {
   PENDING_THERAPIST
   ACTIVE
   REJECTED_BY_ADMIN
+  CLOSED
 }
 
 model User {
@@ -102,6 +103,7 @@ model Client {
   driveFolderId  String?
   rejectionReason String?
   rejectedAt     DateTime?
+  closedAt       DateTime?
   therapistId    String?
   therapist      User?     @relation(fields: [therapistId], references: [id])
   invoices       Invoice[]

@@ -48,7 +48,7 @@ type ClientFormProps = {
     vrcEmail: string | null;
     vrcPhone: string | null;
     therapistId: string | null;
-    assignmentStatus?: "UNASSIGNED" | "PENDING_THERAPIST" | "ACTIVE" | "REJECTED_BY_ADMIN";
+    assignmentStatus?: "UNASSIGNED" | "PENDING_THERAPIST" | "ACTIVE" | "REJECTED_BY_ADMIN" | "CLOSED";
   };
 };
 

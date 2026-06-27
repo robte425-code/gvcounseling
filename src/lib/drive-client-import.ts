@@ -16,7 +16,7 @@ import { prisma } from "@/lib/prisma";
 export type DriveImportResult = {
   created: number;
   updated: number;
-  deleted: number;
+  closed: number;
   unchanged: number;
   skipped: number;
   errors: string[];
@@ -115,7 +115,7 @@ export async function importDriveClientFolder(
   const result: DriveImportResult = {
     created: 0,
     updated: 0,
-    deleted: 0,
+    closed: 0,
     unchanged: 0,
     skipped: 0,
     errors: [],
@@ -182,7 +182,7 @@ export async function importDriveClientFolder(
 function mergeResults(into: DriveImportResult, part: DriveImportResult) {
   into.created += part.created;
   into.updated += part.updated;
-  into.deleted += part.deleted;
+  into.closed += part.closed;
   into.unchanged += part.unchanged;
   into.skipped += part.skipped;
   into.errors.push(...part.errors);
@@ -193,7 +193,7 @@ function emptyDriveImportResult(errors: string[] = []): DriveImportResult {
   return {
     created: 0,
     updated: 0,
-    deleted: 0,
+    closed: 0,
     unchanged: 0,
     skipped: 0,
     errors,
@@ -201,17 +201,22 @@ function emptyDriveImportResult(errors: string[] = []): DriveImportResult {
   };
 }
 
-async function removeClientMissingFromDrive(client: {
-  id: string;
-  lniClaimNumber: string;
-}): Promise<"deleted" | "blocked"> {
-  const invoiceCount = await prisma.invoice.count({ where: { clientId: client.id } });
-  if (invoiceCount > 0) return "blocked";
-  await prisma.client.delete({ where: { id: client.id } });
-  return "deleted";
+async function closeClientMissingFromDrive(clientId: string): Promise<void> {
+  await prisma.client.update({
+    where: { id: clientId },
+    data: {
+      assignmentStatus: "CLOSED",
+      closedAt: new Date(),
+      driveFolderId: null,
+    },
+  });
 }
 
-/** Import new Drive folders and remove clients whose Drive folder was deleted. Skips unchanged folders. */
+function reopenStatusForClient(therapistId: string | null): "ACTIVE" | "UNASSIGNED" {
+  return therapistId ? "ACTIVE" : "UNASSIGNED";
+}
+
+/** Import new Drive folders and close clients whose Drive folder was deleted. Skips unchanged folders. */
 export async function syncClientsFromGoogleDrive(userId: string): Promise<DriveImportResult> {
   const { folders, errors } = await scanDriveClientFolders(userId);
   const result = emptyDriveImportResult([...errors]);
@@ -236,6 +241,7 @@ export async function syncClientsFromGoogleDrive(userId: string): Promise<DriveI
       lniClaimNumber: true,
       therapistId: true,
       driveFolderId: true,
+      assignmentStatus: true,
     },
   });
 
@@ -249,6 +255,21 @@ export async function syncClientsFromGoogleDrive(userId: string): Promise<DriveI
     }
 
     const existing = clientByClaim.get(parsedFolder.claimNumber);
+
+    if (existing?.assignmentStatus === "CLOSED") {
+      await prisma.client.update({
+        where: { id: existing.id },
+        data: {
+          driveFolderId: folder.folderId,
+          assignmentStatus: reopenStatusForClient(existing.therapistId),
+          closedAt: null,
+        },
+      });
+      existing.driveFolderId = folder.folderId;
+      existing.assignmentStatus = reopenStatusForClient(existing.therapistId);
+      result.updated++;
+      continue;
+    }
 
     if (existing?.driveFolderId === folder.folderId) {
       result.unchanged++;
@@ -276,26 +297,31 @@ export async function syncClientsFromGoogleDrive(userId: string): Promise<DriveI
     mergeResults(result, await importDriveClientFolder(userId, folder));
     const created = await prisma.client.findUnique({
       where: { lniClaimNumber: parsedFolder.claimNumber },
-      select: { id: true, lniClaimNumber: true, therapistId: true, driveFolderId: true },
+      select: {
+        id: true,
+        lniClaimNumber: true,
+        therapistId: true,
+        driveFolderId: true,
+        assignmentStatus: true,
+      },
     });
     if (created) clientByClaim.set(created.lniClaimNumber, created);
   }
 
   for (const client of trackedClients) {
-    if (!client.driveFolderId || !client.therapistId || !therapistIds.includes(client.therapistId)) {
+    if (
+      client.assignmentStatus === "CLOSED" ||
+      !client.driveFolderId ||
+      !client.therapistId ||
+      !therapistIds.includes(client.therapistId)
+    ) {
       continue;
     }
     if (driveFolderIds.has(client.driveFolderId)) continue;
 
-    const outcome = await removeClientMissingFromDrive(client);
-    if (outcome === "deleted") {
-      result.deleted++;
-      clientByClaim.delete(client.lniClaimNumber);
-    } else {
-      result.warnings.push(
-        `${client.lniClaimNumber}: Drive folder removed but client has invoices — not deleted.`,
-      );
-    }
+    await closeClientMissingFromDrive(client.id);
+    result.closed++;
+    clientByClaim.delete(client.lniClaimNumber);
   }
 
   return result;

@@ -1,6 +1,7 @@
 import {
   adminRejectReferralAction,
   assignClientTherapistAction,
+  reopenClientAction,
 } from "@/lib/portal-actions";
 import { portalButtonClass, portalButtonSecondaryClass, portalCardClass, portalInputClass, portalLabelClass, StatusBadge } from "@/components/portal/ui";
 import type { ClientAssignmentStatus } from "@/generated/prisma/client";
@@ -38,6 +39,26 @@ export function ClientAssignmentPanel({
       <div className={`${portalCardClass} border-red-200 bg-red-50/50`}>
         <p className="text-sm text-red-900">This referral was rejected by admin.</p>
         {rejectionReason && <p className="mt-2 text-sm text-red-800">{rejectionReason}</p>}
+      </div>
+    );
+  }
+
+  if (assignmentStatus === "CLOSED") {
+    return (
+      <div className={`${portalCardClass} space-y-4 border-slate-200 bg-slate-50/50`}>
+        <div>
+          <StatusBadge status="CLOSED" />
+          <p className="mt-3 text-sm text-muted">
+            This client was closed because their Drive folder was removed. Reopen to resume billing
+            and assignments.
+          </p>
+        </div>
+        <form action={reopenClientAction}>
+          <input type="hidden" name="clientId" value={clientId} />
+          <button type="submit" className={portalButtonClass}>
+            Reopen client
+          </button>
+        </form>
       </div>
     );
   }

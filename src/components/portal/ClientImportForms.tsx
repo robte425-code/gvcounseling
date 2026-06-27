@@ -14,7 +14,7 @@ type Therapist = { id: string; firstName: string; lastName: string };
 type ImportResult = {
   created?: number;
   updated?: number;
-  deleted?: number;
+  closed?: number;
   unchanged?: number;
   skipped?: number;
   errors?: string[];
@@ -37,7 +37,7 @@ function ResultBox({ result }: { result: ImportResult | null }) {
   const hasActivity =
     (result.created ?? 0) > 0 ||
     (result.updated ?? 0) > 0 ||
-    (result.deleted ?? 0) > 0 ||
+    (result.closed ?? 0) > 0 ||
     (result.skipped ?? 0) > 0 ||
     (result.warnings?.length ?? 0) > 0 ||
     (result.errors?.length ?? 0) > 0;
@@ -57,7 +57,7 @@ function ResultBox({ result }: { result: ImportResult | null }) {
     <div className="mt-4 space-y-2 rounded-xl bg-primary/5 px-4 py-3 text-sm">
       {result.created != null && <p>Created: {result.created}</p>}
       {result.updated != null && result.updated > 0 && <p>Updated: {result.updated}</p>}
-      {result.deleted != null && result.deleted > 0 && <p>Removed: {result.deleted}</p>}
+      {result.closed != null && result.closed > 0 && <p>Closed: {result.closed}</p>}
       {result.unchanged != null && result.unchanged > 0 && (
         <p className="text-muted">Unchanged: {result.unchanged}</p>
       )}
@@ -173,7 +173,7 @@ export function ClientImportForms({
         <p className="text-sm text-muted">
           Import clients from <strong>Maria: Client files</strong> and{" "}
           <strong>Steven: Client files</strong>. Sync checks for new or removed folders only —
-          existing clients are not re-imported. Each client folder should be named{" "}
+          existing clients are not re-imported. Removed Drive folders mark clients as closed. Each client folder should be named{" "}
           <code className="text-xs">&lt;claim #&gt; - &lt;client name&gt;</code> and contain a{" "}
           <strong>Referral Submission</strong> Google Doc.
         </p>

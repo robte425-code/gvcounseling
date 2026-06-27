@@ -4,21 +4,24 @@ import { useRouter } from "next/navigation";
 
 type ClientTableRowProps = {
   clientId: string;
+  /** Defaults to /portal/admin/clients */
+  basePath?: string;
   children: React.ReactNode;
 };
 
-export function ClientTableRow({ clientId, children }: ClientTableRowProps) {
+export function ClientTableRow({ clientId, basePath = "/portal/admin/clients", children }: ClientTableRowProps) {
   const router = useRouter();
+  const href = `${basePath}/${clientId}`;
 
   return (
     <tr
       role="link"
       tabIndex={0}
-      onClick={() => router.push(`/portal/admin/clients/${clientId}`)}
+      onClick={() => router.push(href)}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
-          router.push(`/portal/admin/clients/${clientId}`);
+          router.push(href);
         }
       }}
       className="cursor-pointer border-b border-border/60 transition hover:bg-primary/5"

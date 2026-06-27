@@ -20,6 +20,7 @@ export const statusBadge: Record<string, string> = {
   PENDING_THERAPIST: "bg-amber-100 text-amber-900",
   ACTIVE: "bg-primary/10 text-primary-dark",
   REJECTED_BY_ADMIN: "bg-red-100 text-red-800",
+  CLOSED: "bg-slate-200 text-slate-800",
 };
 
 export function StatusBadge({ status }: { status: string }) {
@@ -27,6 +28,7 @@ export function StatusBadge({ status }: { status: string }) {
     UNASSIGNED: "Unassigned",
     PENDING_THERAPIST: "Pending therapist",
     REJECTED_BY_ADMIN: "Rejected",
+    CLOSED: "Closed",
   };
   const label = labels[status] ?? status.toLowerCase().replace(/_/g, " ");
   return (

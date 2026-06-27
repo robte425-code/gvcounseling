@@ -7,9 +7,16 @@ import { ClientForm } from "../new/page";
 import { deleteClientAction } from "@/lib/portal-actions";
 import { prisma } from "@/lib/prisma";
 
-export default async function EditClientPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function EditClientPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ reopened?: string }>;
+}) {
   await requireAdmin();
   const { id } = await params;
+  const { reopened } = await searchParams;
   const [client, therapists] = await Promise.all([
     prisma.client.findUnique({
       where: { id },
@@ -25,6 +32,11 @@ export default async function EditClientPage({ params }: { params: Promise<{ id:
 
   return (
     <div className="space-y-6">
+      {reopened === "1" && (
+        <p className="rounded-xl bg-primary/10 px-4 py-3 text-sm text-primary-dark">
+          Client reopened successfully.
+        </p>
+      )}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <Link href="/portal/admin/clients" className={`${portalButtonSecondaryClass} text-xs`}>
