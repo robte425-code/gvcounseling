@@ -20,7 +20,10 @@ export type ParsedClaimStatus = Pick<
     >
   >;
 
-export function parseLniClaimStatusText(rawText: string): ParsedClaimStatus {
-  const parsed = parseLniCacText(rawText, { requireDiagnoses: true });
+export function parseLniClaimStatusText(
+  rawText: string,
+  options?: { warn?: boolean },
+): ParsedClaimStatus {
+  const parsed = parseLniCacText(rawText, { requireDiagnoses: true, warn: options?.warn });
   return parsed;
 }

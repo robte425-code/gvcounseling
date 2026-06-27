@@ -147,3 +147,44 @@ VRC Email: nikki@example.com
 Client name: James Stanton
 Please enter the LNI claim number: BL53128`;
 console.log("Stanton VRC:", parseReferralSubmissionText(stantonReferral).vrcName);
+
+const hernandezClaimStatus = `Enter Claim #
+BJ88007
+Claim number
+Worker name
+Employer name
+BJ88007
+Injury date
+5/22/2025
+MAYRA HERNANDEZ
+REYES LANDSCAPING
+Attending doctor
+Next Claim Manager review date
+DORROUGH ARLENE E
+JESSICA BLOOMSTROM 360-902-4383
+S39.012A S39.012A STRAIN MUSCLE FASCIA & TENDON LOW BACK INITIAL Allowed`;
+
+const hernandezAddresses = `Enter Claim #
+BJ88007
+Claim number
+Worker name
+Employer name
+BJ88007
+Injury date
+5/22/2025
+MAYRA HERNANDEZ
+REYES LANDSCAPING
+Worker mailing address
+18810 68TH AVE APT A201
+KENMORE, WA 98028-2680
+Attending doctor
+DORROUGH ARLENE E
+MULTIMED CLINIC
+4300 TALBOT RD S STE 103
+RENTON, WA 98055
+Location Phone: 425-988-4868
+Employer name(s)
+> REYES LANDSCAPING`;
+
+console.log("Hernandez claim:", parseLniClaimStatusText(hernandezClaimStatus));
+console.log("Hernandez addresses:", parseLniAddressesText(hernandezAddresses));

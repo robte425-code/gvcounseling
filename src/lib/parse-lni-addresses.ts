@@ -34,6 +34,9 @@ export type ParsedAddressesContacts = Pick<
     >
   >;
 
-export function parseLniAddressesText(rawText: string): ParsedAddressesContacts {
-  return parseLniCacText(rawText, { requireMailingAddress: true });
+export function parseLniAddressesText(
+  rawText: string,
+  options?: { warn?: boolean },
+): ParsedAddressesContacts {
+  return parseLniCacText(rawText, { requireMailingAddress: true, warn: options?.warn });
 }

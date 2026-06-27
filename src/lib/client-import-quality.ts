@@ -264,6 +264,14 @@ function pickFieldFromParts(
   return undefined;
 }
 
+function prefixPartWarning(filename: string, warning: string): string {
+  const baseName = filename.replace(/\s*\([^)]+\)\s*$/, "").trim();
+  if (warning.startsWith(`${filename}:`) || warning.startsWith(`${baseName}:`)) {
+    return warning;
+  }
+  return `${filename}: ${warning}`;
+}
+
 /** Re-merge document parts, preferring values that pass field validation. */
 export function mergeDocumentPartsPreferValid(
   parts: ClientDocumentPart[],
@@ -272,7 +280,7 @@ export function mergeDocumentPartsPreferValid(
 
   for (const { supplement, filename } of parts) {
     for (const warning of supplement.warnings) {
-      merged.warnings.push(`${filename}: ${warning}`);
+      merged.warnings.push(prefixPartWarning(filename, warning));
     }
     mergeDiagnoses(merged.diagnoses, supplement.diagnoses);
   }

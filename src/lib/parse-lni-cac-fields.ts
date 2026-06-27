@@ -1,4 +1,9 @@
-import { DIAGNOSIS_LABEL_PATTERN, extractClaimNumber, isPlausibleIcdCode } from "@/lib/constants";
+import {
+  DIAGNOSIS_LABEL_PATTERN,
+  extractClaimNumber,
+  isLniClaimNumber,
+  isPlausibleIcdCode,
+} from "@/lib/constants";
 
 export type ParsedLniCacFields = {
   claimNumber?: string;
@@ -423,6 +428,7 @@ const ATTENDING_DOCTOR_NAME =
 export function isPlausibleEmployerName(name: string): boolean {
   const n = name.trim().toUpperCase();
   if (!n || n.length < 2) return false;
+  if (isLniClaimNumber(n)) return false;
   if (/\bATTENDING DOCTOR\b/.test(n)) return false;
   if (ATTENDING_DOCTOR_NAME.test(n)) return false;
   if (/\b(ARNP|MD|DO|DC|PAC|NP|APRN|ND)\b/.test(n)) return false;
@@ -466,7 +472,11 @@ const ATTENDING_DOCTOR_SIMPLE =
 function isPlausibleAttendingDoctorSimple(name: string): boolean {
   const n = name.trim().toUpperCase();
   if (!isPlausiblePersonName(n)) return false;
-  if (/\b(ATTENDING DOCTOR|LEGAL REPRESENTATIVE|CLAIM MANAGER|EMPLOYER)\b/.test(n)) {
+  if (
+    /\b(ATTENDING DOCTOR|LEGAL REPRESENTATIVE|CLAIM MANAGER|EMPLOYER|NEXT|REVIEW|STATUS|WORKER)\b/.test(
+      n,
+    )
+  ) {
     return false;
   }
   const parts = n.split(/\s+/).filter(Boolean);
@@ -514,9 +524,10 @@ function parseAttendingDoctorName(text: string): string | undefined {
 
     const simpleStart = cleaned.match(/^\s*([A-Z][A-Z]+\s+[A-Z][A-Z]+(?:\s+[A-Z]\.?)?)\b/i);
     if (simpleStart?.[1] && isPlausibleAttendingDoctorSimple(simpleStart[1])) {
+      const beforeName = cleaned.slice(0, (simpleStart.index ?? 0) + simpleStart[0].length);
       if (
         /\b(GOURMET|SANDWICH|RESTAUR|FIRE PROTECTION|COUNTY|LLC|INC|CORP|SERVICES|HEALTH|HOSPITAL|CLINIC|INDUSTRIES|CONSTRUCTION|AMAZON|FARMS)\b/i.test(
-          cleaned.slice(0, 250),
+          beforeName,
         )
       ) {
         continue;
@@ -1095,9 +1106,47 @@ function parseOccupationalHealthNoteFields(rawText: string): Partial<ParsedLniCa
   };
 }
 
+/** OCR CAC exports often put the claim # on its own line after field labels. */
+function extractCacClaimNumber(rawText: string, text: string): string | undefined {
+  const enterClaim = rawText.match(/Enter Claim\s*#\s*[\n\r]+\s*([A-Z]{1,2}\d+)/i);
+  if (enterClaim?.[1]) {
+    const fromEnter = extractClaimNumber(enterClaim[1]);
+    if (fromEnter) return fromEnter;
+  }
+
+  const inline = text.match(/Claim number\s+([A-Z]{1,2}\d+)\s+Injury/i);
+  if (inline?.[1]) {
+    const fromInline = extractClaimNumber(inline[1]);
+    if (fromInline) return fromInline;
+  }
+
+  const beforeInjury = text.match(/\b([A-Z]{1,2}\d{5,8})\b\s+Injury date/i);
+  if (beforeInjury?.[1]) {
+    const fromInjury = extractClaimNumber(beforeInjury[1]);
+    if (fromInjury) return fromInjury;
+  }
+
+  const multiline = rawText.match(
+    /Claim number(?:[^\n]*\n)+?\s*([A-Z]{1,2}\d{5,8})\s*[\n\r]+\s*Injury date/i,
+  );
+  if (multiline?.[1]) {
+    const fromMultiline = extractClaimNumber(multiline[1]);
+    if (fromMultiline) return fromMultiline;
+  }
+
+  const claimRaw =
+    text.match(/Claim number\s+([A-Z0-9]+)/i)?.[1] ??
+    text.match(/\bClaim\s+#?\s*([A-Z]{1,2}\d+)\b/i)?.[1];
+  return extractClaimNumber(claimRaw);
+}
+
 export function parseLniCacText(
   rawText: string,
-  options?: { requireDiagnoses?: boolean; requireMailingAddress?: boolean },
+  options?: {
+    requireDiagnoses?: boolean;
+    requireMailingAddress?: boolean;
+    warn?: boolean;
+  },
 ): ParsedLniCacFields {
   const lineStacked = parseLineStackedFields(rawText);
   const faxReferral = parseMedicalReferralFaxFields(rawText);
@@ -1105,10 +1154,7 @@ export function parseLniCacText(
   const text = normalizeText(rawText);
   const warnings: string[] = [];
 
-  const claimRaw =
-    text.match(/Claim number\s+([A-Z0-9]+)/i)?.[1] ??
-    text.match(/\bClaim\s+#?\s*([A-Z]{1,2}\d+)\b/i)?.[1];
-  const claimNumber = extractClaimNumber(claimRaw);
+  const claimNumber = extractCacClaimNumber(rawText, text);
 
   const injuryRaw =
     text.match(/Injury dat(?:e)?\s+(\d{1,2}\/\d{1,2}\/\d{4})/i)?.[1] ??
@@ -1187,17 +1233,31 @@ export function parseLniCacText(
     ]),
   ];
 
-  if (options?.requireDiagnoses && !diagnoses.length) {
-    warnings.push("Could not find diagnosis codes in claim status PDF");
-  }
-  if (!claimNumber) warnings.push("Could not find claim number in claim status PDF");
-  if (options?.requireMailingAddress && !addresses.mailingAddressLine1) {
-    warnings.push("Could not find worker mailing address");
+  const resolvedClaimNumber =
+    claimNumber ??
+    faxReferral.claimNumber ??
+    occHealth.claimNumber ??
+    stacked.claimNumber ??
+    afterClaim.claimNumber;
+
+  if (options?.warn !== false) {
+    if (options?.requireDiagnoses && !diagnoses.length) {
+      warnings.push("Could not find diagnosis codes in claim status PDF");
+    }
+    if (!resolvedClaimNumber) {
+      if (options?.requireMailingAddress && !options?.requireDiagnoses) {
+        warnings.push("Could not find claim number in addresses PDF");
+      } else {
+        warnings.push("Could not find claim number in claim status PDF");
+      }
+    }
+    if (options?.requireMailingAddress && !addresses.mailingAddressLine1) {
+      warnings.push("Could not find worker mailing address");
+    }
   }
 
   return {
-    claimNumber:
-      claimNumber ?? faxReferral.claimNumber ?? occHealth.claimNumber ?? stacked.claimNumber ?? afterClaim.claimNumber,
+    claimNumber: resolvedClaimNumber,
     clientName,
     dateOfInjury:
       faxReferral.dateOfInjury ?? occHealth.dateOfInjury ?? stacked.dateOfInjury ?? dateOfInjury,

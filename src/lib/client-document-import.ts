@@ -252,8 +252,16 @@ function routeTextToParser(
 /** Run both L&I parsers and merge — catches fields split across claim/address views. */
 function parseWithAllLniParsers(text: string, filename: string): ClientDocumentSupplement {
   const merged: ClientDocumentSupplement = { diagnoses: [], warnings: [] };
-  applyClaimStatus(merged, parseLniClaimStatusText(text), `${filename} (claim retry)`);
-  applyAddresses(merged, parseLniAddressesText(text), `${filename} (address retry)`);
+  applyClaimStatus(
+    merged,
+    parseLniClaimStatusText(text, { warn: false }),
+    `${filename} (claim retry)`,
+  );
+  applyAddresses(
+    merged,
+    parseLniAddressesText(text, { warn: false }),
+    `${filename} (address retry)`,
+  );
   return merged;
 }
 
