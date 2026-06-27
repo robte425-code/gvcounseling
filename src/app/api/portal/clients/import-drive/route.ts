@@ -1,12 +1,11 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
-import { getRealUserId, requireAdminApi, requirePortalDriveApi } from "@/auth";
+import { getRealUserId, requireAdminApi } from "@/auth";
 import { resolveOAuthUserIdForTherapist } from "@/lib/google-drive-access";
 import {
   importDriveClientFolder,
   scanDriveClientFolders,
   syncClientsFromGoogleDrive,
-  syncTherapistClientsFromGoogleDrive,
   type DriveFolderTarget,
 } from "@/lib/drive-client-import";
 
@@ -36,7 +35,7 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const auth = await requirePortalDriveApi();
+  const auth = await requireAdminApi();
   if (!auth.ok) return auth.response;
 
   const userId = getRealUserId(auth.session);
@@ -49,7 +48,7 @@ export async function POST(request: Request) {
       body = {};
     }
 
-    if (auth.role === "ADMIN" && body.folderId && body.folderName && body.therapistId && body.therapistName) {
+    if (body.folderId && body.folderName && body.therapistId && body.therapistName) {
       const target: DriveFolderTarget = {
         folderId: body.folderId,
         folderName: body.folderName,
@@ -62,15 +61,9 @@ export async function POST(request: Request) {
       return NextResponse.json(result);
     }
 
-    const result =
-      auth.role === "THERAPIST"
-        ? await syncTherapistClientsFromGoogleDrive(userId)
-        : await syncClientsFromGoogleDrive(userId);
-
+    const result = await syncClientsFromGoogleDrive(userId);
     revalidatePath("/portal/admin/clients");
     revalidatePath("/portal/admin/clients/import");
-    revalidatePath("/portal/therapist/integrations");
-    revalidatePath("/portal/therapist/clients");
     return NextResponse.json(result);
   } catch (e) {
     console.error("Drive import failed:", e);

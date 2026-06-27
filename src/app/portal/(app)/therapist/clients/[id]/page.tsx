@@ -3,7 +3,6 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { requireTherapist } from "@/auth";
 import { ClientDetailView } from "@/components/portal/ClientDetailView";
-import { ClientDriveResyncButton } from "@/components/portal/ClientDriveResyncButton";
 import { ClientDriveFilesLoading } from "@/components/portal/ClientDriveFilesLoading";
 import { ClientDriveFilesSection } from "@/components/portal/ClientDriveFilesSection";
 import { portalButtonClass, portalButtonSecondaryClass } from "@/components/portal/ui";
@@ -60,7 +59,6 @@ export default async function TherapistClientDetailPage({
       </div>
 
       <ClientDetailView client={client} />
-      <ClientDriveResyncButton clientId={client.id} />
       <Suspense fallback={<ClientDriveFilesLoading />}>
         <ClientDriveFilesSection
           driveFolderId={client.driveFolderId}

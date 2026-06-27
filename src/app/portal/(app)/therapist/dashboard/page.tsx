@@ -1,12 +1,13 @@
 import Link from "next/link";
-import { requireTherapist } from "@/auth";
+import { getRealUserId, requireTherapist } from "@/auth";
 import { portalButtonClass, portalCardClass, StatusBadge } from "@/components/portal/ui";
-import { formatCurrency, formatDate } from "@/lib/constants";
+import { formatCurrency } from "@/lib/constants";
 import { prisma } from "@/lib/prisma";
 
 export default async function TherapistDashboardPage() {
   const session = await requireTherapist();
-  const [draftCount, submittedCount, pendingReferrals, recent] = await Promise.all([
+  const userId = getRealUserId(session);
+  const [draftCount, submittedCount, pendingReferrals, recent, driveConnection] = await Promise.all([
     prisma.invoice.count({ where: { therapistId: session.user.id, status: "DRAFT" } }),
     prisma.invoice.count({ where: { therapistId: session.user.id, status: "SUBMITTED" } }),
     prisma.client.findMany({
@@ -19,6 +20,10 @@ export default async function TherapistDashboardPage() {
       orderBy: { updatedAt: "desc" },
       include: { client: true },
     }),
+    prisma.googleDriveConnection.findUnique({
+      where: { userId },
+      select: { id: true },
+    }),
   ]);
 
   return (
@@ -27,6 +32,19 @@ export default async function TherapistDashboardPage() {
         <h1 className="font-serif text-3xl font-semibold text-primary-dark">Dashboard</h1>
         <p className="mt-2 text-muted">Welcome, {session.user.firstName}.</p>
       </div>
+      {!driveConnection && (
+        <section className={`${portalCardClass} border-primary/20 bg-primary/5`}>
+          <h2 className="font-serif text-lg font-semibold text-primary-dark">
+            Connect Google Drive
+          </h2>
+          <p className="mt-2 text-sm text-muted">
+            Link your Google account to view client files and folders on client detail pages.
+          </p>
+          <Link href="/portal/therapist/integrations" className={`${portalButtonClass} mt-4 inline-block`}>
+            Go to Integrations
+          </Link>
+        </section>
+      )}
       <div className="grid gap-4 sm:grid-cols-2">
         <div className={portalCardClass}>
           <p className="text-sm text-muted">Draft invoices</p>

@@ -44,27 +44,23 @@ export default async function TherapistIntegrationsPage({
         </Link>
         <h1 className="mt-4 font-serif text-3xl font-semibold text-primary-dark">Integrations</h1>
         <p className="mt-2 text-muted">
-          Connect your Google account to sync client folders from Drive and view files on client
-          pages.
+          Connect your Google account to view client files and folders on client pages. Client
+          import from Drive is managed by admin.
         </p>
       </div>
 
       <GoogleDriveConnectionPanel
+        showSync={false}
         driveStatus={{
           connected: Boolean(driveConnection),
           googleEmail: driveConnection?.googleEmail,
           message: driveMessage,
           error: params.driveError ? safeDecodeParam(params.driveError) : null,
         }}
-        syncButtonLabel="Sync my clients"
         description={
           <>
-            Connect with your Google account to access <strong>{folderName}</strong>. Sync imports
-            new client folders and closes clients whose folders were removed. Use{" "}
-            <strong>Re-sync from Drive</strong> on a client page to refresh one folder. Each client
-            folder should be named{" "}
-            <code className="text-xs">&lt;claim #&gt; - &lt;client name&gt;</code> and contain a{" "}
-            <strong>Referral Submission</strong> Google Doc.
+            Connect with your Google account to browse <strong>{folderName}</strong> from client
+            detail pages. Ask an admin to sync or update client records from Drive.
           </>
         }
       />

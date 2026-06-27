@@ -340,24 +340,6 @@ export async function syncClientsFromGoogleDrive(initiatorUserId: string): Promi
   });
 }
 
-/** Sync only the logged-in therapist's Drive client folder. */
-export async function syncTherapistClientsFromGoogleDrive(
-  therapistUserId: string,
-): Promise<DriveImportResult> {
-  const source = await getTherapistDriveSourceForUser(therapistUserId);
-  if (!source) {
-    return emptyDriveImportResult([
-      "Your account is not configured for a Google Drive client folder.",
-    ]);
-  }
-
-  const { folders, errors } = await scanTherapistDriveClientFolders(therapistUserId);
-  return syncDriveFolders(therapistUserId, folders, errors, {
-    therapistIds: [therapistUserId],
-    scopeTherapistId: therapistUserId,
-  });
-}
-
 /** Re-import one client's Drive folder (referral doc + CAC PDFs) and update the DB record. */
 export async function resyncClientFromDrive(
   initiatorUserId: string,
