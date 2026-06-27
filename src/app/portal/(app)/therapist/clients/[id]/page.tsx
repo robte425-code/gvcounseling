@@ -2,7 +2,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireTherapist } from "@/auth";
 import { ClientDetailView } from "@/components/portal/ClientDetailView";
+import { ClientDriveFiles } from "@/components/portal/ClientDriveFiles";
 import { portalButtonClass, portalButtonSecondaryClass } from "@/components/portal/ui";
+import { loadClientDriveContents } from "@/lib/client-drive-contents";
 import { prisma } from "@/lib/prisma";
 
 export default async function TherapistClientDetailPage({
@@ -20,6 +22,8 @@ export default async function TherapistClientDetailPage({
     where: { id, therapistId: session.user.id },
   });
   if (!client) notFound();
+
+  const drive = await loadClientDriveContents(client.driveFolderId);
 
   return (
     <div className="space-y-4">
@@ -56,6 +60,7 @@ export default async function TherapistClientDetailPage({
       </div>
 
       <ClientDetailView client={client} />
+      <ClientDriveFiles drive={drive} />
     </div>
   );
 }

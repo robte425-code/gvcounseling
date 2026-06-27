@@ -2,6 +2,7 @@ import { isReferralSubmissionFilename, isLniClaimNumber, parseClaimNumber } from
 
 const GOOGLE_DOC_MIME = "application/vnd.google-apps.document";
 const DOCX_MIME = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+const FOLDER_MIME = "application/vnd.google-apps.folder";
 
 export type DriveFile = {
   id: string;
@@ -9,10 +10,42 @@ export type DriveFile = {
   mimeType: string;
 };
 
+export type DriveItemLink = {
+  id: string;
+  name: string;
+  mimeType: string;
+  webViewLink: string;
+  isFolder: boolean;
+  depth: number;
+};
+
+export type ClientDriveFolderContents = {
+  folderName: string;
+  folderLink: string;
+  items: DriveItemLink[];
+};
+
 type DriveListResponse = {
-  files?: DriveFile[];
+  files?: (DriveFile & { webViewLink?: string | null })[];
   nextPageToken?: string;
 };
+
+type DriveFileMeta = {
+  id: string;
+  name: string;
+  mimeType: string;
+  webViewLink?: string | null;
+};
+
+export function driveViewLink(
+  id: string,
+  mimeType: string,
+  webViewLink?: string | null,
+): string {
+  if (webViewLink) return webViewLink;
+  if (mimeType === FOLDER_MIME) return `https://drive.google.com/drive/folders/${id}`;
+  return `https://drive.google.com/file/d/${id}/view`;
+}
 
 async function driveFetch<T>(accessToken: string, path: string): Promise<T> {
   const res = await fetch(`https://www.googleapis.com/drive/v3${path}`, {
@@ -30,13 +63,21 @@ function escapeDriveQuery(value: string): string {
 }
 
 async function listFiles(accessToken: string, query: string): Promise<DriveFile[]> {
-  const files: DriveFile[] = [];
+  const files = await listFilesWithLinks(accessToken, query);
+  return files.map(({ id, name, mimeType }) => ({ id, name, mimeType }));
+}
+
+async function listFilesWithLinks(
+  accessToken: string,
+  query: string,
+): Promise<(DriveFile & { webViewLink: string })[]> {
+  const files: (DriveFile & { webViewLink: string })[] = [];
   let pageToken: string | undefined;
 
   do {
     const params = new URLSearchParams({
       q: query,
-      fields: "nextPageToken,files(id,name,mimeType)",
+      fields: "nextPageToken,files(id,name,mimeType,webViewLink)",
       pageSize: "200",
       supportsAllDrives: "true",
       includeItemsFromAllDrives: "true",
@@ -44,11 +85,83 @@ async function listFiles(accessToken: string, query: string): Promise<DriveFile[
     if (pageToken) params.set("pageToken", pageToken);
 
     const data = await driveFetch<DriveListResponse>(accessToken, `/files?${params.toString()}`);
-    files.push(...(data.files ?? []));
+    for (const file of data.files ?? []) {
+      files.push({
+        id: file.id,
+        name: file.name,
+        mimeType: file.mimeType,
+        webViewLink: driveViewLink(file.id, file.mimeType, file.webViewLink),
+      });
+    }
     pageToken = data.nextPageToken;
   } while (pageToken);
 
   return files;
+}
+
+function sortDriveItems<T extends { name: string; mimeType: string }>(items: T[]): T[] {
+  return [...items].sort((a, b) => {
+    const aFolder = a.mimeType === FOLDER_MIME;
+    const bFolder = b.mimeType === FOLDER_MIME;
+    if (aFolder !== bFolder) return aFolder ? -1 : 1;
+    return a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
+  });
+}
+
+export async function getDriveFileMeta(
+  accessToken: string,
+  fileId: string,
+): Promise<DriveFileMeta & { webViewLink: string }> {
+  const params = new URLSearchParams({
+    fields: "id,name,mimeType,webViewLink",
+    supportsAllDrives: "true",
+  });
+  const data = await driveFetch<DriveFileMeta>(accessToken, `/files/${fileId}?${params.toString()}`);
+  return {
+    ...data,
+    webViewLink: driveViewLink(data.id, data.mimeType, data.webViewLink),
+  };
+}
+
+async function listFolderTree(
+  accessToken: string,
+  folderId: string,
+  depth: number,
+): Promise<DriveItemLink[]> {
+  const query = [`'${folderId}' in parents`, "trashed=false"].join(" and ");
+  const children = await sortDriveItems(await listFilesWithLinks(accessToken, query));
+  const items: DriveItemLink[] = [];
+
+  for (const child of children) {
+    const isFolder = child.mimeType === FOLDER_MIME;
+    items.push({
+      id: child.id,
+      name: child.name,
+      mimeType: child.mimeType,
+      webViewLink: child.webViewLink,
+      isFolder,
+      depth,
+    });
+    if (isFolder) {
+      items.push(...(await listFolderTree(accessToken, child.id, depth + 1)));
+    }
+  }
+
+  return items;
+}
+
+/** Lists the client folder and all nested folders/files with Drive view links. */
+export async function listClientDriveContents(
+  accessToken: string,
+  clientFolderId: string,
+): Promise<ClientDriveFolderContents> {
+  const folder = await getDriveFileMeta(accessToken, clientFolderId);
+  const items = await listFolderTree(accessToken, clientFolderId, 0);
+  return {
+    folderName: folder.name,
+    folderLink: folder.webViewLink,
+    items,
+  };
 }
 
 export function getTherapistFolderConfig() {
