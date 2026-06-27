@@ -1,16 +1,17 @@
-import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
-import { auth, getRealRole, getRealUserId } from "@/auth";
+import { cookies } from "next/headers";
+import { auth, getRealRole, getRealUserId, isImpersonating } from "@/auth";
 import {
   exchangeCodeForTokens,
   fetchGoogleUserEmail,
   getGoogleOAuthConfig,
   getGoogleOAuthStateCookieName,
 } from "@/lib/google-oauth";
+import { googleDriveIntegrationsPath } from "@/lib/google-drive-oauth-redirect";
 import { prisma } from "@/lib/prisma";
 
-function importRedirect(request: Request, params: Record<string, string>) {
-  const url = new URL("/portal/admin/clients/import", request.url);
+function importRedirect(request: Request, role: "ADMIN" | "THERAPIST", params: Record<string, string>) {
+  const url = new URL(googleDriveIntegrationsPath(role), request.url);
   for (const [key, value] of Object.entries(params)) {
     url.searchParams.set(key, value);
   }
@@ -19,7 +20,20 @@ function importRedirect(request: Request, params: Record<string, string>) {
 
 export async function GET(request: Request) {
   const session = await auth();
-  if (!session?.user?.id || getRealRole(session) !== "ADMIN") {
+  if (!session?.user?.id) {
+    const login = new URL("/portal/login", request.url);
+    login.searchParams.set("callbackUrl", "/portal/admin/clients/import");
+    return NextResponse.redirect(login);
+  }
+
+  if (isImpersonating(session)) {
+    return importRedirect(request, "ADMIN", {
+      driveError: "Exit therapist view before connecting Google Drive.",
+    });
+  }
+
+  const role = getRealRole(session);
+  if (role !== "ADMIN" && role !== "THERAPIST") {
     const login = new URL("/portal/login", request.url);
     login.searchParams.set("callbackUrl", "/portal/admin/clients/import");
     return NextResponse.redirect(login);
@@ -31,14 +45,14 @@ export async function GET(request: Request) {
   const oauthError = url.searchParams.get("error");
 
   if (oauthError) {
-    return importRedirect(request, { driveError: oauthError });
+    return importRedirect(request, role, { driveError: oauthError });
   }
 
   const cookieStore = await cookies();
   const savedState = cookieStore.get(getGoogleOAuthStateCookieName())?.value;
 
   if (!code || !state || !savedState || state !== savedState) {
-    return importRedirect(request, {
+    return importRedirect(request, role, {
       driveError: "Invalid OAuth state. Try connecting again.",
     });
   }
@@ -47,7 +61,7 @@ export async function GET(request: Request) {
     getGoogleOAuthConfig();
     const tokens = await exchangeCodeForTokens(code);
     if (!tokens.refresh_token) {
-      return importRedirect(request, {
+      return importRedirect(request, role, {
         driveError:
           "Google did not return a refresh token. Disconnect the app in your Google account settings and try again.",
       });
@@ -56,11 +70,11 @@ export async function GET(request: Request) {
     const googleEmail = await fetchGoogleUserEmail(tokens.access_token);
     const expiresAt = new Date(Date.now() + tokens.expires_in * 1000);
 
-    const adminUserId = getRealUserId(session);
+    const userId = getRealUserId(session);
     await prisma.googleDriveConnection.upsert({
-      where: { userId: adminUserId },
+      where: { userId },
       create: {
-        userId: adminUserId,
+        userId,
         googleEmail,
         accessToken: tokens.access_token,
         refreshToken: tokens.refresh_token,
@@ -74,12 +88,12 @@ export async function GET(request: Request) {
       },
     });
 
-    const response = importRedirect(request, { driveConnected: "1" });
+    const response = importRedirect(request, role, { driveConnected: "1" });
     response.cookies.set(getGoogleOAuthStateCookieName(), "", { maxAge: 0, path: "/" });
     return response;
   } catch (e) {
     console.error("Google OAuth callback failed:", e);
-    return importRedirect(request, {
+    return importRedirect(request, role, {
       driveError: e instanceof Error ? e.message : "Google connection failed.",
     });
   }

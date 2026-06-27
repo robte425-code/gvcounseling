@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import { requireAdmin } from "@/auth";
+import { getRealUserId, requireAdmin } from "@/auth";
 import { ClientAssignmentPanel } from "@/components/portal/ClientAssignmentPanel";
 import { ClientDetailView } from "@/components/portal/ClientDetailView";
 import { ClientDriveResyncButton } from "@/components/portal/ClientDriveResyncButton";
@@ -18,7 +18,7 @@ export default async function AdminClientDetailPage({
   params: Promise<{ id: string }>;
   searchParams: Promise<{ reopened?: string; saved?: string }>;
 }) {
-  await requireAdmin();
+  const session = await requireAdmin();
   const { id } = await params;
   const { reopened, saved } = await searchParams;
   const [client, therapists] = await Promise.all([
@@ -87,7 +87,11 @@ export default async function AdminClientDetailPage({
       <ClientDetailView client={client} />
       <ClientDriveResyncButton clientId={client.id} />
       <Suspense fallback={<ClientDriveFilesLoading />}>
-        <ClientDriveFilesSection driveFolderId={client.driveFolderId} />
+        <ClientDriveFilesSection
+          driveFolderId={client.driveFolderId}
+          therapistId={client.therapistId}
+          initiatorUserId={getRealUserId(session)}
+        />
       </Suspense>
     </div>
   );

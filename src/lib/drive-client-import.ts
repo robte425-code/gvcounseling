@@ -1,16 +1,21 @@
 import {
   downloadReferralDocx,
   findReferralSubmissionFile,
-  getTherapistFolderConfig,
   listClientFolders,
   parseClientFolderName,
   resolveTherapistFolderId,
 } from "@/lib/google-drive";
+import { resolveOAuthUserIdForTherapist } from "@/lib/google-drive-access";
 import { resolveImportClaimNumber } from "@/lib/constants";
 import { getValidGoogleAccessToken } from "@/lib/google-oauth";
 import { importClientDocumentsFromFolderDetailed } from "@/lib/client-document-import";
 import { upsertClientFromReferral } from "@/lib/import-referral-client";
 import { parseReferralDocx } from "@/lib/referral-parser";
+import {
+  getAllTherapistDriveSources,
+  getTherapistDriveSourceForUser,
+  type TherapistDriveSource,
+} from "@/lib/therapist-drive";
 import { prisma } from "@/lib/prisma";
 
 export type DriveImportResult = {
@@ -30,85 +35,81 @@ export type DriveFolderTarget = {
   therapistName: string;
 };
 
-type TherapistFolder = {
-  therapistId: string;
-  therapistName: string;
-  folderId: string | null;
-  folderName: string;
-};
-
-async function getTherapistSources(): Promise<TherapistFolder[]> {
-  const folderConfig = getTherapistFolderConfig();
-  const therapists = await prisma.user.findMany({
-    where: { role: "THERAPIST" },
-    select: { id: true, firstName: true, lastName: true, email: true },
-  });
-
-  const maria = therapists.find((t) => t.email === "maria@gvcounseling.com" || t.firstName === "Maria");
-  const steven = therapists.find((t) => t.email === "steven@gvcounseling.com" || t.firstName === "Steven");
-
-  if (!maria || !steven) {
-    throw new Error("Maria and Steven therapist accounts must exist before importing from Drive.");
-  }
-
-  return [
-    {
-      therapistId: maria.id,
-      therapistName: `${maria.firstName} ${maria.lastName}`,
-      folderId: folderConfig.maria.folderId,
-      folderName: folderConfig.maria.folderName,
-    },
-    {
-      therapistId: steven.id,
-      therapistName: `${steven.firstName} ${steven.lastName}`,
-      folderId: folderConfig.steven.folderId,
-      folderName: folderConfig.steven.folderName,
-    },
-  ];
-}
-
-export async function scanDriveClientFolders(userId: string): Promise<{
-  folders: DriveFolderTarget[];
-  errors: string[];
-}> {
-  const accessToken = await getValidGoogleAccessToken(userId);
-  const sources = await getTherapistSources();
+async function scanTherapistDriveSource(
+  source: TherapistDriveSource,
+  oauthUserId: string,
+): Promise<{ folders: DriveFolderTarget[]; errors: string[] }> {
   const folders: DriveFolderTarget[] = [];
   const errors: string[] = [];
 
-  for (const source of sources) {
-    try {
-      const parentFolderId = await resolveTherapistFolderId(
-        accessToken,
-        source.folderId,
-        source.folderName,
-      );
-      const clientFolders = await listClientFolders(accessToken, parentFolderId);
+  try {
+    const accessToken = await getValidGoogleAccessToken(oauthUserId);
+    const parentFolderId = await resolveTherapistFolderId(
+      accessToken,
+      source.folderId,
+      source.folderName,
+    );
+    const clientFolders = await listClientFolders(accessToken, parentFolderId);
 
-      for (const folder of clientFolders) {
-        if (!parseClientFolderName(folder.name)) continue;
-        folders.push({
-          folderId: folder.id,
-          folderName: folder.name,
-          therapistId: source.therapistId,
-          therapistName: source.therapistName,
-        });
-      }
-    } catch (e) {
-      errors.push(
-        `${source.therapistName}: ${e instanceof Error ? e.message : "Could not list client folders."}`,
-      );
+    for (const folder of clientFolders) {
+      if (!parseClientFolderName(folder.name)) continue;
+      folders.push({
+        folderId: folder.id,
+        folderName: folder.name,
+        therapistId: source.therapistId,
+        therapistName: source.therapistName,
+      });
     }
+  } catch (e) {
+    errors.push(
+      `${source.therapistName}: ${e instanceof Error ? e.message : "Could not list client folders."}`,
+    );
   }
 
   return { folders, errors };
 }
 
+export async function scanDriveClientFolders(initiatorUserId: string): Promise<{
+  folders: DriveFolderTarget[];
+  errors: string[];
+}> {
+  const sources = await getAllTherapistDriveSources();
+  const folders: DriveFolderTarget[] = [];
+  const errors: string[] = [];
+
+  for (const source of sources) {
+    const oauthUserId = await resolveOAuthUserIdForTherapist(
+      source.therapistId,
+      initiatorUserId,
+    );
+    const scan = await scanTherapistDriveSource(source, oauthUserId);
+    folders.push(...scan.folders);
+    errors.push(...scan.errors);
+  }
+
+  return { folders, errors };
+}
+
+export async function scanTherapistDriveClientFolders(therapistUserId: string): Promise<{
+  folders: DriveFolderTarget[];
+  errors: string[];
+}> {
+  const source = await getTherapistDriveSourceForUser(therapistUserId);
+  if (!source) {
+    return {
+      folders: [],
+      errors: ["Your account is not configured for a Google Drive client folder."],
+    };
+  }
+
+  return scanTherapistDriveSource(source, therapistUserId);
+}
+
 export async function importDriveClientFolder(
-  userId: string,
+  oauthUserId: string,
   target: Pick<DriveFolderTarget, "folderId" | "folderName" | "therapistId" | "therapistName">,
 ): Promise<DriveImportResult> {
-  const accessToken = await getValidGoogleAccessToken(userId);
+  const accessToken = await getValidGoogleAccessToken(oauthUserId);
   const folderLabel = `${target.therapistName}/${target.folderName}`;
   const parsedFolder = parseClientFolderName(target.folderName);
 
@@ -216,23 +217,20 @@ function reopenStatusForClient(therapistId: string | null): "ACTIVE" | "UNASSIGN
   return therapistId ? "ACTIVE" : "UNASSIGNED";
 }
 
-/** Import new Drive folders and close clients whose Drive folder was deleted. Skips unchanged folders. */
-export async function syncClientsFromGoogleDrive(userId: string): Promise<DriveImportResult> {
-  const { folders, errors } = await scanDriveClientFolders(userId);
+async function syncDriveFolders(
+  initiatorUserId: string,
+  folders: DriveFolderTarget[],
+  errors: string[],
+  options: { therapistIds: string[]; scopeTherapistId?: string },
+): Promise<DriveImportResult> {
   const result = emptyDriveImportResult([...errors]);
-
-  if (!folders.length && !errors.length) {
-    return result;
-  }
-
-  const sources = await getTherapistSources();
-  const therapistIds = sources.map((s) => s.therapistId);
+  const therapistIds = options.scopeTherapistId ? [options.scopeTherapistId] : options.therapistIds;
   const driveFolderIds = new Set(folders.map((f) => f.folderId));
 
   const trackedClients = await prisma.client.findMany({
     where: {
       OR: [
-        { driveFolderId: { not: null } },
+        { driveFolderId: { not: null }, therapistId: { in: therapistIds } },
         { therapistId: { in: therapistIds } },
       ],
     },
@@ -255,6 +253,7 @@ export async function syncClientsFromGoogleDrive(userId: string): Promise<DriveI
     }
 
     const existing = clientByClaim.get(parsedFolder.claimNumber);
+    const oauthUserId = await resolveOAuthUserIdForTherapist(folder.therapistId, initiatorUserId);
 
     if (existing?.assignmentStatus === "CLOSED") {
       await prisma.client.update({
@@ -294,7 +293,7 @@ export async function syncClientsFromGoogleDrive(userId: string): Promise<DriveI
       continue;
     }
 
-    mergeResults(result, await importDriveClientFolder(userId, folder));
+    mergeResults(result, await importDriveClientFolder(oauthUserId, folder));
     const created = await prisma.client.findUnique({
       where: { lniClaimNumber: parsedFolder.claimNumber },
       select: {
@@ -327,20 +326,73 @@ export async function syncClientsFromGoogleDrive(userId: string): Promise<DriveI
   return result;
 }
 
+/** Import new Drive folders and close clients whose Drive folder was deleted. Skips unchanged folders. */
+export async function syncClientsFromGoogleDrive(initiatorUserId: string): Promise<DriveImportResult> {
+  const { folders, errors } = await scanDriveClientFolders(initiatorUserId);
+  const sources = await getAllTherapistDriveSources();
+
+  if (!folders.length && !errors.length) {
+    return emptyDriveImportResult();
+  }
+
+  return syncDriveFolders(initiatorUserId, folders, errors, {
+    therapistIds: sources.map((s) => s.therapistId),
+  });
+}
+
+/** Sync only the logged-in therapist's Drive client folder. */
+export async function syncTherapistClientsFromGoogleDrive(
+  therapistUserId: string,
+): Promise<DriveImportResult> {
+  const source = await getTherapistDriveSourceForUser(therapistUserId);
+  if (!source) {
+    return emptyDriveImportResult([
+      "Your account is not configured for a Google Drive client folder.",
+    ]);
+  }
+
+  const { folders, errors } = await scanTherapistDriveClientFolders(therapistUserId);
+  return syncDriveFolders(therapistUserId, folders, errors, {
+    therapistIds: [therapistUserId],
+    scopeTherapistId: therapistUserId,
+  });
+}
+
 /** Re-import one client's Drive folder (referral doc + CAC PDFs) and update the DB record. */
 export async function resyncClientFromDrive(
-  userId: string,
+  initiatorUserId: string,
   clientId: string,
 ): Promise<DriveImportResult> {
   const client = await prisma.client.findUnique({
     where: { id: clientId },
-    select: { lniClaimNumber: true, driveFolderId: true },
+    select: { lniClaimNumber: true, driveFolderId: true, therapistId: true },
   });
   if (!client) {
     return emptyDriveImportResult(["Client not found."]);
   }
 
-  const { folders, errors } = await scanDriveClientFolders(userId);
+  let folders: DriveFolderTarget[] = [];
+  let errors: string[] = [];
+
+  if (client.therapistId) {
+    const source = await getTherapistDriveSourceForUser(client.therapistId);
+    if (source) {
+      const oauthUserId = await resolveOAuthUserIdForTherapist(
+        client.therapistId,
+        initiatorUserId,
+      );
+      const scan = await scanTherapistDriveSource(source, oauthUserId);
+      folders = scan.folders;
+      errors = scan.errors;
+    }
+  }
+
+  if (!folders.length) {
+    const scan = await scanDriveClientFolders(initiatorUserId);
+    folders = scan.folders;
+    errors = [...errors, ...scan.errors];
+  }
+
   const folder =
     (client.driveFolderId && folders.find((f) => f.folderId === client.driveFolderId)) ??
     folders.find((f) => f.folderName.startsWith(`${client.lniClaimNumber} `));
@@ -355,8 +407,9 @@ export async function resyncClientFromDrive(
     };
   }
 
+  const oauthUserId = await resolveOAuthUserIdForTherapist(folder.therapistId, initiatorUserId);
   const result = emptyDriveImportResult([...errors]);
-  mergeResults(result, await importDriveClientFolder(userId, folder));
+  mergeResults(result, await importDriveClientFolder(oauthUserId, folder));
   return result;
 }
 

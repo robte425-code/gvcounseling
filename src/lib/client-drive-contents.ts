@@ -1,4 +1,4 @@
-import { getSystemDriveAccessToken } from "@/lib/google-drive-system";
+import { getDriveAccessTokenForClient } from "@/lib/google-drive-access";
 import type { ClientDriveFolderContents, DriveItemLink } from "@/lib/google-drive";
 import { listClientDriveContents } from "@/lib/google-drive";
 
@@ -14,13 +14,17 @@ export type ClientDriveContentsResult =
 
 export async function loadClientDriveContents(
   driveFolderId: string | null,
+  options?: { therapistId?: string | null; initiatorUserId?: string },
 ): Promise<ClientDriveContentsResult> {
   if (!driveFolderId) {
     return { linked: false, folderName: null, folderLink: null, items: [], error: null };
   }
 
   try {
-    const { accessToken } = await getSystemDriveAccessToken();
+    const accessToken = await getDriveAccessTokenForClient({
+      therapistId: options?.therapistId,
+      initiatorUserId: options?.initiatorUserId,
+    });
     const contents: ClientDriveFolderContents = await listClientDriveContents(
       accessToken,
       driveFolderId,

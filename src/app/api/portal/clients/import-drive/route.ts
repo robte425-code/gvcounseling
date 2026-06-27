@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
-import { getRealUserId, requireAdminApi } from "@/auth";
+import { getRealUserId, requireAdminApi, requirePortalDriveApi } from "@/auth";
+import { resolveOAuthUserIdForTherapist } from "@/lib/google-drive-access";
 import {
   importDriveClientFolder,
   scanDriveClientFolders,
   syncClientsFromGoogleDrive,
+  syncTherapistClientsFromGoogleDrive,
   type DriveFolderTarget,
 } from "@/lib/drive-client-import";
 
@@ -34,8 +36,10 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const auth = await requireAdminApi();
+  const auth = await requirePortalDriveApi();
   if (!auth.ok) return auth.response;
+
+  const userId = getRealUserId(auth.session);
 
   try {
     let body: ImportBody = {};
@@ -45,21 +49,28 @@ export async function POST(request: Request) {
       body = {};
     }
 
-    if (body.folderId && body.folderName && body.therapistId && body.therapistName) {
+    if (auth.role === "ADMIN" && body.folderId && body.folderName && body.therapistId && body.therapistName) {
       const target: DriveFolderTarget = {
         folderId: body.folderId,
         folderName: body.folderName,
         therapistId: body.therapistId,
         therapistName: body.therapistName,
       };
-      const result = await importDriveClientFolder(getRealUserId(auth.session), target);
+      const oauthUserId = await resolveOAuthUserIdForTherapist(body.therapistId, userId);
+      const result = await importDriveClientFolder(oauthUserId, target);
       revalidatePath("/portal/admin/clients");
       return NextResponse.json(result);
     }
 
-    const result = await syncClientsFromGoogleDrive(getRealUserId(auth.session));
+    const result =
+      auth.role === "THERAPIST"
+        ? await syncTherapistClientsFromGoogleDrive(userId)
+        : await syncClientsFromGoogleDrive(userId);
+
     revalidatePath("/portal/admin/clients");
     revalidatePath("/portal/admin/clients/import");
+    revalidatePath("/portal/therapist/integrations");
+    revalidatePath("/portal/therapist/clients");
     return NextResponse.json(result);
   } catch (e) {
     console.error("Drive import failed:", e);

@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import { DriveImportResultBox } from "@/components/portal/DriveImportResultBox";
+import { GoogleDriveConnectionPanel } from "@/components/portal/GoogleDriveConnectionPanel";
 import {
   portalButtonClass,
-  portalButtonSecondaryClass,
   portalCardClass,
   portalInputClass,
   portalLabelClass,
@@ -29,53 +30,6 @@ type DriveStatus = {
   error?: string | null;
 };
 
-function ResultBox({ result }: { result: ImportResult | null }) {
-  if (!result) return null;
-  if (result.error) {
-    return <p className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-800">{result.error}</p>;
-  }
-  const hasActivity =
-    (result.created ?? 0) > 0 ||
-    (result.updated ?? 0) > 0 ||
-    (result.closed ?? 0) > 0 ||
-    (result.skipped ?? 0) > 0 ||
-    (result.warnings?.length ?? 0) > 0 ||
-    (result.errors?.length ?? 0) > 0;
-  if (!hasActivity && (result.unchanged ?? 0) > 0) {
-    return (
-      <p className="mt-4 rounded-xl bg-primary/5 px-4 py-3 text-sm text-muted">
-        No changes. {result.unchanged} client folder{result.unchanged === 1 ? "" : "s"} already in sync.
-      </p>
-    );
-  }
-  if (!hasActivity) {
-    return (
-      <p className="mt-4 rounded-xl bg-primary/5 px-4 py-3 text-sm text-muted">No changes found.</p>
-    );
-  }
-  return (
-    <div className="mt-4 space-y-2 rounded-xl bg-primary/5 px-4 py-3 text-sm">
-      {result.created != null && <p>Created: {result.created}</p>}
-      {result.updated != null && result.updated > 0 && <p>Updated: {result.updated}</p>}
-      {result.closed != null && result.closed > 0 && <p>Closed: {result.closed}</p>}
-      {result.unchanged != null && result.unchanged > 0 && (
-        <p className="text-muted">Unchanged: {result.unchanged}</p>
-      )}
-      {result.skipped != null && result.skipped > 0 && <p>Skipped: {result.skipped}</p>}
-      {result.warnings?.map((w) => (
-        <p key={w} className="text-amber-900">
-          {w}
-        </p>
-      ))}
-      {result.errors?.map((err) => (
-        <p key={err} className="text-red-800">
-          {err}
-        </p>
-      ))}
-    </div>
-  );
-}
-
 export function ClientImportForms({
   therapists,
   driveStatus,
@@ -85,11 +39,7 @@ export function ClientImportForms({
 }) {
   const [referralResult, setReferralResult] = useState<ImportResult | null>(null);
   const [csvResult, setCsvResult] = useState<ImportResult | null>(null);
-  const [driveResult, setDriveResult] = useState<ImportResult | null>(null);
-  const [driveProgress, setDriveProgress] = useState<string | null>(null);
   const [loading, setLoading] = useState<string | null>(null);
-  const [connected, setConnected] = useState(driveStatus.connected);
-  const [googleEmail, setGoogleEmail] = useState(driveStatus.googleEmail ?? null);
 
   async function uploadReferral(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -117,42 +67,6 @@ export function ClientImportForms({
     if (res.ok) form.reset();
   }
 
-  async function syncFromDrive() {
-    setLoading("drive");
-    setDriveResult(null);
-    setDriveProgress("Syncing Google Drive…");
-
-    try {
-      const res = await fetch("/api/portal/clients/import-drive", {
-        method: "POST",
-        credentials: "same-origin",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({}),
-      });
-      const body = (await res.json()) as ImportResult;
-
-      if (!res.ok) {
-        setDriveResult({ error: body.error ?? "Drive sync failed." });
-        return;
-      }
-
-      setDriveResult(body);
-    } catch {
-      setDriveResult({ error: "Drive sync failed. Check your connection and try again." });
-    } finally {
-      setDriveProgress(null);
-      setLoading(null);
-    }
-  }
-
-  async function disconnectDrive() {
-    setLoading("disconnect");
-    await fetch("/api/portal/integrations/google/disconnect", { method: "POST" });
-    setConnected(false);
-    setGoogleEmail(null);
-    setLoading(null);
-  }
-
   const therapistSelect = (
     <div>
       <label className={portalLabelClass}>Therapist (for new clients)</label>
@@ -168,57 +82,21 @@ export function ClientImportForms({
 
   return (
     <>
-      <div className={`${portalCardClass} space-y-4`}>
-        <h2 className="font-serif text-xl font-semibold text-primary-dark">Google Drive</h2>
-        <p className="text-sm text-muted">
-          Import clients from <strong>Maria: Client files</strong> and{" "}
-          <strong>Steven: Client files</strong>. Sync checks for new or removed folders only —
-          existing clients are not re-imported. Removed Drive folders mark clients as closed. Each client folder should be named{" "}
-          <code className="text-xs">&lt;claim #&gt; - &lt;client name&gt;</code> and contain a{" "}
-          <strong>Referral Submission</strong> Google Doc.
-        </p>
-
-        {driveStatus.message && (
-          <p className="rounded-xl bg-primary/10 px-4 py-3 text-sm text-primary-dark" role="status">
-            {driveStatus.message}
-          </p>
-        )}
-        {driveStatus.error && (
-          <p className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-800" role="alert">
-            {driveStatus.error}
-          </p>
-        )}
-
-        {connected ? (
-          <div className="flex flex-wrap items-center gap-3">
-            <p className="text-sm text-primary-dark">
-              Connected as <strong>{googleEmail ?? "Google account"}</strong>
-            </p>
-            <button
-              type="button"
-              onClick={syncFromDrive}
-              disabled={loading !== null}
-              className={portalButtonClass}
-            >
-              {loading === "drive" ? driveProgress ?? "Syncing…" : "Sync from Drive"}
-            </button>
-            <button
-              type="button"
-              onClick={disconnectDrive}
-              disabled={loading !== null}
-              className={portalButtonSecondaryClass}
-            >
-              {loading === "disconnect" ? "Disconnecting…" : "Disconnect"}
-            </button>
-          </div>
-        ) : (
-          <a href="/api/portal/integrations/google/connect" className={portalButtonClass}>
-            Connect Google Drive
-          </a>
-        )}
-
-        <ResultBox result={driveResult} />
-      </div>
+      <GoogleDriveConnectionPanel
+        driveStatus={driveStatus}
+        description={
+          <>
+            Import clients from <strong>Maria: Client files</strong> and{" "}
+            <strong>Steven: Client files</strong>. When Maria or Steven connect their own Google
+            accounts, sync uses their credentials for their folder; otherwise your admin connection
+            is used. Sync checks for new or removed folders only — existing clients are not
+            re-imported unless you use <strong>Re-sync from Drive</strong> on a client page.
+            Removed Drive folders mark clients as closed. Each client folder should be named{" "}
+            <code className="text-xs">&lt;claim #&gt; - &lt;client name&gt;</code> and contain a{" "}
+            <strong>Referral Submission</strong> Google Doc.
+          </>
+        }
+      />
 
       <form onSubmit={uploadReferral} className={`${portalCardClass} space-y-4`}>
         <h2 className="font-serif text-xl font-semibold text-primary-dark">Referral Submission (.docx)</h2>
@@ -233,7 +111,7 @@ export function ClientImportForms({
         <button type="submit" disabled={loading === "referral"} className={portalButtonClass}>
           {loading === "referral" ? "Importing…" : "Import referral"}
         </button>
-        <ResultBox result={referralResult} />
+        <DriveImportResultBox result={referralResult} />
       </form>
 
       <form onSubmit={uploadCsv} className={`${portalCardClass} space-y-4`}>
@@ -249,7 +127,7 @@ export function ClientImportForms({
         <button type="submit" disabled={loading === "csv"} className={portalButtonClass}>
           {loading === "csv" ? "Importing…" : "Import CSV"}
         </button>
-        <ResultBox result={csvResult} />
+        <DriveImportResultBox result={csvResult} />
       </form>
     </>
   );

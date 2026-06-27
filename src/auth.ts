@@ -78,5 +78,29 @@ export async function requireAdminApi() {
   if (getRealRole(session) !== "ADMIN") {
     return { ok: false as const, response: Response.json({ error: "Forbidden." }, { status: 403 }) };
   }
-  return { ok: true as const, session };
+  return { ok: true as const, session, role: "ADMIN" as const };
+}
+
+/** Admin or therapist (not while impersonating). */
+export async function requirePortalDriveApi() {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return { ok: false as const, response: Response.json({ error: "Unauthorized." }, { status: 401 }) };
+  }
+  if (isImpersonating(session)) {
+    return {
+      ok: false as const,
+      response: Response.json(
+        { error: "Exit therapist view before connecting Google Drive." },
+        { status: 403 },
+      ),
+    };
+  }
+
+  const role = getRealRole(session);
+  if (role !== "ADMIN" && role !== "THERAPIST") {
+    return { ok: false as const, response: Response.json({ error: "Forbidden." }, { status: 403 }) };
+  }
+
+  return { ok: true as const, session, role };
 }

@@ -1,20 +1,34 @@
 import { randomBytes } from "crypto";
 import { NextResponse } from "next/server";
-import { auth, getRealRole } from "@/auth";
+import { auth, getRealRole, isImpersonating } from "@/auth";
 import { buildGoogleAuthUrl, getGoogleOAuthStateCookieName } from "@/lib/google-oauth";
+import { googleDriveIntegrationsPath } from "@/lib/google-drive-oauth-redirect";
 
-function importErrorRedirect(request: Request, message: string) {
-  const url = new URL("/portal/admin/clients/import", request.url);
+function integrationsErrorRedirect(request: Request, role: "ADMIN" | "THERAPIST", message: string) {
+  const url = new URL(googleDriveIntegrationsPath(role), request.url);
   url.searchParams.set("driveError", message);
   return NextResponse.redirect(url);
 }
 
 export async function GET(request: Request) {
   const session = await auth();
-  if (!session?.user?.id || getRealRole(session) !== "ADMIN") {
+  if (!session?.user?.id) {
     const login = new URL("/portal/login", request.url);
     login.searchParams.set("callbackUrl", "/api/portal/integrations/google/connect");
     return NextResponse.redirect(login);
+  }
+
+  if (isImpersonating(session)) {
+    return integrationsErrorRedirect(
+      request,
+      "ADMIN",
+      "Exit therapist view before connecting Google Drive.",
+    );
+  }
+
+  const role = getRealRole(session);
+  if (role !== "ADMIN" && role !== "THERAPIST") {
+    return NextResponse.redirect(new URL("/portal/login", request.url));
   }
 
   try {
@@ -32,8 +46,9 @@ export async function GET(request: Request) {
 
     return response;
   } catch (e) {
-    return importErrorRedirect(
+    return integrationsErrorRedirect(
       request,
+      role,
       e instanceof Error ? e.message : "Google OAuth is not configured.",
     );
   }
