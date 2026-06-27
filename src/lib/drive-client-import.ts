@@ -327,6 +327,39 @@ export async function syncClientsFromGoogleDrive(userId: string): Promise<DriveI
   return result;
 }
 
+/** Re-import one client's Drive folder (referral doc + CAC PDFs) and update the DB record. */
+export async function resyncClientFromDrive(
+  userId: string,
+  clientId: string,
+): Promise<DriveImportResult> {
+  const client = await prisma.client.findUnique({
+    where: { id: clientId },
+    select: { lniClaimNumber: true, driveFolderId: true },
+  });
+  if (!client) {
+    return emptyDriveImportResult(["Client not found."]);
+  }
+
+  const { folders, errors } = await scanDriveClientFolders(userId);
+  const folder =
+    (client.driveFolderId && folders.find((f) => f.folderId === client.driveFolderId)) ??
+    folders.find((f) => f.folderName.startsWith(`${client.lniClaimNumber} `));
+
+  if (!folder) {
+    return {
+      ...emptyDriveImportResult([
+        ...errors,
+        `No Drive folder found for claim ${client.lniClaimNumber}.`,
+      ]),
+      skipped: 1,
+    };
+  }
+
+  const result = emptyDriveImportResult([...errors]);
+  mergeResults(result, await importDriveClientFolder(userId, folder));
+  return result;
+}
+
 export async function importClientsFromGoogleDrive(userId: string): Promise<DriveImportResult> {
   return syncClientsFromGoogleDrive(userId);
 }

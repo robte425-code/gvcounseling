@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { requireAdmin } from "@/auth";
 import { ClientAssignmentPanel } from "@/components/portal/ClientAssignmentPanel";
 import { ClientDetailView } from "@/components/portal/ClientDetailView";
+import { ClientDriveResyncButton } from "@/components/portal/ClientDriveResyncButton";
 import { ClientDriveFilesLoading } from "@/components/portal/ClientDriveFilesLoading";
 import { ClientDriveFilesSection } from "@/components/portal/ClientDriveFilesSection";
 import { portalButtonClass, portalButtonSecondaryClass } from "@/components/portal/ui";
@@ -84,6 +85,7 @@ export default async function AdminClientDetailPage({
       />
 
       <ClientDetailView client={client} />
+      <ClientDriveResyncButton clientId={client.id} />
       <Suspense fallback={<ClientDriveFilesLoading />}>
         <ClientDriveFilesSection driveFolderId={client.driveFolderId} />
       </Suspense>
