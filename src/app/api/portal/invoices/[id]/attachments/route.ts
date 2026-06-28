@@ -1,7 +1,19 @@
-import { put } from "@vercel/blob";
 import { NextResponse } from "next/server";
 import { requireSession } from "@/auth";
+import { formatServiceDateFolderName } from "@/lib/constants";
+import { getDriveAccessTokenForClient } from "@/lib/google-drive-access";
+import { getOrCreateDriveSubfolder, uploadDriveFile } from "@/lib/google-drive";
 import { prisma } from "@/lib/prisma";
+
+function normalizeServiceDate(value: string): string | null {
+  const trimmed = value.trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return trimmed;
+  return null;
+}
+
+function lineItemServiceDateKey(date: Date): string {
+  return date.toISOString().slice(0, 10);
+}
 
 export async function POST(
   request: Request,
@@ -11,7 +23,13 @@ export async function POST(
     const session = await requireSession();
     const { id } = await params;
 
-    const invoice = await prisma.invoice.findUnique({ where: { id } });
+    const invoice = await prisma.invoice.findUnique({
+      where: { id },
+      include: {
+        client: { select: { driveFolderId: true } },
+        lineItems: { select: { serviceDate: true } },
+      },
+    });
     if (!invoice) {
       return NextResponse.json({ error: "Invoice not found" }, { status: 404 });
     }
@@ -28,19 +46,52 @@ export async function POST(
       return NextResponse.json({ error: "No file uploaded." }, { status: 400 });
     }
 
-    if (!process.env.BLOB_READ_WRITE_TOKEN) {
+    const serviceDate = normalizeServiceDate(String(formData.get("serviceDate") ?? ""));
+    if (!serviceDate) {
+      return NextResponse.json({ error: "Select a service date." }, { status: 400 });
+    }
+
+    const allowedDates = new Set(invoice.lineItems.map((line) => lineItemServiceDateKey(line.serviceDate)));
+    if (!allowedDates.has(serviceDate)) {
       return NextResponse.json(
-        { error: "File storage is not configured (BLOB_READ_WRITE_TOKEN)." },
-        { status: 503 },
+        { error: "Service date must match a saved line on this invoice." },
+        { status: 400 },
       );
     }
 
-    const blob = await put(`invoices/${id}/${file.name}`, file, { access: "public" });
+    if (!invoice.client.driveFolderId) {
+      return NextResponse.json(
+        { error: "This client has no Google Drive folder. Ask admin to sync the client from Drive." },
+        { status: 400 },
+      );
+    }
+
+    const accessToken = await getDriveAccessTokenForClient({
+      therapistId: invoice.therapistId,
+      initiatorUserId: session.user.id,
+    });
+
+    const folderName = formatServiceDateFolderName(serviceDate);
+    const serviceDateFolderId = await getOrCreateDriveSubfolder(
+      accessToken,
+      invoice.client.driveFolderId,
+      folderName,
+    );
+
+    const buffer = Buffer.from(await file.arrayBuffer());
+    const uploaded = await uploadDriveFile(
+      accessToken,
+      serviceDateFolderId,
+      file.name,
+      buffer,
+      file.type || undefined,
+    );
+
     const attachment = await prisma.invoiceAttachment.create({
       data: {
         invoiceId: id,
         filename: file.name,
-        blobUrl: blob.url,
+        blobUrl: uploaded.webViewLink,
         contentType: file.type || "application/octet-stream",
         size: file.size,
       },

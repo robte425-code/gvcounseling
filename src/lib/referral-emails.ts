@@ -8,18 +8,22 @@ export async function sendTherapistAssignmentEmail(options: {
   claimNumber: string;
   clientId: string;
 }) {
-  const reviewUrl = `${getSiteUrl()}/portal/therapist/referrals/${options.clientId}`;
+  const siteUrl = getSiteUrl();
+  const acceptUrl = `${siteUrl}/portal/therapist/referrals/${options.clientId}`;
   await sendEmailTo(options.therapistEmail, {
-    subject: `New client assignment: ${options.clientName} (${options.claimNumber})`,
+    subject: `Accept new client referral: ${options.clientName} (${options.claimNumber})`,
     text: [
       `Hello ${options.therapistName},`,
       "",
-      `You have been assigned a new client referral:`,
+      `You have been assigned a new client referral at Grandview Counseling.`,
+      "",
       `  Client: ${options.clientName}`,
       `  Claim #: ${options.claimNumber}`,
       "",
-      `Please review the referral details and submitted documents, then accept or decline:`,
-      reviewUrl,
+      `Please visit the portal to review the referral and accept or decline:`,
+      acceptUrl,
+      "",
+      `You can also sign in at ${siteUrl}/portal — pending referrals appear on your dashboard.`,
       "",
       "Grandview Counseling",
     ].join("\n"),

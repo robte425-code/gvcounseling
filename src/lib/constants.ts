@@ -53,6 +53,14 @@ export function formatDate(d: Date | string | null | undefined): string {
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
+/** Folder name for invoice attachments: mm-dd-yyyy from an ISO date (YYYY-MM-DD). */
+export function formatServiceDateFolderName(isoDate: string): string {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(isoDate.trim());
+  if (!match) throw new Error("Invalid service date.");
+  const [, year, month, day] = match;
+  return `${month}-${day}-${year}`;
+}
+
 export function parseClaimNumber(raw: string): string {
   return raw.trim().toUpperCase().replace(/\s+/g, "");
 }

@@ -362,11 +362,7 @@ export async function moveDriveFolder(
   folderId: string,
   newParentFolderId: string,
 ): Promise<void> {
-  const meta = await driveJson<{ parents?: string[] }>(
-    accessToken,
-    `/files/${folderId}?fields=parents&supportsAllDrives=true`,
-  );
-  const previousParents = (meta.parents ?? []).join(",");
+  const previousParents = (await getDriveFolderParentIds(accessToken, folderId)).join(",");
   const params = new URLSearchParams({
     addParents: newParentFolderId,
     removeParents: previousParents,
@@ -377,6 +373,17 @@ export async function moveDriveFolder(
     `/files/${folderId}?${params.toString()}`,
     { method: "PATCH", body: JSON.stringify({}) },
   );
+}
+
+export async function getDriveFolderParentIds(
+  accessToken: string,
+  folderId: string,
+): Promise<string[]> {
+  const meta = await driveJson<{ parents?: string[] }>(
+    accessToken,
+    `/files/${folderId}?fields=parents&supportsAllDrives=true`,
+  );
+  return meta.parents ?? [];
 }
 
 function mimeTypeForFilename(filename: string): string {
@@ -392,13 +399,33 @@ function mimeTypeForFilename(filename: string): string {
   return types[ext ?? ""] ?? "application/octet-stream";
 }
 
+export async function findDriveFolderByName(
+  accessToken: string,
+  parentFolderId: string,
+  name: string,
+): Promise<string | null> {
+  const q = `'${parentFolderId}' in parents and mimeType='${FOLDER_MIME}' and name='${escapeDriveQuery(name)}' and trashed=false`;
+  const files = await listFiles(accessToken, q);
+  return files[0]?.id ?? null;
+}
+
+export async function getOrCreateDriveSubfolder(
+  accessToken: string,
+  parentFolderId: string,
+  name: string,
+): Promise<string> {
+  const existing = await findDriveFolderByName(accessToken, parentFolderId, name);
+  if (existing) return existing;
+  return createDriveFolder(accessToken, name, parentFolderId);
+}
+
 export async function uploadDriveFile(
   accessToken: string,
   parentFolderId: string,
   filename: string,
   buffer: Buffer,
   mimeType?: string,
-): Promise<void> {
+): Promise<{ id: string; webViewLink: string }> {
   const type = mimeType || mimeTypeForFilename(filename);
   const metadata = JSON.stringify({ name: filename, parents: [parentFolderId] });
   const boundary = "gc_referral_upload_boundary";
@@ -427,4 +454,9 @@ export async function uploadDriveFile(
     const text = await res.text();
     throw new Error(`Failed to upload "${filename}" (${res.status}): ${text.slice(0, 200)}`);
   }
+  const data = (await res.json()) as { id: string; webViewLink?: string | null };
+  return {
+    id: data.id,
+    webViewLink: driveViewLink(data.id, type, data.webViewLink),
+  };
 }

@@ -44,6 +44,10 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
     amount: String(line.amount),
   }));
 
+  const serviceDates = [
+    ...new Set(invoice.lineItems.map((line) => line.serviceDate.toISOString().slice(0, 10))),
+  ];
+
   const actionButtons =
     session.user.role === "THERAPIST" ? (
       <>
@@ -117,6 +121,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
         invoiceId={invoice.id}
         readOnly={readOnly}
         attachments={invoice.attachments}
+        serviceDates={serviceDates}
       />
     </div>
   );
