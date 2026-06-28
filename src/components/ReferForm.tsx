@@ -1,8 +1,61 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 
 type Status = "idle" | "loading" | "success" | "error";
+
+const REFERRAL_WARNINGS = [
+  "Due to a high number of first appointment no-shows, we kindly request that you confirm your client's willingness to participate in BHI services before making a referral. If a client misses their first scheduled appointment without providing a 24-hour notice, no further appointments will be scheduled, and a $220 no-show fee will be billed to the client. Thank you for your understanding.",
+  "If your client poses an immediate threat to themselves or others (e.g., violent behavior, threats of violence, suicidal ideation), call 911 immediately. Inform them of the psychiatric emergency and request a Crisis Intervention Team (CIT) officer if available. Additionally, you may call, chat, or text the 9-8-8 national mental health crisis line for assistance with suicidal thoughts, mental health or substance use-related crises, or other emotional distress. Please note, we are unable to provide crisis intervention in an emergency.",
+] as const;
+
+function ReferralWarningDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+  useEffect(() => {
+    if (!open) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [open]);
+
+  if (!open) return null;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="referral-warning-title"
+    >
+      <button
+        type="button"
+        className="absolute inset-0 bg-black/50"
+        aria-label="Close warning"
+        onClick={onClose}
+      />
+      <div className="relative max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-2xl border border-border bg-surface p-6 shadow-xl sm:p-8">
+        <h2 id="referral-warning-title" className="font-serif text-2xl font-semibold text-primary-dark">
+          Before you refer a client
+        </h2>
+        <div className="mt-5 space-y-5 text-sm leading-relaxed text-foreground">
+          {REFERRAL_WARNINGS.map((text) => (
+            <p key={text}>
+              <span className="font-semibold text-primary-dark">Important:</span> {text}
+            </p>
+          ))}
+        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          className="mt-6 w-full rounded-full bg-primary px-8 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-primary-dark"
+        >
+          I understand
+        </button>
+      </div>
+    </div>
+  );
+}
 
 const inputClass =
   "w-full rounded-xl border border-border bg-surface px-4 py-3 text-sm text-foreground outline-none transition-shadow focus:border-primary focus:ring-2 focus:ring-primary/20";
@@ -92,6 +145,7 @@ function RadioGroup({
 }
 
 export function ReferForm() {
+  const [showWarning, setShowWarning] = useState(true);
   const [status, setStatus] = useState<Status>("idle");
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -118,7 +172,9 @@ export function ReferForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-10">
+    <>
+      <ReferralWarningDialog open={showWarning} onClose={() => setShowWarning(false)} />
+      <form onSubmit={handleSubmit} className="space-y-10">
       <section className="space-y-5">
         <h2 className="font-serif text-xl font-semibold text-primary-dark">VRC Info</h2>
         <div className="grid gap-5 sm:grid-cols-2">
@@ -219,5 +275,6 @@ export function ReferForm() {
         </button>
       </div>
     </form>
+    </>
   );
 }
