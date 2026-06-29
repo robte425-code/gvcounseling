@@ -1,11 +1,12 @@
 import { requireTherapist } from "@/auth";
+import { TherapistFeesHistoryTable } from "@/components/portal/TherapistFeesHistoryTable";
 import { TherapistFeesTable } from "@/components/portal/TherapistFeesTable";
 import { portalCardClass } from "@/components/portal/ui";
 import { loadTherapistProcedureCodeFees, serializeFeeSchedule } from "@/lib/procedure-fees";
 
 export default async function TherapistFeesPage() {
   const session = await requireTherapist();
-  const fees = serializeFeeSchedule(await loadTherapistProcedureCodeFees(session.user.id));
+  const fees = await loadTherapistProcedureCodeFees(session.user.id);
 
   return (
     <div className="space-y-8">
@@ -18,7 +19,13 @@ export default async function TherapistFeesPage() {
       </div>
 
       <div className={portalCardClass}>
-        <TherapistFeesTable fees={fees} />
+        <h2 className="mb-4 font-serif text-xl font-semibold text-primary-dark">Current rates</h2>
+        <TherapistFeesTable fees={serializeFeeSchedule(fees)} />
+      </div>
+
+      <div className={portalCardClass}>
+        <h2 className="mb-4 font-serif text-xl font-semibold text-primary-dark">Fee history</h2>
+        <TherapistFeesHistoryTable fees={fees} />
       </div>
     </div>
   );
