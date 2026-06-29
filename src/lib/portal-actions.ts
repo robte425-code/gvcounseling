@@ -933,7 +933,7 @@ export async function createTherapistAction(
         return {
           error: isOwnAdminEmail
             ? "This is your admin login email. Change it under Account, then you can add a therapist with this address."
-            : `This email belongs to an admin account (${existing.email}). Remove it under Portal accounts, or use a different email.`,
+            : `This email belongs to an admin account (${existing.email}). Remove it under Account → Portal logins, or use a different email.`,
         };
       }
       if (existing.active) {
@@ -1160,7 +1160,7 @@ export async function deletePortalAccountAction(formData: FormData) {
 
   await prisma.user.delete({ where: { id } });
 
-  revalidatePath("/portal/admin/accounts");
+  revalidatePath("/portal/profile");
   revalidatePath("/portal/admin/therapists");
-  redirect("/portal/admin/accounts?deleted=1");
+  redirect("/portal/profile?deleted=1#portal-logins");
 }

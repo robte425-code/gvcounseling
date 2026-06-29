@@ -46,10 +46,10 @@ export default async function AdminTherapistsPage({
           <h1 className="font-serif text-3xl font-semibold text-primary-dark">Therapists</h1>
           <p className="mt-2 text-muted">
             Manage therapist accounts for the billing portal.{" "}
-            <Link href="/portal/admin/accounts" className="text-primary hover:underline">
-              View all portal accounts
+            <Link href="/portal/profile#portal-logins" className="text-primary hover:underline">
+              View all portal logins
             </Link>{" "}
-            (includes admin logins not shown here).
+            on Account (includes admin logins not shown here).
           </p>
         </div>
         <Link href="/portal/admin/therapists/new" className={portalButtonClass}>
