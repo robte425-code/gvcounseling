@@ -1,6 +1,17 @@
 import { PROCEDURE_CODES } from "@/lib/constants";
 import { prisma } from "@/lib/prisma";
 
+type TransactionClient = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
+
+export type FeeScheduleRow = {
+  procedureCode: string;
+  amount: unknown;
+  effectiveFrom: Date;
+  effectiveTo: Date | null;
+};
+
+export type TherapistFeeScheduleRow = FeeScheduleRow & { therapistId: string };
+
 export function isKnownProcedureCode(code: string): boolean {
   return PROCEDURE_CODES.some((entry) => entry.code === code);
 }
@@ -21,7 +32,7 @@ export function dayBefore(date: Date): Date {
 }
 
 export function resolveFeeAmount(
-  fees: { procedureCode: string; amount: unknown; effectiveFrom: Date; effectiveTo: Date | null }[],
+  fees: FeeScheduleRow[],
   procedureCode: string,
   serviceDate: Date,
 ): number | null {
@@ -55,7 +66,7 @@ export async function getCurrentProcedureFee(procedureCode: string, asOf = new D
 }
 
 export function getCurrentProcedureFeeFromSchedule(
-  fees: { procedureCode: string; amount: unknown; effectiveFrom: Date; effectiveTo: Date | null }[],
+  fees: FeeScheduleRow[],
   procedureCode: string,
   asOf = new Date(),
 ) {
@@ -76,48 +87,93 @@ export function getCurrentProcedureFeeFromSchedule(
   return active ? { amount, effectiveFrom: active.effectiveFrom } : null;
 }
 
-export async function createProcedureCodeFee(options: {
-  procedureCode: string;
-  amount: number;
-  effectiveFrom: Date;
-  createdById?: string;
-}) {
+async function upsertFeeSchedule(
+  tx: TransactionClient,
+  scope: { therapistId?: string },
+  options: {
+    procedureCode: string;
+    amount: number;
+    effectiveFrom: Date;
+    createdById?: string;
+  },
+) {
   const { procedureCode, amount, effectiveFrom, createdById } = options;
-  if (!isKnownProcedureCode(procedureCode)) {
-    throw new Error("Unknown procedure code.");
-  }
-  if (!Number.isFinite(amount) || amount <= 0) {
-    throw new Error("Fee amount must be greater than zero.");
-  }
-
   const from = toDateOnly(effectiveFrom);
+  const scopeWhere = scope.therapistId ? { therapistId: scope.therapistId, procedureCode } : { procedureCode };
 
-  await prisma.$transaction(async (tx) => {
-    const overlapping = await tx.procedureCodeFee.findMany({
-      where: {
-        procedureCode,
-        effectiveFrom: { lt: from },
-        OR: [{ effectiveTo: null }, { effectiveTo: { gte: from } }],
-      },
-    });
+  const overlapping = scope.therapistId
+    ? await tx.therapistProcedureCodeFee.findMany({
+        where: {
+          ...scopeWhere,
+          effectiveFrom: { lt: from },
+          OR: [{ effectiveTo: null }, { effectiveTo: { gte: from } }],
+        },
+      })
+    : await tx.procedureCodeFee.findMany({
+        where: {
+          ...scopeWhere,
+          effectiveFrom: { lt: from },
+          OR: [{ effectiveTo: null }, { effectiveTo: { gte: from } }],
+        },
+      });
 
-    for (const fee of overlapping) {
+  for (const fee of overlapping) {
+    if (scope.therapistId) {
+      await tx.therapistProcedureCodeFee.update({
+        where: { id: fee.id },
+        data: { effectiveTo: dayBefore(from) },
+      });
+    } else {
       await tx.procedureCodeFee.update({
         where: { id: fee.id },
         data: { effectiveTo: dayBefore(from) },
       });
     }
+  }
 
-    const nextFee = await tx.procedureCodeFee.findFirst({
+  const nextFee = scope.therapistId
+    ? await tx.therapistProcedureCodeFee.findFirst({
+        where: {
+          therapistId: scope.therapistId,
+          procedureCode,
+          effectiveFrom: { gt: from },
+        },
+        orderBy: { effectiveFrom: "asc" },
+      })
+    : await tx.procedureCodeFee.findFirst({
+        where: {
+          procedureCode,
+          effectiveFrom: { gt: from },
+        },
+        orderBy: { effectiveFrom: "asc" },
+      });
+
+  const effectiveTo = nextFee ? dayBefore(toDateOnly(nextFee.effectiveFrom)) : null;
+
+  if (scope.therapistId) {
+    await tx.therapistProcedureCodeFee.upsert({
       where: {
-        procedureCode,
-        effectiveFrom: { gt: from },
+        therapistId_procedureCode_effectiveFrom: {
+          therapistId: scope.therapistId,
+          procedureCode,
+          effectiveFrom: from,
+        },
       },
-      orderBy: { effectiveFrom: "asc" },
+      create: {
+        therapistId: scope.therapistId,
+        procedureCode,
+        amount,
+        effectiveFrom: from,
+        effectiveTo,
+        createdById,
+      },
+      update: {
+        amount,
+        effectiveTo,
+        createdById,
+      },
     });
-
-    const effectiveTo = nextFee ? dayBefore(toDateOnly(nextFee.effectiveFrom)) : null;
-
+  } else {
     await tx.procedureCodeFee.upsert({
       where: {
         procedureCode_effectiveFrom: {
@@ -138,12 +194,89 @@ export async function createProcedureCodeFee(options: {
         createdById,
       },
     });
+  }
+}
+
+export async function createProcedureCodeFee(options: {
+  procedureCode: string;
+  amount: number;
+  effectiveFrom: Date;
+  createdById?: string;
+}) {
+  const { procedureCode, amount, effectiveFrom, createdById } = options;
+  if (!isKnownProcedureCode(procedureCode)) {
+    throw new Error("Unknown procedure code.");
+  }
+  if (!Number.isFinite(amount) || amount <= 0) {
+    throw new Error("Fee amount must be greater than zero.");
+  }
+
+  const from = toDateOnly(effectiveFrom);
+
+  await prisma.$transaction(async (tx) => {
+    await upsertFeeSchedule(tx, {}, { procedureCode, amount, effectiveFrom: from, createdById });
+  });
+}
+
+export async function loadTherapistProcedureCodeFees(therapistId: string) {
+  return prisma.therapistProcedureCodeFee.findMany({
+    where: { therapistId },
+    orderBy: [{ procedureCode: "asc" }, { effectiveFrom: "desc" }],
+  });
+}
+
+export async function loadTherapistProcedureCodeFeesForTherapists(therapistIds: string[]) {
+  if (therapistIds.length === 0) return [];
+  return prisma.therapistProcedureCodeFee.findMany({
+    where: { therapistId: { in: therapistIds } },
+    orderBy: [{ therapistId: "asc" }, { procedureCode: "asc" }, { effectiveFrom: "desc" }],
+  });
+}
+
+export async function createTherapistProcedureCodeFee(options: {
+  therapistId: string;
+  procedureCode: string;
+  amount: number;
+  effectiveFrom: Date;
+  createdById?: string;
+}) {
+  const { therapistId, procedureCode, amount, effectiveFrom, createdById } = options;
+  if (!isKnownProcedureCode(procedureCode)) {
+    throw new Error("Unknown procedure code.");
+  }
+  if (!Number.isFinite(amount) || amount <= 0) {
+    throw new Error("Fee amount must be greater than zero.");
+  }
+
+  const therapist = await prisma.user.findFirst({
+    where: { id: therapistId, role: "THERAPIST" },
+    select: { id: true },
+  });
+  if (!therapist) throw new Error("Therapist not found.");
+
+  const from = toDateOnly(effectiveFrom);
+
+  await prisma.$transaction(async (tx) => {
+    await upsertFeeSchedule(tx, { therapistId }, { procedureCode, amount, effectiveFrom: from, createdById });
   });
 }
 
 export function buildFeeLookup(
-  fees: { procedureCode: string; amount: unknown; effectiveFrom: Date; effectiveTo: Date | null }[],
+  fees: FeeScheduleRow[],
 ) {
   return (procedureCode: string, serviceDate: Date) =>
     resolveFeeAmount(fees, procedureCode, serviceDate);
+}
+
+export function resolveTherapistFeeAmount(
+  therapistFees: TherapistFeeScheduleRow[],
+  globalFees: FeeScheduleRow[],
+  therapistId: string,
+  procedureCode: string,
+  serviceDate: Date,
+): number | null {
+  const scoped = therapistFees.filter((fee) => fee.therapistId === therapistId);
+  const therapistAmount = resolveFeeAmount(scoped, procedureCode, serviceDate);
+  if (therapistAmount !== null) return therapistAmount;
+  return resolveFeeAmount(globalFees, procedureCode, serviceDate);
 }

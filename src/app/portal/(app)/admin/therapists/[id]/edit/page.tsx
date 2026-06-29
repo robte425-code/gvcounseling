@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { requireAdmin } from "@/auth";
 import { ConfirmSubmitButton } from "@/components/portal/ConfirmSubmitButton";
 import { TherapistForm } from "@/components/portal/TherapistForm";
+import { TherapistFeesSection } from "@/components/portal/TherapistFeesSection";
 import {
   portalButtonClass,
   portalButtonSecondaryClass,
@@ -90,6 +91,8 @@ export default async function EditTherapistPage({
         therapist={therapist}
         cancelHref="/portal/admin/therapists"
       />
+
+      <TherapistFeesSection therapistId={therapist.id} />
 
       <section className={`${portalCardCompactClass} space-y-3`}>
         <h2 className="text-xs font-semibold uppercase tracking-wide text-muted">Account status</h2>

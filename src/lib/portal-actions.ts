@@ -21,7 +21,7 @@ import { getSystemDriveAccessToken } from "@/lib/google-drive-system";
 import { sendAdminWelcomeEmail, sendTherapistAssignmentEmail, sendTherapistWelcomeEmail } from "@/lib/referral-emails";
 import { generateOneTimePassword, hashPassword, verifyPassword } from "@/lib/password";
 import { fetchLniPayPeriods } from "@/lib/lni-pay-periods";
-import { createProcedureCodeFee, loadAllProcedureCodeFees, resolveFeeAmount } from "@/lib/procedure-fees";
+import { createProcedureCodeFee, createTherapistProcedureCodeFee, loadAllProcedureCodeFees, loadTherapistProcedureCodeFeesForTherapists, resolveTherapistFeeAmount } from "@/lib/procedure-fees";
 import { prisma } from "@/lib/prisma";
 
 function parseDecimal(value: FormDataEntryValue | null): number {
@@ -184,6 +184,28 @@ export async function createProcedureCodeFeeAction(formData: FormData) {
 
   revalidatePath("/portal/admin/billing");
   revalidatePath("/portal/admin/billing/fees/history");
+}
+
+export async function createTherapistProcedureCodeFeeAction(formData: FormData) {
+  const session = await requireAdmin();
+  const therapistId = String(formData.get("therapistId") ?? "").trim();
+  const procedureCode = String(formData.get("procedureCode") ?? "").trim();
+  const amount = parseDecimal(formData.get("amount"));
+  const effectiveFrom = parseDate(formData.get("effectiveFrom"));
+
+  if (!therapistId) throw new Error("Therapist is required.");
+  if (!effectiveFrom) throw new Error("Effective from date is required.");
+
+  await createTherapistProcedureCodeFee({
+    therapistId,
+    procedureCode,
+    amount,
+    effectiveFrom,
+    createdById: session.user.id,
+  });
+
+  revalidatePath(`/portal/admin/therapists/${therapistId}/edit`);
+  revalidatePath(`/portal/admin/therapists/${therapistId}/fees/history`);
 }
 
 export async function syncPayPeriodsFromLniAction() {
@@ -563,7 +585,9 @@ export async function generateBillAction(formData: FormData) {
     throw new Error(`Cannot generate bill. Missing data: ${blocked.slice(0, 5).join("; ")}`);
   }
 
-  const feeSchedule = await loadAllProcedureCodeFees();
+  const therapistIds = [...new Set(invoices.map((inv) => inv.therapistId))];
+  const therapistFeeSchedule = await loadTherapistProcedureCodeFeesForTherapists(therapistIds);
+  const globalFeeSchedule = await loadAllProcedureCodeFees();
   const missingFees: string[] = [];
 
   const claims: Edi837Claim[] = invoices.map((inv) => {
@@ -591,10 +615,16 @@ export async function generateBillAction(formData: FormData) {
         npi: inv.therapist.npi!,
       },
       lines: inv.lineItems.map((line) => {
-        const feeAmount = resolveFeeAmount(feeSchedule, line.procedureCode, line.serviceDate);
+        const feeAmount = resolveTherapistFeeAmount(
+          therapistFeeSchedule,
+          globalFeeSchedule,
+          inv.therapistId,
+          line.procedureCode,
+          line.serviceDate,
+        );
         if (feeAmount === null) {
           missingFees.push(
-            `${line.procedureCode} on ${line.serviceDate.toISOString().slice(0, 10)} (invoice #${inv.invoiceNumber})`,
+            `${line.procedureCode} on ${line.serviceDate.toISOString().slice(0, 10)} (invoice #${inv.invoiceNumber}, therapist ${inv.therapist.lastName})`,
           );
         }
         return {
