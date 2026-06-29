@@ -6,10 +6,10 @@ import { prisma } from "@/lib/prisma";
 export default async function AdminTherapistsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ deleted?: string; created?: string; driveWarning?: string }>;
+  searchParams: Promise<{ deleted?: string; created?: string; driveWarning?: string; emailWarning?: string }>;
 }) {
   await requireAdmin();
-  const { deleted, created, driveWarning } = await searchParams;
+  const { deleted, created, driveWarning, emailWarning } = await searchParams;
 
   const therapists = await prisma.user.findMany({
     where: { role: "THERAPIST" },
@@ -38,15 +38,30 @@ export default async function AdminTherapistsPage({
         </p>
       )}
 
-      {created === "1" && !driveWarning && (
+      {created === "1" && !driveWarning && !emailWarning && (
         <p className="rounded-lg bg-primary/10 px-3 py-2 text-sm text-primary-dark">
-          Therapist added and Google Drive folder created.
+          Therapist added. Welcome email sent and Google Drive folder created.
         </p>
       )}
 
-      {created === "1" && driveWarning && (
+      {created === "1" && !driveWarning && emailWarning && (
         <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-950" role="alert">
-          Therapist added, but the Google Drive folder could not be created: {driveWarning}
+          Therapist added and Drive folder created, but the welcome email could not be sent:{" "}
+          {emailWarning}
+        </p>
+      )}
+
+      {created === "1" && driveWarning && !emailWarning && (
+        <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-950" role="alert">
+          Therapist added and welcome email sent, but the Google Drive folder could not be created:{" "}
+          {driveWarning}
+        </p>
+      )}
+
+      {created === "1" && driveWarning && emailWarning && (
+        <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-950" role="alert">
+          Therapist added, but the welcome email could not be sent ({emailWarning}) and the Google
+          Drive folder could not be created ({driveWarning}).
         </p>
       )}
 

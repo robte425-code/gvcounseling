@@ -18,7 +18,7 @@ import { client837Ready, parseClaimNumber } from "@/lib/constants";
 import { moveClientDriveFolderToTherapist } from "@/lib/client-drive-move";
 import { ensureTherapistDriveFolder } from "@/lib/google-drive";
 import { getSystemDriveAccessToken } from "@/lib/google-drive-system";
-import { sendTherapistAssignmentEmail } from "@/lib/referral-emails";
+import { sendTherapistAssignmentEmail, sendTherapistWelcomeEmail } from "@/lib/referral-emails";
 import { generateOneTimePassword, hashPassword, verifyPassword } from "@/lib/password";
 import { fetchLniPayPeriods } from "@/lib/lni-pay-periods";
 import { prisma } from "@/lib/prisma";
@@ -805,12 +805,10 @@ export async function therapistRejectReferralAction(formData: FormData) {
   redirect("/portal/therapist/dashboard?referralDeclined=1");
 }
 
-const THERAPIST_EMAIL_DOMAIN = "@gvcounseling.com";
-
-function normalizeTherapistEmail(raw: string): string {
+function normalizeEmail(raw: string): string {
   const email = raw.toLowerCase().trim();
-  if (!email.endsWith(THERAPIST_EMAIL_DOMAIN)) {
-    throw new Error(`Therapist email must end with ${THERAPIST_EMAIL_DOMAIN}.`);
+  if (!email || !email.includes("@")) {
+    throw new Error("A valid email address is required.");
   }
   return email;
 }
@@ -818,7 +816,7 @@ function normalizeTherapistEmail(raw: string): string {
 function parseTherapistFields(formData: FormData) {
   const firstName = String(formData.get("firstName") ?? "").trim();
   const lastName = String(formData.get("lastName") ?? "").trim();
-  const email = normalizeTherapistEmail(String(formData.get("email") ?? ""));
+  const email = normalizeEmail(String(formData.get("email") ?? ""));
   const lniProviderId = String(formData.get("lniProviderId") ?? "").trim() || null;
   const npi = String(formData.get("npi") ?? "").trim() || null;
 
@@ -854,6 +852,7 @@ export async function createTherapistAction(
     }
 
     let password = String(formData.get("password") ?? "").trim();
+    const adminSetPassword = password.length > 0;
     if (!password) {
       password = generateOneTimePassword();
     } else if (password.length < 8) {
@@ -865,9 +864,22 @@ export async function createTherapistAction(
         ...fields,
         role: "THERAPIST",
         passwordHash: await hashPassword(password),
-        mustChangePassword: true,
+        mustChangePassword: !adminSetPassword,
       },
     });
+
+    let emailWarning: string | undefined;
+    try {
+      await sendTherapistWelcomeEmail({
+        therapistEmail: fields.email,
+        therapistName: `${fields.firstName} ${fields.lastName}`,
+        password,
+        mustChangePassword: !adminSetPassword,
+      });
+    } catch (e) {
+      emailWarning =
+        e instanceof Error ? e.message : "Welcome email could not be sent.";
+    }
 
     let driveWarning: string | undefined;
     try {
@@ -886,6 +898,7 @@ export async function createTherapistAction(
     revalidatePath("/portal/admin/therapists");
     const params = new URLSearchParams({ created: "1" });
     if (driveWarning) params.set("driveWarning", driveWarning);
+    if (emailWarning) params.set("emailWarning", emailWarning);
     redirect(`/portal/admin/therapists?${params.toString()}`);
   } catch (e) {
     if (isNextRedirectError(e)) throw e;

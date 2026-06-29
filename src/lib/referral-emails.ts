@@ -55,6 +55,44 @@ export async function sendAdminTherapistRejectionEmail(options: {
   });
 }
 
+export async function sendTherapistWelcomeEmail(options: {
+  therapistEmail: string;
+  therapistName: string;
+  password: string;
+  mustChangePassword: boolean;
+}) {
+  const siteUrl = getSiteUrl();
+  const loginUrl = `${siteUrl}/portal/login`;
+  const passwordLabel = options.mustChangePassword ? "Temporary password" : "Password";
+  const lines = [
+    `Hello ${options.therapistName},`,
+    "",
+    "An account has been created for you on the Grandview Counseling billing portal.",
+    "",
+    "Sign in here:",
+    loginUrl,
+    "",
+    `  Email: ${options.therapistEmail}`,
+    `  ${passwordLabel}: ${options.password}`,
+  ];
+  if (options.mustChangePassword) {
+    lines.push("", "You will be asked to choose a new password when you sign in for the first time.");
+  }
+  lines.push(
+    "",
+    "From the portal you can review client referrals, manage clients, and submit invoices.",
+    "Optional: connect your Google account under Integrations to view client files.",
+    "",
+    "If you did not expect this email, please contact the office.",
+    "",
+    "Grandview Counseling",
+  );
+  await sendEmailTo(options.therapistEmail, {
+    subject: "Your Grandview Counseling billing portal account",
+    text: lines.join("\n"),
+  });
+}
+
 export async function sendReferralIntakeAdminNotice(options: {
   clientName: string;
   claimNumber: string;

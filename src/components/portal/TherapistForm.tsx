@@ -96,7 +96,7 @@ function TherapistFields({
           type="email"
           required
           defaultValue={therapist?.email ?? ""}
-          placeholder="name@gvcounseling.com"
+          placeholder="therapist@example.com"
           className={portalInputCompactClass}
         />
       </div>
@@ -127,8 +127,8 @@ function TherapistFields({
             className={portalInputCompactClass}
           />
           <p className="mt-1 text-xs text-muted">
-            Therapist must change password on first login. Share the password securely if you set one
-            manually.
+            Leave blank to auto-generate a temporary password (must be changed on first login). If you
+            set a password here, they can sign in with it directly.
           </p>
         </div>
       )}
