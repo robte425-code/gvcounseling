@@ -66,6 +66,35 @@ async function findPayPeriodByCutoff(cutoffDate: Date) {
   });
 }
 
+export type ProfileState = { error?: string; saved?: boolean };
+
+export async function updateProfileAction(
+  _prevState: ProfileState,
+  formData: FormData,
+): Promise<ProfileState> {
+  const session = await requireSession();
+  if (isImpersonating(session)) {
+    return { error: "Exit therapist view before editing your account." };
+  }
+
+  const firstName = String(formData.get("firstName") ?? "").trim();
+  const lastName = String(formData.get("lastName") ?? "").trim();
+  if (!firstName || !lastName) {
+    return { error: "First and last name are required." };
+  }
+
+  const userId = getRealUserId(session);
+  await prisma.user.update({
+    where: { id: userId },
+    data: { firstName, lastName },
+  });
+
+  await unstable_update({ user: { firstName, lastName } });
+
+  revalidatePath("/portal/profile");
+  redirect("/portal/profile?saved=1");
+}
+
 export type ChangePasswordState = { error?: string };
 
 export async function changePasswordAction(

@@ -62,7 +62,14 @@ export async function PortalNav() {
               Grandview Counseling
             </Link>
             <p className="text-xs text-muted">
-              Billing portal · {session.user.firstName}
+              Billing portal ·{" "}
+              {impersonating ? (
+                session.user.firstName
+              ) : (
+                <Link href="/portal/profile" className="hover:text-primary-dark hover:underline">
+                  {session.user.firstName}
+                </Link>
+              )}
               {admin && !impersonating ? " (admin)" : ""}
             </p>
           </div>
@@ -78,6 +85,14 @@ export async function PortalNav() {
             ))}
           </nav>
           <div className="flex flex-wrap items-center gap-3">
+            {!impersonating && (
+              <Link
+                href="/portal/profile"
+                className="text-sm text-muted hover:text-primary-dark"
+              >
+                Account
+              </Link>
+            )}
             {therapists.length > 0 && <ViewAsTherapistSelect therapists={therapists} />}
             <form
               action={async () => {

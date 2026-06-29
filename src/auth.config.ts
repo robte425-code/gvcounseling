@@ -52,6 +52,18 @@ export const authConfig = {
         if (session.user?.mustChangePassword !== undefined) {
           token.mustChangePassword = session.user.mustChangePassword;
         }
+        if (session.user?.firstName !== undefined) {
+          token.firstName = session.user.firstName;
+          if (token.adminSnapshot) {
+            (token.adminSnapshot as AdminSnapshot).firstName = session.user.firstName;
+          }
+        }
+        if (session.user?.lastName !== undefined) {
+          token.lastName = session.user.lastName;
+          if (token.adminSnapshot) {
+            (token.adminSnapshot as AdminSnapshot).lastName = session.user.lastName;
+          }
+        }
       }
       if (user) {
         token.id = user.id!;
