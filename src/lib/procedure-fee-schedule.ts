@@ -64,3 +64,31 @@ export function getCurrentProcedureFeeFromSchedule(
 
   return active ? { amount, effectiveFrom: active.effectiveFrom } : null;
 }
+
+export function getCurrentProcedureFeeRecordFromSchedule(
+  fees: (FeeScheduleRow & { id?: string })[],
+  procedureCode: string,
+  asOf: Date | string = new Date(),
+) {
+  const amount = resolveFeeAmount(fees, procedureCode, asOf);
+  if (amount === null) return null;
+
+  const date = toDateOnly(asOf);
+  const active = fees
+    .filter((fee) => {
+      if (fee.procedureCode !== procedureCode) return false;
+      const from = toDateOnly(fee.effectiveFrom);
+      if (from > date) return false;
+      if (fee.effectiveTo && toDateOnly(fee.effectiveTo) < date) return false;
+      return true;
+    })
+    .sort((a, b) => toDateOnly(b.effectiveFrom).getTime() - toDateOnly(a.effectiveFrom).getTime())[0];
+
+  if (!active?.id) return null;
+
+  return {
+    id: active.id,
+    amount,
+    effectiveFrom: active.effectiveFrom,
+  };
+}

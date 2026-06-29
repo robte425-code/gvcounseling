@@ -1,7 +1,6 @@
 import Link from "next/link";
-import { TherapistFeesEditableTable } from "@/components/portal/TherapistFeesEditableTable";
-import { TherapistFeesTable } from "@/components/portal/TherapistFeesTable";
-import { loadTherapistProcedureCodeFees, serializeFeeSchedule } from "@/lib/procedure-fees";
+import { TherapistCurrentFeesEditor } from "@/components/portal/TherapistCurrentFeesEditor";
+import { loadTherapistProcedureCodeFees } from "@/lib/procedure-fees";
 import {
   portalButtonSecondaryClass,
   portalCardCompactClass,
@@ -36,14 +35,7 @@ export async function TherapistFeesSection({ therapistId }: Props) {
       <div className="mt-4">
         <h3 className="text-xs font-semibold uppercase tracking-wide text-muted">Current rates</h3>
         <div className="mt-2">
-          <TherapistFeesTable fees={serializeFeeSchedule(fees)} />
-        </div>
-      </div>
-
-      <div className="mt-4 border-t border-border pt-4">
-        <h3 className="text-xs font-semibold uppercase tracking-wide text-muted">All fee rows</h3>
-        <div className="mt-2">
-          <TherapistFeesEditableTable therapistId={therapistId} fees={fees} />
+          <TherapistCurrentFeesEditor therapistId={therapistId} fees={fees} />
         </div>
       </div>
     </section>
