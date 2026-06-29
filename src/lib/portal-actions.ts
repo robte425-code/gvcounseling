@@ -21,7 +21,7 @@ import { getSystemDriveAccessToken } from "@/lib/google-drive-system";
 import { sendAdminWelcomeEmail, sendTherapistAssignmentEmail, sendTherapistWelcomeEmail } from "@/lib/referral-emails";
 import { generateOneTimePassword, hashPassword, verifyPassword } from "@/lib/password";
 import { fetchLniPayPeriods } from "@/lib/lni-pay-periods";
-import { createProcedureCodeFee, createTherapistProcedureCodeFee, applyTherapistFeeSchedule, loadAllProcedureCodeFees, resolveFeeAmount } from "@/lib/procedure-fees";
+import { createProcedureCodeFee, createTherapistProcedureCodeFee, updateTherapistProcedureCodeFee, applyTherapistFeeSchedule, loadAllProcedureCodeFees, resolveFeeAmount } from "@/lib/procedure-fees";
 import { prisma } from "@/lib/prisma";
 
 function parseDecimal(value: FormDataEntryValue | null): number {
@@ -206,6 +206,33 @@ export async function createTherapistProcedureCodeFeeAction(formData: FormData) 
 
   revalidatePath(`/portal/admin/therapists/${therapistId}/edit`);
   revalidatePath(`/portal/admin/therapists/${therapistId}/fees/history`);
+  revalidatePath("/portal/therapist/fees");
+}
+
+export async function updateTherapistProcedureCodeFeeAction(formData: FormData) {
+  const session = await requireAdmin();
+  const id = String(formData.get("id") ?? "").trim();
+  const therapistId = String(formData.get("therapistId") ?? "").trim();
+  const procedureCode = String(formData.get("procedureCode") ?? "").trim();
+  const amount = parseDecimal(formData.get("amount"));
+  const effectiveFrom = parseDate(formData.get("effectiveFrom"));
+
+  if (!id) throw new Error("Fee is required.");
+  if (!therapistId) throw new Error("Therapist is required.");
+  if (!effectiveFrom) throw new Error("Effective from date is required.");
+
+  await updateTherapistProcedureCodeFee({
+    id,
+    therapistId,
+    procedureCode,
+    amount,
+    effectiveFrom,
+    createdById: session.user.id,
+  });
+
+  revalidatePath(`/portal/admin/therapists/${therapistId}/edit`);
+  revalidatePath(`/portal/admin/therapists/${therapistId}/fees/history`);
+  revalidatePath("/portal/therapist/fees");
 }
 
 export async function syncPayPeriodsFromLniAction() {

@@ -199,6 +199,90 @@ export async function createTherapistProcedureCodeFee(options: {
   });
 }
 
+async function reconcileTherapistFeesForCode(
+  tx: TransactionClient,
+  therapistId: string,
+  procedureCode: string,
+) {
+  const fees = await tx.therapistProcedureCodeFee.findMany({
+    where: { therapistId, procedureCode },
+    orderBy: { effectiveFrom: "asc" },
+  });
+
+  for (let i = 0; i < fees.length; i++) {
+    const next = fees[i + 1];
+    const effectiveTo = next ? dayBefore(toDateOnly(next.effectiveFrom)) : null;
+    const currentToMs = fees[i].effectiveTo ? toDateOnly(fees[i].effectiveTo!).getTime() : null;
+    const nextToMs = effectiveTo ? effectiveTo.getTime() : null;
+    if (currentToMs !== nextToMs) {
+      await tx.therapistProcedureCodeFee.update({
+        where: { id: fees[i].id },
+        data: { effectiveTo },
+      });
+    }
+  }
+}
+
+export async function updateTherapistProcedureCodeFee(options: {
+  id: string;
+  therapistId: string;
+  procedureCode: string;
+  amount: number;
+  effectiveFrom: Date;
+  createdById?: string;
+}) {
+  const { id, therapistId, procedureCode, amount, effectiveFrom, createdById } = options;
+  if (!isKnownProcedureCode(procedureCode)) {
+    throw new Error("Unknown procedure code.");
+  }
+  if (!Number.isFinite(amount) || amount <= 0) {
+    throw new Error("Fee amount must be greater than zero.");
+  }
+
+  const existing = await prisma.therapistProcedureCodeFee.findFirst({
+    where: { id, therapistId },
+  });
+  if (!existing) throw new Error("Fee not found.");
+
+  const from = toDateOnly(effectiveFrom);
+  const sameKey =
+    existing.procedureCode === procedureCode &&
+    toDateOnly(existing.effectiveFrom).getTime() === from.getTime();
+  const oldProcedureCode = existing.procedureCode;
+
+  await prisma.$transaction(async (tx) => {
+    if (sameKey) {
+      await tx.therapistProcedureCodeFee.update({
+        where: { id },
+        data: { amount, createdById },
+      });
+      return;
+    }
+
+    const conflict = await tx.therapistProcedureCodeFee.findFirst({
+      where: {
+        therapistId,
+        procedureCode,
+        effectiveFrom: from,
+        NOT: { id },
+      },
+    });
+    if (conflict) {
+      throw new Error("A fee for this procedure code and effective date already exists.");
+    }
+
+    await tx.therapistProcedureCodeFee.delete({ where: { id } });
+    await reconcileTherapistFeesForCode(tx, therapistId, oldProcedureCode);
+
+    await upsertFeeSchedule(tx, { therapistId }, {
+      procedureCode,
+      amount,
+      effectiveFrom: from,
+      createdById,
+    });
+  });
+}
+
 export function buildFeeLookup(fees: FeeScheduleRow[]) {
   return (procedureCode: string, serviceDate: Date) =>
     resolveFeeAmount(fees, procedureCode, serviceDate);
