@@ -155,9 +155,7 @@ export function ClientDetailView({
                 <AttendingNpiSearch
                   clientId={clientId}
                   doctorName={client.attendingDoctorName}
-                  doctorAddress={client.attendingDoctorAddress}
-                  city={client.city}
-                  state={client.state}
+                  doctorPhone={client.attendingDoctorPhone}
                 />
               )}
             </dd>

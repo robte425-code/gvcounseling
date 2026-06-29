@@ -44,12 +44,20 @@ type NpiApiResponse = {
 
 const NPI_REGISTRY_API = "https://npiregistry.cms.hhs.gov/api/";
 
+/** L&I referral imports: LAST FIRST [M] CREDENTIAL (e.g. SAWYER JESSICA K PAC). */
+const LNI_DOCTOR_NAME =
+  /^[A-Z][A-Z'-]+\s+[A-Z][A-Z'-]+(?:\s+[A-Z]\.?)?\s+(?:PAC|PA-C|ARNP|MD|DO|DC|APRN|NP|ND)\b/i;
+
 /** Common medical credentials that appear in referral imports, not part of the legal name. */
 const CREDENTIAL_PATTERN =
-  /\b(PAC|PA-C|P\.A\.C?\.?|PA|NP|FNP-C?|ARNP|APRN|DNP|MD|M\.D\.|DO|D\.O\.|PHD|PH\.D\.|PSYD|PSY\.D\.|LMFT|LMFTA|LCSW|LICSW|PT|OT|DC|DDS|DMD|CNP|CRNP|DR|DR\.|DPM|OD|RN|MSW|MA|MS|MBA|FACP|FACS|JD)\b/gi;
+  /\b(PAC|PA-C|P\.A\.C?\.?|PA|NP|FNP-C?|ARNP|APRN|DNP|MD|M\.D\.|DO|D\.O\.|PHD|PH\.D\.|PSYD|PSY\.D\.|LMFT|LMFTA|LCSW|LICSW|PT|OT|DC|DDS|DMD|CNP|CRNP|DR|DR\.|DPM|OD|RN|MSW|MA|MS|MBA|FACP|FACS|JD|ND)\b/gi;
 
 function stripCredentials(text: string): string {
   return text.replace(CREDENTIAL_PATTERN, "").replace(/\s+/g, " ").trim();
+}
+
+function isMiddleInitial(token: string): boolean {
+  return /^[A-Z]\.?$/i.test(token);
 }
 
 function variantKey(variant: NpiSearchVariant): string {
@@ -79,6 +87,7 @@ export function generateNpiSearchVariants(name: string): NpiSearchVariant[] {
 
   const variants: NpiSearchVariant[] = [];
   const seen = new Set<string>();
+  const lniFormat = LNI_DOCTOR_NAME.test(name.trim());
 
   if (cleaned.includes(",")) {
     const [lastPart, rest] = cleaned.split(",", 2);
@@ -105,6 +114,9 @@ export function generateNpiSearchVariants(name: string): NpiSearchVariant[] {
   }
 
   if (tokens.length === 2) {
+    if (lniFormat) {
+      addVariant(variants, seen, tokens[1], tokens[0]!);
+    }
     addVariant(variants, seen, tokens[0], tokens[1]!);
     addVariant(variants, seen, tokens[1], tokens[0]!);
     addVariant(variants, seen, undefined, tokens[0]!);
@@ -112,9 +124,30 @@ export function generateNpiSearchVariants(name: string): NpiSearchVariant[] {
     return variants;
   }
 
-  addVariant(variants, seen, tokens[0], tokens[tokens.length - 1]!);
-  addVariant(variants, seen, tokens[tokens.length - 1], tokens[0]!);
-  addVariant(variants, seen, undefined, tokens[tokens.length - 1]!);
+  const lastToken = tokens[tokens.length - 1]!;
+  const trailingMiddle = isMiddleInitial(lastToken);
+
+  // LNI LAST FIRST M: SAWYER JESSICA K
+  if (lniFormat || (trailingMiddle && tokens[1]!.length >= 2)) {
+    addVariant(variants, seen, tokens[1], tokens[0]!);
+    addVariant(variants, seen, undefined, tokens[0]!);
+  }
+
+  // FIRST M LAST: JOHN W SMITH
+  if (tokens.length >= 3 && isMiddleInitial(tokens[1]!)) {
+    addVariant(variants, seen, tokens[0], lastToken);
+    addVariant(variants, seen, undefined, lastToken);
+  }
+
+  // FIRST … LAST (Western order)
+  if (!trailingMiddle || tokens.length > 3) {
+    addVariant(variants, seen, tokens[0], lastToken);
+  }
+
+  if (!trailingMiddle) {
+    addVariant(variants, seen, lastToken, tokens[0]!);
+    addVariant(variants, seen, undefined, lastToken);
+  }
   addVariant(variants, seen, undefined, tokens[0]!);
   return variants;
 }
@@ -132,15 +165,50 @@ export function parseDoctorNameForNpiSearch(name: string): {
   };
 }
 
-/** Extract city and state from a free-text doctor address. */
+/** Extract city, state, and ZIP from a free-text doctor address. */
 export function parseCityStateFromAddress(address: string | null | undefined): {
   city?: string;
   state?: string;
+  postalCode?: string;
 } {
   if (!address?.trim()) return {};
-  const match = address.match(/,\s*([^,]+),\s*([A-Z]{2})\b/i);
-  if (!match) return {};
-  return { city: match[1]!.trim(), state: match[2]!.toUpperCase() };
+  const match = address.match(/,\s*([^,]+),\s*([A-Z]{2})\s+(\d{5})(?:-\d{4})?\b/i);
+  if (!match) {
+    const fallback = address.match(/,\s*([^,]+),\s*([A-Z]{2})\b/i);
+    if (!fallback) return {};
+    return { city: fallback[1]!.trim(), state: fallback[2]!.toUpperCase() };
+  }
+  return {
+    city: match[1]!.trim(),
+    state: match[2]!.toUpperCase(),
+    postalCode: match[3],
+  };
+}
+
+function normalizePhone(phone: string | null | undefined): string {
+  return (phone ?? "").replace(/\D/g, "");
+}
+
+function scoreProvider(
+  provider: NpiRegistryProvider,
+  hints: {
+    firstName?: string;
+    lastName?: string;
+    phone?: string;
+  },
+): number {
+  let score = 0;
+  const providerPhone = normalizePhone(provider.phone);
+  const hintPhone = normalizePhone(hints.phone);
+  if (hintPhone.length >= 10 && providerPhone.endsWith(hintPhone.slice(-10))) {
+    score += 100;
+  }
+
+  const nameUpper = provider.name.toUpperCase();
+  if (hints.firstName && nameUpper.includes(hints.firstName.toUpperCase())) score += 20;
+  if (hints.lastName && nameUpper.includes(hints.lastName.toUpperCase())) score += 10;
+
+  return score;
 }
 
 function formatProviderName(result: NpiApiResult): string {
@@ -188,7 +256,6 @@ function mapResult(result: NpiApiResult): NpiRegistryProvider {
 async function fetchNpiResults(
   variant: NpiSearchVariant,
   state: string,
-  city?: string,
 ): Promise<{ providers: NpiRegistryProvider[]; error?: string }> {
   const params = new URLSearchParams({
     version: "2.1",
@@ -197,7 +264,6 @@ async function fetchNpiResults(
     state,
   });
   if (variant.firstName) params.set("first_name", variant.firstName);
-  if (city) params.set("city", city);
 
   let response: Response;
   try {
@@ -236,12 +302,10 @@ function formatVariantLabel(variant: NpiSearchVariant): string {
 export async function searchAttendingNpiRegistry(options: {
   doctorName: string;
   state?: string | null;
-  city?: string | null;
-  doctorAddress?: string | null;
+  doctorPhone?: string | null;
 }): Promise<{
   providers: NpiRegistryProvider[];
   searchVariants: string[];
-  searchedStateWide?: boolean;
   error?: string;
 }> {
   const variants = generateNpiSearchVariants(options.doctorName);
@@ -253,46 +317,53 @@ export async function searchAttendingNpiRegistry(options: {
     };
   }
 
-  const fromAddress = parseCityStateFromAddress(options.doctorAddress);
-  const state = (options.state ?? fromAddress.state ?? "WA").trim().toUpperCase();
-  const city = (options.city ?? fromAddress.city)?.trim();
+  const state = (options.state ?? "WA").trim().toUpperCase();
+
+  const [primaryVariant, ...fallbackVariants] = variants;
+  const scoreHints = {
+    firstName: primaryVariant?.firstName,
+    lastName: primaryVariant?.lastName,
+    phone: options.doctorPhone ?? undefined,
+  };
 
   const seenNpis = new Set<string>();
-  const providers: NpiRegistryProvider[] = [];
+  let providers: NpiRegistryProvider[] = [];
   const searchVariants: string[] = [];
   let lastError: string | undefined;
-  let searchedStateWide = false;
 
-  async function runVariant(variant: NpiSearchVariant, withCity: boolean) {
+  async function collect(variant: NpiSearchVariant): Promise<number> {
     const label = formatVariantLabel(variant);
-    const locationLabel = withCity && city ? `${label} (${city}, ${state})` : `${label} (${state})`;
-    searchVariants.push(locationLabel);
+    searchVariants.push(`${label} (${state})`);
 
-    const result = await fetchNpiResults(variant, state, withCity ? city : undefined);
+    const result = await fetchNpiResults(variant, state);
     if (result.error) lastError = result.error;
+
+    let added = 0;
     for (const provider of result.providers) {
       if (seenNpis.has(provider.npi)) continue;
       seenNpis.add(provider.npi);
       providers.push(provider);
+      added++;
+    }
+    return added;
+  }
+
+  async function searchVariantList(variantList: NpiSearchVariant[]) {
+    for (const variant of variantList) {
+      await collect(variant);
     }
   }
 
-  for (const variant of variants) {
-    await runVariant(variant, true);
-    if (providers.length > 0) break;
+  await searchVariantList([primaryVariant!]);
+  if (providers.length === 0 && fallbackVariants.length > 0) {
+    await searchVariantList(fallbackVariants);
   }
 
-  if (providers.length === 0 && city) {
-    searchedStateWide = true;
-    for (const variant of variants) {
-      await runVariant(variant, false);
-      if (providers.length > 0) break;
-    }
-  }
+  providers.sort((a, b) => scoreProvider(b, scoreHints) - scoreProvider(a, scoreHints));
 
   if (providers.length === 0 && lastError) {
-    return { providers: [], searchVariants, searchedStateWide, error: lastError };
+    return { providers: [], searchVariants, error: lastError };
   }
 
-  return { providers, searchVariants, searchedStateWide };
+  return { providers, searchVariants };
 }

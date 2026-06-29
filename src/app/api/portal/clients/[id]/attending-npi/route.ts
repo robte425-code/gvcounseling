@@ -18,6 +18,7 @@ async function getClientForPortalUser(clientId: string) {
       attendingNpi: true,
       attendingDoctorName: true,
       attendingDoctorAddress: true,
+      attendingDoctorPhone: true,
       state: true,
       city: true,
     },
@@ -64,25 +65,20 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
     );
   }
 
-  const { providers, searchVariants, searchedStateWide, error } = await searchAttendingNpiRegistry({
+  const { providers, searchVariants, error } = await searchAttendingNpiRegistry({
     doctorName: client.attendingDoctorName,
     state: client.state,
-    city: client.city,
-    doctorAddress: client.attendingDoctorAddress,
+    doctorPhone: client.attendingDoctorPhone,
   });
 
   if (error) {
-    return NextResponse.json(
-      { error, providers: [], searchVariants, searchedStateWide },
-      { status: 422 },
-    );
+    return NextResponse.json({ error, providers: [], searchVariants }, { status: 422 });
   }
 
   return NextResponse.json({
     providers,
     query: client.attendingDoctorName,
     searchVariants,
-    searchedStateWide,
   });
 }
 

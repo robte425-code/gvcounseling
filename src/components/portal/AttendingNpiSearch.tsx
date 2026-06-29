@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { generateNpiSearchVariants, parseCityStateFromAddress } from "@/lib/npi-registry";
+import { generateNpiSearchVariants } from "@/lib/npi-registry";
 import { portalButtonClass, portalButtonSecondaryClass, portalCardCompactClass } from "@/components/portal/ui";
 
 type NpiProvider = {
@@ -17,17 +17,13 @@ type NpiProvider = {
 type AttendingNpiSearchProps = {
   clientId: string;
   doctorName: string | null;
-  doctorAddress: string | null;
-  city: string | null;
-  state: string;
+  doctorPhone: string | null;
 };
 
 export function AttendingNpiSearch({
   clientId,
   doctorName,
-  doctorAddress,
-  city,
-  state,
+  doctorPhone,
 }: AttendingNpiSearchProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -36,14 +32,12 @@ export function AttendingNpiSearch({
   const [error, setError] = useState<string | null>(null);
   const [providers, setProviders] = useState<NpiProvider[]>([]);
   const [searchVariants, setSearchVariants] = useState<string[]>([]);
-  const [searchedStateWide, setSearchedStateWide] = useState(false);
 
   async function handleSearch() {
     setLoading(true);
     setError(null);
     setProviders([]);
     setSearchVariants([]);
-    setSearchedStateWide(false);
     setOpen(true);
 
     try {
@@ -51,18 +45,15 @@ export function AttendingNpiSearch({
       const data = (await response.json()) as {
         providers?: NpiProvider[];
         searchVariants?: string[];
-        searchedStateWide?: boolean;
         error?: string;
       };
       if (!response.ok) {
         setError(data.error ?? "NPI search failed.");
         setSearchVariants(data.searchVariants ?? []);
-        setSearchedStateWide(data.searchedStateWide ?? false);
         return;
       }
       setProviders(data.providers ?? []);
       setSearchVariants(data.searchVariants ?? []);
-      setSearchedStateWide(data.searchedStateWide ?? false);
       if ((data.providers ?? []).length === 0) {
         setError("No matching providers found in the NPI Registry.");
       }
@@ -98,16 +89,20 @@ export function AttendingNpiSearch({
 
   const disabled = !doctorName?.trim();
   const previewVariants = doctorName ? generateNpiSearchVariants(doctorName) : [];
-  const fromAddress = parseCityStateFromAddress(doctorAddress);
-  const searchCity = city?.trim() || fromAddress.city;
-  const searchState = (state?.trim() || fromAddress.state || "WA").toUpperCase();
+  const searchState = "WA";
 
   return (
     <div className="mt-2 space-y-2">
       {!disabled && (
         <p className="text-xs text-muted">
-          Uses doctor and location from this client record (referral import):{" "}
-          <span className="font-medium text-foreground">{doctorName}</span>
+          Searches the NPI Registry statewide in {searchState} using the doctor name from this
+          client record: <span className="font-medium text-foreground">{doctorName}</span>
+          {doctorPhone?.trim() ? (
+            <>
+              {" "}
+              · <span className="font-medium text-foreground">{doctorPhone}</span>
+            </>
+          ) : null}
           {previewVariants.length > 0 && (
             <>
               {" "}
@@ -118,15 +113,6 @@ export function AttendingNpiSearch({
               )
             </>
           )}
-          {searchCity || searchState ? (
-            <>
-              {" "}
-              in{" "}
-              <span className="font-medium text-foreground">
-                {[searchCity, searchState].filter(Boolean).join(", ")}
-              </span>
-            </>
-          ) : null}
         </p>
       )}
       <button
@@ -156,23 +142,11 @@ export function AttendingNpiSearch({
               <p className="text-sm font-medium text-primary-dark">NPI Registry results</p>
               {doctorName && (
                 <p className="text-xs text-muted">
-                  From client record:{" "}
-                  <span className="font-medium">{doctorName}</span>
-                  {(searchCity || searchState) && (
-                    <>
-                      {" "}
-                      · {[searchCity, searchState].filter(Boolean).join(", ")}
-                    </>
-                  )}
+                  From client record: <span className="font-medium">{doctorName}</span>
                 </p>
               )}
               {searchVariants.length > 0 && (
-                <p className="text-xs text-muted">
-                  Searched as: {searchVariants.join("; ")}
-                  {searchedStateWide
-                    ? ` (expanded to all of ${searchState} after no city matches)`
-                    : ""}
-                </p>
+                <p className="text-xs text-muted">Searched as: {searchVariants.join("; ")}</p>
               )}
             </div>
             <button
