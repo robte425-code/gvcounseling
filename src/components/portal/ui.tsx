@@ -9,6 +9,14 @@ export const portalButtonClass =
 export const portalButtonSecondaryClass =
   "rounded-full border border-border bg-surface px-6 py-2.5 text-sm font-semibold text-foreground transition hover:bg-primary/5 disabled:opacity-60";
 
+export const portalNavLinkClass =
+  "inline-flex items-center rounded-full px-3 py-1.5 text-sm font-normal text-muted transition hover:bg-primary/10 hover:text-primary-dark";
+
+export const portalNavButtonClass = `${portalNavLinkClass} border-0 bg-transparent cursor-pointer`;
+
+export const portalNavSelectClass =
+  "rounded-full border border-border bg-surface px-3 py-1.5 text-sm font-normal text-muted outline-none transition hover:bg-primary/5 focus:border-primary focus:ring-2 focus:ring-primary/20";
+
 export const portalCardClass = "rounded-2xl border border-border bg-surface p-6 shadow-sm";
 
 export const portalCardCompactClass = "rounded-xl border border-border bg-surface p-4 shadow-sm";

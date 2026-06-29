@@ -76,60 +76,6 @@ async function findPayPeriodByCutoff(cutoffDate: Date) {
   });
 }
 
-export type ProfileState = { error?: string; saved?: boolean };
-
-export async function updateProfileAction(
-  _prevState: ProfileState,
-  formData: FormData,
-): Promise<ProfileState> {
-  const session = await requireSession();
-  if (isImpersonating(session)) {
-    return { error: "Exit therapist view before editing your account." };
-  }
-
-  const firstName = String(formData.get("firstName") ?? "").trim();
-  const lastName = String(formData.get("lastName") ?? "").trim();
-  if (!firstName || !lastName) {
-    return { error: "First and last name are required." };
-  }
-
-  const userId = getRealUserId(session);
-  const current = await prisma.user.findUniqueOrThrow({
-    where: { id: userId },
-    select: { email: true, role: true },
-  });
-
-  let email = current.email;
-  let emailChanged = false;
-  if (getRealRole(session) === "ADMIN") {
-    try {
-      const nextEmail = normalizeEmail(String(formData.get("email") ?? ""));
-      if (nextEmail !== current.email) {
-        const taken = await prisma.user.findUnique({ where: { email: nextEmail } });
-        if (taken) {
-          return { error: "That email is already used by another portal account." };
-        }
-        email = nextEmail;
-        emailChanged = true;
-      }
-    } catch (e) {
-      return { error: e instanceof Error ? e.message : "Invalid email address." };
-    }
-  }
-
-  await prisma.user.update({
-    where: { id: userId },
-    data: { firstName, lastName, email },
-  });
-
-  await unstable_update({ user: { firstName, lastName } });
-
-  revalidatePath("/portal/profile");
-  const params = new URLSearchParams({ saved: "1" });
-  if (emailChanged) params.set("emailChanged", "1");
-  redirect(`/portal/profile?${params.toString()}`);
-}
-
 export type ChangePasswordState = { error?: string };
 
 export async function changePasswordAction(
@@ -160,12 +106,6 @@ export async function changePasswordAction(
   });
 
   await unstable_update({ user: { mustChangePassword: false } });
-
-  const returnTo = String(formData.get("returnTo") ?? "").trim();
-  if (returnTo === "profile") {
-    revalidatePath("/portal/profile");
-    redirect("/portal/profile?passwordChanged=1");
-  }
 
   const dest =
     getRealRole(session) === "ADMIN" ? "/portal/admin/dashboard" : "/portal/therapist/dashboard";
@@ -936,7 +876,7 @@ export async function createTherapistAction(
         const isOwnAdminEmail = existing.id === getRealUserId(session);
         return {
           error: isOwnAdminEmail
-            ? "This is your admin login email. Change it under Account, then you can add a therapist with this address."
+            ? "This is your admin login email. Use a different email for the therapist account."
             : `This email belongs to an admin account (${existing.email}). Remove it from Admins, or use a different email.`,
         };
       }
@@ -1259,7 +1199,6 @@ export async function updateAdminAction(formData: FormData) {
 
   revalidatePath("/portal/admin/admins");
   revalidatePath(`/portal/admin/admins/${id}/edit`);
-  revalidatePath("/portal/profile");
   redirect(`/portal/admin/admins/${id}/edit?saved=1`);
 }
 

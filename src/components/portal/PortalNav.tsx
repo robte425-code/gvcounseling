@@ -2,6 +2,7 @@ import Link from "next/link";
 import { auth, getRealRole, isImpersonating, signOut } from "@/auth";
 import { stopImpersonationAction } from "@/lib/portal-actions";
 import { ViewAsTherapistSelect } from "@/components/portal/ViewAsTherapistSelect";
+import { portalNavButtonClass, portalNavLinkClass } from "@/components/portal/ui";
 import { prisma } from "@/lib/prisma";
 
 const adminLinks = [
@@ -59,37 +60,16 @@ export async function PortalNav() {
               Grandview Counseling
             </Link>
             <p className="text-xs text-muted">
-              Billing portal ·{" "}
-              {impersonating ? (
-                session.user.firstName
-              ) : (
-                <Link href="/portal/profile" className="hover:text-primary-dark hover:underline">
-                  {session.user.firstName}
-                </Link>
-              )}
+              Billing portal · {session.user.firstName}
               {admin && !impersonating ? " (admin)" : ""}
             </p>
           </div>
           <nav className="flex flex-wrap items-center gap-1">
             {links.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className="rounded-full px-3 py-1.5 text-sm text-muted transition hover:bg-primary/10 hover:text-primary-dark"
-              >
+              <Link key={link.href} href={link.href} className={portalNavLinkClass}>
                 {link.label}
               </Link>
             ))}
-          </nav>
-          <div className="flex flex-wrap items-center gap-3">
-            {!impersonating && (
-              <Link
-                href="/portal/profile"
-                className="text-sm text-muted hover:text-primary-dark"
-              >
-                Account
-              </Link>
-            )}
             {therapists.length > 0 && <ViewAsTherapistSelect therapists={therapists} />}
             <form
               action={async () => {
@@ -97,11 +77,11 @@ export async function PortalNav() {
                 await signOut({ redirectTo: "/portal/login" });
               }}
             >
-              <button type="submit" className="text-sm text-muted hover:text-primary-dark">
+              <button type="submit" className={portalNavButtonClass}>
                 Sign out
               </button>
             </form>
-          </div>
+          </nav>
         </div>
       </header>
     </>

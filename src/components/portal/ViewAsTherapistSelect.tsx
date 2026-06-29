@@ -2,7 +2,7 @@
 
 import { useRef } from "react";
 import { startImpersonationAction } from "@/lib/portal-actions";
-import { portalInputClass } from "@/components/portal/ui";
+import { portalNavSelectClass } from "@/components/portal/ui";
 
 type TherapistOption = {
   email: string;
@@ -16,31 +16,28 @@ export function ViewAsTherapistSelect({ therapists }: { therapists: TherapistOpt
   if (!therapists.length) return null;
 
   return (
-    <div className="flex items-center gap-2">
-      <span className="text-xs text-muted">View as</span>
-      <form ref={formRef} action={startImpersonationAction}>
-        <label htmlFor="view-as-therapist" className="sr-only">
-          View as therapist
-        </label>
-        <select
-          id="view-as-therapist"
-          name="email"
-          defaultValue=""
-          className={`${portalInputClass} w-auto min-w-[10rem] py-2 text-xs`}
-          onChange={(e) => {
-            if (e.target.value) formRef.current?.requestSubmit();
-          }}
-        >
-          <option value="" disabled>
-            Select therapist…
+    <form ref={formRef} action={startImpersonationAction} className="inline-flex items-center">
+      <label htmlFor="view-as-therapist" className="sr-only">
+        View as therapist
+      </label>
+      <select
+        id="view-as-therapist"
+        name="email"
+        defaultValue=""
+        className={`${portalNavSelectClass} w-auto min-w-[10rem]`}
+        onChange={(e) => {
+          if (e.target.value) formRef.current?.requestSubmit();
+        }}
+      >
+        <option value="" disabled>
+          View as…
+        </option>
+        {therapists.map((t) => (
+          <option key={t.email} value={t.email}>
+            {t.firstName} {t.lastName}
           </option>
-          {therapists.map((t) => (
-            <option key={t.email} value={t.email}>
-              {t.firstName} {t.lastName}
-            </option>
-          ))}
-        </select>
-      </form>
-    </div>
+        ))}
+      </select>
+    </form>
   );
 }
