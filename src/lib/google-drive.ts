@@ -299,7 +299,7 @@ export async function resolveNewReferralsFolderId(accessToken: string): Promise<
 }
 
 export function therapistDriveFolderName(firstName: string, lastName: string): string {
-  return `${firstName.trim()} ${lastName.trim()}`.replace(/\s+/g, " ");
+  return `${firstName.trim()} ${lastName.trim()}: Client files`.replace(/\s+/g, " ");
 }
 
 export async function resolveTherapistParentFolderId(accessToken: string): Promise<string> {
@@ -356,6 +356,38 @@ export async function resolveTherapistFolderForUser(
   const parentId = await resolveTherapistParentFolderId(accessToken);
   const folderName = therapistDriveFolderName(therapist.firstName, therapist.lastName);
   return resolveTherapistFolderInParent(accessToken, parentId, folderName);
+}
+
+async function listDriveFolderChildren(accessToken: string, folderId: string): Promise<DriveFile[]> {
+  const query = [`'${folderId}' in parents`, "trashed=false"].join(" and ");
+  return listFiles(accessToken, query);
+}
+
+async function trashDriveFile(accessToken: string, fileId: string): Promise<void> {
+  await driveJson(accessToken, `/files/${fileId}?supportsAllDrives=true`, {
+    method: "PATCH",
+    body: JSON.stringify({ trashed: true }),
+  });
+}
+
+/** Move all items from the therapist folder to New Referrals, then trash the folder. */
+export async function removeTherapistDriveFolder(
+  accessToken: string,
+  therapist: { email: string; firstName: string; lastName: string },
+): Promise<void> {
+  let therapistFolderId: string;
+  try {
+    therapistFolderId = await resolveTherapistFolderForUser(accessToken, therapist);
+  } catch {
+    return;
+  }
+
+  const referralsFolderId = await resolveNewReferralsFolderId(accessToken);
+  const children = await listDriveFolderChildren(accessToken, therapistFolderId);
+  for (const child of children) {
+    await moveDriveFolder(accessToken, child.id, referralsFolderId);
+  }
+  await trashDriveFile(accessToken, therapistFolderId);
 }
 
 async function driveJson<T>(

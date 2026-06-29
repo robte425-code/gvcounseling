@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { requireAdmin } from "@/auth";
-import { portalButtonClass, portalCardClass } from "@/components/portal/ui";
+import { portalButtonClass, portalCardClass, StatusBadge } from "@/components/portal/ui";
 import { prisma } from "@/lib/prisma";
 
 export default async function AdminTherapistsPage({
@@ -32,9 +32,17 @@ export default async function AdminTherapistsPage({
         </Link>
       </div>
 
-      {deleted === "1" && (
+      {deleted === "1" && !driveWarning && (
         <p className="rounded-lg bg-primary/10 px-3 py-2 text-sm text-primary-dark">
-          Therapist deleted.
+          Therapist deleted. Assigned clients are unassigned; their Drive folders were moved to New
+          Referrals.
+        </p>
+      )}
+
+      {deleted === "1" && driveWarning && (
+        <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-950" role="alert">
+          Therapist deleted and assigned clients unassigned, but Drive folder cleanup failed:{" "}
+          {driveWarning}
         </p>
       )}
 
@@ -73,6 +81,7 @@ export default async function AdminTherapistsPage({
               <th className="py-2 pr-4">Email</th>
               <th className="py-2 pr-4">L&I ID</th>
               <th className="py-2 pr-4">NPI</th>
+              <th className="py-2 pr-4">Status</th>
               <th className="py-2 pr-4">Clients</th>
               <th className="py-2 pr-4">Invoices</th>
               <th className="py-2 pr-4">Drive</th>
@@ -92,6 +101,13 @@ export default async function AdminTherapistsPage({
                 <td className="py-3 pr-4 text-muted">{t.email}</td>
                 <td className="py-3 pr-4 font-mono text-xs">{t.lniProviderId ?? "—"}</td>
                 <td className="py-3 pr-4 font-mono text-xs">{t.npi ?? "—"}</td>
+                <td className="py-3 pr-4">
+                  {t.active ? (
+                    <span className="text-xs text-muted">Active</span>
+                  ) : (
+                    <StatusBadge status="INACTIVE" />
+                  )}
+                </td>
                 <td className="py-3 pr-4">{t._count.clients}</td>
                 <td className="py-3 pr-4">{t._count.invoices}</td>
                 <td className="py-3 pr-4 text-xs text-muted">

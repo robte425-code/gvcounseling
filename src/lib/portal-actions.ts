@@ -16,7 +16,7 @@ import { Gender, InvoiceStatus } from "@/generated/prisma/client";
 import { buildEdi837, generateClmControlNumber, type Edi837Claim } from "@/lib/edi837";
 import { client837Ready, parseClaimNumber } from "@/lib/constants";
 import { moveClientDriveFolderToTherapist } from "@/lib/client-drive-move";
-import { ensureTherapistDriveFolder } from "@/lib/google-drive";
+import { ensureTherapistDriveFolder, removeTherapistDriveFolder } from "@/lib/google-drive";
 import { getSystemDriveAccessToken } from "@/lib/google-drive-system";
 import { sendTherapistAssignmentEmail, sendTherapistWelcomeEmail } from "@/lib/referral-emails";
 import { generateOneTimePassword, hashPassword, verifyPassword } from "@/lib/password";
@@ -40,7 +40,7 @@ async function notifyAssignedTherapist(
   therapistId: string,
 ) {
   const therapist = await prisma.user.findUnique({
-    where: { id: therapistId, role: "THERAPIST" },
+    where: { id: therapistId, role: "THERAPIST", active: true },
     select: { email: true, firstName: true, lastName: true },
   });
   if (!therapist) return;
@@ -139,7 +139,7 @@ export async function startImpersonationAction(formData: FormData) {
   if (!email) throw new Error("Therapist email is required.");
 
   const therapist = await prisma.user.findFirst({
-    where: { email, role: "THERAPIST" },
+    where: { email, role: "THERAPIST", active: true },
     select: { id: true, role: true, firstName: true, lastName: true },
   });
   if (!therapist) throw new Error("Therapist not found.");
@@ -308,9 +308,19 @@ export async function saveClientAction(formData: FormData) {
 
   const therapistChanged = isAdmin && !!therapistId && therapistId !== existing?.therapistId;
 
+  if (isAdmin && therapistId && (therapistChanged || !id)) {
+    const assignable = await prisma.user.findFirst({
+      where: { id: therapistId, role: "THERAPIST", active: true },
+      select: { id: true },
+    });
+    if (!assignable) {
+      throw new Error("Selected therapist not found or is inactive.");
+    }
+  }
+
   if (isAdmin && therapistChanged && existing?.driveFolderId && therapistId) {
     const therapist = await prisma.user.findUnique({
-      where: { id: therapistId, role: "THERAPIST" },
+      where: { id: therapistId, role: "THERAPIST", active: true },
       select: { email: true, firstName: true, lastName: true },
     });
     if (therapist) {
@@ -637,7 +647,7 @@ export async function assignClientTherapistAction(formData: FormData) {
 
   const [client, therapist] = await Promise.all([
     prisma.client.findUnique({ where: { id: clientId } }),
-    prisma.user.findUnique({ where: { id: therapistId, role: "THERAPIST" } }),
+    prisma.user.findUnique({ where: { id: therapistId, role: "THERAPIST", active: true } }),
   ]);
   if (!client) throw new Error("Client not found.");
   if (!therapist) throw new Error("Therapist not found.");
@@ -974,7 +984,7 @@ export async function deleteTherapistAction(formData: FormData) {
 
   const therapist = await prisma.user.findFirst({
     where: { id, role: "THERAPIST" },
-    select: { id: true },
+    select: { id: true, email: true, firstName: true, lastName: true },
   });
   if (!therapist) throw new Error("Therapist not found.");
 
@@ -987,6 +997,15 @@ export async function deleteTherapistAction(formData: FormData) {
   }
   if (billCount > 0) {
     throw new Error(`Cannot delete: therapist generated ${billCount} L&I bill(s).`);
+  }
+
+  let driveWarning: string | undefined;
+  try {
+    const { accessToken } = await getSystemDriveAccessToken();
+    await removeTherapistDriveFolder(accessToken, therapist);
+  } catch (e) {
+    driveWarning =
+      e instanceof Error ? e.message : "Therapist Drive folder could not be removed.";
   }
 
   await prisma.$transaction(async (tx) => {
@@ -1002,5 +1021,51 @@ export async function deleteTherapistAction(formData: FormData) {
 
   revalidatePath("/portal/admin/therapists");
   revalidatePath("/portal/admin/clients");
-  redirect("/portal/admin/therapists?deleted=1");
+  const params = new URLSearchParams({ deleted: "1" });
+  if (driveWarning) params.set("driveWarning", driveWarning);
+  redirect(`/portal/admin/therapists?${params.toString()}`);
+}
+
+export async function deactivateTherapistAction(formData: FormData) {
+  await requireAdmin();
+  const id = String(formData.get("id") ?? "").trim();
+  if (!id) throw new Error("Therapist id is required.");
+
+  const therapist = await prisma.user.findFirst({
+    where: { id, role: "THERAPIST" },
+    select: { id: true, active: true },
+  });
+  if (!therapist) throw new Error("Therapist not found.");
+  if (!therapist.active) throw new Error("Therapist is already inactive.");
+
+  await prisma.user.update({
+    where: { id },
+    data: { active: false },
+  });
+
+  revalidatePath("/portal/admin/therapists");
+  revalidatePath(`/portal/admin/therapists/${id}/edit`);
+  redirect(`/portal/admin/therapists/${id}/edit?deactivated=1`);
+}
+
+export async function reactivateTherapistAction(formData: FormData) {
+  await requireAdmin();
+  const id = String(formData.get("id") ?? "").trim();
+  if (!id) throw new Error("Therapist id is required.");
+
+  const therapist = await prisma.user.findFirst({
+    where: { id, role: "THERAPIST" },
+    select: { id: true, active: true },
+  });
+  if (!therapist) throw new Error("Therapist not found.");
+  if (therapist.active) throw new Error("Therapist is already active.");
+
+  await prisma.user.update({
+    where: { id },
+    data: { active: true },
+  });
+
+  revalidatePath("/portal/admin/therapists");
+  revalidatePath(`/portal/admin/therapists/${id}/edit`);
+  redirect(`/portal/admin/therapists/${id}/edit?reactivated=1`);
 }

@@ -27,7 +27,7 @@ export default async function AdminClientDetailPage({
       include: { therapist: { select: { firstName: true, lastName: true } } },
     }),
     prisma.user.findMany({
-      where: { role: "THERAPIST" },
+      where: { role: "THERAPIST", active: true },
       orderBy: { lastName: "asc" },
       select: { id: true, firstName: true, lastName: true },
     }),

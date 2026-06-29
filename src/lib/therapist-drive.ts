@@ -52,7 +52,7 @@ export async function getTherapistDriveSourceForUser(
 
 export async function getAllTherapistDriveSources(): Promise<TherapistDriveSource[]> {
   const therapists = await prisma.user.findMany({
-    where: { role: "THERAPIST" },
+    where: { role: "THERAPIST", active: true },
     select: { id: true, firstName: true, lastName: true, email: true },
   });
 

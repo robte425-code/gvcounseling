@@ -40,6 +40,7 @@ model User {
   firstName          String
   lastName           String
   mustChangePassword Boolean   @default(true)
+  active             Boolean   @default(true)
   lniProviderId      String?
   npi                String?
   createdAt          DateTime  @default(now())

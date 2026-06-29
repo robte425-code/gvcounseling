@@ -33,7 +33,7 @@ export async function PortalNav() {
   const therapists =
     admin && !impersonating
       ? await prisma.user.findMany({
-          where: { role: "THERAPIST" },
+          where: { role: "THERAPIST", active: true },
           orderBy: { firstName: "asc" },
           select: { email: true, firstName: true, lastName: true },
         })

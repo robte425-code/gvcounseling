@@ -28,10 +28,10 @@ export async function POST(request: Request) {
     }
 
     const therapist = await prisma.user.findFirst({
-      where: { id: therapistId, role: "THERAPIST" },
+      where: { id: therapistId, role: "THERAPIST", active: true },
     });
     if (!therapist) {
-      return NextResponse.json({ error: "Invalid therapist." }, { status: 400 });
+      return NextResponse.json({ error: "Invalid or inactive therapist." }, { status: 400 });
     }
 
     const buffer = Buffer.from(await file.arrayBuffer());

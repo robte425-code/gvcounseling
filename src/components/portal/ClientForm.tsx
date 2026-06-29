@@ -70,7 +70,7 @@ export async function ClientForm({ client, mode, cancelHref }: ClientFormProps) 
   const therapists =
     mode === "admin-create" || mode === "admin-edit"
       ? await prisma.user.findMany({
-          where: { role: "THERAPIST" },
+          where: { role: "THERAPIST", active: true },
           orderBy: { lastName: "asc" },
         })
       : [];

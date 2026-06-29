@@ -4,6 +4,7 @@ import { requireAdmin } from "@/auth";
 import { ConfirmSubmitButton } from "@/components/portal/ConfirmSubmitButton";
 import { TherapistForm } from "@/components/portal/TherapistForm";
 import {
+  portalButtonClass,
   portalButtonSecondaryClass,
   portalCardCompactClass,
   portalInputCompactClass,
@@ -11,6 +12,8 @@ import {
 } from "@/components/portal/ui";
 import {
   deleteTherapistAction,
+  deactivateTherapistAction,
+  reactivateTherapistAction,
   resetTherapistPasswordAction,
 } from "@/lib/portal-actions";
 import { prisma } from "@/lib/prisma";
@@ -20,11 +23,11 @@ export default async function EditTherapistPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ saved?: string; passwordReset?: string }>;
+  searchParams: Promise<{ saved?: string; passwordReset?: string; deactivated?: string; reactivated?: string }>;
 }) {
   await requireAdmin();
   const { id } = await params;
-  const { saved, passwordReset } = await searchParams;
+  const { saved, passwordReset, deactivated, reactivated } = await searchParams;
 
   const therapist = await prisma.user.findFirst({
     where: { id, role: "THERAPIST" },
@@ -55,6 +58,16 @@ export default async function EditTherapistPage({
           Password reset. The therapist must change it on next login.
         </p>
       )}
+      {deactivated === "1" && (
+        <p className="rounded-lg bg-primary/10 px-3 py-2 text-sm text-primary-dark">
+          Therapist deactivated. They cannot sign in; clients and Drive folders are unchanged.
+        </p>
+      )}
+      {reactivated === "1" && (
+        <p className="rounded-lg bg-primary/10 px-3 py-2 text-sm text-primary-dark">
+          Therapist reactivated. They can sign in again.
+        </p>
+      )}
 
       <div>
         <Link href="/portal/admin/therapists" className={`${portalButtonSecondaryClass} text-xs`}>
@@ -65,6 +78,7 @@ export default async function EditTherapistPage({
         </h1>
         <p className="mt-1 text-sm text-muted">
           {therapist._count.clients} client(s) · {therapist._count.invoices} invoice(s)
+          {therapist.active ? " · Active" : " · Inactive"}
           {therapist.googleDriveConnection?.googleEmail
             ? ` · Drive: ${therapist.googleDriveConnection.googleEmail}`
             : " · Drive not connected"}
@@ -76,6 +90,39 @@ export default async function EditTherapistPage({
         therapist={therapist}
         cancelHref="/portal/admin/therapists"
       />
+
+      <section className={`${portalCardCompactClass} space-y-3`}>
+        <h2 className="text-xs font-semibold uppercase tracking-wide text-muted">Account status</h2>
+        {therapist.active ? (
+          <>
+            <p className="text-sm text-muted">
+              Deactivate to block portal sign-in. Clients, invoices, and Drive folders stay as they
+              are. Use delete to permanently remove an account with no billing history.
+            </p>
+            <form action={deactivateTherapistAction}>
+              <input type="hidden" name="id" value={therapist.id} />
+              <ConfirmSubmitButton
+                confirmMessage={`Deactivate ${therapist.firstName} ${therapist.lastName}? They will not be able to sign in.`}
+                className={portalButtonSecondaryClass}
+              >
+                Deactivate therapist
+              </ConfirmSubmitButton>
+            </form>
+          </>
+        ) : (
+          <>
+            <p className="text-sm text-muted">
+              This therapist is inactive and cannot sign in. Assigned clients are unchanged.
+            </p>
+            <form action={reactivateTherapistAction}>
+              <input type="hidden" name="id" value={therapist.id} />
+              <button type="submit" className={portalButtonClass}>
+                Reactivate therapist
+              </button>
+            </form>
+          </>
+        )}
+      </section>
 
       <section className={`${portalCardCompactClass} space-y-3`}>
         <h2 className="text-xs font-semibold uppercase tracking-wide text-muted">Reset password</h2>
@@ -103,12 +150,13 @@ export default async function EditTherapistPage({
           <>
             <p className="text-sm text-muted">
               Permanently removes this account. Assigned clients ({therapist._count.clients}) will
-              be unassigned.
+              be set to Unassigned. Any client folders in their Drive folder will be moved to New
+              Referrals, then their therapist folder is deleted.
             </p>
             <form action={deleteTherapistAction}>
               <input type="hidden" name="id" value={therapist.id} />
               <ConfirmSubmitButton
-                confirmMessage={`Delete ${therapist.firstName} ${therapist.lastName}? Assigned clients will be unassigned.`}
+                confirmMessage={`Delete ${therapist.firstName} ${therapist.lastName}? Assigned clients will be unassigned and their Drive folders moved to New Referrals.`}
                 className="text-sm text-red-700 hover:underline"
               >
                 Delete therapist

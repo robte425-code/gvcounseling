@@ -24,6 +24,7 @@ export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
 
         const user = await prisma.user.findUnique({ where: { email } });
         if (!user) return null;
+        if (user.role === "THERAPIST" && !user.active) return null;
 
         const valid = await verifyPassword(password, user.passwordHash);
         if (!valid) return null;
