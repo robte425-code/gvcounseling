@@ -35,6 +35,14 @@ function parseDate(value: FormDataEntryValue | null): Date | null {
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
+function normalizeEmail(raw: string): string {
+  const email = raw.toLowerCase().trim();
+  if (!email || !email.includes("@")) {
+    throw new Error("A valid email address is required.");
+  }
+  return email;
+}
+
 async function notifyAssignedTherapist(
   client: { id: string; firstName: string; lastName: string; lniClaimNumber: string },
   therapistId: string,
@@ -86,15 +94,40 @@ export async function updateProfileAction(
   }
 
   const userId = getRealUserId(session);
+  const current = await prisma.user.findUniqueOrThrow({
+    where: { id: userId },
+    select: { email: true, role: true },
+  });
+
+  let email = current.email;
+  let emailChanged = false;
+  if (getRealRole(session) === "ADMIN") {
+    try {
+      const nextEmail = normalizeEmail(String(formData.get("email") ?? ""));
+      if (nextEmail !== current.email) {
+        const taken = await prisma.user.findUnique({ where: { email: nextEmail } });
+        if (taken) {
+          return { error: "That email is already used by another portal account." };
+        }
+        email = nextEmail;
+        emailChanged = true;
+      }
+    } catch (e) {
+      return { error: e instanceof Error ? e.message : "Invalid email address." };
+    }
+  }
+
   await prisma.user.update({
     where: { id: userId },
-    data: { firstName, lastName },
+    data: { firstName, lastName, email },
   });
 
   await unstable_update({ user: { firstName, lastName } });
 
   revalidatePath("/portal/profile");
-  redirect("/portal/profile?saved=1");
+  const params = new URLSearchParams({ saved: "1" });
+  if (emailChanged) params.set("emailChanged", "1");
+  redirect(`/portal/profile?${params.toString()}`);
 }
 
 export type ChangePasswordState = { error?: string };
@@ -815,14 +848,6 @@ export async function therapistRejectReferralAction(formData: FormData) {
   redirect("/portal/therapist/dashboard?referralDeclined=1");
 }
 
-function normalizeEmail(raw: string): string {
-  const email = raw.toLowerCase().trim();
-  if (!email || !email.includes("@")) {
-    throw new Error("A valid email address is required.");
-  }
-  return email;
-}
-
 function parseTherapistFields(formData: FormData) {
   const firstName = String(formData.get("firstName") ?? "").trim();
   const lastName = String(formData.get("lastName") ?? "").trim();
@@ -886,7 +911,7 @@ export async function createTherapistAction(
   formData: FormData,
 ): Promise<TherapistFormState> {
   try {
-    await requireAdmin();
+    const session = await requireAdmin();
     const fields = parseTherapistFields(formData);
 
     const existing = await prisma.user.findUnique({ where: { email: fields.email } });
@@ -903,8 +928,13 @@ export async function createTherapistAction(
     let restored = false;
 
     if (existing) {
-      if (existing.role !== "THERAPIST") {
-        return { error: "This email is already used by another account." };
+      if (existing.role === "ADMIN") {
+        const isOwnAdminEmail = existing.id === getRealUserId(session);
+        return {
+          error: isOwnAdminEmail
+            ? "This is your admin login email. Change it under Account, then you can add a therapist with this address."
+            : `This email belongs to an admin account (${existing.email}). Remove it under Portal accounts, or use a different email.`,
+        };
       }
       if (existing.active) {
         return {
@@ -1102,4 +1132,35 @@ export async function reactivateTherapistAction(formData: FormData) {
   revalidatePath("/portal/admin/therapists");
   revalidatePath(`/portal/admin/therapists/${id}/edit`);
   redirect(`/portal/admin/therapists/${id}/edit?reactivated=1`);
+}
+
+export async function deletePortalAccountAction(formData: FormData) {
+  await requireAdmin();
+  const session = await requireAdmin();
+  const id = String(formData.get("id") ?? "").trim();
+  if (!id) throw new Error("Account id is required.");
+  if (id === getRealUserId(session)) {
+    throw new Error("You cannot delete your own account.");
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { id },
+    select: { id: true, role: true, email: true },
+  });
+  if (!user) throw new Error("Account not found.");
+
+  if (user.role === "THERAPIST") {
+    throw new Error("Use the therapist edit page to delete or deactivate therapist accounts.");
+  }
+
+  const billCount = await prisma.bill.count({ where: { generatedById: id } });
+  if (billCount > 0) {
+    throw new Error(`Cannot delete: account generated ${billCount} L&I bill(s).`);
+  }
+
+  await prisma.user.delete({ where: { id } });
+
+  revalidatePath("/portal/admin/accounts");
+  revalidatePath("/portal/admin/therapists");
+  redirect("/portal/admin/accounts?deleted=1");
 }

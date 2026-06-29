@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { requireAdmin } from "@/auth";
-import { portalButtonClass, portalCardClass, StatusBadge } from "@/components/portal/ui";
+import { portalButtonClass, portalCardClass, portalInputCompactClass, portalLabelCompactClass, StatusBadge } from "@/components/portal/ui";
 import { prisma } from "@/lib/prisma";
 
 export default async function AdminTherapistsPage({
@@ -12,13 +12,26 @@ export default async function AdminTherapistsPage({
     reactivated?: string;
     driveWarning?: string;
     emailWarning?: string;
+    q?: string;
   }>;
 }) {
   await requireAdmin();
-  const { deleted, created, reactivated, driveWarning, emailWarning } = await searchParams;
+  const { deleted, created, reactivated, driveWarning, emailWarning, q } = await searchParams;
+  const query = q?.trim() ?? "";
 
   const therapists = await prisma.user.findMany({
-    where: { role: "THERAPIST" },
+    where: {
+      role: "THERAPIST",
+      ...(query
+        ? {
+            OR: [
+              { email: { contains: query, mode: "insensitive" } },
+              { firstName: { contains: query, mode: "insensitive" } },
+              { lastName: { contains: query, mode: "insensitive" } },
+            ],
+          }
+        : {}),
+    },
     orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
     include: {
       googleDriveConnection: { select: { googleEmail: true } },
@@ -31,7 +44,13 @@ export default async function AdminTherapistsPage({
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="font-serif text-3xl font-semibold text-primary-dark">Therapists</h1>
-          <p className="mt-2 text-muted">Manage therapist accounts for the billing portal.</p>
+          <p className="mt-2 text-muted">
+            Manage therapist accounts for the billing portal.{" "}
+            <Link href="/portal/admin/accounts" className="text-primary hover:underline">
+              View all portal accounts
+            </Link>{" "}
+            (includes admin logins not shown here).
+          </p>
         </div>
         <Link href="/portal/admin/therapists/new" className={portalButtonClass}>
           Add therapist
@@ -93,6 +112,30 @@ export default async function AdminTherapistsPage({
         </p>
       )}
 
+      <form method="get" className="flex flex-wrap items-end gap-3">
+        <div className="min-w-[240px] flex-1">
+          <label htmlFor="therapist-search" className={portalLabelCompactClass}>
+            Search
+          </label>
+          <input
+            id="therapist-search"
+            name="q"
+            type="search"
+            defaultValue={query}
+            placeholder="Name or email"
+            className={portalInputCompactClass}
+          />
+        </div>
+        <button type="submit" className={portalButtonClass}>
+          Search
+        </button>
+        {query && (
+          <Link href="/portal/admin/therapists" className={portalButtonClass}>
+            Clear
+          </Link>
+        )}
+      </form>
+
       <div className={portalCardClass}>
         <table className="w-full text-left text-sm">
           <thead>
@@ -139,7 +182,9 @@ export default async function AdminTherapistsPage({
         </table>
         {therapists.length === 0 && (
           <p className="py-8 text-center text-sm text-muted">
-            No therapists yet. Add one to get started.
+            {query
+              ? `No therapists match “${query}”.`
+              : "No therapists yet. Add one to get started."}
           </p>
         )}
       </div>

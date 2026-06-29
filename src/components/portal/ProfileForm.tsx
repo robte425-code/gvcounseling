@@ -16,9 +16,10 @@ type ProfileFormProps = {
   email: string;
   firstName: string;
   lastName: string;
+  canEditEmail: boolean;
 };
 
-export function ProfileForm({ email, firstName, lastName }: ProfileFormProps) {
+export function ProfileForm({ email, firstName, lastName, canEditEmail }: ProfileFormProps) {
   const [state, formAction, pending] = useActionState(updateProfileAction, initialState);
 
   return (
@@ -44,12 +45,28 @@ export function ProfileForm({ email, firstName, lastName }: ProfileFormProps) {
         </div>
         <div>
           <label className={portalLabelCompactClass}>Email</label>
-          <input
-            value={email}
-            readOnly
-            disabled
-            className={`${portalInputCompactClass} cursor-not-allowed opacity-70`}
-          />
+          {canEditEmail ? (
+            <>
+              <input
+                name="email"
+                type="email"
+                required
+                defaultValue={email}
+                className={portalInputCompactClass}
+              />
+              <p className="mt-1 text-xs text-muted">
+                Your admin login email. Change it here before reusing the address for a therapist
+                account.
+              </p>
+            </>
+          ) : (
+            <input
+              value={email}
+              readOnly
+              disabled
+              className={`${portalInputCompactClass} cursor-not-allowed opacity-70`}
+            />
+          )}
         </div>
       </div>
 

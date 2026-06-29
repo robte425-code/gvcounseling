@@ -9,6 +9,7 @@ const adminLinks = [
   { href: "/portal/admin/pay-periods", label: "Pay periods" },
   { href: "/portal/admin/clients", label: "Clients" },
   { href: "/portal/admin/therapists", label: "Therapists" },
+  { href: "/portal/admin/accounts", label: "Accounts" },
   { href: "/portal/admin/invoices", label: "Invoices" },
   { href: "/portal/admin/generate-bill", label: "Generate L&I bill" },
   { href: "/portal/admin/bills", label: "Bill history" },
