@@ -6,10 +6,16 @@ import { prisma } from "@/lib/prisma";
 export default async function AdminTherapistsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ deleted?: string; created?: string; driveWarning?: string; emailWarning?: string }>;
+  searchParams: Promise<{
+    deleted?: string;
+    created?: string;
+    reactivated?: string;
+    driveWarning?: string;
+    emailWarning?: string;
+  }>;
 }) {
   await requireAdmin();
-  const { deleted, created, driveWarning, emailWarning } = await searchParams;
+  const { deleted, created, reactivated, driveWarning, emailWarning } = await searchParams;
 
   const therapists = await prisma.user.findMany({
     where: { role: "THERAPIST" },
@@ -43,6 +49,20 @@ export default async function AdminTherapistsPage({
         <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-950" role="alert">
           Therapist deleted and assigned clients unassigned, but Drive folder cleanup failed:{" "}
           {driveWarning}
+        </p>
+      )}
+
+      {reactivated === "1" && !driveWarning && !emailWarning && (
+        <p className="rounded-lg bg-primary/10 px-3 py-2 text-sm text-primary-dark">
+          Inactive therapist restored. Welcome email sent and Google Drive folder ensured.
+        </p>
+      )}
+
+      {reactivated === "1" && (driveWarning || emailWarning) && (
+        <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-950" role="alert">
+          Inactive therapist restored.
+          {emailWarning && ` Welcome email failed: ${emailWarning}.`}
+          {driveWarning && ` Drive folder issue: ${driveWarning}.`}
         </p>
       )}
 

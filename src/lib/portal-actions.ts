@@ -837,6 +837,39 @@ function parseTherapistFields(formData: FormData) {
   return { firstName, lastName, email, lniProviderId, npi };
 }
 
+async function setupTherapistWelcomeAndDrive(
+  fields: { firstName: string; lastName: string; email: string },
+  password: string,
+  mustChangePassword: boolean,
+): Promise<{ emailWarning?: string; driveWarning?: string }> {
+  let emailWarning: string | undefined;
+  let driveWarning: string | undefined;
+
+  try {
+    await sendTherapistWelcomeEmail({
+      therapistEmail: fields.email,
+      therapistName: `${fields.firstName} ${fields.lastName}`,
+      password,
+      mustChangePassword,
+    });
+  } catch (e) {
+    emailWarning = e instanceof Error ? e.message : "Welcome email could not be sent.";
+  }
+
+  try {
+    const { accessToken } = await getSystemDriveAccessToken();
+    await ensureTherapistDriveFolder(accessToken, {
+      firstName: fields.firstName,
+      lastName: fields.lastName,
+    });
+  } catch (e) {
+    driveWarning =
+      e instanceof Error ? e.message : "Google Drive folder could not be created.";
+  }
+
+  return { emailWarning, driveWarning };
+}
+
 export type TherapistFormState = { error?: string };
 
 function isNextRedirectError(error: unknown): boolean {
@@ -857,9 +890,6 @@ export async function createTherapistAction(
     const fields = parseTherapistFields(formData);
 
     const existing = await prisma.user.findUnique({ where: { email: fields.email } });
-    if (existing) {
-      return { error: "A user with this email already exists." };
-    }
 
     let password = String(formData.get("password") ?? "").trim();
     const adminSetPassword = password.length > 0;
@@ -869,44 +899,48 @@ export async function createTherapistAction(
       return { error: "Password must be at least 8 characters." };
     }
 
-    await prisma.user.create({
-      data: {
-        ...fields,
-        role: "THERAPIST",
-        passwordHash: await hashPassword(password),
-        mustChangePassword: !adminSetPassword,
-      },
-    });
+    const mustChangePassword = !adminSetPassword;
+    let restored = false;
 
-    let emailWarning: string | undefined;
-    try {
-      await sendTherapistWelcomeEmail({
-        therapistEmail: fields.email,
-        therapistName: `${fields.firstName} ${fields.lastName}`,
-        password,
-        mustChangePassword: !adminSetPassword,
+    if (existing) {
+      if (existing.role !== "THERAPIST") {
+        return { error: "This email is already used by another account." };
+      }
+      if (existing.active) {
+        return {
+          error:
+            "A therapist with this email already exists. Open them from the therapists list to edit or deactivate.",
+        };
+      }
+      await prisma.user.update({
+        where: { id: existing.id },
+        data: {
+          ...fields,
+          active: true,
+          passwordHash: await hashPassword(password),
+          mustChangePassword,
+        },
       });
-    } catch (e) {
-      emailWarning =
-        e instanceof Error ? e.message : "Welcome email could not be sent.";
+      restored = true;
+    } else {
+      await prisma.user.create({
+        data: {
+          ...fields,
+          role: "THERAPIST",
+          passwordHash: await hashPassword(password),
+          mustChangePassword,
+        },
+      });
     }
 
-    let driveWarning: string | undefined;
-    try {
-      const { accessToken } = await getSystemDriveAccessToken();
-      await ensureTherapistDriveFolder(accessToken, {
-        firstName: fields.firstName,
-        lastName: fields.lastName,
-      });
-    } catch (e) {
-      driveWarning =
-        e instanceof Error
-          ? e.message
-          : "Google Drive folder could not be created.";
-    }
+    const { emailWarning, driveWarning } = await setupTherapistWelcomeAndDrive(
+      fields,
+      password,
+      mustChangePassword,
+    );
 
     revalidatePath("/portal/admin/therapists");
-    const params = new URLSearchParams({ created: "1" });
+    const params = new URLSearchParams(restored ? { reactivated: "1" } : { created: "1" });
     if (driveWarning) params.set("driveWarning", driveWarning);
     if (emailWarning) params.set("emailWarning", emailWarning);
     redirect(`/portal/admin/therapists?${params.toString()}`);
