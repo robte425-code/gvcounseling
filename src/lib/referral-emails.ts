@@ -81,7 +81,6 @@ export async function sendTherapistWelcomeEmail(options: {
   lines.push(
     "",
     "From the portal you can review client referrals, manage clients, and submit invoices.",
-    "Optional: connect your Google account under Integrations to view client files.",
     "",
     "If you did not expect this email, please contact the office.",
     "",
@@ -89,6 +88,43 @@ export async function sendTherapistWelcomeEmail(options: {
   );
   await sendEmailTo(options.therapistEmail, {
     subject: "Your Grandview Counseling billing portal account",
+    text: lines.join("\n"),
+  });
+}
+
+export async function sendAdminWelcomeEmail(options: {
+  adminEmail: string;
+  adminName: string;
+  password: string;
+  mustChangePassword: boolean;
+}) {
+  const siteUrl = getSiteUrl();
+  const loginUrl = `${siteUrl}/portal/login`;
+  const passwordLabel = options.mustChangePassword ? "Temporary password" : "Password";
+  const lines = [
+    `Hello ${options.adminName},`,
+    "",
+    "An admin account has been created for you on the Grandview Counseling billing portal.",
+    "",
+    "Sign in here:",
+    loginUrl,
+    "",
+    `  Email: ${options.adminEmail}`,
+    `  ${passwordLabel}: ${options.password}`,
+  ];
+  if (options.mustChangePassword) {
+    lines.push("", "You will be asked to choose a new password when you sign in for the first time.");
+  }
+  lines.push(
+    "",
+    "From the portal you can manage clients, therapists, invoices, and L&I billing.",
+    "",
+    "If you did not expect this email, please contact the office.",
+    "",
+    "Grandview Counseling",
+  );
+  await sendEmailTo(options.adminEmail, {
+    subject: "Your Grandview Counseling admin portal account",
     text: lines.join("\n"),
   });
 }

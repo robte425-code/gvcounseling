@@ -18,8 +18,6 @@ const therapistLinks = [
   { href: "/portal/therapist/dashboard", label: "Dashboard" },
   { href: "/portal/therapist/clients", label: "Clients" },
   { href: "/portal/therapist/invoices", label: "Invoices" },
-  { href: "/portal/therapist/invoices/new", label: "New invoice" },
-  { href: "/portal/therapist/integrations", label: "Integrations" },
 ];
 
 export async function PortalNav() {
@@ -90,7 +88,7 @@ export async function PortalNav() {
                 href="/portal/profile"
                 className="text-sm text-muted hover:text-primary-dark"
               >
-                Account
+                {admin ? "Admin" : "Account"}
               </Link>
             )}
             {therapists.length > 0 && <ViewAsTherapistSelect therapists={therapists} />}

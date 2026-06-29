@@ -31,6 +31,10 @@ export async function GET(request: Request) {
     return NextResponse.redirect(new URL("/portal/login", request.url));
   }
 
+  if (role === "THERAPIST") {
+    return NextResponse.redirect(new URL("/portal/therapist/dashboard", request.url));
+  }
+
   try {
     const state = randomBytes(24).toString("hex");
     const authUrl = buildGoogleAuthUrl(state);

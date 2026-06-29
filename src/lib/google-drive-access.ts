@@ -51,6 +51,6 @@ export async function getDriveAccessTokenForClient(options: {
   }
 
   throw new Error(
-    "Google Drive is not connected. Connect your Google account in the portal integrations page.",
+    "Google Drive is not connected. Ask an admin to connect Drive for client file access.",
   );
 }

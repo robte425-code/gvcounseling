@@ -18,7 +18,7 @@ import { client837Ready, parseClaimNumber } from "@/lib/constants";
 import { moveClientDriveFolderToTherapist } from "@/lib/client-drive-move";
 import { ensureTherapistDriveFolder, removeTherapistDriveFolder } from "@/lib/google-drive";
 import { getSystemDriveAccessToken } from "@/lib/google-drive-system";
-import { sendTherapistAssignmentEmail, sendTherapistWelcomeEmail } from "@/lib/referral-emails";
+import { sendAdminWelcomeEmail, sendTherapistAssignmentEmail, sendTherapistWelcomeEmail } from "@/lib/referral-emails";
 import { generateOneTimePassword, hashPassword, verifyPassword } from "@/lib/password";
 import { fetchLniPayPeriods } from "@/lib/lni-pay-periods";
 import { prisma } from "@/lib/prisma";
@@ -160,6 +160,12 @@ export async function changePasswordAction(
   });
 
   await unstable_update({ user: { mustChangePassword: false } });
+
+  const returnTo = String(formData.get("returnTo") ?? "").trim();
+  if (returnTo === "profile") {
+    revalidatePath("/portal/profile");
+    redirect("/portal/profile?passwordChanged=1");
+  }
 
   const dest =
     getRealRole(session) === "ADMIN" ? "/portal/admin/dashboard" : "/portal/therapist/dashboard";
@@ -932,8 +938,8 @@ export async function createTherapistAction(
         const isOwnAdminEmail = existing.id === getRealUserId(session);
         return {
           error: isOwnAdminEmail
-            ? "This is your admin login email. Change it under Account, then you can add a therapist with this address."
-            : `This email belongs to an admin account (${existing.email}). Remove it under Account → Portal logins, or use a different email.`,
+            ? "This is your admin login email. Change it under Admin, then you can add a therapist with this address."
+            : `This email belongs to an admin account (${existing.email}). Remove it under Admin → Portal logins, or use a different email.`,
         };
       }
       if (existing.active) {
@@ -1163,4 +1169,80 @@ export async function deletePortalAccountAction(formData: FormData) {
   revalidatePath("/portal/profile");
   revalidatePath("/portal/admin/therapists");
   redirect("/portal/profile?deleted=1#portal-logins");
+}
+
+function parseAdminFields(formData: FormData) {
+  const firstName = String(formData.get("firstName") ?? "").trim();
+  const lastName = String(formData.get("lastName") ?? "").trim();
+  const email = normalizeEmail(String(formData.get("email") ?? ""));
+
+  if (!firstName || !lastName) {
+    throw new Error("First and last name are required.");
+  }
+
+  return { firstName, lastName, email };
+}
+
+export type AdminFormState = { error?: string };
+
+export async function createAdminAction(
+  _prevState: AdminFormState,
+  formData: FormData,
+): Promise<AdminFormState> {
+  try {
+    await requireAdmin();
+    const fields = parseAdminFields(formData);
+
+    let password = String(formData.get("password") ?? "").trim();
+    const adminSetPassword = password.length > 0;
+    if (!password) {
+      password = generateOneTimePassword();
+    } else if (password.length < 8) {
+      return { error: "Password must be at least 8 characters." };
+    }
+
+    const mustChangePassword = !adminSetPassword;
+
+    const existing = await prisma.user.findUnique({ where: { email: fields.email } });
+    if (existing) {
+      if (existing.role === "ADMIN") {
+        return { error: "An admin with this email already exists." };
+      }
+      return {
+        error:
+          "This email belongs to a therapist account. Manage them from the Therapists page, or use a different email.",
+      };
+    }
+
+    await prisma.user.create({
+      data: {
+        ...fields,
+        role: "ADMIN",
+        passwordHash: await hashPassword(password),
+        mustChangePassword,
+      },
+    });
+
+    let emailWarning: string | undefined;
+    try {
+      await sendAdminWelcomeEmail({
+        adminEmail: fields.email,
+        adminName: `${fields.firstName} ${fields.lastName}`,
+        password,
+        mustChangePassword,
+      });
+    } catch (e) {
+      emailWarning = e instanceof Error ? e.message : "Welcome email could not be sent.";
+    }
+
+    revalidatePath("/portal/profile");
+    const params = new URLSearchParams({ adminCreated: "1" });
+    if (emailWarning) params.set("emailWarning", emailWarning);
+    redirect(`/portal/profile?${params.toString()}#portal-logins`);
+  } catch (e) {
+    if (isNextRedirectError(e)) throw e;
+    return {
+      error: e instanceof Error ? e.message : "Could not create admin.",
+    };
+  }
 }

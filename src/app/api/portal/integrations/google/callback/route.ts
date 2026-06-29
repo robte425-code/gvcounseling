@@ -39,6 +39,10 @@ export async function GET(request: Request) {
     return NextResponse.redirect(login);
   }
 
+  if (role === "THERAPIST") {
+    return NextResponse.redirect(new URL("/portal/therapist/dashboard", request.url));
+  }
+
   const url = new URL(request.url);
   const code = url.searchParams.get("code");
   const state = url.searchParams.get("state");

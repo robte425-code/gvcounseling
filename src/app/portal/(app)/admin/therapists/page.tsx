@@ -49,7 +49,7 @@ export default async function AdminTherapistsPage({
             <Link href="/portal/profile#portal-logins" className="text-primary hover:underline">
               View all portal logins
             </Link>{" "}
-            on Account (includes admin logins not shown here).
+            on Admin (includes admin logins not shown here).
           </p>
         </div>
         <Link href="/portal/admin/therapists/new" className={portalButtonClass}>

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AdminForm } from "@/components/portal/AdminForm";
 import { ConfirmSubmitButton } from "@/components/portal/ConfirmSubmitButton";
 import {
   portalButtonClass,
@@ -14,12 +15,16 @@ type PortalAccountsSectionProps = {
   currentUserId: string;
   query: string;
   deleted?: string;
+  adminCreated?: string;
+  emailWarning?: string;
 };
 
 export async function PortalAccountsSection({
   currentUserId,
   query,
   deleted,
+  adminCreated,
+  emailWarning,
 }: PortalAccountsSectionProps) {
   const users = await prisma.user.findMany({
     where: query
@@ -53,6 +58,14 @@ export async function PortalAccountsSection({
           Account deleted.
         </p>
       )}
+
+      {adminCreated === "1" && (
+        <p className="rounded-lg bg-primary/10 px-3 py-2 text-sm text-primary-dark">
+          Admin added.{emailWarning ? ` Welcome email failed: ${emailWarning}.` : " Welcome email sent."}
+        </p>
+      )}
+
+      <AdminForm />
 
       <form method="get" action={searchAction} className="flex flex-wrap items-end gap-3">
         <div className="min-w-[240px] flex-1">
