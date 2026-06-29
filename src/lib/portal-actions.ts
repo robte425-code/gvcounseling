@@ -183,6 +183,7 @@ export async function createProcedureCodeFeeAction(formData: FormData) {
   });
 
   revalidatePath("/portal/admin/billing");
+  revalidatePath("/portal/admin/billing/fees/history");
 }
 
 export async function syncPayPeriodsFromLniAction() {

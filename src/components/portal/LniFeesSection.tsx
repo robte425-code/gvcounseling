@@ -1,17 +1,12 @@
-import {
-  createProcedureCodeFeeAction,
-} from "@/lib/portal-actions";
-import {
-  formatCurrency,
-  formatDate,
-  PROCEDURE_CODES,
-} from "@/lib/constants";
+import Link from "next/link";
+import { createProcedureCodeFeeAction } from "@/lib/portal-actions";
+import { formatCurrency, formatDate, PROCEDURE_CODES } from "@/lib/constants";
 import { getCurrentProcedureFeeFromSchedule, loadAllProcedureCodeFees } from "@/lib/procedure-fees";
 import {
   portalButtonSecondaryClass,
-  portalCardClass,
-  portalInputClass,
-  portalLabelClass,
+  portalCardCompactClass,
+  portalInputCompactClass,
+  portalLabelCompactClass,
   portalSectionHeadingClass,
 } from "@/components/portal/ui";
 
@@ -24,31 +19,38 @@ export async function LniFeesSection() {
   }));
 
   return (
-    <div className={portalCardClass}>
-      <h2 className={`${portalSectionHeadingClass} font-serif text-lg`}>L&I fees</h2>
-      <p className="mt-1 text-sm text-muted">
-        Set the L&I fee for each procedure code by effective date. These rates are used when
-        generating 837 files.
-      </p>
+    <div className={portalCardCompactClass}>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 className={`${portalSectionHeadingClass} font-serif text-base normal-case text-primary-dark`}>
+          L&I fees
+        </h2>
+        <Link
+          href="/portal/admin/billing/fees/history"
+          className={`${portalButtonSecondaryClass} px-4 py-1.5 text-xs`}
+        >
+          Fee history
+        </Link>
+      </div>
 
-      <table className="mt-4 w-full text-left text-sm">
+      <table className="mt-3 w-full text-left text-xs sm:text-sm">
         <thead>
           <tr className="border-b border-border text-muted">
-            <th className="py-2 pr-4">Code</th>
-            <th className="py-2 pr-4">Description</th>
-            <th className="py-2 pr-4">Current fee</th>
-            <th className="py-2 pr-4">Effective from</th>
+            <th className="py-1.5 pr-3">Procedure</th>
+            <th className="py-1.5 pr-3">Current fee</th>
+            <th className="py-1.5 pr-3">Effective from</th>
           </tr>
         </thead>
         <tbody>
           {currentFees.map(({ code, description, current }) => (
             <tr key={code} className="border-b border-border/60 last:border-0">
-              <td className="py-3 pr-4 font-mono">{code}</td>
-              <td className="py-3 pr-4">{description}</td>
-              <td className="py-3 pr-4">
+              <td className="py-1.5 pr-3">
+                <span className="font-mono">{code}</span>
+                <span className="text-muted"> · {description}</span>
+              </td>
+              <td className="py-1.5 pr-3 whitespace-nowrap">
                 {current ? formatCurrency(current.amount) : <span className="text-muted">Not set</span>}
               </td>
-              <td className="py-3 pr-4">
+              <td className="py-1.5 pr-3 whitespace-nowrap">
                 {current ? formatDate(current.effectiveFrom) : <span className="text-muted">—</span>}
               </td>
             </tr>
@@ -58,13 +60,13 @@ export async function LniFeesSection() {
 
       <form
         action={createProcedureCodeFeeAction}
-        className="mt-6 grid gap-4 border-t border-border pt-6 sm:grid-cols-2 lg:grid-cols-4"
+        className="mt-3 grid gap-2 border-t border-border pt-3 sm:grid-cols-2 lg:grid-cols-5"
       >
-        <div>
-          <label htmlFor="feeProcedureCode" className={portalLabelClass}>
+        <div className="sm:col-span-2">
+          <label htmlFor="feeProcedureCode" className={portalLabelCompactClass}>
             Procedure code
           </label>
-          <select id="feeProcedureCode" name="procedureCode" required className={portalInputClass}>
+          <select id="feeProcedureCode" name="procedureCode" required className={portalInputCompactClass}>
             {PROCEDURE_CODES.map(({ code, description }) => (
               <option key={code} value={code}>
                 {code} — {description}
@@ -73,8 +75,8 @@ export async function LniFeesSection() {
           </select>
         </div>
         <div>
-          <label htmlFor="feeAmount" className={portalLabelClass}>
-            Fee amount
+          <label htmlFor="feeAmount" className={portalLabelCompactClass}>
+            Amount
           </label>
           <input
             id="feeAmount"
@@ -83,12 +85,12 @@ export async function LniFeesSection() {
             step="0.01"
             min="0.01"
             required
-            className={portalInputClass}
+            className={portalInputCompactClass}
             placeholder="0.00"
           />
         </div>
         <div>
-          <label htmlFor="feeEffectiveFrom" className={portalLabelClass}>
+          <label htmlFor="feeEffectiveFrom" className={portalLabelCompactClass}>
             Effective from
           </label>
           <input
@@ -96,43 +98,15 @@ export async function LniFeesSection() {
             name="effectiveFrom"
             type="date"
             required
-            className={portalInputClass}
+            className={portalInputCompactClass}
           />
         </div>
         <div className="flex items-end">
-          <button type="submit" className={portalButtonSecondaryClass}>
+          <button type="submit" className={`${portalButtonSecondaryClass} px-4 py-1.5 text-xs`}>
             Save fee
           </button>
         </div>
       </form>
-
-      {allFees.length > 0 && (
-        <div className="mt-8 border-t border-border pt-6">
-          <h3 className="text-sm font-semibold text-primary-dark">Fee history</h3>
-          <table className="mt-3 w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-border text-muted">
-                <th className="py-2 pr-4">Code</th>
-                <th className="py-2 pr-4">Amount</th>
-                <th className="py-2 pr-4">Effective from</th>
-                <th className="py-2 pr-4">Effective to</th>
-              </tr>
-            </thead>
-            <tbody>
-              {allFees.map((fee) => (
-                <tr key={fee.id} className="border-b border-border/60 last:border-0">
-                  <td className="py-2 pr-4 font-mono">{fee.procedureCode}</td>
-                  <td className="py-2 pr-4">{formatCurrency(Number(fee.amount))}</td>
-                  <td className="py-2 pr-4">{formatDate(fee.effectiveFrom)}</td>
-                  <td className="py-2 pr-4">
-                    {fee.effectiveTo ? formatDate(fee.effectiveTo) : "Current"}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
     </div>
   );
 }

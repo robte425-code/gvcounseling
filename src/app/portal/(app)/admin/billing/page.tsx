@@ -12,8 +12,8 @@ import {
   portalButtonClass,
   portalButtonSecondaryClass,
   portalCardClass,
-  portalInputClass,
-  portalLabelClass,
+  portalInputCompactClass,
+  portalLabelCompactClass,
 } from "@/components/portal/ui";
 import { formatDate } from "@/lib/constants";
 import { prisma } from "@/lib/prisma";
@@ -49,12 +49,11 @@ export default async function BillingPage({
       : null;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <div>
         <h1 className="font-serif text-3xl font-semibold text-primary-dark">Billing</h1>
-        <p className="mt-2 text-muted">
-          Manage pay periods, L&I procedure fees, generate 837 files, and view billing history for
-          each cutoff date.
+        <p className="mt-2 text-sm text-muted">
+          Manage pay periods, L&I procedure fees, generate 837 files, and view billing history.
         </p>
       </div>
 
@@ -64,63 +63,61 @@ export default async function BillingPage({
         </p>
       )}
 
-      <div className={`${portalCardClass} flex flex-wrap items-center justify-between gap-4`}>
-        <div>
-          <h2 className="font-serif text-lg font-semibold text-primary-dark">L&I payment schedule</h2>
-          <p className="mt-1 text-sm text-muted">
-            Bill Cutoff Date → cutoff · Warrant Date → expected payment
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-3">
-          <form action={syncPayPeriodsFromLniAction}>
-            <button type="submit" className={portalButtonClass}>
-              Sync from L&I
-            </button>
-          </form>
-          <a
-            href={LNI_PAYMENT_STATUS_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={portalButtonSecondaryClass}
-          >
-            View on LNI.wa.gov
-          </a>
-        </div>
-      </div>
-
-      <LniFeesSection />
-
-      <form action={createPayPeriodAction} className={`${portalCardClass} grid gap-4 sm:grid-cols-2`}>
-        <div className="sm:col-span-2">
-          <h2 className="font-serif text-lg font-semibold text-primary-dark">Add pay period</h2>
-        </div>
-        <div>
-          <label htmlFor="label" className={portalLabelClass}>
-            Label (optional)
-          </label>
-          <input id="label" name="label" className={portalInputClass} placeholder="June 2026" />
-        </div>
-        <div>
-          <label htmlFor="cutoffDate" className={portalLabelClass}>
-            Cutoff date
-          </label>
-          <input id="cutoffDate" name="cutoffDate" type="date" required className={portalInputClass} />
-        </div>
-        <div>
-          <label htmlFor="paymentDate" className={portalLabelClass}>
-            Expected payment date (optional)
-          </label>
-          <input id="paymentDate" name="paymentDate" type="date" className={portalInputClass} />
-        </div>
-        <div className="flex items-end">
-          <button type="submit" className={portalButtonSecondaryClass}>
-            Add pay period
-          </button>
-        </div>
-      </form>
-
       <div className={portalCardClass}>
-        <table className="w-full text-left text-sm">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="font-serif text-lg font-semibold text-primary-dark">Pay periods</h2>
+            <p className="mt-0.5 text-xs text-muted">
+              Sync from L&I (Bill Cutoff → cutoff, Warrant Date → expected payment) or add manually.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <form action={syncPayPeriodsFromLniAction}>
+              <button type="submit" className={portalButtonClass}>
+                Sync from L&I
+              </button>
+            </form>
+            <a
+              href={LNI_PAYMENT_STATUS_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={portalButtonSecondaryClass}
+            >
+              View on LNI.wa.gov
+            </a>
+          </div>
+        </div>
+
+        <form
+          action={createPayPeriodAction}
+          className="mt-4 grid gap-3 border-t border-border pt-4 sm:grid-cols-2 lg:grid-cols-5"
+        >
+          <div>
+            <label htmlFor="label" className={portalLabelCompactClass}>
+              Label
+            </label>
+            <input id="label" name="label" className={portalInputCompactClass} placeholder="June 2026" />
+          </div>
+          <div>
+            <label htmlFor="cutoffDate" className={portalLabelCompactClass}>
+              Cutoff date
+            </label>
+            <input id="cutoffDate" name="cutoffDate" type="date" required className={portalInputCompactClass} />
+          </div>
+          <div>
+            <label htmlFor="paymentDate" className={portalLabelCompactClass}>
+              Expected payment
+            </label>
+            <input id="paymentDate" name="paymentDate" type="date" className={portalInputCompactClass} />
+          </div>
+          <div className="flex items-end sm:col-span-2 lg:col-span-2">
+            <button type="submit" className={portalButtonSecondaryClass}>
+              Add pay period
+            </button>
+          </div>
+        </form>
+
+        <table className="mt-4 w-full text-left text-sm">
           <thead>
             <tr className="border-b border-border text-muted">
               <th className="py-2 pr-4">Label</th>
@@ -134,12 +131,12 @@ export default async function BillingPage({
           <tbody>
             {periodRows.map(({ period, queuedInvoices }) => (
               <tr key={period.id} className="border-b border-border/60 last:border-0">
-                <td className="py-3 pr-4">{period.label ?? "—"}</td>
-                <td className="py-3 pr-4">{formatDate(period.cutoffDate)}</td>
-                <td className="py-3 pr-4">{formatDate(period.paymentDate)}</td>
-                <td className="py-3 pr-4">{period._count.bills}</td>
-                <td className="py-3 pr-4">{queuedInvoices}</td>
-                <td className="py-3">
+                <td className="py-2.5 pr-4">{period.label ?? "—"}</td>
+                <td className="py-2.5 pr-4">{formatDate(period.cutoffDate)}</td>
+                <td className="py-2.5 pr-4">{formatDate(period.paymentDate)}</td>
+                <td className="py-2.5 pr-4">{period._count.bills}</td>
+                <td className="py-2.5 pr-4">{queuedInvoices}</td>
+                <td className="py-2.5">
                   <div className="flex flex-wrap gap-2">
                     <form action={generateBillAction}>
                       <input type="hidden" name="payPeriodId" value={period.id} />
@@ -175,11 +172,13 @@ export default async function BillingPage({
           </tbody>
         </table>
         {periodRows.length === 0 && (
-          <p className="py-8 text-center text-sm text-muted">
-            No pay periods yet. Click <strong>Sync from L&I</strong> to import the schedule.
+          <p className="py-6 text-center text-sm text-muted">
+            No pay periods yet. Click <strong>Sync from L&I</strong> or add one above.
           </p>
         )}
       </div>
+
+      <LniFeesSection />
     </div>
   );
 }
