@@ -938,8 +938,8 @@ export async function createTherapistAction(
         const isOwnAdminEmail = existing.id === getRealUserId(session);
         return {
           error: isOwnAdminEmail
-            ? "This is your admin login email. Change it under Admin, then you can add a therapist with this address."
-            : `This email belongs to an admin account (${existing.email}). Remove it under Admin → Portal logins, or use a different email.`,
+            ? "This is your admin login email. Change it under Account, then you can add a therapist with this address."
+            : `This email belongs to an admin account (${existing.email}). Remove it from Admins, or use a different email.`,
         };
       }
       if (existing.active) {
@@ -1140,24 +1140,20 @@ export async function reactivateTherapistAction(formData: FormData) {
   redirect(`/portal/admin/therapists/${id}/edit?reactivated=1`);
 }
 
-export async function deletePortalAccountAction(formData: FormData) {
+export async function deleteAdminAction(formData: FormData) {
   await requireAdmin();
   const session = await requireAdmin();
   const id = String(formData.get("id") ?? "").trim();
-  if (!id) throw new Error("Account id is required.");
+  if (!id) throw new Error("Admin id is required.");
   if (id === getRealUserId(session)) {
     throw new Error("You cannot delete your own account.");
   }
 
-  const user = await prisma.user.findUnique({
-    where: { id },
-    select: { id: true, role: true, email: true },
+  const admin = await prisma.user.findFirst({
+    where: { id, role: "ADMIN" },
+    select: { id: true, email: true },
   });
-  if (!user) throw new Error("Account not found.");
-
-  if (user.role === "THERAPIST") {
-    throw new Error("Use the therapist edit page to delete or deactivate therapist accounts.");
-  }
+  if (!admin) throw new Error("Admin not found.");
 
   const billCount = await prisma.bill.count({ where: { generatedById: id } });
   if (billCount > 0) {
@@ -1166,9 +1162,8 @@ export async function deletePortalAccountAction(formData: FormData) {
 
   await prisma.user.delete({ where: { id } });
 
-  revalidatePath("/portal/profile");
-  revalidatePath("/portal/admin/therapists");
-  redirect("/portal/profile?deleted=1#portal-logins");
+  revalidatePath("/portal/admin/admins");
+  redirect("/portal/admin/admins?deleted=1");
 }
 
 function parseAdminFields(formData: FormData) {
@@ -1192,16 +1187,7 @@ export async function createAdminAction(
   try {
     await requireAdmin();
     const fields = parseAdminFields(formData);
-
-    let password = String(formData.get("password") ?? "").trim();
-    const adminSetPassword = password.length > 0;
-    if (!password) {
-      password = generateOneTimePassword();
-    } else if (password.length < 8) {
-      return { error: "Password must be at least 8 characters." };
-    }
-
-    const mustChangePassword = !adminSetPassword;
+    const password = generateOneTimePassword();
 
     const existing = await prisma.user.findUnique({ where: { email: fields.email } });
     if (existing) {
@@ -1219,7 +1205,7 @@ export async function createAdminAction(
         ...fields,
         role: "ADMIN",
         passwordHash: await hashPassword(password),
-        mustChangePassword,
+        mustChangePassword: true,
       },
     });
 
@@ -1229,20 +1215,88 @@ export async function createAdminAction(
         adminEmail: fields.email,
         adminName: `${fields.firstName} ${fields.lastName}`,
         password,
-        mustChangePassword,
+        mustChangePassword: true,
       });
     } catch (e) {
       emailWarning = e instanceof Error ? e.message : "Welcome email could not be sent.";
     }
 
-    revalidatePath("/portal/profile");
-    const params = new URLSearchParams({ adminCreated: "1" });
+    revalidatePath("/portal/admin/admins");
+    const params = new URLSearchParams({ created: "1" });
     if (emailWarning) params.set("emailWarning", emailWarning);
-    redirect(`/portal/profile?${params.toString()}#portal-logins`);
+    redirect(`/portal/admin/admins?${params.toString()}`);
   } catch (e) {
     if (isNextRedirectError(e)) throw e;
     return {
       error: e instanceof Error ? e.message : "Could not create admin.",
     };
   }
+}
+
+export async function updateAdminAction(formData: FormData) {
+  const session = await requireAdmin();
+  const id = String(formData.get("id") ?? "").trim();
+  if (!id) throw new Error("Admin id is required.");
+
+  const admin = await prisma.user.findFirst({
+    where: { id, role: "ADMIN" },
+    select: { id: true },
+  });
+  if (!admin) throw new Error("Admin not found.");
+
+  const firstName = String(formData.get("firstName") ?? "").trim();
+  const lastName = String(formData.get("lastName") ?? "").trim();
+  if (!firstName || !lastName) {
+    throw new Error("First and last name are required.");
+  }
+
+  await prisma.user.update({
+    where: { id },
+    data: { firstName, lastName },
+  });
+
+  if (id === getRealUserId(session)) {
+    await unstable_update({ user: { firstName, lastName } });
+  }
+
+  revalidatePath("/portal/admin/admins");
+  revalidatePath(`/portal/admin/admins/${id}/edit`);
+  revalidatePath("/portal/profile");
+  redirect(`/portal/admin/admins/${id}/edit?saved=1`);
+}
+
+export async function resetAdminPasswordAction(formData: FormData) {
+  await requireAdmin();
+  const id = String(formData.get("id") ?? "").trim();
+  if (!id) throw new Error("Admin id is required.");
+
+  const admin = await prisma.user.findFirst({
+    where: { id, role: "ADMIN" },
+    select: { id: true, email: true, firstName: true, lastName: true },
+  });
+  if (!admin) throw new Error("Admin not found.");
+
+  const password = generateOneTimePassword();
+
+  await prisma.user.update({
+    where: { id },
+    data: {
+      passwordHash: await hashPassword(password),
+      mustChangePassword: true,
+    },
+  });
+
+  try {
+    await sendAdminWelcomeEmail({
+      adminEmail: admin.email,
+      adminName: `${admin.firstName} ${admin.lastName}`,
+      password,
+      mustChangePassword: true,
+    });
+  } catch (e) {
+    console.error("Admin password reset email failed:", e);
+  }
+
+  revalidatePath(`/portal/admin/admins/${id}/edit`);
+  redirect(`/portal/admin/admins/${id}/edit?passwordReset=1`);
 }

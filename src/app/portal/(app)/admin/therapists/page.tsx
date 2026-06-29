@@ -44,13 +44,7 @@ export default async function AdminTherapistsPage({
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="font-serif text-3xl font-semibold text-primary-dark">Therapists</h1>
-          <p className="mt-2 text-muted">
-            Manage therapist accounts for the billing portal.{" "}
-            <Link href="/portal/profile#portal-logins" className="text-primary hover:underline">
-              View all portal logins
-            </Link>{" "}
-            on Admin (includes admin logins not shown here).
-          </p>
+          <p className="mt-2 text-muted">Manage therapist accounts for the billing portal.</p>
         </div>
         <Link href="/portal/admin/therapists/new" className={portalButtonClass}>
           Add therapist

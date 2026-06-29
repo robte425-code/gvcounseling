@@ -9,6 +9,7 @@ const adminLinks = [
   { href: "/portal/admin/pay-periods", label: "Pay periods" },
   { href: "/portal/admin/clients", label: "Clients" },
   { href: "/portal/admin/therapists", label: "Therapists" },
+  { href: "/portal/admin/admins", label: "Admins" },
   { href: "/portal/admin/invoices", label: "Invoices" },
   { href: "/portal/admin/generate-bill", label: "Generate L&I bill" },
   { href: "/portal/admin/bills", label: "Bill history" },
@@ -88,7 +89,7 @@ export async function PortalNav() {
                 href="/portal/profile"
                 className="text-sm text-muted hover:text-primary-dark"
               >
-                {admin ? "Admin" : "Account"}
+                Account
               </Link>
             )}
             {therapists.length > 0 && <ViewAsTherapistSelect therapists={therapists} />}

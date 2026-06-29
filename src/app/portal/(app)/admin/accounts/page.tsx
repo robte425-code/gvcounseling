@@ -3,12 +3,13 @@ import { redirect } from "next/navigation";
 export default async function AdminAccountsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; deleted?: string }>;
+  searchParams: Promise<{ q?: string; deleted?: string; created?: string; emailWarning?: string }>;
 }) {
-  const { q, deleted } = await searchParams;
+  const { deleted, created, emailWarning } = await searchParams;
   const params = new URLSearchParams();
-  if (q?.trim()) params.set("q", q.trim());
   if (deleted === "1") params.set("deleted", "1");
+  if (created === "1") params.set("created", "1");
+  if (emailWarning) params.set("emailWarning", emailWarning);
   const query = params.toString();
-  redirect(`/portal/profile${query ? `?${query}` : ""}#portal-logins`);
+  redirect(`/portal/admin/admins${query ? `?${query}` : ""}`);
 }
