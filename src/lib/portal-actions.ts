@@ -212,8 +212,7 @@ export async function createPayPeriodAction(formData: FormData) {
   await prisma.payPeriod.create({
     data: { cutoffDate, paymentDate, label },
   });
-  revalidatePath("/portal/admin/pay-periods");
-  revalidatePath("/portal/admin/generate-bill");
+  revalidatePath("/portal/admin/billing");
 }
 
 export async function deletePayPeriodAction(formData: FormData) {
@@ -224,7 +223,7 @@ export async function deletePayPeriodAction(formData: FormData) {
     throw new Error("Cannot delete a pay period that already has generated bills.");
   }
   await prisma.payPeriod.delete({ where: { id } });
-  revalidatePath("/portal/admin/pay-periods");
+  revalidatePath("/portal/admin/billing");
 }
 
 export async function syncPayPeriodsFromLniAction() {
@@ -257,10 +256,9 @@ export async function syncPayPeriodsFromLniAction() {
     }
   }
 
-  revalidatePath("/portal/admin/pay-periods");
-  revalidatePath("/portal/admin/generate-bill");
+  revalidatePath("/portal/admin/billing");
   redirect(
-    `/portal/admin/pay-periods?synced=1&created=${created}&updated=${updated}&total=${rows.length}`,
+    `/portal/admin/billing?synced=1&created=${created}&updated=${updated}&total=${rows.length}`,
   );
 }
 
@@ -672,9 +670,9 @@ export async function generateBillAction(formData: FormData) {
     return created;
   });
 
-  revalidatePath("/portal/admin/bills");
+  revalidatePath("/portal/admin/billing");
+  revalidatePath(`/portal/admin/billing/${payPeriodId}/bills`);
   revalidatePath("/portal/admin/invoices");
-  revalidatePath("/portal/admin/generate-bill");
   redirect(`/portal/admin/bills/${bill.id}?generated=1`);
 }
 

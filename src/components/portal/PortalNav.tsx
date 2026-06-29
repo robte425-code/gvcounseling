@@ -6,13 +6,11 @@ import { prisma } from "@/lib/prisma";
 
 const adminLinks = [
   { href: "/portal/admin/dashboard", label: "Dashboard" },
-  { href: "/portal/admin/pay-periods", label: "Pay periods" },
+  { href: "/portal/admin/billing", label: "Billing" },
   { href: "/portal/admin/clients", label: "Clients" },
   { href: "/portal/admin/therapists", label: "Therapists" },
   { href: "/portal/admin/admins", label: "Admins" },
   { href: "/portal/admin/invoices", label: "Invoices" },
-  { href: "/portal/admin/generate-bill", label: "Generate L&I bill" },
-  { href: "/portal/admin/bills", label: "Bill history" },
 ];
 
 const therapistLinks = [

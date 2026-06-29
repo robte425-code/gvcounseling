@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireAdmin } from "@/auth";
-import { portalButtonClass, portalCardClass } from "@/components/portal/ui";
+import { portalButtonClass, portalButtonSecondaryClass, portalCardClass } from "@/components/portal/ui";
 import { formatCurrency, formatDate } from "@/lib/constants";
 import { prisma } from "@/lib/prisma";
 
@@ -37,8 +37,11 @@ export default async function BillDetailPage({
       )}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <Link href="/portal/admin/bills" className="text-sm text-primary hover:underline">
-            ← Bill history
+          <Link
+            href={`/portal/admin/billing/${bill.payPeriodId}/bills`}
+            className={`${portalButtonSecondaryClass} text-xs`}
+          >
+            ← Back to billing history
           </Link>
           <h1 className="mt-2 font-serif text-3xl font-semibold text-primary-dark">{bill.filename}</h1>
           <p className="mt-2 text-muted">
