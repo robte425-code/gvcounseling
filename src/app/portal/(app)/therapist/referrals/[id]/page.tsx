@@ -1,15 +1,17 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { Suspense } from "react";
 import { requireTherapist } from "@/auth";
+import { ClientDetailView } from "@/components/portal/ClientDetailView";
+import { ClientDriveFilesLoading } from "@/components/portal/ClientDriveFilesLoading";
+import { ClientDriveFilesSection } from "@/components/portal/ClientDriveFilesSection";
 import {
   portalButtonClass,
   portalButtonSecondaryClass,
   portalCardClass,
   portalInputClass,
   portalLabelClass,
-  StatusBadge,
 } from "@/components/portal/ui";
-import { formatDate } from "@/lib/constants";
 import {
   therapistAcceptReferralAction,
   therapistRejectReferralAction,
@@ -34,7 +36,7 @@ export default async function TherapistReferralReviewPage({
   }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
+    <div className="mx-auto max-w-4xl space-y-6">
       <div>
         <Link href="/portal/therapist/dashboard" className={`${portalButtonSecondaryClass} text-xs`}>
           ← Back to dashboard
@@ -43,51 +45,20 @@ export default async function TherapistReferralReviewPage({
           New client referral
         </h1>
         <p className="mt-2 text-muted">
-          Review the information below and accept or decline this assignment.
+          Review the client information and attached files below, then accept or decline this
+          assignment.
         </p>
       </div>
 
-      <div className={portalCardClass}>
-        <StatusBadge status="PENDING_THERAPIST" />
-        <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
-          <div>
-            <dt className="text-muted">Client</dt>
-            <dd className="font-medium">
-              {client.lastName}, {client.firstName}
-            </dd>
-          </div>
-          <div>
-            <dt className="text-muted">Claim #</dt>
-            <dd className="font-mono">{client.lniClaimNumber}</dd>
-          </div>
-          <div>
-            <dt className="text-muted">Date of birth</dt>
-            <dd>{formatDate(client.dateOfBirth)}</dd>
-          </div>
-          <div>
-            <dt className="text-muted">Date of injury</dt>
-            <dd>{formatDate(client.dateOfInjury)}</dd>
-          </div>
-          <div>
-            <dt className="text-muted">VRC</dt>
-            <dd>{client.vrcName ?? "—"}</dd>
-          </div>
-          <div>
-            <dt className="text-muted">VRC phone</dt>
-            <dd>{client.vrcPhone ?? "—"}</dd>
-          </div>
-          <div className="sm:col-span-2">
-            <dt className="text-muted">Employer</dt>
-            <dd>{client.employerName ?? "—"}</dd>
-          </div>
-          {client.clientHistory && (
-            <div className="sm:col-span-2">
-              <dt className="text-muted">Client history</dt>
-              <dd className="whitespace-pre-wrap">{client.clientHistory}</dd>
-            </div>
-          )}
-        </dl>
-      </div>
+      <ClientDetailView client={client} clientId={client.id} />
+
+      <Suspense fallback={<ClientDriveFilesLoading />}>
+        <ClientDriveFilesSection
+          driveFolderId={client.driveFolderId}
+          therapistId={session.user.id}
+          initiatorUserId={session.user.id}
+        />
+      </Suspense>
 
       <div className={`${portalCardClass} space-y-4`}>
         <form action={therapistAcceptReferralAction}>
