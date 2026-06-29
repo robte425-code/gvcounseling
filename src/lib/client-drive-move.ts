@@ -8,6 +8,7 @@ import { getSystemDriveAccessToken } from "@/lib/google-drive-system";
 type TherapistFolderTarget = {
   email: string;
   firstName: string;
+  lastName: string;
 };
 
 /** Move a client folder (and all contents) under the therapist's Drive folder. */

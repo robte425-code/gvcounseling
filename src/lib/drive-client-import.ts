@@ -4,6 +4,8 @@ import {
   listClientFolders,
   parseClientFolderName,
   resolveTherapistFolderId,
+  resolveTherapistFolderInParent,
+  resolveTherapistParentFolderId,
 } from "@/lib/google-drive";
 import { resolveOAuthUserIdForTherapist } from "@/lib/google-drive-access";
 import { resolveImportClaimNumber } from "@/lib/constants";
@@ -44,11 +46,21 @@ async function scanTherapistDriveSource(
 
   try {
     const accessToken = await getValidGoogleAccessToken(oauthUserId);
-    const parentFolderId = await resolveTherapistFolderId(
-      accessToken,
-      source.folderId,
-      source.folderName,
-    );
+    let parentFolderId: string;
+    if (source.folderId) {
+      parentFolderId = await resolveTherapistFolderId(
+        accessToken,
+        source.folderId,
+        source.folderName,
+      );
+    } else {
+      const therapistParentId = await resolveTherapistParentFolderId(accessToken);
+      parentFolderId = await resolveTherapistFolderInParent(
+        accessToken,
+        therapistParentId,
+        source.folderName,
+      );
+    }
     const clientFolders = await listClientFolders(accessToken, parentFolderId);
 
     for (const folder of clientFolders) {

@@ -16,6 +16,8 @@ import { Gender, InvoiceStatus } from "@/generated/prisma/client";
 import { buildEdi837, generateClmControlNumber, type Edi837Claim } from "@/lib/edi837";
 import { client837Ready, parseClaimNumber } from "@/lib/constants";
 import { moveClientDriveFolderToTherapist } from "@/lib/client-drive-move";
+import { ensureTherapistDriveFolder } from "@/lib/google-drive";
+import { getSystemDriveAccessToken } from "@/lib/google-drive-system";
 import { sendTherapistAssignmentEmail } from "@/lib/referral-emails";
 import { generateOneTimePassword, hashPassword, verifyPassword } from "@/lib/password";
 import { fetchLniPayPeriods } from "@/lib/lni-pay-periods";
@@ -309,7 +311,7 @@ export async function saveClientAction(formData: FormData) {
   if (isAdmin && therapistChanged && existing?.driveFolderId && therapistId) {
     const therapist = await prisma.user.findUnique({
       where: { id: therapistId, role: "THERAPIST" },
-      select: { email: true, firstName: true },
+      select: { email: true, firstName: true, lastName: true },
     });
     if (therapist) {
       await moveClientDriveFolderToTherapist(existing.driveFolderId, therapist);
@@ -649,6 +651,7 @@ export async function assignClientTherapistAction(formData: FormData) {
   await moveClientDriveFolderToTherapist(client.driveFolderId, {
     email: therapist.email,
     firstName: therapist.firstName,
+    lastName: therapist.lastName,
   });
 
   await prisma.client.update({
@@ -734,7 +737,7 @@ export async function therapistAcceptReferralAction(formData: FormData) {
 
   const therapist = await prisma.user.findUniqueOrThrow({
     where: { id: session.user.id },
-    select: { email: true, firstName: true },
+    select: { email: true, firstName: true, lastName: true },
   });
   await moveClientDriveFolderToTherapist(client.driveFolderId, therapist);
 
@@ -842,7 +845,7 @@ export async function createTherapistAction(formData: FormData) {
     throw new Error("Password must be at least 8 characters.");
   }
 
-  await prisma.user.create({
+  const user = await prisma.user.create({
     data: {
       ...fields,
       role: "THERAPIST",
@@ -850,6 +853,19 @@ export async function createTherapistAction(formData: FormData) {
       mustChangePassword: true,
     },
   });
+
+  try {
+    const { accessToken } = await getSystemDriveAccessToken();
+    await ensureTherapistDriveFolder(accessToken, {
+      firstName: fields.firstName,
+      lastName: fields.lastName,
+    });
+  } catch (e) {
+    await prisma.user.delete({ where: { id: user.id } });
+    throw e instanceof Error
+      ? e
+      : new Error("Failed to create therapist Google Drive folder.");
+  }
 
   revalidatePath("/portal/admin/therapists");
   redirect("/portal/admin/therapists");

@@ -1,4 +1,4 @@
-import { getTherapistFolderConfig } from "@/lib/google-drive";
+import { getTherapistFolderConfig, therapistDriveFolderName } from "@/lib/google-drive";
 import { prisma } from "@/lib/prisma";
 
 export type TherapistDriveSource = {
@@ -31,7 +31,12 @@ function folderConfigForTherapist(user: {
       folderName: folderConfig.steven.folderName,
     };
   }
-  return null;
+  return {
+    therapistId: user.id,
+    therapistName: `${user.firstName} ${user.lastName}`,
+    folderId: null,
+    folderName: therapistDriveFolderName(user.firstName, user.lastName),
+  };
 }
 
 export async function getTherapistDriveSourceForUser(
@@ -58,7 +63,7 @@ export async function getAllTherapistDriveSources(): Promise<TherapistDriveSourc
   }
 
   if (!sources.length) {
-    throw new Error("Maria and Steven therapist accounts must exist before importing from Drive.");
+    throw new Error("At least one therapist account must exist before importing from Drive.");
   }
 
   return sources;

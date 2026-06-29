@@ -298,9 +298,53 @@ export async function resolveNewReferralsFolderId(accessToken: string): Promise<
   return resolveTherapistFolderId(accessToken, config.folderId, config.folderName);
 }
 
+export function therapistDriveFolderName(firstName: string, lastName: string): string {
+  return `${firstName.trim()} ${lastName.trim()}`.replace(/\s+/g, " ");
+}
+
+export async function resolveTherapistParentFolderId(accessToken: string): Promise<string> {
+  const override = process.env.GOOGLE_DRIVE_THERAPIST_PARENT_FOLDER_ID?.trim();
+  if (override) return override;
+
+  const config = getTherapistFolderConfig();
+  const mariaFolderId = await resolveTherapistFolderId(
+    accessToken,
+    config.maria.folderId,
+    config.maria.folderName,
+  );
+  const parents = await getDriveFolderParentIds(accessToken, mariaFolderId);
+  if (parents.length === 1) return parents[0]!;
+  throw new Error(
+    "Could not determine therapist folder parent in Google Drive. Set GOOGLE_DRIVE_THERAPIST_PARENT_FOLDER_ID.",
+  );
+}
+
+export async function resolveTherapistFolderInParent(
+  accessToken: string,
+  parentFolderId: string,
+  folderName: string,
+  folderId?: string | null,
+): Promise<string> {
+  if (folderId) return folderId;
+  const existing = await findDriveFolderByName(accessToken, parentFolderId, folderName);
+  if (!existing) {
+    throw new Error(`Could not find folder "${folderName}" in Google Drive.`);
+  }
+  return existing;
+}
+
+export async function ensureTherapistDriveFolder(
+  accessToken: string,
+  therapist: { firstName: string; lastName: string },
+): Promise<string> {
+  const parentId = await resolveTherapistParentFolderId(accessToken);
+  const folderName = therapistDriveFolderName(therapist.firstName, therapist.lastName);
+  return getOrCreateDriveSubfolder(accessToken, parentId, folderName);
+}
+
 export async function resolveTherapistFolderForUser(
   accessToken: string,
-  therapist: { email: string; firstName: string },
+  therapist: { email: string; firstName: string; lastName: string },
 ): Promise<string> {
   const config = getTherapistFolderConfig();
   if (therapist.email === "maria@gvcounseling.com") {
@@ -309,11 +353,9 @@ export async function resolveTherapistFolderForUser(
   if (therapist.email === "steven@gvcounseling.com") {
     return resolveTherapistFolderId(accessToken, config.steven.folderId, config.steven.folderName);
   }
-  return resolveTherapistFolderId(
-    accessToken,
-    null,
-    `${therapist.firstName}: Client files`,
-  );
+  const parentId = await resolveTherapistParentFolderId(accessToken);
+  const folderName = therapistDriveFolderName(therapist.firstName, therapist.lastName);
+  return resolveTherapistFolderInParent(accessToken, parentId, folderName);
 }
 
 async function driveJson<T>(
