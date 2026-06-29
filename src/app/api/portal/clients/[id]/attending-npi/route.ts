@@ -64,7 +64,7 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
     );
   }
 
-  const { providers, error } = await searchAttendingNpiRegistry({
+  const { providers, searchVariants, searchedStateWide, error } = await searchAttendingNpiRegistry({
     doctorName: client.attendingDoctorName,
     state: client.state,
     city: client.city,
@@ -72,10 +72,18 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
   });
 
   if (error) {
-    return NextResponse.json({ error, providers: [] }, { status: 422 });
+    return NextResponse.json(
+      { error, providers: [], searchVariants, searchedStateWide },
+      { status: 422 },
+    );
   }
 
-  return NextResponse.json({ providers, query: client.attendingDoctorName });
+  return NextResponse.json({
+    providers,
+    query: client.attendingDoctorName,
+    searchVariants,
+    searchedStateWide,
+  });
 }
 
 export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {

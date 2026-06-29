@@ -7,6 +7,11 @@ export type NpiRegistryProvider = {
   phone: string | null;
 };
 
+export type NpiSearchVariant = {
+  firstName?: string;
+  lastName: string;
+};
+
 type NpiApiAddress = {
   address_purpose?: string;
   address_1?: string;
@@ -39,30 +44,91 @@ type NpiApiResponse = {
 
 const NPI_REGISTRY_API = "https://npiregistry.cms.hhs.gov/api/";
 
-/** Parse attending doctor name into NPI Registry search parts. */
+/** Common medical credentials that appear in referral imports, not part of the legal name. */
+const CREDENTIAL_PATTERN =
+  /\b(PAC|PA-C|P\.A\.C?\.?|PA|NP|FNP-C?|ARNP|APRN|DNP|MD|M\.D\.|DO|D\.O\.|PHD|PH\.D\.|PSYD|PSY\.D\.|LMFT|LMFTA|LCSW|LICSW|PT|OT|DC|DDS|DMD|CNP|CRNP|DR|DR\.|DPM|OD|RN|MSW|MA|MS|MBA|FACP|FACS|JD)\b/gi;
+
+function stripCredentials(text: string): string {
+  return text.replace(CREDENTIAL_PATTERN, "").replace(/\s+/g, " ").trim();
+}
+
+function variantKey(variant: NpiSearchVariant): string {
+  return `${variant.firstName ?? ""}|${variant.lastName}`.toLowerCase();
+}
+
+function addVariant(
+  variants: NpiSearchVariant[],
+  seen: Set<string>,
+  firstName: string | undefined,
+  lastName: string,
+) {
+  const trimmedLast = lastName.trim();
+  if (!trimmedLast) return;
+  const trimmedFirst = firstName?.trim() || undefined;
+  const variant: NpiSearchVariant = { firstName: trimmedFirst, lastName: trimmedLast };
+  const key = variantKey(variant);
+  if (seen.has(key)) return;
+  seen.add(key);
+  variants.push(variant);
+}
+
+/** Build multiple first/last combinations to try against the NPI Registry. */
+export function generateNpiSearchVariants(name: string): NpiSearchVariant[] {
+  const cleaned = stripCredentials(name);
+  if (!cleaned) return [];
+
+  const variants: NpiSearchVariant[] = [];
+  const seen = new Set<string>();
+
+  if (cleaned.includes(",")) {
+    const [lastPart, rest] = cleaned.split(",", 2);
+    const lastTokens = lastPart.trim().split(/\s+/).filter(Boolean);
+    const firstTokens = rest.trim().split(/\s+/).filter(Boolean);
+
+    const lastName = lastTokens[0];
+    const firstName = firstTokens[0];
+    if (lastName) addVariant(variants, seen, firstName, lastName);
+    if (lastName && lastTokens.length > 1) {
+      addVariant(variants, seen, firstName, lastTokens[lastTokens.length - 1]!);
+    }
+    if (firstName && firstTokens.length > 1) {
+      addVariant(variants, seen, firstTokens[firstTokens.length - 1], lastName ?? firstName);
+    }
+    if (lastName) addVariant(variants, seen, undefined, lastName);
+    return variants;
+  }
+
+  const tokens = cleaned.split(/\s+/).filter(Boolean);
+  if (tokens.length === 1) {
+    addVariant(variants, seen, undefined, tokens[0]!);
+    return variants;
+  }
+
+  if (tokens.length === 2) {
+    addVariant(variants, seen, tokens[0], tokens[1]!);
+    addVariant(variants, seen, tokens[1], tokens[0]!);
+    addVariant(variants, seen, undefined, tokens[0]!);
+    addVariant(variants, seen, undefined, tokens[1]!);
+    return variants;
+  }
+
+  addVariant(variants, seen, tokens[0], tokens[tokens.length - 1]!);
+  addVariant(variants, seen, tokens[tokens.length - 1], tokens[0]!);
+  addVariant(variants, seen, undefined, tokens[tokens.length - 1]!);
+  addVariant(variants, seen, undefined, tokens[0]!);
+  return variants;
+}
+
+/** Primary name parse for display; uses the first search variant. */
 export function parseDoctorNameForNpiSearch(name: string): {
   firstName: string;
   lastName: string;
 } | null {
-  const cleaned = name
-    .replace(/\b(MD|DO|M\.D\.|D\.O\.|DR\.?)\b/gi, "")
-    .replace(/\s+/g, " ")
-    .trim();
-  if (!cleaned) return null;
-
-  if (cleaned.includes(",")) {
-    const [lastPart, rest] = cleaned.split(",", 2);
-    const lastName = lastPart.trim();
-    const firstName = rest.trim().split(/\s+/)[0]?.trim();
-    if (!lastName || !firstName) return null;
-    return { firstName, lastName };
-  }
-
-  const parts = cleaned.split(/\s+/).filter(Boolean);
-  if (parts.length < 2) return null;
+  const variant = generateNpiSearchVariants(name)[0];
+  if (!variant) return null;
   return {
-    firstName: parts[0]!,
-    lastName: parts[parts.length - 1]!,
+    firstName: variant.firstName ?? "",
+    lastName: variant.lastName,
   };
 }
 
@@ -119,31 +185,18 @@ function mapResult(result: NpiApiResult): NpiRegistryProvider {
   };
 }
 
-export async function searchAttendingNpiRegistry(options: {
-  doctorName: string;
-  state?: string | null;
-  city?: string | null;
-  doctorAddress?: string | null;
-}): Promise<{ providers: NpiRegistryProvider[]; error?: string }> {
-  const parsed = parseDoctorNameForNpiSearch(options.doctorName);
-  if (!parsed) {
-    return {
-      providers: [],
-      error: "Could not parse the attending doctor name. Edit the client and check the Doctor field.",
-    };
-  }
-
-  const fromAddress = parseCityStateFromAddress(options.doctorAddress);
-  const state = (options.state ?? fromAddress.state ?? "WA").trim().toUpperCase();
-  const city = (options.city ?? fromAddress.city)?.trim();
-
+async function fetchNpiResults(
+  variant: NpiSearchVariant,
+  state: string,
+  city?: string,
+): Promise<{ providers: NpiRegistryProvider[]; error?: string }> {
   const params = new URLSearchParams({
     version: "2.1",
     limit: "50",
-    first_name: parsed.firstName,
-    last_name: parsed.lastName,
+    last_name: variant.lastName,
     state,
   });
+  if (variant.firstName) params.set("first_name", variant.firstName);
   if (city) params.set("city", city);
 
   let response: Response;
@@ -173,4 +226,73 @@ export async function searchAttendingNpiRegistry(options: {
     .map(mapResult);
 
   return { providers };
+}
+
+function formatVariantLabel(variant: NpiSearchVariant): string {
+  if (variant.firstName) return `${variant.firstName} ${variant.lastName}`;
+  return variant.lastName;
+}
+
+export async function searchAttendingNpiRegistry(options: {
+  doctorName: string;
+  state?: string | null;
+  city?: string | null;
+  doctorAddress?: string | null;
+}): Promise<{
+  providers: NpiRegistryProvider[];
+  searchVariants: string[];
+  searchedStateWide?: boolean;
+  error?: string;
+}> {
+  const variants = generateNpiSearchVariants(options.doctorName);
+  if (variants.length === 0) {
+    return {
+      providers: [],
+      searchVariants: [],
+      error: "Could not parse the attending doctor name. Edit the client and check the Doctor field.",
+    };
+  }
+
+  const fromAddress = parseCityStateFromAddress(options.doctorAddress);
+  const state = (options.state ?? fromAddress.state ?? "WA").trim().toUpperCase();
+  const city = (options.city ?? fromAddress.city)?.trim();
+
+  const seenNpis = new Set<string>();
+  const providers: NpiRegistryProvider[] = [];
+  const searchVariants: string[] = [];
+  let lastError: string | undefined;
+  let searchedStateWide = false;
+
+  async function runVariant(variant: NpiSearchVariant, withCity: boolean) {
+    const label = formatVariantLabel(variant);
+    const locationLabel = withCity && city ? `${label} (${city}, ${state})` : `${label} (${state})`;
+    searchVariants.push(locationLabel);
+
+    const result = await fetchNpiResults(variant, state, withCity ? city : undefined);
+    if (result.error) lastError = result.error;
+    for (const provider of result.providers) {
+      if (seenNpis.has(provider.npi)) continue;
+      seenNpis.add(provider.npi);
+      providers.push(provider);
+    }
+  }
+
+  for (const variant of variants) {
+    await runVariant(variant, true);
+    if (providers.length > 0) break;
+  }
+
+  if (providers.length === 0 && city) {
+    searchedStateWide = true;
+    for (const variant of variants) {
+      await runVariant(variant, false);
+      if (providers.length > 0) break;
+    }
+  }
+
+  if (providers.length === 0 && lastError) {
+    return { providers: [], searchVariants, searchedStateWide, error: lastError };
+  }
+
+  return { providers, searchVariants, searchedStateWide };
 }
