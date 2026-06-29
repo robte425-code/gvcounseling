@@ -436,10 +436,7 @@ async function nextInvoiceNumber(therapistId: string): Promise<number> {
   return (last?.invoiceNumber ?? 0) + 1;
 }
 
-export async function saveInvoiceAction(formData: FormData) {
-  const session = await requireSession();
-  const invoiceId = String(formData.get("invoiceId") ?? "").trim();
-
+function parseInvoiceLineItems(formData: FormData) {
   const lineCount = parseInt(String(formData.get("lineCount") ?? "0"), 10);
   const lineItems: { serviceDate: Date; procedureCode: string; sortOrder: number }[] = [];
 
@@ -453,6 +450,17 @@ export async function saveInvoiceAction(formData: FormData) {
   if (!lineItems.length) {
     throw new Error("Add at least one service line with date and procedure code.");
   }
+
+  return lineItems;
+}
+
+async function persistInvoiceFromFormData(
+  session: Awaited<ReturnType<typeof requireSession>>,
+  formData: FormData,
+  options: { allowCreate: boolean },
+) {
+  const invoiceId = String(formData.get("invoiceId") ?? "").trim();
+  const lineItems = parseInvoiceLineItems(formData);
 
   const therapistIdForFees = invoiceId
     ? (
@@ -469,6 +477,9 @@ export async function saveInvoiceAction(formData: FormData) {
   const totalAmount = pricedLineItems.reduce((s, l) => s + l.amount, 0);
 
   if (!invoiceId) {
+    if (!options.allowCreate) {
+      throw new Error("Invoice not found.");
+    }
     if (session.user.role !== "THERAPIST") {
       throw new Error("Only therapists can create invoices.");
     }
@@ -494,16 +505,15 @@ export async function saveInvoiceAction(formData: FormData) {
           create: pricedLineItems.map((line) => ({ ...line, units: 1 })),
         },
       },
+      include: { client: true },
     });
 
-    revalidatePath("/portal/therapist/invoices");
-    revalidatePath("/portal/admin/invoices");
-    redirect(`/portal/therapist/invoices/${invoice.id}`);
+    return { invoice, created: true as const };
   }
 
   const invoice = await prisma.invoice.findUnique({
     where: { id: invoiceId },
-    include: { lineItems: true },
+    include: { client: true },
   });
   if (!invoice) throw new Error("Invoice not found.");
   if (session.user.role === "THERAPIST" && invoice.therapistId !== session.user.id) {
@@ -526,19 +536,35 @@ export async function saveInvoiceAction(formData: FormData) {
     ),
   ]);
 
+  const updated = await prisma.invoice.findUniqueOrThrow({
+    where: { id: invoiceId },
+    include: { client: true },
+  });
+
+  return { invoice: updated, created: false as const };
+}
+
+/** Auto-save draft line items (existing draft invoices only). */
+export async function saveInvoiceDraftAction(formData: FormData) {
+  const session = await requireSession();
+  const invoiceId = String(formData.get("invoiceId") ?? "").trim();
+  if (!invoiceId) return;
+
+  await persistInvoiceFromFormData(session, formData, { allowCreate: false });
+
   revalidatePath(`/portal/therapist/invoices/${invoiceId}`);
   revalidatePath("/portal/admin/invoices");
 }
 
 export async function submitInvoiceAction(formData: FormData) {
   const session = await requireTherapist();
-  const invoiceId = String(formData.get("invoiceId") ?? "");
-  const invoice = await prisma.invoice.findFirst({
-    where: { id: invoiceId, therapistId: session.user.id },
-    include: { lineItems: true, client: true },
+  const { invoice, created } = await persistInvoiceFromFormData(session, formData, {
+    allowCreate: true,
   });
-  if (!invoice || invoice.status !== "DRAFT") throw new Error("Invoice cannot be submitted.");
-  if (!invoice.lineItems.length) throw new Error("Add line items before submitting.");
+
+  if (invoice.status !== "DRAFT") {
+    throw new Error("Invoice cannot be submitted.");
+  }
 
   const readiness = client837Ready(invoice.client);
   if (!readiness.ready) {
@@ -548,11 +574,17 @@ export async function submitInvoiceAction(formData: FormData) {
   }
 
   await prisma.invoice.update({
-    where: { id: invoiceId },
+    where: { id: invoice.id },
     data: { status: "SUBMITTED", submittedAt: new Date() },
   });
-  revalidatePath(`/portal/therapist/invoices/${invoiceId}`);
+
+  revalidatePath(`/portal/therapist/invoices/${invoice.id}`);
+  revalidatePath("/portal/therapist/invoices");
   revalidatePath("/portal/admin/invoices");
+
+  if (created) {
+    redirect(`/portal/therapist/invoices/${invoice.id}`);
+  }
 }
 
 export async function unsubmitInvoiceAction(formData: FormData) {

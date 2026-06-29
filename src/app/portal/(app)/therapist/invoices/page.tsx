@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { requireTherapist } from "@/auth";
-import { StatusBadge, portalButtonClass, portalCardClass } from "@/components/portal/ui";
+import { ConfirmSubmitButton } from "@/components/portal/ConfirmSubmitButton";
+import { InvoiceTableRow } from "@/components/portal/InvoiceTableRow";
+import { StatusBadge, portalButtonClass, portalButtonSecondaryClass, portalCardClass } from "@/components/portal/ui";
 import { formatCurrency, formatDate } from "@/lib/constants";
 import { deleteInvoiceAction } from "@/lib/portal-actions";
 import { prisma } from "@/lib/prisma";
@@ -44,7 +46,23 @@ export default async function TherapistInvoicesPage({
           </thead>
           <tbody>
             {invoices.map((inv) => (
-              <tr key={inv.id} className="border-b border-border/60">
+              <InvoiceTableRow
+                key={inv.id}
+                href={`/portal/therapist/invoices/${inv.id}`}
+                actions={
+                  inv.status === "DRAFT" ? (
+                    <form action={deleteInvoiceAction}>
+                      <input type="hidden" name="invoiceId" value={inv.id} />
+                      <ConfirmSubmitButton
+                        confirmMessage={`Delete invoice #${inv.invoiceNumber}?`}
+                        className={`${portalButtonSecondaryClass} border-red-200 px-3 py-1 text-xs text-red-700 hover:bg-red-50`}
+                      >
+                        Delete
+                      </ConfirmSubmitButton>
+                    </form>
+                  ) : null
+                }
+              >
                 <td className="py-3 pr-4">{inv.invoiceNumber}</td>
                 <td className="py-3 pr-4">
                   {inv.client.lastName}, {inv.client.firstName}
@@ -54,22 +72,7 @@ export default async function TherapistInvoicesPage({
                 </td>
                 <td className="py-3 pr-4">{formatCurrency(Number(inv.totalAmount))}</td>
                 <td className="py-3 pr-4">{formatDate(inv.updatedAt)}</td>
-                <td className="py-3 text-right">
-                  <div className="flex items-center justify-end gap-4">
-                    <Link href={`/portal/therapist/invoices/${inv.id}`} className="text-primary hover:underline">
-                      Open
-                    </Link>
-                    {inv.status === "DRAFT" && (
-                      <form action={deleteInvoiceAction}>
-                        <input type="hidden" name="invoiceId" value={inv.id} />
-                        <button type="submit" className="text-sm text-red-700 hover:underline">
-                          Delete
-                        </button>
-                      </form>
-                    )}
-                  </div>
-                </td>
-              </tr>
+              </InvoiceTableRow>
             ))}
           </tbody>
         </table>

@@ -8,7 +8,7 @@ import {
   PROCEDURE_CODES,
 } from "@/lib/constants";
 import { resolveFeeAmount, type FeeScheduleRow } from "@/lib/procedure-fee-schedule";
-import { saveInvoiceAction } from "@/lib/portal-actions";
+import { submitInvoiceAction } from "@/lib/portal-actions";
 import {
   portalButtonClass,
   portalButtonSecondaryClass,
@@ -21,6 +21,8 @@ type LineItem = {
   procedureCode: string;
   amount: string;
 };
+
+export type InvoiceLineItem = LineItem;
 
 type ClientOption = {
   id: string;
@@ -35,6 +37,8 @@ type Props = {
   clients?: ClientOption[];
   initialClientId?: string;
   therapistFeeSchedule?: FeeScheduleRow[];
+  onLinesChange?: (lines: LineItem[]) => void;
+  showSubmit?: boolean;
 };
 
 const emptyLine = (): LineItem => ({
@@ -90,6 +94,8 @@ export function InvoiceEditor({
   clients,
   initialClientId,
   therapistFeeSchedule,
+  onLinesChange,
+  showSubmit = true,
 }: Props) {
   const usesTherapistFees = therapistFeeSchedule !== undefined;
 
@@ -113,6 +119,10 @@ export function InvoiceEditor({
     setLines((prev) => prev.map(priceLine));
     // eslint-disable-next-line react-hooks/exhaustive-deps -- reprice when fee schedule loads
   }, [therapistFeeSchedule]);
+
+  useEffect(() => {
+    onLinesChange?.(lines);
+  }, [lines, onLinesChange]);
 
   const total = useMemo(
     () => lines.reduce((sum, l) => sum + (parseFloat(l.amount) || 0), 0),
@@ -161,7 +171,7 @@ export function InvoiceEditor({
   }
 
   return (
-    <form action={saveInvoiceAction} className="space-y-4">
+    <form action={submitInvoiceAction} className="space-y-4">
       {invoiceId ? <input type="hidden" name="invoiceId" value={invoiceId} /> : null}
       {clients ? (
         <div>
@@ -253,17 +263,19 @@ export function InvoiceEditor({
       {usesTherapistFees && lines.some((line) => !line.amount) && (
         <p className="text-sm text-amber-900">
           One or more lines have no fee on file for the selected date. Ask admin to update your
-          procedure code fees before saving.
+          procedure code fees before submitting.
         </p>
       )}
       <div className="flex flex-wrap gap-3">
-        <button
-          type="submit"
-          className={portalButtonClass}
-          disabled={usesTherapistFees && lines.some((line) => !line.amount)}
-        >
-          Save invoice
-        </button>
+        {showSubmit && (
+          <button
+            type="submit"
+            className={portalButtonClass}
+            disabled={usesTherapistFees && lines.some((line) => !line.amount)}
+          >
+            Submit invoice
+          </button>
+        )}
         {actions}
       </div>
     </form>

@@ -1,13 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireSession } from "@/auth";
-import { InvoiceAttachments } from "@/components/portal/InvoiceAttachments";
-import { InvoiceEditor } from "@/components/portal/InvoiceEditor";
-import { StatusBadge, portalButtonClass, portalCardClass } from "@/components/portal/ui";
+import { InvoiceDetailClient } from "@/components/portal/InvoiceDetailClient";
+import { StatusBadge, portalButtonClass } from "@/components/portal/ui";
 import { client837Ready, formatCurrency, formatDate } from "@/lib/constants";
 import {
   deleteInvoiceAction,
-  submitInvoiceAction,
   unsubmitInvoiceAction,
 } from "@/lib/portal-actions";
 import { loadTherapistProcedureCodeFees, serializeFeeSchedule } from "@/lib/procedure-fees";
@@ -59,12 +57,6 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
       <>
         {invoice.status === "DRAFT" && (
           <>
-            <form action={submitInvoiceAction}>
-              <input type="hidden" name="invoiceId" value={invoice.id} />
-              <button type="submit" className={portalButtonClass}>
-                Submit to admin
-              </button>
-            </form>
             <form action={deleteInvoiceAction}>
               <input type="hidden" name="invoiceId" value={invoice.id} />
               <button type="submit" className="text-sm text-red-700 hover:underline">
@@ -113,22 +105,14 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
         )}
       </div>
 
-      <div className={portalCardClass}>
-        <h2 className="mb-4 font-serif text-xl font-semibold text-primary-dark">Service lines</h2>
-        <InvoiceEditor
-          invoiceId={invoice.id}
-          readOnly={readOnly}
-          initialLines={lines}
-          therapistFeeSchedule={therapistFees}
-          actions={actionButtons}
-        />
-      </div>
-
-      <InvoiceAttachments
+      <InvoiceDetailClient
         invoiceId={invoice.id}
         readOnly={readOnly}
+        initialLines={lines}
+        therapistFeeSchedule={therapistFees}
         attachments={invoice.attachments}
-        serviceDates={serviceDates}
+        savedServiceDates={serviceDates}
+        actions={actionButtons}
       />
     </div>
   );
