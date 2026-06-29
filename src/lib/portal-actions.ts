@@ -829,46 +829,70 @@ function parseTherapistFields(formData: FormData) {
   return { firstName, lastName, email, lniProviderId, npi };
 }
 
-export async function createTherapistAction(formData: FormData) {
-  await requireAdmin();
-  const fields = parseTherapistFields(formData);
+export type TherapistFormState = { error?: string };
 
-  const existing = await prisma.user.findUnique({ where: { email: fields.email } });
-  if (existing) {
-    throw new Error("A user with this email already exists.");
-  }
+function isNextRedirectError(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "digest" in error &&
+    String((error as { digest?: string }).digest).startsWith("NEXT_REDIRECT")
+  );
+}
 
-  let password = String(formData.get("password") ?? "").trim();
-  if (!password) {
-    password = generateOneTimePassword();
-  } else if (password.length < 8) {
-    throw new Error("Password must be at least 8 characters.");
-  }
-
-  const user = await prisma.user.create({
-    data: {
-      ...fields,
-      role: "THERAPIST",
-      passwordHash: await hashPassword(password),
-      mustChangePassword: true,
-    },
-  });
-
+export async function createTherapistAction(
+  _prevState: TherapistFormState,
+  formData: FormData,
+): Promise<TherapistFormState> {
   try {
-    const { accessToken } = await getSystemDriveAccessToken();
-    await ensureTherapistDriveFolder(accessToken, {
-      firstName: fields.firstName,
-      lastName: fields.lastName,
-    });
-  } catch (e) {
-    await prisma.user.delete({ where: { id: user.id } });
-    throw e instanceof Error
-      ? e
-      : new Error("Failed to create therapist Google Drive folder.");
-  }
+    await requireAdmin();
+    const fields = parseTherapistFields(formData);
 
-  revalidatePath("/portal/admin/therapists");
-  redirect("/portal/admin/therapists");
+    const existing = await prisma.user.findUnique({ where: { email: fields.email } });
+    if (existing) {
+      return { error: "A user with this email already exists." };
+    }
+
+    let password = String(formData.get("password") ?? "").trim();
+    if (!password) {
+      password = generateOneTimePassword();
+    } else if (password.length < 8) {
+      return { error: "Password must be at least 8 characters." };
+    }
+
+    await prisma.user.create({
+      data: {
+        ...fields,
+        role: "THERAPIST",
+        passwordHash: await hashPassword(password),
+        mustChangePassword: true,
+      },
+    });
+
+    let driveWarning: string | undefined;
+    try {
+      const { accessToken } = await getSystemDriveAccessToken();
+      await ensureTherapistDriveFolder(accessToken, {
+        firstName: fields.firstName,
+        lastName: fields.lastName,
+      });
+    } catch (e) {
+      driveWarning =
+        e instanceof Error
+          ? e.message
+          : "Google Drive folder could not be created.";
+    }
+
+    revalidatePath("/portal/admin/therapists");
+    const params = new URLSearchParams({ created: "1" });
+    if (driveWarning) params.set("driveWarning", driveWarning);
+    redirect(`/portal/admin/therapists?${params.toString()}`);
+  } catch (e) {
+    if (isNextRedirectError(e)) throw e;
+    return {
+      error: e instanceof Error ? e.message : "Could not create therapist.",
+    };
+  }
 }
 
 export async function updateTherapistAction(formData: FormData) {

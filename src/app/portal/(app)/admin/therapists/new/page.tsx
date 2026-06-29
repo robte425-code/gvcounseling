@@ -6,12 +6,15 @@ export default async function NewTherapistPage() {
   return (
     <div className="space-y-4">
       <h1 className="font-serif text-2xl font-semibold text-primary-dark">Add therapist</h1>
-      <p className="text-sm text-muted">
-        Email must be an @gvcounseling.com address. The therapist will be prompted to change their
-        password on first login. A Google Drive folder named{" "}
-        <span className="font-medium">First Last</span> is created alongside Maria and Steven&apos;s
-        folders (requires system Drive connection).
-      </p>
+      <p className="text-sm text-muted">New therapist accounts:</p>
+      <ul className="list-inside list-disc text-sm text-muted">
+        <li>Email must end with @gvcounseling.com</li>
+        <li>Password must be changed on first login</li>
+        <li>
+          A Google Drive folder named <span className="font-medium">First Last</span> is created next
+          to Maria and Steven&apos;s folders (system Drive must be connected)
+        </li>
+      </ul>
       <TherapistForm mode="create" cancelHref="/portal/admin/therapists" />
     </div>
   );
