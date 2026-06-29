@@ -4,6 +4,7 @@ import {
   portalSectionHeadingClass,
   StatusBadge,
 } from "@/components/portal/ui";
+import { AttendingNpiSearch } from "@/components/portal/AttendingNpiSearch";
 import { client837Ready, formatDate } from "@/lib/constants";
 
 export type ClientDetailData = {
@@ -87,7 +88,13 @@ function display(value: string | null | undefined): React.ReactNode {
   return value?.trim() || null;
 }
 
-export function ClientDetailView({ client }: { client: ClientDetailData }) {
+export function ClientDetailView({
+  client,
+  clientId,
+}: {
+  client: ClientDetailData;
+  clientId?: string;
+}) {
   const readiness = client837Ready(client);
   const mailing = formatAddress(client.addressLine1, client.addressLine2, client.city, client.state, client.zip);
   const residence = formatAddress(
@@ -137,7 +144,25 @@ export function ClientDetailView({ client }: { client: ClientDetailData }) {
       )}
 
       <DetailSection title="Medical & claims">
-        <DetailField label="Attending NPI" value={display(client.attendingNpi)} />
+        {client.attendingNpi ? (
+          <DetailField label="Attending NPI" value={display(client.attendingNpi)} />
+        ) : (
+          <div className="sm:col-span-2 lg:col-span-3">
+            <dt className="text-xs text-muted">Attending NPI</dt>
+            <dd className="text-sm leading-snug">
+              <span className="text-muted">Not set</span>
+              {clientId && (
+                <AttendingNpiSearch
+                  clientId={clientId}
+                  doctorName={client.attendingDoctorName}
+                  doctorAddress={client.attendingDoctorAddress}
+                  city={client.city}
+                  state={client.state}
+                />
+              )}
+            </dd>
+          </div>
+        )}
         <DetailField label="Doctor" value={display(client.attendingDoctorName)} />
         <DetailField label="Doctor phone" value={display(client.attendingDoctorPhone)} />
         <DetailField label="Doctor address" value={display(client.attendingDoctorAddress)} wide />

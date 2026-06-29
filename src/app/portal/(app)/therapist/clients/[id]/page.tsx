@@ -61,7 +61,7 @@ export default async function TherapistClientDetailPage({
         </div>
       </div>
 
-      <ClientDetailView client={client} />
+      <ClientDetailView client={client} clientId={client.id} />
       <Suspense fallback={<ClientDriveFilesLoading />}>
         <ClientDriveFilesSection
           driveFolderId={client.driveFolderId}

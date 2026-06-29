@@ -84,7 +84,7 @@ export default async function AdminClientDetailPage({
         therapists={therapists}
       />
 
-      <ClientDetailView client={client} />
+      <ClientDetailView client={client} clientId={client.id} />
       <ClientDriveResyncButton clientId={client.id} />
       <Suspense fallback={<ClientDriveFilesLoading />}>
         <ClientDriveFilesSection
