@@ -17,6 +17,7 @@ import {
 } from "@/components/portal/ui";
 import { formatDate } from "@/lib/constants";
 import { prisma } from "@/lib/prisma";
+import { LniFeesSection } from "@/components/portal/LniFeesSection";
 
 export default async function BillingPage({
   searchParams,
@@ -52,7 +53,8 @@ export default async function BillingPage({
       <div>
         <h1 className="font-serif text-3xl font-semibold text-primary-dark">Billing</h1>
         <p className="mt-2 text-muted">
-          Manage pay periods, generate 837 files, and view billing history for each cutoff date.
+          Manage pay periods, L&I procedure fees, generate 837 files, and view billing history for
+          each cutoff date.
         </p>
       </div>
 
@@ -85,6 +87,8 @@ export default async function BillingPage({
           </a>
         </div>
       </div>
+
+      <LniFeesSection />
 
       <form action={createPayPeriodAction} className={`${portalCardClass} grid gap-4 sm:grid-cols-2`}>
         <div className="sm:col-span-2">

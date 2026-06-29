@@ -48,6 +48,7 @@ model User {
   clients            Client[]
   invoices           Invoice[]
   billsGenerated     Bill[]    @relation("BillGeneratedBy")
+  procedureCodeFees  ProcedureCodeFee[] @relation("ProcedureCodeFeeCreatedBy")
   googleDriveConnection GoogleDriveConnection?
 }
 
@@ -181,6 +182,20 @@ model Bill {
   invoices      Invoice[]
 
   @@index([payPeriodId])
+}
+
+model ProcedureCodeFee {
+  id            String    @id @default(cuid())
+  procedureCode String
+  amount        Decimal   @db.Decimal(10, 2)
+  effectiveFrom DateTime  @db.Date
+  effectiveTo   DateTime? @db.Date
+  createdAt     DateTime  @default(now())
+  createdById   String?
+  createdBy     User?     @relation("ProcedureCodeFeeCreatedBy", fields: [createdById], references: [id])
+
+  @@unique([procedureCode, effectiveFrom])
+  @@index([procedureCode, effectiveFrom])
 }
 
 model GoogleDriveConnection {

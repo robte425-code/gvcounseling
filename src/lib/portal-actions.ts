@@ -21,6 +21,7 @@ import { getSystemDriveAccessToken } from "@/lib/google-drive-system";
 import { sendAdminWelcomeEmail, sendTherapistAssignmentEmail, sendTherapistWelcomeEmail } from "@/lib/referral-emails";
 import { generateOneTimePassword, hashPassword, verifyPassword } from "@/lib/password";
 import { fetchLniPayPeriods } from "@/lib/lni-pay-periods";
+import { createProcedureCodeFee, loadAllProcedureCodeFees, resolveFeeAmount } from "@/lib/procedure-fees";
 import { prisma } from "@/lib/prisma";
 
 function parseDecimal(value: FormDataEntryValue | null): number {
@@ -163,6 +164,24 @@ export async function deletePayPeriodAction(formData: FormData) {
     throw new Error("Cannot delete a pay period that already has generated bills.");
   }
   await prisma.payPeriod.delete({ where: { id } });
+  revalidatePath("/portal/admin/billing");
+}
+
+export async function createProcedureCodeFeeAction(formData: FormData) {
+  const session = await requireAdmin();
+  const procedureCode = String(formData.get("procedureCode") ?? "").trim();
+  const amount = parseDecimal(formData.get("amount"));
+  const effectiveFrom = parseDate(formData.get("effectiveFrom"));
+
+  if (!effectiveFrom) throw new Error("Effective from date is required.");
+
+  await createProcedureCodeFee({
+    procedureCode,
+    amount,
+    effectiveFrom,
+    createdById: session.user.id,
+  });
+
   revalidatePath("/portal/admin/billing");
 }
 
@@ -543,6 +562,9 @@ export async function generateBillAction(formData: FormData) {
     throw new Error(`Cannot generate bill. Missing data: ${blocked.slice(0, 5).join("; ")}`);
   }
 
+  const feeSchedule = await loadAllProcedureCodeFees();
+  const missingFees: string[] = [];
+
   const claims: Edi837Claim[] = invoices.map((inv) => {
     const dx = inv.client.diagnoses;
     return {
@@ -567,14 +589,28 @@ export async function generateBillAction(formData: FormData) {
         lniProviderId: inv.therapist.lniProviderId!,
         npi: inv.therapist.npi!,
       },
-      lines: inv.lineItems.map((line) => ({
-        procedureCode: line.procedureCode,
-        amount: Number(line.amount),
-        serviceDate: line.serviceDate,
-        units: line.units,
-      })),
+      lines: inv.lineItems.map((line) => {
+        const feeAmount = resolveFeeAmount(feeSchedule, line.procedureCode, line.serviceDate);
+        if (feeAmount === null) {
+          missingFees.push(
+            `${line.procedureCode} on ${line.serviceDate.toISOString().slice(0, 10)} (invoice #${inv.invoiceNumber})`,
+          );
+        }
+        return {
+          procedureCode: line.procedureCode,
+          amount: feeAmount ?? Number(line.amount),
+          serviceDate: line.serviceDate,
+          units: line.units,
+        };
+      }),
     };
   });
+
+  if (missingFees.length) {
+    throw new Error(
+      `Cannot generate bill. No L&I fee on file for: ${missingFees.slice(0, 5).join("; ")}. Add fees on the Billing page.`,
+    );
+  }
 
   const edi = buildEdi837(claims);
   const now = new Date();
