@@ -17,7 +17,7 @@ import { buildEdi837, generateClmControlNumber, type Edi837Claim } from "@/lib/e
 import { client837Ready, parseClaimNumber } from "@/lib/constants";
 import { moveClientDriveFolderToTherapist } from "@/lib/client-drive-move";
 import { sendTherapistAssignmentEmail } from "@/lib/referral-emails";
-import { hashPassword, verifyPassword } from "@/lib/password";
+import { generateOneTimePassword, hashPassword, verifyPassword } from "@/lib/password";
 import { fetchLniPayPeriods } from "@/lib/lni-pay-periods";
 import { prisma } from "@/lib/prisma";
 
@@ -771,4 +771,154 @@ export async function therapistRejectReferralAction(formData: FormData) {
   revalidatePath("/portal/admin/clients");
   revalidatePath(`/portal/admin/clients/${clientId}`);
   redirect("/portal/therapist/dashboard?referralDeclined=1");
+}
+
+const THERAPIST_EMAIL_DOMAIN = "@gvcounseling.com";
+
+function normalizeTherapistEmail(raw: string): string {
+  const email = raw.toLowerCase().trim();
+  if (!email.endsWith(THERAPIST_EMAIL_DOMAIN)) {
+    throw new Error(`Therapist email must end with ${THERAPIST_EMAIL_DOMAIN}.`);
+  }
+  return email;
+}
+
+function parseTherapistFields(formData: FormData) {
+  const firstName = String(formData.get("firstName") ?? "").trim();
+  const lastName = String(formData.get("lastName") ?? "").trim();
+  const email = normalizeTherapistEmail(String(formData.get("email") ?? ""));
+  const lniProviderId = String(formData.get("lniProviderId") ?? "").trim() || null;
+  const npi = String(formData.get("npi") ?? "").trim() || null;
+
+  if (!firstName || !lastName) {
+    throw new Error("First and last name are required.");
+  }
+
+  return { firstName, lastName, email, lniProviderId, npi };
+}
+
+export async function createTherapistAction(formData: FormData) {
+  await requireAdmin();
+  const fields = parseTherapistFields(formData);
+
+  const existing = await prisma.user.findUnique({ where: { email: fields.email } });
+  if (existing) {
+    throw new Error("A user with this email already exists.");
+  }
+
+  let password = String(formData.get("password") ?? "").trim();
+  if (!password) {
+    password = generateOneTimePassword();
+  } else if (password.length < 8) {
+    throw new Error("Password must be at least 8 characters.");
+  }
+
+  await prisma.user.create({
+    data: {
+      ...fields,
+      role: "THERAPIST",
+      passwordHash: await hashPassword(password),
+      mustChangePassword: true,
+    },
+  });
+
+  revalidatePath("/portal/admin/therapists");
+  redirect("/portal/admin/therapists");
+}
+
+export async function updateTherapistAction(formData: FormData) {
+  await requireAdmin();
+  const id = String(formData.get("id") ?? "").trim();
+  if (!id) throw new Error("Therapist id is required.");
+
+  const therapist = await prisma.user.findFirst({
+    where: { id, role: "THERAPIST" },
+    select: { id: true, email: true },
+  });
+  if (!therapist) throw new Error("Therapist not found.");
+
+  const fields = parseTherapistFields(formData);
+  if (fields.email !== therapist.email) {
+    const existing = await prisma.user.findUnique({ where: { email: fields.email } });
+    if (existing) {
+      throw new Error("A user with this email already exists.");
+    }
+  }
+
+  await prisma.user.update({
+    where: { id },
+    data: fields,
+  });
+
+  revalidatePath("/portal/admin/therapists");
+  revalidatePath(`/portal/admin/therapists/${id}/edit`);
+  redirect(`/portal/admin/therapists/${id}/edit?saved=1`);
+}
+
+export async function resetTherapistPasswordAction(formData: FormData) {
+  await requireAdmin();
+  const id = String(formData.get("id") ?? "").trim();
+  if (!id) throw new Error("Therapist id is required.");
+
+  const therapist = await prisma.user.findFirst({
+    where: { id, role: "THERAPIST" },
+    select: { id: true },
+  });
+  if (!therapist) throw new Error("Therapist not found.");
+
+  let password = String(formData.get("password") ?? "").trim();
+  if (!password) {
+    password = generateOneTimePassword();
+  } else if (password.length < 8) {
+    throw new Error("Password must be at least 8 characters.");
+  }
+
+  await prisma.user.update({
+    where: { id },
+    data: {
+      passwordHash: await hashPassword(password),
+      mustChangePassword: true,
+    },
+  });
+
+  revalidatePath(`/portal/admin/therapists/${id}/edit`);
+  redirect(`/portal/admin/therapists/${id}/edit?passwordReset=1`);
+}
+
+export async function deleteTherapistAction(formData: FormData) {
+  await requireAdmin();
+  const id = String(formData.get("id") ?? "").trim();
+  if (!id) throw new Error("Therapist id is required.");
+
+  const therapist = await prisma.user.findFirst({
+    where: { id, role: "THERAPIST" },
+    select: { id: true },
+  });
+  if (!therapist) throw new Error("Therapist not found.");
+
+  const [invoiceCount, billCount] = await Promise.all([
+    prisma.invoice.count({ where: { therapistId: id } }),
+    prisma.bill.count({ where: { generatedById: id } }),
+  ]);
+  if (invoiceCount > 0) {
+    throw new Error(`Cannot delete: therapist has ${invoiceCount} invoice(s).`);
+  }
+  if (billCount > 0) {
+    throw new Error(`Cannot delete: therapist generated ${billCount} L&I bill(s).`);
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await tx.client.updateMany({
+      where: { therapistId: id },
+      data: {
+        therapistId: null,
+        assignmentStatus: "UNASSIGNED",
+      },
+    });
+    await tx.user.delete({ where: { id } });
+  });
+
+  revalidatePath("/portal/admin/therapists");
+  revalidatePath("/portal/admin/clients");
+  redirect("/portal/admin/therapists?deleted=1");
 }

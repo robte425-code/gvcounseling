@@ -60,23 +60,57 @@ export async function sendReferralIntakeAdminNotice(options: {
   claimNumber: string;
   clientId: string;
   warnings: string[];
+  formDetails: string;
+  replyTo?: string;
+  attachments?: { filename: string; content: string; contentType?: string }[];
 }) {
   const adminEmail = process.env.CONTACT_EMAIL?.trim() || "ghim@gvcounseling.com";
   const clientUrl = `${getSiteUrl()}/portal/admin/clients/${options.clientId}`;
   const lines = [
     `A new referral was submitted and a client record was created.`,
     "",
+    `View client in the portal:`,
+    clientUrl,
+    "",
     `Client: ${options.clientName}`,
     `Claim #: ${options.claimNumber}`,
     "",
-    `Review and assign a therapist:`,
-    clientUrl,
+    "--- Referral form ---",
+    "",
+    options.formDetails,
   ];
   if (options.warnings.length) {
     lines.push("", "Notes:", ...options.warnings.map((w) => `- ${w}`));
   }
   await sendEmailTo(adminEmail, {
-    subject: `New referral ready for assignment: ${options.clientName}`,
+    subject: `New referral: ${options.clientName} (${options.claimNumber})`,
+    replyTo: options.replyTo,
     text: lines.join("\n"),
+    attachments: options.attachments,
+  });
+}
+
+export async function sendReferralIntakeFailedNotice(options: {
+  clientName: string;
+  formDetails: string;
+  errorMessage: string;
+  replyTo?: string;
+  attachments?: { filename: string; content: string; contentType?: string }[];
+}) {
+  const adminEmail = process.env.CONTACT_EMAIL?.trim() || "ghim@gvcounseling.com";
+  await sendEmailTo(adminEmail, {
+    subject: `Referral intake failed: ${options.clientName}`,
+    replyTo: options.replyTo,
+    text: [
+      "A referral was submitted but automatic client creation failed.",
+      "",
+      "Error:",
+      options.errorMessage,
+      "",
+      "--- Referral form ---",
+      "",
+      options.formDetails,
+    ].join("\n"),
+    attachments: options.attachments,
   });
 }

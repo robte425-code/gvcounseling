@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { collectReferralUploads, processReferralIntake } from "@/lib/referral-intake";
-import { sendEmail } from "@/lib/email";
-import { sendReferralIntakeAdminNotice } from "@/lib/referral-emails";
+import {
+  sendReferralIntakeAdminNotice,
+  sendReferralIntakeFailedNotice,
+} from "@/lib/referral-emails";
 
 const textFields = [
   "vrcName",
@@ -51,12 +53,8 @@ export async function POST(request: NextRequest) {
       lines.push(`${upload.fieldName}: ${upload.filename} (${Math.round(upload.buffer.length / 1024)} KB)`);
     }
 
-    await sendEmail({
-      subject: `Client referral: ${clientName}`,
-      replyTo: String(formData.get("vrcEmail") || ""),
-      text: lines.join("\n"),
-      attachments,
-    });
+    const formDetails = lines.join("\n");
+    const replyTo = String(formData.get("vrcEmail") || "");
 
     let intakeWarnings: string[] = [];
     try {
@@ -67,19 +65,21 @@ export async function POST(request: NextRequest) {
         claimNumber: intake.claimNumber,
         clientId: intake.clientId,
         warnings: intake.warnings,
+        formDetails,
+        replyTo,
+        attachments,
       });
     } catch (intakeError) {
       console.error("Referral intake error:", intakeError);
       intakeWarnings = [
         intakeError instanceof Error ? intakeError.message : "Client record creation failed.",
       ];
-      await sendEmail({
-        subject: `Referral intake failed: ${clientName}`,
-        text: [
-          "The referral notification email was sent, but automatic client creation failed.",
-          "",
-          intakeError instanceof Error ? intakeError.message : String(intakeError),
-        ].join("\n"),
+      await sendReferralIntakeFailedNotice({
+        clientName: String(clientName),
+        formDetails,
+        errorMessage: intakeWarnings[0]!,
+        replyTo,
+        attachments,
       });
     }
 
