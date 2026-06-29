@@ -11,6 +11,30 @@ type SendEmailOptions = {
   attachments?: Attachment[];
 };
 
+const DEFAULT_CONTACT_EMAIL = "ghim@gvcounseling.com";
+const DEFAULT_EMAIL_FROM = "Grandview Counseling <ghim@gvcounseling.com>";
+
+function envOrDefault(name: string, fallback: string): string {
+  const value = process.env[name]?.trim();
+  return value || fallback;
+}
+
+function formatPostmarkError(body: string): string {
+  try {
+    const parsed = JSON.parse(body) as { Message?: string };
+    const message = parsed.Message ?? body;
+    if (/sender signature/i.test(message)) {
+      return (
+        "Email could not be sent because the configured From address is not verified in Postmark. " +
+        "Set EMAIL_FROM in Vercel to a verified sender, or verify the address/domain in Postmark."
+      );
+    }
+    return `Email delivery failed: ${message}`;
+  } catch {
+    return `Email delivery failed: ${body}`;
+  }
+}
+
 function contentTypeFor(filename: string): string {
   const ext = filename.split(".").pop()?.toLowerCase();
   const types: Record<string, string> = {
@@ -25,8 +49,8 @@ function contentTypeFor(filename: string): string {
 }
 
 async function postmarkSend(to: string, options: SendEmailOptions) {
-  const serverToken = process.env.POSTMARK_SERVER_TOKEN;
-  const from = process.env.EMAIL_FROM || "info@gvcounseling.com";
+  const serverToken = process.env.POSTMARK_SERVER_TOKEN?.trim();
+  const from = envOrDefault("EMAIL_FROM", DEFAULT_EMAIL_FROM);
 
   if (!serverToken) {
     throw new Error(
@@ -60,12 +84,12 @@ async function postmarkSend(to: string, options: SendEmailOptions) {
 
   if (!res.ok) {
     const body = await res.text();
-    throw new Error(`Email delivery failed: ${body}`);
+    throw new Error(formatPostmarkError(body));
   }
 }
 
 export async function sendEmail({ subject, text, replyTo, attachments = [] }: SendEmailOptions) {
-  const to = process.env.CONTACT_EMAIL || "info@gvcounseling.com";
+  const to = envOrDefault("CONTACT_EMAIL", DEFAULT_CONTACT_EMAIL);
   await postmarkSend(to, { subject, text, replyTo, attachments });
 }
 

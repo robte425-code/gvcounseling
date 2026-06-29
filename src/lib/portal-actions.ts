@@ -757,7 +757,7 @@ export async function therapistRejectReferralAction(formData: FormData) {
     },
   });
 
-  const adminEmail = process.env.CONTACT_EMAIL || "ghim@gvcounseling.com";
+  const adminEmail = process.env.CONTACT_EMAIL?.trim() || "ghim@gvcounseling.com";
   const { sendAdminTherapistRejectionEmail } = await import("@/lib/referral-emails");
   await sendAdminTherapistRejectionEmail({
     adminEmail,

@@ -61,7 +61,7 @@ export async function sendReferralIntakeAdminNotice(options: {
   clientId: string;
   warnings: string[];
 }) {
-  const adminEmail = process.env.CONTACT_EMAIL || "ghim@gvcounseling.com";
+  const adminEmail = process.env.CONTACT_EMAIL?.trim() || "ghim@gvcounseling.com";
   const clientUrl = `${getSiteUrl()}/portal/admin/clients/${options.clientId}`;
   const lines = [
     `A new referral was submitted and a client record was created.`,
