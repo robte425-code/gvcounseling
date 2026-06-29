@@ -42,6 +42,7 @@ export function InvoiceAttachments({
   const selectedServiceDate = singleServiceDate ?? serviceDate;
 
   const canUpload =
+    Boolean(invoiceId) &&
     savedServiceDates.length > 0 &&
     selectedServiceDate &&
     savedServiceDates.includes(selectedServiceDate);
@@ -62,7 +63,7 @@ export function InvoiceAttachments({
 
   async function handleUpload(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (!canUpload || !selectedServiceDate) return;
+    if (!invoiceId || !canUpload || !selectedServiceDate) return;
 
     setUploading(true);
     setError("");
@@ -124,6 +125,8 @@ export function InvoiceAttachments({
       {!readOnly && (
         lineServiceDates.length === 0 ? (
           <p className="text-sm text-amber-900">Add at least one service line with a date before uploading attachments.</p>
+        ) : !invoiceId ? (
+          <p className="text-sm text-muted">Preparing invoice…</p>
         ) : (
           <form onSubmit={handleUpload} className="space-y-3">
             <div>

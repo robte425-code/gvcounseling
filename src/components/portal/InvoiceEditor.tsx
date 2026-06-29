@@ -38,7 +38,9 @@ type Props = {
   initialClientId?: string;
   therapistFeeSchedule?: FeeScheduleRow[];
   onLinesChange?: (lines: LineItem[]) => void;
+  onClientChange?: (clientId: string) => void;
   showSubmit?: boolean;
+  formId?: string;
 };
 
 const emptyLine = (): LineItem => ({
@@ -95,7 +97,9 @@ export function InvoiceEditor({
   initialClientId,
   therapistFeeSchedule,
   onLinesChange,
+  onClientChange,
   showSubmit = true,
+  formId,
 }: Props) {
   const usesTherapistFees = therapistFeeSchedule !== undefined;
 
@@ -123,6 +127,10 @@ export function InvoiceEditor({
   useEffect(() => {
     onLinesChange?.(lines);
   }, [lines, onLinesChange]);
+
+  useEffect(() => {
+    onClientChange?.(clientId);
+  }, [clientId, onClientChange]);
 
   const total = useMemo(
     () => lines.reduce((sum, l) => sum + (parseFloat(l.amount) || 0), 0),
@@ -171,7 +179,7 @@ export function InvoiceEditor({
   }
 
   return (
-    <form action={submitInvoiceAction} className="space-y-4">
+    <form id={formId} action={submitInvoiceAction} className="space-y-4">
       {invoiceId ? <input type="hidden" name="invoiceId" value={invoiceId} /> : null}
       {clients ? (
         <div>

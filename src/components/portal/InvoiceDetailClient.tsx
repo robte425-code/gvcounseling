@@ -6,8 +6,10 @@ import { InvoiceAttachments } from "@/components/portal/InvoiceAttachments";
 import { InvoiceEditor, type InvoiceLineItem } from "@/components/portal/InvoiceEditor";
 import { buildInvoiceFormData, linesArePersistable } from "@/lib/invoice-form-data";
 import { saveInvoiceDraftAction } from "@/lib/portal-actions";
-import { portalCardClass } from "@/components/portal/ui";
+import { portalButtonClass, portalCardClass } from "@/components/portal/ui";
 import type { FeeScheduleRow } from "@/lib/procedure-fee-schedule";
+
+const INVOICE_FORM_ID = "invoice-form";
 
 type Props = {
   invoiceId: string;
@@ -16,7 +18,7 @@ type Props = {
   therapistFeeSchedule?: FeeScheduleRow[];
   attachments: { id: string; filename: string; blobUrl: string }[];
   savedServiceDates: string[];
-  actions?: React.ReactNode;
+  footerActions?: React.ReactNode;
 };
 
 function uniqueServiceDates(lines: InvoiceLineItem[]): string[] {
@@ -33,13 +35,19 @@ export function InvoiceDetailClient({
   therapistFeeSchedule,
   attachments,
   savedServiceDates,
-  actions,
+  footerActions,
 }: Props) {
   const router = useRouter();
   const [lines, setLines] = useState(initialLines);
   const [persistedServiceDates, setPersistedServiceDates] = useState(savedServiceDates);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lineServiceDates = useMemo(() => uniqueServiceDates(lines), [lines]);
+
+  const usesTherapistFees = therapistFeeSchedule !== undefined;
+  const canSubmit =
+    !readOnly &&
+    linesArePersistable(lines) &&
+    (!usesTherapistFees || !lines.some((line) => !line.amount));
 
   useEffect(() => {
     setPersistedServiceDates(savedServiceDates);
@@ -65,16 +73,17 @@ export function InvoiceDetailClient({
   }, [invoiceId, lines, readOnly, router]);
 
   return (
-    <>
+    <div className="space-y-8">
       <div className={portalCardClass}>
         <h2 className="mb-4 font-serif text-xl font-semibold text-primary-dark">Service lines</h2>
         <InvoiceEditor
+          formId={INVOICE_FORM_ID}
           invoiceId={invoiceId}
           readOnly={readOnly}
           initialLines={initialLines}
           therapistFeeSchedule={therapistFeeSchedule}
           onLinesChange={setLines}
-          actions={actions}
+          showSubmit={false}
         />
       </div>
 
@@ -85,6 +94,29 @@ export function InvoiceDetailClient({
         lineServiceDates={lineServiceDates}
         savedServiceDates={persistedServiceDates}
       />
-    </>
+
+      {!readOnly && usesTherapistFees && lines.some((line) => !line.amount) && (
+        <p className="text-sm text-amber-900">
+          One or more lines have no fee on file for the selected date. Ask admin to update your
+          procedure code fees before submitting.
+        </p>
+      )}
+
+      {(footerActions || !readOnly) && (
+        <div className="flex flex-wrap items-center gap-3">
+          {!readOnly && (
+            <button
+              type="submit"
+              form={INVOICE_FORM_ID}
+              className={portalButtonClass}
+              disabled={!canSubmit}
+            >
+              Submit invoice
+            </button>
+          )}
+          {footerActions}
+        </div>
+      )}
+    </div>
   );
 }

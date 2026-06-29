@@ -454,6 +454,26 @@ function parseInvoiceLineItems(formData: FormData) {
   return lineItems;
 }
 
+async function resolveInvoiceClientUpdate(
+  session: Awaited<ReturnType<typeof requireSession>>,
+  formData: FormData,
+) {
+  const clientId = String(formData.get("clientId") ?? "").trim();
+  if (!clientId || session.user.role !== "THERAPIST") return {};
+
+  const client = await prisma.client.findFirst({
+    where: {
+      id: clientId,
+      therapistId: session.user.id,
+      assignmentStatus: "ACTIVE",
+    },
+    select: { id: true },
+  });
+  if (!client) throw new Error("Client not found.");
+
+  return { clientId };
+}
+
 async function persistInvoiceFromFormData(
   session: Awaited<ReturnType<typeof requireSession>>,
   formData: FormData,
@@ -527,7 +547,10 @@ async function persistInvoiceFromFormData(
     prisma.invoiceLineItem.deleteMany({ where: { invoiceId } }),
     prisma.invoice.update({
       where: { id: invoiceId },
-      data: { totalAmount },
+      data: {
+        totalAmount,
+        ...(await resolveInvoiceClientUpdate(session, formData)),
+      },
     }),
     ...pricedLineItems.map((line) =>
       prisma.invoiceLineItem.create({
@@ -553,12 +576,53 @@ export async function saveInvoiceDraftAction(formData: FormData) {
   await persistInvoiceFromFormData(session, formData, { allowCreate: false });
 
   revalidatePath(`/portal/therapist/invoices/${invoiceId}`);
+  revalidatePath("/portal/therapist/invoices/new");
   revalidatePath("/portal/admin/invoices");
+}
+
+export async function createInvoiceDraftAction(clientId: string) {
+  const session = await requireTherapist();
+  const client = await prisma.client.findFirst({
+    where: {
+      id: clientId,
+      therapistId: session.user.id,
+      assignmentStatus: "ACTIVE",
+    },
+  });
+  if (!client) throw new Error("Client not found.");
+
+  const serviceDate = new Date();
+  const pricedLineItems = await applyTherapistFeeSchedule(session.user.id, [
+    {
+      serviceDate,
+      procedureCode: "96156",
+      sortOrder: 0,
+    },
+  ]);
+  const totalAmount = pricedLineItems.reduce((s, l) => s + l.amount, 0);
+
+  const invoice = await prisma.invoice.create({
+    data: {
+      therapistId: session.user.id,
+      clientId,
+      invoiceNumber: await nextInvoiceNumber(session.user.id),
+      totalAmount,
+      status: "DRAFT",
+      lineItems: {
+        create: pricedLineItems.map((line) => ({ ...line, units: 1 })),
+      },
+    },
+  });
+
+  revalidatePath("/portal/therapist/invoices");
+  revalidatePath("/portal/therapist/invoices/new");
+
+  return { invoiceId: invoice.id };
 }
 
 export async function submitInvoiceAction(formData: FormData) {
   const session = await requireTherapist();
-  const { invoice, created } = await persistInvoiceFromFormData(session, formData, {
+  const { invoice } = await persistInvoiceFromFormData(session, formData, {
     allowCreate: true,
   });
 
@@ -580,11 +644,10 @@ export async function submitInvoiceAction(formData: FormData) {
 
   revalidatePath(`/portal/therapist/invoices/${invoice.id}`);
   revalidatePath("/portal/therapist/invoices");
+  revalidatePath("/portal/therapist/invoices/new");
   revalidatePath("/portal/admin/invoices");
 
-  if (created) {
-    redirect(`/portal/therapist/invoices/${invoice.id}`);
-  }
+  redirect(`/portal/therapist/invoices/${invoice.id}`);
 }
 
 export async function unsubmitInvoiceAction(formData: FormData) {

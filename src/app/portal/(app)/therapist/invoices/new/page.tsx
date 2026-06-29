@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { requireTherapist } from "@/auth";
-import { InvoiceEditor } from "@/components/portal/InvoiceEditor";
+import { NewInvoiceClient } from "@/components/portal/NewInvoiceClient";
 import { portalCardClass } from "@/components/portal/ui";
 import { loadTherapistProcedureCodeFees, serializeFeeSchedule } from "@/lib/procedure-fees";
 import { prisma } from "@/lib/prisma";
@@ -38,19 +38,14 @@ export default async function NewInvoicePage({
           No clients assigned to you yet. Ask the admin to add clients or import Referral Submission files.
         </p>
       ) : (
-        <div className={portalCardClass}>
-          <h2 className="mb-4 font-serif text-xl font-semibold text-primary-dark">Service lines</h2>
-          <InvoiceEditor
-            readOnly={false}
-            initialLines={[]}
-            therapistFeeSchedule={serializeFeeSchedule(therapistFees)}
-            clients={clients.map((c) => ({
-              id: c.id,
-              label: `${c.lniClaimNumber} — ${c.lastName}, ${c.firstName}`,
-            }))}
-            initialClientId={selectedClientId}
-          />
-        </div>
+        <NewInvoiceClient
+          clients={clients.map((c) => ({
+            id: c.id,
+            label: `${c.lniClaimNumber} — ${c.lastName}, ${c.firstName}`,
+          }))}
+          initialClientId={selectedClientId!}
+          therapistFeeSchedule={serializeFeeSchedule(therapistFees)}
+        />
       )}
     </div>
   );

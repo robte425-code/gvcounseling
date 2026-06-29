@@ -52,18 +52,16 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
     ...new Set(invoice.lineItems.map((line) => line.serviceDate.toISOString().slice(0, 10))),
   ];
 
-  const actionButtons =
+  const footerActions =
     session.user.role === "THERAPIST" ? (
       <>
         {invoice.status === "DRAFT" && (
-          <>
-            <form action={deleteInvoiceAction}>
-              <input type="hidden" name="invoiceId" value={invoice.id} />
-              <button type="submit" className="text-sm text-red-700 hover:underline">
-                Delete draft
-              </button>
-            </form>
-          </>
+          <form action={deleteInvoiceAction}>
+            <input type="hidden" name="invoiceId" value={invoice.id} />
+            <button type="submit" className="text-sm text-red-700 hover:underline">
+              Delete draft
+            </button>
+          </form>
         )}
         {invoice.status === "SUBMITTED" && (
           <form action={unsubmitInvoiceAction}>
@@ -112,7 +110,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
         therapistFeeSchedule={therapistFees}
         attachments={invoice.attachments}
         savedServiceDates={serviceDates}
-        actions={actionButtons}
+        footerActions={footerActions}
       />
     </div>
   );
