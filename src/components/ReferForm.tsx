@@ -215,7 +215,7 @@ export function ReferForm() {
           required
         />
 
-        <Field label="Client's Date of Birth" name="clientDob" type="date" required />
+        <Field label="Client's Date of Birth" name="clientDob" type="date" />
         <Field label="Client's Email Address" name="clientEmail" type="email" />
         <Field
           label="If client is attending PGAP, please provide Activity coach name"
