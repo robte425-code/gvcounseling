@@ -1,12 +1,13 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   formatCurrency,
   formatProcedureCodeLabel,
   PROCEDURE_CODE_NOTICES,
   PROCEDURE_CODES,
 } from "@/lib/constants";
+import { resolveFeeAmount, type FeeScheduleRow } from "@/lib/procedure-fee-schedule";
 import { saveInvoiceAction } from "@/lib/portal-actions";
 import {
   portalButtonClass,
@@ -33,6 +34,7 @@ type Props = {
   actions?: React.ReactNode;
   clients?: ClientOption[];
   initialClientId?: string;
+  therapistFeeSchedule?: FeeScheduleRow[];
 };
 
 const emptyLine = (): LineItem => ({
@@ -87,13 +89,30 @@ export function InvoiceEditor({
   actions,
   clients,
   initialClientId,
+  therapistFeeSchedule,
 }: Props) {
+  const usesTherapistFees = therapistFeeSchedule !== undefined;
+
+  function priceLine(line: LineItem): LineItem {
+    if (!therapistFeeSchedule?.length || !line.serviceDate || !line.procedureCode) {
+      return line;
+    }
+    const amount = resolveFeeAmount(therapistFeeSchedule, line.procedureCode, line.serviceDate);
+    return { ...line, amount: amount !== null ? amount.toFixed(2) : "" };
+  }
+
   const [clientId, setClientId] = useState(
     initialClientId ?? clients?.[0]?.id ?? "",
   );
-  const [lines, setLines] = useState<LineItem[]>(
-    initialLines.length ? initialLines : [emptyLine()],
+  const [lines, setLines] = useState<LineItem[]>(() =>
+    (initialLines.length ? initialLines : [emptyLine()]).map(priceLine),
   );
+
+  useEffect(() => {
+    if (!usesTherapistFees) return;
+    setLines((prev) => prev.map(priceLine));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reprice when fee schedule loads
+  }, [therapistFeeSchedule]);
 
   const total = useMemo(
     () => lines.reduce((sum, l) => sum + (parseFloat(l.amount) || 0), 0),
@@ -101,11 +120,13 @@ export function InvoiceEditor({
   );
 
   function updateLine(index: number, patch: Partial<LineItem>) {
-    setLines((prev) => prev.map((line, i) => (i === index ? { ...line, ...patch } : line)));
+    setLines((prev) =>
+      prev.map((line, i) => (i === index ? priceLine({ ...line, ...patch }) : line)),
+    );
   }
 
   function addLine() {
-    setLines((prev) => [...prev, emptyLine()]);
+    setLines((prev) => [...prev, priceLine(emptyLine())]);
   }
 
   function removeLine(index: number) {
@@ -194,15 +215,21 @@ export function InvoiceEditor({
             </div>
             <div>
               <label className={portalLabelClass}>Amount</label>
-              <input
-                type="number"
-                step="0.01"
-                min="0.01"
-                required
-                value={line.amount}
-                onChange={(e) => updateLine(index, { amount: e.target.value })}
-                className={portalInputClass}
-              />
+              {usesTherapistFees ? (
+                <p className={`${portalInputClass} bg-muted/10 text-muted`}>
+                  {line.amount ? formatCurrency(line.amount) : "No fee on file"}
+                </p>
+              ) : (
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  required
+                  value={line.amount}
+                  onChange={(e) => updateLine(index, { amount: e.target.value })}
+                  className={portalInputClass}
+                />
+              )}
             </div>
             <div className="flex items-end">
               <button
@@ -223,8 +250,18 @@ export function InvoiceEditor({
         </button>
         <p className="font-semibold">Total: {formatCurrency(total)}</p>
       </div>
+      {usesTherapistFees && lines.some((line) => !line.amount) && (
+        <p className="text-sm text-amber-900">
+          One or more lines have no fee on file for the selected date. Ask admin to update your
+          procedure code fees before saving.
+        </p>
+      )}
       <div className="flex flex-wrap gap-3">
-        <button type="submit" className={portalButtonClass}>
+        <button
+          type="submit"
+          className={portalButtonClass}
+          disabled={usesTherapistFees && lines.some((line) => !line.amount)}
+        >
           Save invoice
         </button>
         {actions}

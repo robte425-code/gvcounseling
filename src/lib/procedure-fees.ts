@@ -1,57 +1,25 @@
 import { PROCEDURE_CODES } from "@/lib/constants";
+import {
+  dayBefore,
+  getCurrentProcedureFeeFromSchedule,
+  resolveFeeAmount,
+  toDateOnly,
+  type FeeScheduleRow,
+} from "@/lib/procedure-fee-schedule";
 import { prisma } from "@/lib/prisma";
+
+export {
+  dayBefore,
+  getCurrentProcedureFeeFromSchedule,
+  resolveFeeAmount,
+  toDateOnly,
+  type FeeScheduleRow,
+} from "@/lib/procedure-fee-schedule";
 
 type TransactionClient = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
 
-export type FeeScheduleRow = {
-  procedureCode: string;
-  amount: unknown;
-  effectiveFrom: Date;
-  effectiveTo: Date | null;
-};
-
-export type TherapistFeeScheduleRow = FeeScheduleRow & { therapistId: string };
-
 export function isKnownProcedureCode(code: string): boolean {
   return PROCEDURE_CODES.some((entry) => entry.code === code);
-}
-
-/** Normalize to UTC midnight for date-only fee comparisons. */
-export function toDateOnly(value: Date | string): Date {
-  const text = typeof value === "string" ? value : value.toISOString().slice(0, 10);
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(text);
-  if (!match) throw new Error("Invalid date.");
-  const [, year, month, day] = match;
-  return new Date(Date.UTC(Number(year), Number(month) - 1, Number(day)));
-}
-
-export function dayBefore(date: Date): Date {
-  const previous = new Date(date);
-  previous.setUTCDate(previous.getUTCDate() - 1);
-  return previous;
-}
-
-export function resolveFeeAmount(
-  fees: FeeScheduleRow[],
-  procedureCode: string,
-  serviceDate: Date,
-): number | null {
-  const date = toDateOnly(serviceDate);
-  let bestAmount: number | null = null;
-  let bestFrom: Date | null = null;
-
-  for (const fee of fees) {
-    if (fee.procedureCode !== procedureCode) continue;
-    const from = toDateOnly(fee.effectiveFrom);
-    if (from > date) continue;
-    if (fee.effectiveTo && toDateOnly(fee.effectiveTo) < date) continue;
-    if (!bestFrom || from > bestFrom) {
-      bestFrom = from;
-      bestAmount = Number(fee.amount);
-    }
-  }
-
-  return bestAmount;
 }
 
 export async function loadAllProcedureCodeFees() {
@@ -63,28 +31,6 @@ export async function loadAllProcedureCodeFees() {
 export async function getCurrentProcedureFee(procedureCode: string, asOf = new Date()) {
   const fees = await loadAllProcedureCodeFees();
   return getCurrentProcedureFeeFromSchedule(fees, procedureCode, asOf);
-}
-
-export function getCurrentProcedureFeeFromSchedule(
-  fees: FeeScheduleRow[],
-  procedureCode: string,
-  asOf = new Date(),
-) {
-  const amount = resolveFeeAmount(fees, procedureCode, asOf);
-  if (amount === null) return null;
-
-  const date = toDateOnly(asOf);
-  const active = fees
-    .filter((fee) => {
-      if (fee.procedureCode !== procedureCode) return false;
-      const from = toDateOnly(fee.effectiveFrom);
-      if (from > date) return false;
-      if (fee.effectiveTo && toDateOnly(fee.effectiveTo) < date) return false;
-      return true;
-    })
-    .sort((a, b) => toDateOnly(b.effectiveFrom).getTime() - toDateOnly(a.effectiveFrom).getTime())[0];
-
-  return active ? { amount, effectiveFrom: active.effectiveFrom } : null;
 }
 
 async function upsertFeeSchedule(
@@ -225,14 +171,6 @@ export async function loadTherapistProcedureCodeFees(therapistId: string) {
   });
 }
 
-export async function loadTherapistProcedureCodeFeesForTherapists(therapistIds: string[]) {
-  if (therapistIds.length === 0) return [];
-  return prisma.therapistProcedureCodeFee.findMany({
-    where: { therapistId: { in: therapistIds } },
-    orderBy: [{ therapistId: "asc" }, { procedureCode: "asc" }, { effectiveFrom: "desc" }],
-  });
-}
-
 export async function createTherapistProcedureCodeFee(options: {
   therapistId: string;
   procedureCode: string;
@@ -261,22 +199,39 @@ export async function createTherapistProcedureCodeFee(options: {
   });
 }
 
-export function buildFeeLookup(
-  fees: FeeScheduleRow[],
-) {
+export function buildFeeLookup(fees: FeeScheduleRow[]) {
   return (procedureCode: string, serviceDate: Date) =>
     resolveFeeAmount(fees, procedureCode, serviceDate);
 }
 
-export function resolveTherapistFeeAmount(
-  therapistFees: TherapistFeeScheduleRow[],
-  globalFees: FeeScheduleRow[],
+export function serializeFeeSchedule(
+  fees: {
+    procedureCode: string;
+    amount: unknown;
+    effectiveFrom: Date;
+    effectiveTo: Date | null;
+  }[],
+): FeeScheduleRow[] {
+  return fees.map((fee) => ({
+    procedureCode: fee.procedureCode,
+    amount: Number(fee.amount),
+    effectiveFrom: fee.effectiveFrom.toISOString().slice(0, 10),
+    effectiveTo: fee.effectiveTo ? fee.effectiveTo.toISOString().slice(0, 10) : null,
+  }));
+}
+
+export async function applyTherapistFeeSchedule(
   therapistId: string,
-  procedureCode: string,
-  serviceDate: Date,
-): number | null {
-  const scoped = therapistFees.filter((fee) => fee.therapistId === therapistId);
-  const therapistAmount = resolveFeeAmount(scoped, procedureCode, serviceDate);
-  if (therapistAmount !== null) return therapistAmount;
-  return resolveFeeAmount(globalFees, procedureCode, serviceDate);
+  lines: { serviceDate: Date; procedureCode: string; sortOrder: number }[],
+) {
+  const fees = await loadTherapistProcedureCodeFees(therapistId);
+  return lines.map((line) => {
+    const amount = resolveFeeAmount(fees, line.procedureCode, line.serviceDate);
+    if (amount === null) {
+      throw new Error(
+        `No fee on file for ${line.procedureCode} on ${line.serviceDate.toISOString().slice(0, 10)}. Ask admin to set your procedure code fees.`,
+      );
+    }
+    return { ...line, amount };
+  });
 }

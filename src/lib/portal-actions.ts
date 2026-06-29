@@ -21,7 +21,7 @@ import { getSystemDriveAccessToken } from "@/lib/google-drive-system";
 import { sendAdminWelcomeEmail, sendTherapistAssignmentEmail, sendTherapistWelcomeEmail } from "@/lib/referral-emails";
 import { generateOneTimePassword, hashPassword, verifyPassword } from "@/lib/password";
 import { fetchLniPayPeriods } from "@/lib/lni-pay-periods";
-import { createProcedureCodeFee, createTherapistProcedureCodeFee, loadAllProcedureCodeFees, loadTherapistProcedureCodeFeesForTherapists, resolveTherapistFeeAmount } from "@/lib/procedure-fees";
+import { createProcedureCodeFee, createTherapistProcedureCodeFee, applyTherapistFeeSchedule, loadAllProcedureCodeFees, resolveFeeAmount } from "@/lib/procedure-fees";
 import { prisma } from "@/lib/prisma";
 
 function parseDecimal(value: FormDataEntryValue | null): number {
@@ -414,22 +414,32 @@ export async function saveInvoiceAction(formData: FormData) {
   const invoiceId = String(formData.get("invoiceId") ?? "").trim();
 
   const lineCount = parseInt(String(formData.get("lineCount") ?? "0"), 10);
-  const lineItems: { serviceDate: Date; procedureCode: string; amount: number; sortOrder: number }[] =
-    [];
+  const lineItems: { serviceDate: Date; procedureCode: string; sortOrder: number }[] = [];
 
   for (let i = 0; i < lineCount; i++) {
     const serviceDate = parseDate(formData.get(`line_${i}_serviceDate`));
     const procedureCode = String(formData.get(`line_${i}_procedureCode`) ?? "").trim();
-    const amount = parseDecimal(formData.get(`line_${i}_amount`));
-    if (!serviceDate || !procedureCode || amount <= 0) continue;
-    lineItems.push({ serviceDate, procedureCode, amount, sortOrder: i });
+    if (!serviceDate || !procedureCode) continue;
+    lineItems.push({ serviceDate, procedureCode, sortOrder: i });
   }
 
   if (!lineItems.length) {
-    throw new Error("Add at least one service line with date, code, and amount.");
+    throw new Error("Add at least one service line with date and procedure code.");
   }
 
-  const totalAmount = lineItems.reduce((s, l) => s + l.amount, 0);
+  const therapistIdForFees = invoiceId
+    ? (
+        await prisma.invoice.findUnique({
+          where: { id: invoiceId },
+          select: { therapistId: true },
+        })
+      )?.therapistId
+    : session.user.id;
+
+  if (!therapistIdForFees) throw new Error("Invoice not found.");
+
+  const pricedLineItems = await applyTherapistFeeSchedule(therapistIdForFees, lineItems);
+  const totalAmount = pricedLineItems.reduce((s, l) => s + l.amount, 0);
 
   if (!invoiceId) {
     if (session.user.role !== "THERAPIST") {
@@ -454,7 +464,7 @@ export async function saveInvoiceAction(formData: FormData) {
         totalAmount,
         status: "DRAFT",
         lineItems: {
-          create: lineItems.map((line) => ({ ...line, units: 1 })),
+          create: pricedLineItems.map((line) => ({ ...line, units: 1 })),
         },
       },
     });
@@ -482,7 +492,7 @@ export async function saveInvoiceAction(formData: FormData) {
       where: { id: invoiceId },
       data: { totalAmount },
     }),
-    ...lineItems.map((line) =>
+    ...pricedLineItems.map((line) =>
       prisma.invoiceLineItem.create({
         data: { invoiceId, ...line, units: 1 },
       }),
@@ -585,9 +595,7 @@ export async function generateBillAction(formData: FormData) {
     throw new Error(`Cannot generate bill. Missing data: ${blocked.slice(0, 5).join("; ")}`);
   }
 
-  const therapistIds = [...new Set(invoices.map((inv) => inv.therapistId))];
-  const therapistFeeSchedule = await loadTherapistProcedureCodeFeesForTherapists(therapistIds);
-  const globalFeeSchedule = await loadAllProcedureCodeFees();
+  const lniFeeSchedule = await loadAllProcedureCodeFees();
   const missingFees: string[] = [];
 
   const claims: Edi837Claim[] = invoices.map((inv) => {
@@ -615,16 +623,10 @@ export async function generateBillAction(formData: FormData) {
         npi: inv.therapist.npi!,
       },
       lines: inv.lineItems.map((line) => {
-        const feeAmount = resolveTherapistFeeAmount(
-          therapistFeeSchedule,
-          globalFeeSchedule,
-          inv.therapistId,
-          line.procedureCode,
-          line.serviceDate,
-        );
+        const feeAmount = resolveFeeAmount(lniFeeSchedule, line.procedureCode, line.serviceDate);
         if (feeAmount === null) {
           missingFees.push(
-            `${line.procedureCode} on ${line.serviceDate.toISOString().slice(0, 10)} (invoice #${inv.invoiceNumber}, therapist ${inv.therapist.lastName})`,
+            `${line.procedureCode} on ${line.serviceDate.toISOString().slice(0, 10)} (invoice #${inv.invoiceNumber})`,
           );
         }
         return {

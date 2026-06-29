@@ -10,6 +10,7 @@ import {
   submitInvoiceAction,
   unsubmitInvoiceAction,
 } from "@/lib/portal-actions";
+import { loadTherapistProcedureCodeFees, serializeFeeSchedule } from "@/lib/procedure-fees";
 import { prisma } from "@/lib/prisma";
 
 export default async function InvoiceDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -31,6 +32,11 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
   if (session.user.role === "THERAPIST" && invoice.therapistId !== session.user.id) {
     notFound();
   }
+
+  const therapistFees =
+    session.user.role === "THERAPIST" && invoice.status === "DRAFT"
+      ? serializeFeeSchedule(await loadTherapistProcedureCodeFees(invoice.therapistId))
+      : undefined;
 
   const readOnly =
     session.user.role === "THERAPIST"
@@ -113,6 +119,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
           invoiceId={invoice.id}
           readOnly={readOnly}
           initialLines={lines}
+          therapistFeeSchedule={therapistFees}
           actions={actionButtons}
         />
       </div>

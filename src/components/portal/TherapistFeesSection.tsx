@@ -1,10 +1,7 @@
 import Link from "next/link";
 import { createTherapistProcedureCodeFeeAction } from "@/lib/portal-actions";
-import { formatCurrency, formatDate, PROCEDURE_CODES } from "@/lib/constants";
-import {
-  getCurrentProcedureFeeFromSchedule,
-  loadTherapistProcedureCodeFees,
-} from "@/lib/procedure-fees";
+import { TherapistFeesTable } from "@/components/portal/TherapistFeesTable";
+import { loadTherapistProcedureCodeFees, serializeFeeSchedule } from "@/lib/procedure-fees";
 import {
   portalButtonSecondaryClass,
   portalCardCompactClass,
@@ -12,18 +9,14 @@ import {
   portalLabelCompactClass,
   portalSectionHeadingClass,
 } from "@/components/portal/ui";
+import { PROCEDURE_CODES } from "@/lib/constants";
 
 type Props = {
   therapistId: string;
 };
 
 export async function TherapistFeesSection({ therapistId }: Props) {
-  const allFees = await loadTherapistProcedureCodeFees(therapistId);
-  const currentFees = PROCEDURE_CODES.map((entry) => ({
-    code: entry.code,
-    description: entry.description,
-    current: getCurrentProcedureFeeFromSchedule(allFees, entry.code),
-  }));
+  const fees = serializeFeeSchedule(await loadTherapistProcedureCodeFees(therapistId));
 
   return (
     <section className={portalCardCompactClass}>
@@ -39,35 +32,13 @@ export async function TherapistFeesSection({ therapistId }: Props) {
         </Link>
       </div>
       <p className="mt-1 text-xs text-muted">
-        Rates for this therapist&apos;s L&I billing. When generating 837 files, therapist fees take
-        precedence; otherwise the global L&I fee schedule on Billing applies.
+        Rates this therapist invoices the practice. L&I 837 billing uses the global fee schedule on
+        Billing; the difference is practice margin.
       </p>
 
-      <table className="mt-3 w-full text-left text-xs sm:text-sm">
-        <thead>
-          <tr className="border-b border-border text-muted">
-            <th className="py-1.5 pr-3">Procedure</th>
-            <th className="py-1.5 pr-3">Current fee</th>
-            <th className="py-1.5 pr-3">Effective from</th>
-          </tr>
-        </thead>
-        <tbody>
-          {currentFees.map(({ code, description, current }) => (
-            <tr key={code} className="border-b border-border/60 last:border-0">
-              <td className="py-1.5 pr-3">
-                <span className="font-mono">{code}</span>
-                <span className="text-muted"> · {description}</span>
-              </td>
-              <td className="py-1.5 pr-3 whitespace-nowrap">
-                {current ? formatCurrency(current.amount) : <span className="text-muted">Not set</span>}
-              </td>
-              <td className="py-1.5 pr-3 whitespace-nowrap">
-                {current ? formatDate(current.effectiveFrom) : <span className="text-muted">—</span>}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <div className="mt-3">
+        <TherapistFeesTable fees={fees} />
+      </div>
 
       <form
         action={createTherapistProcedureCodeFeeAction}

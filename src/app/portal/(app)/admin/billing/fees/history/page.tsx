@@ -20,8 +20,8 @@ export default async function LniFeeHistoryPage() {
         </Link>
         <h1 className="mt-3 font-serif text-3xl font-semibold text-primary-dark">L&I fee history</h1>
         <p className="mt-2 text-muted">
-          All procedure code rates by effective date. Current rates are used when generating 837
-          files based on each line&apos;s service date.
+          L&I procedure rates by effective date. Used when generating 837 files to bill L&I. Therapist
+          invoices use each therapist&apos;s own fee schedule.
         </p>
       </div>
 

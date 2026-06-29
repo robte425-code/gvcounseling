@@ -39,8 +39,8 @@ export default async function TherapistFeeHistoryPage({
           Fee history — {therapist.lastName}, {therapist.firstName}
         </h1>
         <p className="mt-2 text-muted">
-          All procedure code rates for this therapist by effective date. Therapist-specific rates are
-          used when generating 837 files; otherwise the global L&I schedule applies.
+          All procedure code rates for this therapist by effective date. These rates are used when
+          the therapist creates invoices; L&I 837 billing uses the global schedule on Billing.
         </p>
       </div>
 

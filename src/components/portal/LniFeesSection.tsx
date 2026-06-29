@@ -31,6 +31,9 @@ export async function LniFeesSection() {
           Fee history
         </Link>
       </div>
+      <p className="mt-1 text-xs text-muted">
+        Rates billed to L&I in 837 files. Therapist invoices use each therapist&apos;s own fee schedule.
+      </p>
 
       <table className="mt-3 w-full text-left text-xs sm:text-sm">
         <thead>

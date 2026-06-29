@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requireTherapist } from "@/auth";
 import { InvoiceEditor } from "@/components/portal/InvoiceEditor";
 import { portalCardClass } from "@/components/portal/ui";
+import { loadTherapistProcedureCodeFees, serializeFeeSchedule } from "@/lib/procedure-fees";
 import { prisma } from "@/lib/prisma";
 
 export default async function NewInvoicePage({
@@ -11,10 +12,13 @@ export default async function NewInvoicePage({
 }) {
   const session = await requireTherapist();
   const { clientId: preselectedClientId } = await searchParams;
-  const clients = await prisma.client.findMany({
-    where: { therapistId: session.user.id, assignmentStatus: "ACTIVE" },
-    orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
-  });
+  const [clients, therapistFees] = await Promise.all([
+    prisma.client.findMany({
+      where: { therapistId: session.user.id, assignmentStatus: "ACTIVE" },
+      orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
+    }),
+    loadTherapistProcedureCodeFees(session.user.id),
+  ]);
 
   const selectedClientId =
     preselectedClientId && clients.some((c) => c.id === preselectedClientId)
@@ -39,6 +43,7 @@ export default async function NewInvoicePage({
           <InvoiceEditor
             readOnly={false}
             initialLines={[]}
+            therapistFeeSchedule={serializeFeeSchedule(therapistFees)}
             clients={clients.map((c) => ({
               id: c.id,
               label: `${c.lniClaimNumber} — ${c.lastName}, ${c.firstName}`,
