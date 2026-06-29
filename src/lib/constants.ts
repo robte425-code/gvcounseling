@@ -18,15 +18,15 @@ export const ORG = {
 } as const;
 
 export const PROCEDURE_CODES = [
-  { code: "98966", description: "1-10 minutes phone call" },
-  { code: "98967", description: "11-20 minutes phone call" },
-  { code: "98968", description: "21+ minutes phone call" },
   { code: "96156", description: "Hlth Behavioral Assmt/Reassessment (BHI)" },
   { code: "96158", description: "Behavioral Health Intervention - Individual" },
   { code: "96159", description: "Add on" },
   { code: "90832", description: "Psychotherapy - Individual 16 to 37 minutes" },
   { code: "90834", description: "Psychotherapy - Individual 45 minutes" },
   { code: "90837", description: "Psychotherapy - Individual 53 to 60 minutes" },
+  { code: "9919M", description: "Case management telephone calls" },
+  { code: "9918M", description: "Electronic Provider Communication" },
+  { code: "1073M", description: "Telephone or online communication bundled" },
 ] as const;
 
 export const BHI_PROCEDURE_CODES = PROCEDURE_CODES.map((entry) => entry.code);
