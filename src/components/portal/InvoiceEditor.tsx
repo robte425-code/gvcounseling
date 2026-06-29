@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import {
   formatCurrency,
   formatProcedureCodeLabel,
+  PROCEDURE_CODE_NOTICES,
   PROCEDURE_CODES,
 } from "@/lib/constants";
 import { saveInvoiceAction } from "@/lib/portal-actions";
@@ -39,6 +40,45 @@ const emptyLine = (): LineItem => ({
   procedureCode: "96156",
   amount: "",
 });
+
+function ProcedureCodeNotice({ code }: { code: string }) {
+  const notice = PROCEDURE_CODE_NOTICES[code];
+  if (!notice) return null;
+
+  return (
+    <div className="sm:col-span-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+      {notice.intros?.map((text, index) => (
+        <p key={text} className={index > 0 ? "mt-2" : undefined}>
+          {text}
+        </p>
+      ))}
+      <ul className={`list-disc space-y-1 pl-5 ${notice.intros?.length ? "mt-2" : ""}`}>
+        {notice.bullets.map((bullet) => (
+          <li key={bullet}>{bullet}</li>
+        ))}
+      </ul>
+      {notice.footer || notice.footerLinks?.length ? (
+        <p className="mt-2">
+          {notice.footer}
+          {notice.footerLinks?.map((link, index) => (
+            <span key={link.href}>
+              {index > 0 ? " and " : null}
+              <a
+                href={link.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-medium text-primary underline hover:text-primary-dark"
+              >
+                {link.label}
+              </a>
+            </span>
+          ))}
+          {notice.footerLinks?.length ? "." : null}
+        </p>
+      ) : null}
+    </div>
+  );
+}
 
 export function InvoiceEditor({
   invoiceId,
@@ -173,6 +213,7 @@ export function InvoiceEditor({
                 Remove
               </button>
             </div>
+            <ProcedureCodeNotice code={line.procedureCode} />
           </div>
         ))}
       </div>

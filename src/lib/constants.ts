@@ -29,6 +29,63 @@ export const PROCEDURE_CODES = [
   { code: "1073M", description: "Telephone or online communication bundled" },
 ] as const;
 
+export type ProcedureCodeNotice = {
+  intros?: string[];
+  bullets: string[];
+  footer?: string;
+  footerLinks?: { label: string; href: string }[];
+};
+
+export const PROCEDURE_CODE_NOTICES: Partial<Record<string, ProcedureCodeNotice>> = {
+  "9918M": {
+    intros: [
+      "Code 9918M is a localized medical billing code used in the Washington State workers' compensation system (administered by the Department of Labor & Industries, or L&I).",
+      "It specifically covers physician and non-physician secure online communications regarding a worker's claim.",
+      "Key Rules and Information:",
+    ],
+    bullets: [
+      "Usage Limit: It is strictly limited to once per claim, per day.",
+      "Two-Way Communication: When used as part of \"Best Practice 3\" for COHE (Centers of Occupational Health and Education) advisors communicating with employers, a modifier (such as -8R or modifier 32) is often required along with specific chart documentation.",
+      "Non-Covered Services: You cannot bill 9918M for routine administrative communications, authorization requests, or routine scheduling.",
+    ],
+  },
+  "9919M": {
+    intros: [
+      "Code 9919M is a localized medical billing code used in the Washington State Department of Labor & Industries (L&I) worker's compensation system. It specifically represents case management telephone calls between healthcare providers and involved parties (such as employers, vocational counselors, or the injured worker).",
+      "To bill code 9919M successfully, providers must meet specific criteria set by L&I:",
+    ],
+    bullets: [
+      "Two-Way Communication: The interaction must be an active, one-on-one phone conversation. Voicemails are considered administrative and are not covered.",
+      "Documentation: You must clearly document the date, the length of the call, the participants and their titles, and the nature of the communication and submit it with this invoice.",
+      "Frequency limits: Billing is restricted to one call per day, per claim, per provider.",
+      "Evaluation & Management (E/M): If you perform a separately identifiable office visit on the same day, code 9919M can be billed alongside the relevant CPT E/M code (e.g., CPT® code 99215) using modifier -25. The time spent on the phone call cannot be counted toward the E/M level selection.",
+    ],
+    footer: "For full regulatory parameters and fee limits, review the ",
+    footerLinks: [
+      {
+        label: "L&I Chapter 5: Care Coordination",
+        href: "https://www.lni.wa.gov/patient-care/billing-payments/marfsdocs/2025/2025MARFSChapter5.pdf",
+      },
+      {
+        label: "L&I Chapter 9: Evaluation and Management guidelines",
+        href: "https://lni.wa.gov/patient-care/billing-payments/marfsdocs/2025/2025MarfsChapter9.pdf",
+      },
+    ],
+  },
+  "1073M": {
+    intros: [
+      "Code 1073M is the specific billing code used for the Activity Prescription Form (APF) under the Washington State Department of Labor & Industries (L&I) workers' compensation system. It is used by attending healthcare providers to communicate an injured worker's physical capacity, work restrictions, and progress.",
+      "Healthcare providers use code 1073M specifically when there are changes in an injured worker's medical status, work capabilities, or release-to-work status.",
+      "Key Rules for Billing 1073M:",
+    ],
+    bullets: [
+      "Authorization: Only the attending provider (or approved concurrent care provider) assigned to the claim can bill for completing and signing this form.",
+      "Frequency limits: It is typically limited to one submission per provider, per worker, per day. Usually, a maximum of 6 can be billed within the first 60 days of the initial visit.",
+      "No office visit required: In certain circumstances, providers can bill for this code without conducting an in-person office visit.",
+    ],
+  },
+};
+
 export const BHI_PROCEDURE_CODES = PROCEDURE_CODES.map((entry) => entry.code);
 
 export function formatProcedureCodeLabel(code: string): string {
