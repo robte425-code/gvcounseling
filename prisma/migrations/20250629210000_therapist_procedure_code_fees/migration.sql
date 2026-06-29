@@ -13,10 +13,10 @@ CREATE TABLE "TherapistProcedureCodeFee" (
 );
 
 -- CreateIndex
-CREATE INDEX "TherapistProcedureCodeFee_therapistId_procedureCode_effectiveFrom_idx" ON "TherapistProcedureCodeFee"("therapistId", "procedureCode", "effectiveFrom");
+CREATE INDEX "TPCF_therapist_code_from_idx" ON "TherapistProcedureCodeFee"("therapistId", "procedureCode", "effectiveFrom");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "TherapistProcedureCodeFee_therapistId_procedureCode_effectiveFrom_key" ON "TherapistProcedureCodeFee"("therapistId", "procedureCode", "effectiveFrom");
+CREATE UNIQUE INDEX "TPCF_therapist_code_from_key" ON "TherapistProcedureCodeFee"("therapistId", "procedureCode", "effectiveFrom");
 
 -- AddForeignKey
 ALTER TABLE "TherapistProcedureCodeFee" ADD CONSTRAINT "TherapistProcedureCodeFee_therapistId_fkey" FOREIGN KEY ("therapistId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
