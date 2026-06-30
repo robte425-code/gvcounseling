@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { InvoiceAttachments, type InvoiceAttachmentItem } from "@/components/portal/InvoiceAttachments";
 import { InvoiceEditor, type InvoiceLineItem } from "@/components/portal/InvoiceEditor";
 import { buildInvoiceFormData, linesArePersistable } from "@/lib/invoice-form-data";
+import { todayCalendarIso } from "@/lib/constants";
 import { createInvoiceDraftAction, saveInvoiceDraftAction } from "@/lib/portal-actions";
 import { portalButtonClass, portalCardClass } from "@/components/portal/ui";
 import type { FeeScheduleRow } from "@/lib/procedure-fee-schedule";
@@ -31,7 +32,7 @@ function uniqueServiceDates(lines: InvoiceLineItem[]): string[] {
 
 function defaultLine(): InvoiceLineItem {
   return {
-    serviceDate: new Date().toISOString().slice(0, 10),
+    serviceDate: todayCalendarIso(),
     procedureCode: "96156",
     amount: "",
   };

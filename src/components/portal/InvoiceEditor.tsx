@@ -6,6 +6,7 @@ import {
   formatProcedureCodeLabel,
   PROCEDURE_CODE_NOTICES,
   PROCEDURE_CODES,
+  todayCalendarIso,
 } from "@/lib/constants";
 import { resolveFeeAmount, type FeeScheduleRow } from "@/lib/procedure-fee-schedule";
 import { submitInvoiceAction } from "@/lib/portal-actions";
@@ -44,7 +45,7 @@ type Props = {
 };
 
 const emptyLine = (): LineItem => ({
-  serviceDate: new Date().toISOString().slice(0, 10),
+  serviceDate: todayCalendarIso(),
   procedureCode: "96156",
   amount: "",
 });

@@ -104,8 +104,39 @@ export function formatCurrency(amount: number | string): string {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(n);
 }
 
+const CALENDAR_ISO = /^(\d{4})-(\d{2})-(\d{2})$/;
+
+/** Local calendar date as YYYY-MM-DD (matches HTML date inputs). */
+export function todayCalendarIso(): string {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+/** Format a calendar ISO date (YYYY-MM-DD) without UTC timezone shift. */
+export function formatCalendarIso(iso: string): string {
+  const match = CALENDAR_ISO.exec(iso.trim());
+  if (!match) return formatDate(iso);
+  const [, year, month, day] = match;
+  const date = new Date(Number(year), Number(month) - 1, Number(day));
+  return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
+/** Read a calendar ISO date from a Date stored as UTC midnight. */
+export function calendarIsoFromDate(d: Date): string {
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(d.getUTCDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
 export function formatDate(d: Date | string | null | undefined): string {
   if (!d) return "—";
+  if (typeof d === "string" && CALENDAR_ISO.test(d.trim())) {
+    return formatCalendarIso(d);
+  }
   const date = typeof d === "string" ? new Date(d) : d;
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }

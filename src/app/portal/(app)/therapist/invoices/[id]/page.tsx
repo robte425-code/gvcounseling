@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { requireSession } from "@/auth";
 import { InvoiceDetailClient } from "@/components/portal/InvoiceDetailClient";
 import { StatusBadge, portalButtonClass } from "@/components/portal/ui";
-import { client837Ready, formatCurrency, formatDate } from "@/lib/constants";
+import { client837Ready, formatCurrency, formatDate, calendarIsoFromDate } from "@/lib/constants";
 import {
   deleteInvoiceAction,
   unsubmitInvoiceAction,
@@ -43,13 +43,13 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
 
   const readiness = client837Ready(invoice.client);
   const lines = invoice.lineItems.map((line) => ({
-    serviceDate: line.serviceDate.toISOString().slice(0, 10),
+    serviceDate: calendarIsoFromDate(line.serviceDate),
     procedureCode: line.procedureCode,
     amount: String(line.amount),
   }));
 
   const serviceDates = [
-    ...new Set(invoice.lineItems.map((line) => line.serviceDate.toISOString().slice(0, 10))),
+    ...new Set(invoice.lineItems.map((line) => calendarIsoFromDate(line.serviceDate))),
   ];
 
   const footerActions =

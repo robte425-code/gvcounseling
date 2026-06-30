@@ -22,6 +22,7 @@ import { sendAdminWelcomeEmail, sendTherapistAssignmentEmail, sendTherapistWelco
 import { generateOneTimePassword, hashPassword, verifyPassword } from "@/lib/password";
 import { fetchLniPayPeriods } from "@/lib/lni-pay-periods";
 import { createProcedureCodeFee, createTherapistProcedureCodeFee, updateTherapistProcedureCodeFee, applyTherapistFeeSchedule, loadAllProcedureCodeFees, resolveFeeAmount } from "@/lib/procedure-fees";
+import { toDateOnly } from "@/lib/procedure-fee-schedule";
 import { prisma } from "@/lib/prisma";
 
 function parseDecimal(value: FormDataEntryValue | null): number {
@@ -32,6 +33,11 @@ function parseDecimal(value: FormDataEntryValue | null): number {
 function parseDate(value: FormDataEntryValue | null): Date | null {
   const s = String(value ?? "").trim();
   if (!s) return null;
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
+  if (match) {
+    const [, year, month, day] = match;
+    return new Date(Date.UTC(Number(year), Number(month) - 1, Number(day)));
+  }
   const d = new Date(s);
   return Number.isNaN(d.getTime()) ? null : d;
 }
@@ -591,7 +597,7 @@ export async function createInvoiceDraftAction(clientId: string) {
   });
   if (!client) throw new Error("Client not found.");
 
-  const serviceDate = new Date(new Date().toISOString().slice(0, 10));
+  const serviceDate = toDateOnly(new Date().toISOString().slice(0, 10));
   const pricedLineItems = await applyTherapistFeeSchedule(session.user.id, [
     {
       serviceDate,

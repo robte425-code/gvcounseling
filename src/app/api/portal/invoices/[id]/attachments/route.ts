@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { requireSession } from "@/auth";
-import { formatServiceDateFolderName } from "@/lib/constants";
+import { formatServiceDateFolderName, calendarIsoFromDate } from "@/lib/constants";
 import { getDriveAccessTokenForClient } from "@/lib/google-drive-access";
 import { getOrCreateDriveSubfolder, uploadDriveFile } from "@/lib/google-drive";
 import { prisma } from "@/lib/prisma";
@@ -13,7 +13,7 @@ function normalizeServiceDate(value: string): string | null {
 }
 
 function lineItemServiceDateKey(date: Date): string {
-  return date.toISOString().slice(0, 10);
+  return calendarIsoFromDate(date);
 }
 
 export async function POST(
