@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { formatDate } from "@/lib/constants";
 import {
   portalButtonSecondaryClass,
@@ -24,7 +24,9 @@ export function InvoiceAttachments({
   /** Service dates persisted on the invoice (required for upload). */
   savedServiceDates: string[];
 }) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [items, setItems] = useState(attachments);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
   const [serviceDate, setServiceDate] = useState(lineServiceDates[0] ?? "");
@@ -61,23 +63,31 @@ export function InvoiceAttachments({
     );
   }, [lineServiceDates]);
 
+  function handleFileSelection(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = e.target.files ? [...e.target.files] : [];
+    setSelectedFiles(files);
+    setError("");
+  }
+
+  function clearSelectedFiles() {
+    setSelectedFiles([]);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }
+
   async function handleUpload(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!invoiceId || !canUpload || !selectedServiceDate) return;
 
-    setUploading(true);
-    setError("");
-    const form = e.currentTarget;
-    const fileInput = form.elements.namedItem("files") as HTMLInputElement;
-    const files = fileInput?.files ? [...fileInput.files] : [];
-    if (files.length === 0) {
+    if (selectedFiles.length === 0) {
       setError("Select at least one file.");
-      setUploading(false);
       return;
     }
 
+    setUploading(true);
+    setError("");
+
     const uploaded: { id: string; filename: string; blobUrl: string }[] = [];
-    for (const file of files) {
+    for (const file of selectedFiles) {
       const data = new FormData();
       data.set("serviceDate", selectedServiceDate);
       data.set("file", file);
@@ -99,7 +109,7 @@ export function InvoiceAttachments({
 
     setUploading(false);
     setItems((prev) => [...prev, ...uploaded]);
-    form.reset();
+    clearSelectedFiles();
   }
 
   return (
@@ -109,26 +119,36 @@ export function InvoiceAttachments({
         Files are saved to the client&apos;s Google Drive folder under a subfolder named for the service date
         (mm-dd-yyyy).
       </p>
-      {items.length === 0 ? (
-        <p className="text-sm text-muted">No files attached.</p>
-      ) : (
-        <ul className="space-y-2 text-sm">
-          {items.map((a) => (
-            <li key={a.id}>
-              <a href={a.blobUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-                {a.filename}
-              </a>
-            </li>
-          ))}
-        </ul>
-      )}
+
+      <div>
+        <h3 className={portalLabelClass}>Uploaded files</h3>
+        {items.length === 0 ? (
+          <p className="mt-1 text-sm text-muted">No files uploaded yet.</p>
+        ) : (
+          <ul className="mt-2 space-y-1 text-sm">
+            {items.map((a) => (
+              <li key={a.id}>
+                <a
+                  href={a.blobUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline"
+                >
+                  {a.filename}
+                </a>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
       {!readOnly && (
         lineServiceDates.length === 0 ? (
           <p className="text-sm text-amber-900">Add at least one service line with a date before uploading attachments.</p>
         ) : !invoiceId ? (
           <p className="text-sm text-muted">Preparing invoice…</p>
         ) : (
-          <form onSubmit={handleUpload} className="space-y-3">
+          <form onSubmit={handleUpload} className="space-y-3 border-t border-border pt-4">
             <div>
               <span className={portalLabelClass}>Service date</span>
               {singleServiceDate ? (
@@ -153,20 +173,37 @@ export function InvoiceAttachments({
               )}
             </div>
             <div>
-              <label className={portalLabelClass}>PDF or document</label>
+              <span className={portalLabelClass}>PDF or document</span>
               <input
-                name="files"
+                ref={fileInputRef}
                 type="file"
                 accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
                 multiple
-                required
-                className="mt-1 block w-full text-sm"
+                className="sr-only"
+                onChange={handleFileSelection}
               />
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className={`${portalButtonSecondaryClass} mt-1`}
+              >
+                Choose files
+              </button>
             </div>
+            {selectedFiles.length > 0 && (
+              <div>
+                <h3 className={portalLabelClass}>Files to upload</h3>
+                <ul className="mt-2 space-y-1 text-sm">
+                  {selectedFiles.map((file) => (
+                    <li key={`${file.name}-${file.lastModified}`}>{file.name}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
             {error && <p className="text-sm text-red-800">{error}</p>}
             <button
               type="submit"
-              disabled={uploading || !canUpload}
+              disabled={uploading || !canUpload || selectedFiles.length === 0}
               className={portalButtonSecondaryClass}
             >
               {uploading ? "Uploading…" : "Upload files"}
