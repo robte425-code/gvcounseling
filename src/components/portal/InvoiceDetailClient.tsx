@@ -93,6 +93,7 @@ export function InvoiceDetailClient({
         attachments={attachments}
         lineServiceDates={lineServiceDates}
         savedServiceDates={persistedServiceDates}
+        onUploaded={() => router.refresh()}
       />
 
       {!readOnly && usesTherapistFees && lines.some((line) => !line.amount) && (

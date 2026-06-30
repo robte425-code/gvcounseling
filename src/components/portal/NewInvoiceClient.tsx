@@ -129,6 +129,7 @@ export function NewInvoiceClient({ clients, initialClientId, therapistFeeSchedul
         attachments={[]}
         lineServiceDates={lineServiceDates}
         savedServiceDates={persistedServiceDates}
+        onUploaded={() => router.refresh()}
       />
 
       {usesTherapistFees && lines.some((line) => !line.amount) && (

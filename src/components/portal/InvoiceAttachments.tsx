@@ -15,6 +15,7 @@ export function InvoiceAttachments({
   attachments,
   lineServiceDates,
   savedServiceDates,
+  onUploaded,
 }: {
   invoiceId: string;
   readOnly: boolean;
@@ -23,6 +24,7 @@ export function InvoiceAttachments({
   lineServiceDates: string[];
   /** Service dates persisted on the invoice (required for upload). */
   savedServiceDates: string[];
+  onUploaded?: () => void;
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [items, setItems] = useState(attachments);
@@ -49,9 +51,14 @@ export function InvoiceAttachments({
     selectedServiceDate &&
     savedServiceDates.includes(selectedServiceDate);
 
+  const attachmentIds = useMemo(
+    () => attachments.map((a) => a.id).join("|"),
+    [attachments],
+  );
+
   useEffect(() => {
     setItems(attachments);
-  }, [attachments]);
+  }, [attachmentIds, attachments]);
 
   useEffect(() => {
     if (lineServiceDates.length === 0) {
@@ -76,7 +83,12 @@ export function InvoiceAttachments({
 
   async function handleUpload(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (!invoiceId || !canUpload || !selectedServiceDate) return;
+    if (!invoiceId || !selectedServiceDate) return;
+
+    if (!canUpload) {
+      setError("Wait a moment for service lines to save, or match the service date on your lines.");
+      return;
+    }
 
     if (selectedFiles.length === 0) {
       setError("Select at least one file.");
@@ -110,6 +122,7 @@ export function InvoiceAttachments({
     setUploading(false);
     setItems((prev) => [...prev, ...uploaded]);
     clearSelectedFiles();
+    onUploaded?.();
   }
 
   return (
