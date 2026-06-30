@@ -47,8 +47,8 @@ type Props = {
 
 const submitInitialState: SubmitInvoiceState = {};
 
-const emptyLine = (): LineItem => ({
-  serviceDate: todayCalendarIso(),
+const defaultLine = (serviceDate?: string): LineItem => ({
+  serviceDate: serviceDate ?? todayCalendarIso(),
   procedureCode: "96156",
   amount: "",
 });
@@ -124,7 +124,7 @@ export function InvoiceEditor({
     initialClientId ?? clients?.[0]?.id ?? "",
   );
   const [lines, setLines] = useState<LineItem[]>(() =>
-    (initialLines.length ? initialLines : [emptyLine()]).map(priceLine),
+    (initialLines.length ? initialLines : [defaultLine()]).map(priceLine),
   );
 
   useEffect(() => {
@@ -157,7 +157,10 @@ export function InvoiceEditor({
   }
 
   function addLine() {
-    setLines((prev) => [...prev, priceLine(emptyLine())]);
+    setLines((prev) => {
+      const serviceDate = prev[0]?.serviceDate ?? todayCalendarIso();
+      return [...prev, priceLine(defaultLine(serviceDate))];
+    });
   }
 
   function removeLine(index: number) {

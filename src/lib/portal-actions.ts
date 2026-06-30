@@ -16,7 +16,8 @@ import { Gender, InvoiceStatus } from "@/generated/prisma/client";
 import { buildEdi837, generateClmControlNumber, type Edi837Claim } from "@/lib/edi837";
 import { client837Ready, parseClaimNumber } from "@/lib/constants";
 import { moveClientDriveFolderToTherapist } from "@/lib/client-drive-move";
-import { ensureTherapistDriveFolder, removeTherapistDriveFolder } from "@/lib/google-drive";
+import { ensureTherapistDriveFolder, removeTherapistDriveFolder, deleteInvoiceDriveAttachments } from "@/lib/google-drive";
+import { getDriveAccessTokenForClient } from "@/lib/google-drive-access";
 import { getSystemDriveAccessToken } from "@/lib/google-drive-system";
 import { sendAdminWelcomeEmail, sendTherapistAssignmentEmail, sendTherapistWelcomeEmail } from "@/lib/referral-emails";
 import { generateOneTimePassword, hashPassword, verifyPassword } from "@/lib/password";
@@ -682,8 +683,29 @@ export async function deleteInvoiceAction(formData: FormData) {
   const invoiceId = String(formData.get("invoiceId") ?? "");
   const invoice = await prisma.invoice.findFirst({
     where: { id: invoiceId, therapistId: session.user.id },
+    include: {
+      client: { select: { driveFolderId: true } },
+      attachments: { select: { blobUrl: true } },
+    },
   });
   if (!invoice || invoice.status !== "DRAFT") throw new Error("Only draft invoices can be deleted.");
+
+  if (invoice.client.driveFolderId && invoice.attachments.length > 0) {
+    try {
+      const accessToken = await getDriveAccessTokenForClient({
+        therapistId: session.user.id,
+        initiatorUserId: session.user.id,
+      });
+      await deleteInvoiceDriveAttachments(
+        accessToken,
+        invoice.client.driveFolderId,
+        invoice.attachments,
+      );
+    } catch (error) {
+      console.error("Invoice Drive cleanup failed:", error);
+    }
+  }
+
   await prisma.invoice.delete({ where: { id: invoiceId } });
   revalidatePath("/portal/therapist/invoices");
   redirect("/portal/therapist/invoices");

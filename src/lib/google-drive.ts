@@ -370,6 +370,47 @@ async function trashDriveFile(accessToken: string, fileId: string): Promise<void
   });
 }
 
+const SERVICE_DATE_FOLDER_NAME = /^\d{2}-\d{2}-\d{4}$/;
+
+/** Extract a Google Drive file id from a view/share URL. */
+export function parseDriveFileIdFromUrl(url: string): string | null {
+  const fileMatch = /\/file\/d\/([^/?#]+)/.exec(url);
+  if (fileMatch) return fileMatch[1]!;
+  const openMatch = /[?&]id=([^&#]+)/.exec(url);
+  if (openMatch) return openMatch[1]!;
+  return null;
+}
+
+/** Trash invoice attachment files and any empty mm-dd-yyyy service-date subfolders. */
+export async function deleteInvoiceDriveAttachments(
+  accessToken: string,
+  clientFolderId: string,
+  attachments: { blobUrl: string }[],
+): Promise<void> {
+  for (const attachment of attachments) {
+    const fileId = parseDriveFileIdFromUrl(attachment.blobUrl);
+    if (!fileId) continue;
+    try {
+      await trashDriveFile(accessToken, fileId);
+    } catch (error) {
+      console.error(`Failed to trash Drive file ${fileId}:`, error);
+    }
+  }
+
+  const folders = await listDriveFolderChildren(accessToken, clientFolderId);
+  for (const folder of folders) {
+    if (folder.mimeType !== FOLDER_MIME || !SERVICE_DATE_FOLDER_NAME.test(folder.name)) continue;
+    const contents = await listDriveFolderChildren(accessToken, folder.id);
+    if (contents.length === 0) {
+      try {
+        await trashDriveFile(accessToken, folder.id);
+      } catch (error) {
+        console.error(`Failed to trash Drive folder ${folder.name}:`, error);
+      }
+    }
+  }
+}
+
 /** Move all items from the therapist folder to New Referrals, then trash the folder. */
 export async function removeTherapistDriveFolder(
   accessToken: string,
