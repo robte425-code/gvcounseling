@@ -184,8 +184,15 @@ export function InvoiceEditor({
               </tr>
             ))}
           </tbody>
+          <tfoot>
+            <tr className="border-t border-border font-semibold">
+              <td className="py-2 pr-4 text-right" colSpan={2}>
+                Total
+              </td>
+              <td className="py-2 pr-4">{formatCurrency(total)}</td>
+            </tr>
+          </tfoot>
         </table>
-        <p className="text-right font-semibold">Total: {formatCurrency(total)}</p>
         {actions}
       </div>
     );
