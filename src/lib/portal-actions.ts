@@ -664,6 +664,31 @@ export async function unsubmitInvoiceAction(formData: FormData) {
   revalidatePath(`/portal/therapist/invoices/${invoiceId}`);
 }
 
+async function removeInvoiceDriveAttachments(
+  invoice: {
+    therapistId: string;
+    client: { driveFolderId: string | null };
+    attachments: { blobUrl: string }[];
+  },
+  initiatorUserId: string,
+) {
+  if (!invoice.client.driveFolderId || invoice.attachments.length === 0) return;
+
+  try {
+    const accessToken = await getDriveAccessTokenForClient({
+      therapistId: invoice.therapistId,
+      initiatorUserId,
+    });
+    await deleteInvoiceDriveAttachments(
+      accessToken,
+      invoice.client.driveFolderId,
+      invoice.attachments,
+    );
+  } catch (error) {
+    console.error("Invoice Drive cleanup failed:", error);
+  }
+}
+
 export async function deleteInvoiceAction(formData: FormData) {
   const session = await requireTherapist();
   const invoiceId = String(formData.get("invoiceId") ?? "");
@@ -676,25 +701,31 @@ export async function deleteInvoiceAction(formData: FormData) {
   });
   if (!invoice || invoice.status !== "DRAFT") throw new Error("Only draft invoices can be deleted.");
 
-  if (invoice.client.driveFolderId && invoice.attachments.length > 0) {
-    try {
-      const accessToken = await getDriveAccessTokenForClient({
-        therapistId: session.user.id,
-        initiatorUserId: session.user.id,
-      });
-      await deleteInvoiceDriveAttachments(
-        accessToken,
-        invoice.client.driveFolderId,
-        invoice.attachments,
-      );
-    } catch (error) {
-      console.error("Invoice Drive cleanup failed:", error);
-    }
-  }
-
+  await removeInvoiceDriveAttachments(invoice, session.user.id);
   await prisma.invoice.delete({ where: { id: invoiceId } });
   revalidatePath("/portal/therapist/invoices");
   redirect("/portal/therapist/invoices");
+}
+
+export async function deleteAdminInvoiceAction(formData: FormData) {
+  const session = await requireAdmin();
+  const invoiceId = String(formData.get("invoiceId") ?? "");
+  const invoice = await prisma.invoice.findUnique({
+    where: { id: invoiceId },
+    include: {
+      client: { select: { driveFolderId: true } },
+      attachments: { select: { blobUrl: true } },
+    },
+  });
+  if (!invoice) throw new Error("Invoice not found.");
+
+  await removeInvoiceDriveAttachments(invoice, session.user.id);
+  await prisma.invoice.delete({ where: { id: invoiceId } });
+  revalidatePath("/portal/admin/invoices");
+  revalidatePath(`/portal/admin/invoices/${invoiceId}`);
+  revalidatePath("/portal/therapist/invoices");
+  revalidatePath(`/portal/therapist/invoices/${invoiceId}`);
+  redirect("/portal/admin/invoices");
 }
 
 export async function generateBillAction(formData: FormData) {

@@ -1,9 +1,19 @@
 import Link from "next/link";
 import { requireAdmin } from "@/auth";
+import { ConfirmSubmitButton } from "@/components/portal/ConfirmSubmitButton";
 import { InvoiceTableRow } from "@/components/portal/InvoiceTableRow";
-import { StatusBadge, portalCardClass } from "@/components/portal/ui";
-import { formatCurrency, formatDate } from "@/lib/constants";
+import { StatusBadge, portalButtonSecondaryClass, portalCardClass } from "@/components/portal/ui";
+import { formatCurrency, formatDate, formatCalendarIso, calendarIsoFromDate } from "@/lib/constants";
+import { deleteAdminInvoiceAction } from "@/lib/portal-actions";
 import { prisma } from "@/lib/prisma";
+
+function formatInvoiceServiceDates(lineItems: { serviceDate: Date }[]): string {
+  const dates = [
+    ...new Set(lineItems.map((line) => calendarIsoFromDate(line.serviceDate))),
+  ].sort();
+  if (dates.length === 0) return "—";
+  return dates.map((date) => formatCalendarIso(date)).join(", ");
+}
 
 export default async function AdminInvoicesPage({
   searchParams,
@@ -18,6 +28,7 @@ export default async function AdminInvoicesPage({
     include: {
       client: true,
       therapist: { select: { firstName: true, lastName: true } },
+      lineItems: { select: { serviceDate: true }, orderBy: { sortOrder: "asc" } },
     },
   });
 
@@ -50,6 +61,7 @@ export default async function AdminInvoicesPage({
               <th className="py-2 pr-4">#</th>
               <th className="py-2 pr-4">Therapist</th>
               <th className="py-2 pr-4">Client</th>
+              <th className="py-2 pr-4">Service date</th>
               <th className="py-2 pr-4">Status</th>
               <th className="py-2 pr-4">Total</th>
               <th className="py-2 pr-4">Submitted</th>
@@ -58,7 +70,21 @@ export default async function AdminInvoicesPage({
           </thead>
           <tbody>
             {invoices.map((inv) => (
-              <InvoiceTableRow key={inv.id} href={`/portal/admin/invoices/${inv.id}`}>
+              <InvoiceTableRow
+                key={inv.id}
+                href={`/portal/admin/invoices/${inv.id}`}
+                actions={
+                  <form action={deleteAdminInvoiceAction}>
+                    <input type="hidden" name="invoiceId" value={inv.id} />
+                    <ConfirmSubmitButton
+                      confirmMessage={`Delete invoice #${inv.invoiceNumber}?`}
+                      className={`${portalButtonSecondaryClass} border-red-200 px-3 py-1 text-xs text-red-700 hover:bg-red-50`}
+                    >
+                      Delete
+                    </ConfirmSubmitButton>
+                  </form>
+                }
+              >
                 <td className="py-3 pr-4">{inv.invoiceNumber}</td>
                 <td className="py-3 pr-4">
                   {inv.therapist.firstName} {inv.therapist.lastName}
@@ -66,6 +92,7 @@ export default async function AdminInvoicesPage({
                 <td className="py-3 pr-4">
                   {inv.client.lastName}, {inv.client.firstName} ({inv.client.lniClaimNumber})
                 </td>
+                <td className="py-3 pr-4">{formatInvoiceServiceDates(inv.lineItems)}</td>
                 <td className="py-3 pr-4">
                   <StatusBadge status={inv.status} />
                 </td>
