@@ -154,7 +154,10 @@ export function InvoiceEditor({
   }
 
   function addLine() {
-    setLines((prev) => [...prev, priceLine(emptyInvoiceLine())]);
+    setLines((prev) => {
+      const serviceDate = prev[0]?.serviceDate ?? "";
+      return [...prev, priceLine({ ...emptyInvoiceLine(), serviceDate })];
+    });
   }
 
   function removeLine(index: number) {

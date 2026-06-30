@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { requireAdmin } from "@/auth";
+import { InvoiceTableRow } from "@/components/portal/InvoiceTableRow";
 import { StatusBadge, portalCardClass } from "@/components/portal/ui";
 import { formatCurrency, formatDate } from "@/lib/constants";
 import { prisma } from "@/lib/prisma";
@@ -52,11 +53,12 @@ export default async function AdminInvoicesPage({
               <th className="py-2 pr-4">Status</th>
               <th className="py-2 pr-4">Total</th>
               <th className="py-2 pr-4">Submitted</th>
+              <th className="py-2" />
             </tr>
           </thead>
           <tbody>
             {invoices.map((inv) => (
-              <tr key={inv.id} className="border-b border-border/60">
+              <InvoiceTableRow key={inv.id} href={`/portal/admin/invoices/${inv.id}`}>
                 <td className="py-3 pr-4">{inv.invoiceNumber}</td>
                 <td className="py-3 pr-4">
                   {inv.therapist.firstName} {inv.therapist.lastName}
@@ -69,7 +71,7 @@ export default async function AdminInvoicesPage({
                 </td>
                 <td className="py-3 pr-4">{formatCurrency(Number(inv.totalAmount))}</td>
                 <td className="py-3 pr-4">{formatDate(inv.submittedAt)}</td>
-              </tr>
+              </InvoiceTableRow>
             ))}
           </tbody>
         </table>
