@@ -45,6 +45,8 @@ export function InvoiceDetailClient({
   const [lines, setLines] = useState(initialLines);
   const [attachmentItems, setAttachmentItems] = useState(attachments);
   const [persistedServiceDates, setPersistedServiceDates] = useState(savedServiceDates);
+  const [submitError, setSubmitError] = useState("");
+  const [submitPending, setSubmitPending] = useState(false);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lineServiceDates = useMemo(() => uniqueServiceDates(lines), [lines]);
 
@@ -98,6 +100,10 @@ export function InvoiceDetailClient({
           initialLines={initialLines}
           therapistFeeSchedule={therapistFeeSchedule}
           onLinesChange={setLines}
+          onSubmitStateChange={(state, pending) => {
+            setSubmitError(state.error ?? "");
+            setSubmitPending(pending);
+          }}
           showSubmit={false}
         />
       </div>
@@ -128,10 +134,15 @@ export function InvoiceDetailClient({
               type="submit"
               form={INVOICE_FORM_ID}
               className={portalButtonClass}
-              disabled={!canSubmit}
+              disabled={!canSubmit || submitPending}
             >
-              Submit invoice
+              {submitPending ? "Submitting…" : "Submit invoice"}
             </button>
+          )}
+          {!readOnly && submitError && (
+            <p className="w-full rounded-xl bg-red-50 px-4 py-3 text-sm text-red-800" role="alert">
+              {submitError}
+            </p>
           )}
           {footerActions}
         </div>

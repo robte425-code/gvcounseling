@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useActionState, useEffect, useMemo, useState } from "react";
 import {
   formatCurrency,
   formatProcedureCodeLabel,
@@ -9,7 +9,7 @@ import {
   todayCalendarIso,
 } from "@/lib/constants";
 import { resolveFeeAmount, type FeeScheduleRow } from "@/lib/procedure-fee-schedule";
-import { submitInvoiceAction } from "@/lib/portal-actions";
+import { submitInvoiceAction, type SubmitInvoiceState } from "@/lib/portal-actions";
 import {
   portalButtonClass,
   portalButtonSecondaryClass,
@@ -40,9 +40,12 @@ type Props = {
   therapistFeeSchedule?: FeeScheduleRow[];
   onLinesChange?: (lines: LineItem[]) => void;
   onClientChange?: (clientId: string) => void;
+  onSubmitStateChange?: (state: SubmitInvoiceState, pending: boolean) => void;
   showSubmit?: boolean;
   formId?: string;
 };
+
+const submitInitialState: SubmitInvoiceState = {};
 
 const emptyLine = (): LineItem => ({
   serviceDate: todayCalendarIso(),
@@ -99,10 +102,15 @@ export function InvoiceEditor({
   therapistFeeSchedule,
   onLinesChange,
   onClientChange,
+  onSubmitStateChange,
   showSubmit = true,
   formId,
 }: Props) {
   const usesTherapistFees = therapistFeeSchedule !== undefined;
+  const [submitState, submitAction, submitPending] = useActionState(
+    submitInvoiceAction,
+    submitInitialState,
+  );
 
   function priceLine(line: LineItem): LineItem {
     if (!therapistFeeSchedule?.length || !line.serviceDate || !line.procedureCode) {
@@ -132,6 +140,10 @@ export function InvoiceEditor({
   useEffect(() => {
     onClientChange?.(clientId);
   }, [clientId, onClientChange]);
+
+  useEffect(() => {
+    onSubmitStateChange?.(submitState, submitPending);
+  }, [submitState, submitPending, onSubmitStateChange]);
 
   const total = useMemo(
     () => lines.reduce((sum, l) => sum + (parseFloat(l.amount) || 0), 0),
@@ -180,7 +192,7 @@ export function InvoiceEditor({
   }
 
   return (
-    <form id={formId} action={submitInvoiceAction} className="space-y-4">
+    <form id={formId} action={submitAction} className="space-y-4">
       {invoiceId ? <input type="hidden" name="invoiceId" value={invoiceId} /> : null}
       {clients ? (
         <div>
@@ -275,14 +287,19 @@ export function InvoiceEditor({
           procedure code fees before submitting.
         </p>
       )}
+      {submitState.error && (
+        <p className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-800" role="alert">
+          {submitState.error}
+        </p>
+      )}
       <div className="flex flex-wrap gap-3">
         {showSubmit && (
           <button
             type="submit"
             className={portalButtonClass}
-            disabled={usesTherapistFees && lines.some((line) => !line.amount)}
+            disabled={submitPending || (usesTherapistFees && lines.some((line) => !line.amount))}
           >
-            Submit invoice
+            {submitPending ? "Submitting…" : "Submit invoice"}
           </button>
         )}
         {actions}

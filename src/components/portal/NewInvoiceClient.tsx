@@ -50,6 +50,8 @@ export function NewInvoiceClient({ clients, initialClientId, therapistFeeSchedul
   const [attachments, setAttachments] = useState<InvoiceAttachmentItem[]>([]);
   const [persistedServiceDates, setPersistedServiceDates] = useState<string[]>([]);
   const [draftError, setDraftError] = useState("");
+  const [submitError, setSubmitError] = useState("");
+  const [submitPending, setSubmitPending] = useState(false);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const creatingDraftRef = useRef(false);
 
@@ -128,6 +130,10 @@ export function NewInvoiceClient({ clients, initialClientId, therapistFeeSchedul
           initialClientId={initialClientId}
           onLinesChange={setLines}
           onClientChange={setClientId}
+          onSubmitStateChange={(state, pending) => {
+            setSubmitError(state.error ?? "");
+            setSubmitPending(pending);
+          }}
           showSubmit={false}
         />
       </div>
@@ -154,10 +160,15 @@ export function NewInvoiceClient({ clients, initialClientId, therapistFeeSchedul
         type="submit"
         form={INVOICE_FORM_ID}
         className={portalButtonClass}
-        disabled={!canSubmit}
+        disabled={!canSubmit || submitPending}
       >
-        Submit invoice
+        {submitPending ? "Submitting…" : "Submit invoice"}
       </button>
+      {submitError && (
+        <p className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-800" role="alert">
+          {submitError}
+        </p>
+      )}
     </div>
   );
 }

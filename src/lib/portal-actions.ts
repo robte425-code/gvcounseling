@@ -626,21 +626,34 @@ export async function createInvoiceDraftAction(clientId: string) {
   return { invoiceId: invoice.id };
 }
 
-export async function submitInvoiceAction(formData: FormData) {
+export type SubmitInvoiceState = { error?: string };
+
+export async function submitInvoiceAction(
+  _prevState: SubmitInvoiceState,
+  formData: FormData,
+): Promise<SubmitInvoiceState> {
   const session = await requireTherapist();
-  const { invoice } = await persistInvoiceFromFormData(session, formData, {
-    allowCreate: true,
-  });
+
+  let invoice;
+  try {
+    ({ invoice } = await persistInvoiceFromFormData(session, formData, {
+      allowCreate: true,
+    }));
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : "Could not save invoice before submitting.",
+    };
+  }
 
   if (invoice.status !== "DRAFT") {
-    throw new Error("Invoice cannot be submitted.");
+    return { error: "Invoice cannot be submitted." };
   }
 
   const readiness = client837Ready(invoice.client);
   if (!readiness.ready) {
-    throw new Error(
-      `Client is missing required billing fields: ${readiness.missing.join(", ")}. Ask admin to update the client record.`,
-    );
+    return {
+      error: `Client is missing required billing fields: ${readiness.missing.join(", ")}. Ask admin to update the client record.`,
+    };
   }
 
   await prisma.invoice.update({
