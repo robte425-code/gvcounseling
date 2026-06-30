@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { InvoiceAttachments } from "@/components/portal/InvoiceAttachments";
+import { InvoiceAttachments, type InvoiceAttachmentItem } from "@/components/portal/InvoiceAttachments";
 import { InvoiceEditor, type InvoiceLineItem } from "@/components/portal/InvoiceEditor";
 import { buildInvoiceFormData, linesArePersistable } from "@/lib/invoice-form-data";
 import { createInvoiceDraftAction, saveInvoiceDraftAction } from "@/lib/portal-actions";
@@ -42,6 +42,7 @@ export function NewInvoiceClient({ clients, initialClientId, therapistFeeSchedul
   const [clientId, setClientId] = useState(initialClientId);
   const [invoiceId, setInvoiceId] = useState<string | null>(null);
   const [lines, setLines] = useState<InvoiceLineItem[]>([defaultLine()]);
+  const [attachments, setAttachments] = useState<InvoiceAttachmentItem[]>([]);
   const [persistedServiceDates, setPersistedServiceDates] = useState<string[]>([]);
   const [draftError, setDraftError] = useState("");
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -65,7 +66,9 @@ export function NewInvoiceClient({ clients, initialClientId, therapistFeeSchedul
         const { invoiceId: id } = await createInvoiceDraftAction(clientId);
         if (cancelled) return;
         setInvoiceId(id);
-        setPersistedServiceDates([new Date().toISOString().slice(0, 10)]);
+        await saveInvoiceDraftAction(buildInvoiceFormData(lines, { invoiceId: id, clientId }));
+        if (cancelled) return;
+        setPersistedServiceDates(uniqueServiceDates(lines));
       } catch (error) {
         if (!cancelled) {
           setDraftError(error instanceof Error ? error.message : "Could not create invoice draft.");
@@ -76,6 +79,7 @@ export function NewInvoiceClient({ clients, initialClientId, therapistFeeSchedul
     }
 
     setInvoiceId(null);
+    setAttachments([]);
     setPersistedServiceDates([]);
     void ensureDraft();
 
@@ -126,10 +130,12 @@ export function NewInvoiceClient({ clients, initialClientId, therapistFeeSchedul
       <InvoiceAttachments
         invoiceId={invoiceId ?? ""}
         readOnly={false}
-        attachments={[]}
+        attachments={attachments}
         lineServiceDates={lineServiceDates}
         savedServiceDates={persistedServiceDates}
-        onUploaded={() => router.refresh()}
+        onAttachmentsUploaded={(uploaded) =>
+          setAttachments((prev) => [...prev, ...uploaded])
+        }
       />
 
       {usesTherapistFees && lines.some((line) => !line.amount) && (

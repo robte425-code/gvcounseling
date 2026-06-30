@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { InvoiceAttachments } from "@/components/portal/InvoiceAttachments";
+import { InvoiceAttachments, type InvoiceAttachmentItem } from "@/components/portal/InvoiceAttachments";
 import { InvoiceEditor, type InvoiceLineItem } from "@/components/portal/InvoiceEditor";
 import { buildInvoiceFormData, linesArePersistable } from "@/lib/invoice-form-data";
 import { saveInvoiceDraftAction } from "@/lib/portal-actions";
@@ -16,7 +16,7 @@ type Props = {
   readOnly: boolean;
   initialLines: InvoiceLineItem[];
   therapistFeeSchedule?: FeeScheduleRow[];
-  attachments: { id: string; filename: string; blobUrl: string }[];
+  attachments: InvoiceAttachmentItem[];
   savedServiceDates: string[];
   footerActions?: React.ReactNode;
 };
@@ -39,9 +39,15 @@ export function InvoiceDetailClient({
 }: Props) {
   const router = useRouter();
   const [lines, setLines] = useState(initialLines);
+  const [attachmentItems, setAttachmentItems] = useState(attachments);
   const [persistedServiceDates, setPersistedServiceDates] = useState(savedServiceDates);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lineServiceDates = useMemo(() => uniqueServiceDates(lines), [lines]);
+
+  const serverAttachmentIds = useMemo(
+    () => attachments.map((attachment) => attachment.id).join("|"),
+    [attachments],
+  );
 
   const usesTherapistFees = therapistFeeSchedule !== undefined;
   const canSubmit =
@@ -52,6 +58,11 @@ export function InvoiceDetailClient({
   useEffect(() => {
     setPersistedServiceDates(savedServiceDates);
   }, [savedServiceDates]);
+
+  useEffect(() => {
+    setAttachmentItems(attachments);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- sync when server attachment ids change, not array reference
+  }, [serverAttachmentIds]);
 
   useEffect(() => {
     if (readOnly || !linesArePersistable(lines)) return;
@@ -90,10 +101,12 @@ export function InvoiceDetailClient({
       <InvoiceAttachments
         invoiceId={invoiceId}
         readOnly={readOnly}
-        attachments={attachments}
+        attachments={attachmentItems}
         lineServiceDates={lineServiceDates}
         savedServiceDates={persistedServiceDates}
-        onUploaded={() => router.refresh()}
+        onAttachmentsUploaded={(uploaded) =>
+          setAttachmentItems((prev) => [...prev, ...uploaded])
+        }
       />
 
       {!readOnly && usesTherapistFees && lines.some((line) => !line.amount) && (

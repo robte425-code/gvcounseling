@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { requireSession } from "@/auth";
 import { formatServiceDateFolderName } from "@/lib/constants";
 import { getDriveAccessTokenForClient } from "@/lib/google-drive-access";
@@ -97,7 +98,17 @@ export async function POST(
       },
     });
 
-    return NextResponse.json({ attachment });
+    revalidatePath(`/portal/therapist/invoices/${id}`);
+    revalidatePath("/portal/therapist/invoices/new");
+    revalidatePath("/portal/admin/invoices");
+
+    return NextResponse.json({
+      attachment: {
+        id: attachment.id,
+        filename: attachment.filename,
+        blobUrl: attachment.blobUrl,
+      },
+    });
   } catch (e) {
     console.error(e);
     return NextResponse.json(

@@ -591,7 +591,7 @@ export async function createInvoiceDraftAction(clientId: string) {
   });
   if (!client) throw new Error("Client not found.");
 
-  const serviceDate = new Date();
+  const serviceDate = new Date(new Date().toISOString().slice(0, 10));
   const pricedLineItems = await applyTherapistFeeSchedule(session.user.id, [
     {
       serviceDate,

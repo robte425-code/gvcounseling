@@ -9,25 +9,30 @@ import {
   portalLabelClass,
 } from "@/components/portal/ui";
 
+export type InvoiceAttachmentItem = {
+  id: string;
+  filename: string;
+  blobUrl: string;
+};
+
 export function InvoiceAttachments({
   invoiceId,
   readOnly,
   attachments,
   lineServiceDates,
   savedServiceDates,
-  onUploaded,
+  onAttachmentsUploaded,
 }: {
   invoiceId: string;
   readOnly: boolean;
-  attachments: { id: string; filename: string; blobUrl: string }[];
+  attachments: InvoiceAttachmentItem[];
   /** Service dates from the service lines form (may include unsaved edits). */
   lineServiceDates: string[];
   /** Service dates persisted on the invoice (required for upload). */
   savedServiceDates: string[];
-  onUploaded?: () => void;
+  onAttachmentsUploaded?: (uploaded: InvoiceAttachmentItem[]) => void;
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [items, setItems] = useState(attachments);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
@@ -50,15 +55,6 @@ export function InvoiceAttachments({
     savedServiceDates.length > 0 &&
     selectedServiceDate &&
     savedServiceDates.includes(selectedServiceDate);
-
-  const attachmentIds = useMemo(
-    () => attachments.map((a) => a.id).join("|"),
-    [attachments],
-  );
-
-  useEffect(() => {
-    setItems(attachments);
-  }, [attachmentIds, attachments]);
 
   useEffect(() => {
     if (lineServiceDates.length === 0) {
@@ -98,7 +94,7 @@ export function InvoiceAttachments({
     setUploading(true);
     setError("");
 
-    const uploaded: { id: string; filename: string; blobUrl: string }[] = [];
+    const uploaded: InvoiceAttachmentItem[] = [];
     for (const file of selectedFiles) {
       const data = new FormData();
       data.set("serviceDate", selectedServiceDate);
@@ -107,12 +103,20 @@ export function InvoiceAttachments({
         method: "POST",
         body: data,
       });
-      const body = await res.json();
+      const body = (await res.json()) as { attachment?: InvoiceAttachmentItem; error?: string };
       if (!res.ok) {
         setUploading(false);
         setError(body.error ?? `Upload failed for ${file.name}`);
         if (uploaded.length) {
-          setItems((prev) => [...prev, ...uploaded]);
+          onAttachmentsUploaded?.(uploaded);
+        }
+        return;
+      }
+      if (!body.attachment?.id) {
+        setUploading(false);
+        setError(`Upload failed for ${file.name}: invalid server response.`);
+        if (uploaded.length) {
+          onAttachmentsUploaded?.(uploaded);
         }
         return;
       }
@@ -120,9 +124,8 @@ export function InvoiceAttachments({
     }
 
     setUploading(false);
-    setItems((prev) => [...prev, ...uploaded]);
+    onAttachmentsUploaded?.(uploaded);
     clearSelectedFiles();
-    onUploaded?.();
   }
 
   return (
@@ -135,11 +138,12 @@ export function InvoiceAttachments({
 
       <div>
         <h3 className={portalLabelClass}>Uploaded files</h3>
-        {items.length === 0 ? (
+        {error && <p className="mt-1 text-sm text-red-800">{error}</p>}
+        {attachments.length === 0 ? (
           <p className="mt-1 text-sm text-muted">No files uploaded yet.</p>
         ) : (
           <ul className="mt-2 space-y-1 text-sm">
-            {items.map((a) => (
+            {attachments.map((a) => (
               <li key={a.id}>
                 <a
                   href={a.blobUrl}
