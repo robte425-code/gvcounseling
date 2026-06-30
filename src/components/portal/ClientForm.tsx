@@ -10,7 +10,6 @@ import {
   portalLabelCompactClass,
   portalSectionHeadingClass,
 } from "@/components/portal/ui";
-import { client837Ready } from "@/lib/constants";
 import { prisma } from "@/lib/prisma";
 
 export type ClientFormClient = {
@@ -75,7 +74,6 @@ export async function ClientForm({ client, mode, cancelHref }: ClientFormProps) 
         })
       : [];
 
-  const readiness = client ? client837Ready(client) : null;
   const showTherapist =
     mode === "admin-create" || (mode === "admin-edit" && client?.assignmentStatus === "ACTIVE");
 
@@ -83,11 +81,6 @@ export async function ClientForm({ client, mode, cancelHref }: ClientFormProps) 
     <form action={saveClientAction} className={`${portalCardCompactClass} space-y-4`}>
       {client && <input type="hidden" name="id" value={client.id} />}
       <input type="hidden" name="returnTo" value={cancelHref} />
-      {readiness && !readiness.ready && (
-        <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-900">
-          Missing for 837: {readiness.missing.join(", ")}
-        </p>
-      )}
 
       <section className="space-y-2">
         <SectionHeading>Claim &amp; client</SectionHeading>

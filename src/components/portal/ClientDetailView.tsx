@@ -5,7 +5,7 @@ import {
   StatusBadge,
 } from "@/components/portal/ui";
 import { AttendingNpiSearch } from "@/components/portal/AttendingNpiSearch";
-import { client837Ready, formatDate } from "@/lib/constants";
+import { formatDate } from "@/lib/constants";
 
 export type ClientDetailData = {
   lniClaimNumber: string;
@@ -95,7 +95,6 @@ export function ClientDetailView({
   client: ClientDetailData;
   clientId?: string;
 }) {
-  const readiness = client837Ready(client);
   const mailing = formatAddress(client.addressLine1, client.addressLine2, client.city, client.state, client.zip);
   const residence = formatAddress(
     client.residenceAddressLine1,
@@ -113,11 +112,6 @@ export function ClientDetailView({
           <span className="text-xs text-muted">Active</span>
         ) : (
           <StatusBadge status={client.assignmentStatus} />
-        )}
-        {readiness.ready ? (
-          <StatusBadge status="READY" />
-        ) : (
-          <span className="text-xs text-amber-800">837: {readiness.missing.join(", ")}</span>
         )}
       </div>
 

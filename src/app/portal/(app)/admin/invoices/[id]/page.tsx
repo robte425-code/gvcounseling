@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { requireAdmin } from "@/auth";
 import { InvoiceDetailClient } from "@/components/portal/InvoiceDetailClient";
 import { StatusBadge } from "@/components/portal/ui";
-import { client837Ready, formatCurrency, formatDate, calendarIsoFromDate } from "@/lib/constants";
+import { formatCurrency, formatDate, calendarIsoFromDate } from "@/lib/constants";
 import { prisma } from "@/lib/prisma";
 
 export default async function AdminInvoiceDetailPage({
@@ -27,7 +27,6 @@ export default async function AdminInvoiceDetailPage({
 
   if (!invoice) notFound();
 
-  const readiness = client837Ready(invoice.client);
   const lines = invoice.lineItems.map((line) => ({
     serviceDate: calendarIsoFromDate(line.serviceDate),
     procedureCode: line.procedureCode,
@@ -55,12 +54,6 @@ export default async function AdminInvoiceDetailPage({
           {invoice.client.firstName} · {invoice.client.lniClaimNumber} ·{" "}
           {formatCurrency(Number(invoice.totalAmount))}
         </p>
-        {!readiness.ready && invoice.status !== "BILLED" && (
-          <p className="mt-2 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-900">
-            Client missing L&I billing fields: {readiness.missing.join(", ")}. Complete these before
-            including this claim in an 837 file.
-          </p>
-        )}
         {invoice.submittedAt && (
           <p className="mt-2 text-sm text-muted">Submitted {formatDate(invoice.submittedAt)}</p>
         )}

@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { requireSession } from "@/auth";
 import { InvoiceDetailClient } from "@/components/portal/InvoiceDetailClient";
 import { StatusBadge, portalButtonClass } from "@/components/portal/ui";
-import { client837Ready, formatCurrency, formatDate, calendarIsoFromDate } from "@/lib/constants";
+import { formatCurrency, formatDate, calendarIsoFromDate } from "@/lib/constants";
 import {
   deleteInvoiceAction,
   unsubmitInvoiceAction,
@@ -41,7 +41,6 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
       ? invoice.status !== "DRAFT"
       : invoice.status === "BILLED";
 
-  const readiness = client837Ready(invoice.client);
   const lines = invoice.lineItems.map((line) => ({
     serviceDate: calendarIsoFromDate(line.serviceDate),
     procedureCode: line.procedureCode,
@@ -90,12 +89,6 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
           {invoice.client.lastName}, {invoice.client.firstName} · {invoice.client.lniClaimNumber} ·{" "}
           {formatCurrency(Number(invoice.totalAmount))}
         </p>
-        {invoice.status === "DRAFT" && !readiness.ready && (
-          <p className="mt-2 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-900">
-            Client missing L&I billing fields: {readiness.missing.join(", ")}. Admin must complete these
-            before this claim can be included in an 837 file.
-          </p>
-        )}
         {invoice.billedAt && (
           <p className="mt-2 text-sm text-muted">
             Billed {formatDate(invoice.billedAt)}
