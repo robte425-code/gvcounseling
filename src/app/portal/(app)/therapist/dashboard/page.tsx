@@ -1,25 +1,38 @@
 import Link from "next/link";
 import { requireTherapist } from "@/auth";
 import { portalButtonClass, portalCardClass, StatusBadge } from "@/components/portal/ui";
-import { formatCurrency } from "@/lib/constants";
+import { formatCurrency, formatDate } from "@/lib/constants";
 import { prisma } from "@/lib/prisma";
+
+function startOfUtcDay(date = new Date()): Date {
+  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+}
 
 export default async function TherapistDashboardPage() {
   const session = await requireTherapist();
-  const [draftCount, submittedCount, pendingReferrals, recent] = await Promise.all([
-    prisma.invoice.count({ where: { therapistId: session.user.id, status: "DRAFT" } }),
-    prisma.invoice.count({ where: { therapistId: session.user.id, status: "SUBMITTED" } }),
-    prisma.client.findMany({
-      where: { therapistId: session.user.id, assignmentStatus: "PENDING_THERAPIST" },
-      orderBy: { updatedAt: "desc" },
-    }),
-    prisma.invoice.findMany({
-      where: { therapistId: session.user.id },
-      take: 5,
-      orderBy: { updatedAt: "desc" },
-      include: { client: true },
-    }),
-  ]);
+  const today = startOfUtcDay();
+  const [clientCount, nextPayPeriod, draftCount, submittedCount, pendingReferrals, recent] =
+    await Promise.all([
+      prisma.client.count({
+        where: { therapistId: session.user.id, assignmentStatus: "ACTIVE" },
+      }),
+      prisma.payPeriod.findFirst({
+        where: { cutoffDate: { gte: today } },
+        orderBy: { cutoffDate: "asc" },
+      }),
+      prisma.invoice.count({ where: { therapistId: session.user.id, status: "DRAFT" } }),
+      prisma.invoice.count({ where: { therapistId: session.user.id, status: "SUBMITTED" } }),
+      prisma.client.findMany({
+        where: { therapistId: session.user.id, assignmentStatus: "PENDING_THERAPIST" },
+        orderBy: { updatedAt: "desc" },
+      }),
+      prisma.invoice.findMany({
+        where: { therapistId: session.user.id },
+        take: 5,
+        orderBy: { updatedAt: "desc" },
+        include: { client: true },
+      }),
+    ]);
 
   return (
     <div className="space-y-8">
@@ -27,7 +40,17 @@ export default async function TherapistDashboardPage() {
         <h1 className="font-serif text-3xl font-semibold text-primary-dark">Dashboard</h1>
         <p className="mt-2 text-muted">Welcome, {session.user.firstName}.</p>
       </div>
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className={portalCardClass}>
+          <p className="text-sm text-muted">Assigned clients</p>
+          <p className="mt-2 text-3xl font-semibold">{clientCount}</p>
+        </div>
+        <div className={portalCardClass}>
+          <p className="text-sm text-muted">Next cutoff date</p>
+          <p className="mt-2 text-3xl font-semibold">
+            {nextPayPeriod ? formatDate(nextPayPeriod.cutoffDate) : "—"}
+          </p>
+        </div>
         <div className={portalCardClass}>
           <p className="text-sm text-muted">Draft invoices</p>
           <p className="mt-2 text-3xl font-semibold">{draftCount}</p>
