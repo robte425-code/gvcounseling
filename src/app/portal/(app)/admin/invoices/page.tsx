@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { requireAdmin } from "@/auth";
-import { ConfirmSubmitButton } from "@/components/portal/ConfirmSubmitButton";
-import { InvoiceTableRow } from "@/components/portal/InvoiceTableRow";
-import { StatusBadge, portalButtonSecondaryClass, portalCardClass } from "@/components/portal/ui";
-import { formatCurrency, formatDate, formatCalendarIso, calendarIsoFromDate } from "@/lib/constants";
-import { deleteAdminInvoiceAction } from "@/lib/portal-actions";
+import {
+  AdminInvoicesTable,
+  type AdminInvoiceRow,
+  type PayPeriodOption,
+} from "@/components/portal/AdminInvoicesTable";
+import { portalCardClass } from "@/components/portal/ui";
+import { formatDate, formatCalendarIso, calendarIsoFromDate } from "@/lib/constants";
 import { prisma } from "@/lib/prisma";
 
 function formatInvoiceServiceDates(lineItems: { serviceDate: Date }[]): string {
@@ -15,22 +17,60 @@ function formatInvoiceServiceDates(lineItems: { serviceDate: Date }[]): string {
   return dates.map((date) => formatCalendarIso(date)).join(", ");
 }
 
+function payPeriodLabel(
+  period: { label: string | null; cutoffDate: Date } | null,
+): string | null {
+  if (!period) return null;
+  return period.label ?? formatDate(period.cutoffDate);
+}
+
 export default async function AdminInvoicesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string }>;
+  searchParams: Promise<{ status?: string; assigned?: string }>;
 }) {
   await requireAdmin();
-  const { status } = await searchParams;
-  const invoices = await prisma.invoice.findMany({
-    where: status ? { status: status as "DRAFT" | "SUBMITTED" | "BILLED" } : undefined,
-    orderBy: { updatedAt: "desc" },
-    include: {
-      client: true,
-      therapist: { select: { firstName: true, lastName: true } },
-      lineItems: { select: { serviceDate: true }, orderBy: { sortOrder: "asc" } },
-    },
-  });
+  const { status, assigned } = await searchParams;
+  const returnTo = status
+    ? `/portal/admin/invoices?status=${encodeURIComponent(status)}`
+    : "/portal/admin/invoices";
+
+  const [invoices, payPeriods] = await Promise.all([
+    prisma.invoice.findMany({
+      where: status ? { status: status as "DRAFT" | "SUBMITTED" | "BILLED" } : undefined,
+      orderBy: { updatedAt: "desc" },
+      include: {
+        client: true,
+        therapist: { select: { firstName: true, lastName: true } },
+        lineItems: { select: { serviceDate: true }, orderBy: { sortOrder: "asc" } },
+        payPeriod: { select: { label: true, cutoffDate: true } },
+        bill: { select: { payPeriod: { select: { label: true, cutoffDate: true } } } },
+      },
+    }),
+    prisma.payPeriod.findMany({
+      orderBy: { cutoffDate: "desc" },
+      select: { id: true, label: true, cutoffDate: true },
+    }),
+  ]);
+
+  const invoiceRows: AdminInvoiceRow[] = invoices.map((inv) => ({
+    id: inv.id,
+    invoiceNumber: inv.invoiceNumber,
+    status: inv.status,
+    totalAmount: Number(inv.totalAmount),
+    submittedAt: inv.submittedAt?.toISOString() ?? null,
+    therapistName: `${inv.therapist.firstName} ${inv.therapist.lastName}`,
+    clientLabel: `${inv.client.lastName}, ${inv.client.firstName} (${inv.client.lniClaimNumber})`,
+    serviceDates: formatInvoiceServiceDates(inv.lineItems),
+    payPeriodLabel:
+      payPeriodLabel(inv.payPeriod) ?? payPeriodLabel(inv.bill?.payPeriod ?? null),
+    assignable: inv.status === "SUBMITTED" && !inv.billId,
+  }));
+
+  const periodOptions: PayPeriodOption[] = payPeriods.map((period) => ({
+    id: period.id,
+    label: period.label ?? `Cutoff ${formatDate(period.cutoffDate)}`,
+  }));
 
   const filters = [
     { label: "All", href: "/portal/admin/invoices" },
@@ -38,10 +78,20 @@ export default async function AdminInvoicesPage({
     { label: "Billed", href: "/portal/admin/invoices?status=BILLED" },
   ];
 
+  const assignedCount = assigned ? Number.parseInt(assigned, 10) : 0;
+  const assignedMessage =
+    assignedCount > 0
+      ? `Updated pay period assignment for ${assignedCount} invoice${assignedCount === 1 ? "" : "s"}.`
+      : null;
+
   return (
     <div className="space-y-8">
       <div>
         <h1 className="font-serif text-3xl font-semibold text-primary-dark">Invoices</h1>
+        <p className="mt-2 text-sm text-muted">
+          Select submitted invoices and assign them to a pay period before generating an 837 on the
+          Billing page.
+        </p>
         <div className="mt-4 flex flex-wrap gap-2">
           {filters.map((f) => (
             <Link
@@ -54,54 +104,19 @@ export default async function AdminInvoicesPage({
           ))}
         </div>
       </div>
+
+      {assignedMessage && (
+        <p className="rounded-xl bg-primary/10 px-4 py-3 text-sm text-primary-dark" role="status">
+          {assignedMessage}
+        </p>
+      )}
+
       <div className={portalCardClass}>
-        <table className="w-full text-left text-sm">
-          <thead>
-            <tr className="border-b border-border text-muted">
-              <th className="py-2 pr-4">#</th>
-              <th className="py-2 pr-4">Therapist</th>
-              <th className="py-2 pr-4">Client</th>
-              <th className="py-2 pr-4">Service date</th>
-              <th className="py-2 pr-4">Status</th>
-              <th className="py-2 pr-4">Total</th>
-              <th className="py-2 pr-4">Submitted</th>
-              <th className="py-2" />
-            </tr>
-          </thead>
-          <tbody>
-            {invoices.map((inv) => (
-              <InvoiceTableRow
-                key={inv.id}
-                href={`/portal/admin/invoices/${inv.id}`}
-                actions={
-                  <form action={deleteAdminInvoiceAction}>
-                    <input type="hidden" name="invoiceId" value={inv.id} />
-                    <ConfirmSubmitButton
-                      confirmMessage={`Delete invoice #${inv.invoiceNumber}?`}
-                      className={`${portalButtonSecondaryClass} border-red-200 px-3 py-1 text-xs text-red-700 hover:bg-red-50`}
-                    >
-                      Delete
-                    </ConfirmSubmitButton>
-                  </form>
-                }
-              >
-                <td className="py-3 pr-4">{inv.invoiceNumber}</td>
-                <td className="py-3 pr-4">
-                  {inv.therapist.firstName} {inv.therapist.lastName}
-                </td>
-                <td className="py-3 pr-4">
-                  {inv.client.lastName}, {inv.client.firstName} ({inv.client.lniClaimNumber})
-                </td>
-                <td className="py-3 pr-4">{formatInvoiceServiceDates(inv.lineItems)}</td>
-                <td className="py-3 pr-4">
-                  <StatusBadge status={inv.status} />
-                </td>
-                <td className="py-3 pr-4">{formatCurrency(Number(inv.totalAmount))}</td>
-                <td className="py-3 pr-4">{formatDate(inv.submittedAt)}</td>
-              </InvoiceTableRow>
-            ))}
-          </tbody>
-        </table>
+        <AdminInvoicesTable
+          invoices={invoiceRows}
+          payPeriods={periodOptions}
+          returnTo={returnTo}
+        />
       </div>
     </div>
   );

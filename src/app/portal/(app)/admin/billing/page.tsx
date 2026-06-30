@@ -36,7 +36,7 @@ export default async function BillingPage({
       const queuedInvoices = await prisma.invoice.count({
         where: {
           status: "SUBMITTED",
-          submittedAt: { lte: period.cutoffDate },
+          payPeriodId: period.id,
         },
       });
       return { period, queuedInvoices };
@@ -54,6 +54,11 @@ export default async function BillingPage({
         <h1 className="font-serif text-3xl font-semibold text-primary-dark">Billing</h1>
         <p className="mt-2 text-sm text-muted">
           Manage pay periods, L&I procedure fees, generate 837 files, and view billing history.
+          Assign submitted invoices to a pay period on the{" "}
+          <Link href="/portal/admin/invoices?status=SUBMITTED" className="text-primary hover:underline">
+            Invoices
+          </Link>{" "}
+          page before generating.
         </p>
       </div>
 
@@ -124,7 +129,7 @@ export default async function BillingPage({
               <th className="py-2 pr-4">Cutoff</th>
               <th className="py-2 pr-4">Expected payment</th>
               <th className="py-2 pr-4">837 files</th>
-              <th className="py-2 pr-4">Queued</th>
+              <th className="py-2 pr-4">Assigned</th>
               <th className="py-2">Actions</th>
             </tr>
           </thead>

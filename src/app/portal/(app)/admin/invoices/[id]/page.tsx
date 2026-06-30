@@ -21,7 +21,8 @@ export default async function AdminInvoiceDetailPage({
       therapist: true,
       lineItems: { orderBy: { sortOrder: "asc" } },
       attachments: { orderBy: { createdAt: "desc" } },
-      bill: true,
+      bill: { include: { payPeriod: true } },
+      payPeriod: true,
     },
   });
 
@@ -61,6 +62,15 @@ export default async function AdminInvoiceDetailPage({
           <p className="mt-2 text-sm text-muted">
             Billed {formatDate(invoice.billedAt)}
             {invoice.clmControlNumber ? ` · CLM ${invoice.clmControlNumber}` : ""}
+            {invoice.bill?.payPeriod
+              ? ` · ${invoice.bill.payPeriod.label ?? formatDate(invoice.bill.payPeriod.cutoffDate)}`
+              : ""}
+          </p>
+        )}
+        {invoice.status === "SUBMITTED" && invoice.payPeriod && (
+          <p className="mt-2 text-sm text-muted">
+            Assigned to pay period{" "}
+            {invoice.payPeriod.label ?? formatDate(invoice.payPeriod.cutoffDate)}
           </p>
         )}
       </div>

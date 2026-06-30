@@ -62,6 +62,7 @@ model PayPeriod {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   bills       Bill[]
+  invoices    Invoice[]
 }
 
 model Client {
@@ -127,6 +128,8 @@ model Invoice {
   client           Client              @relation(fields: [clientId], references: [id])
   billId           String?
   bill             Bill?               @relation(fields: [billId], references: [id])
+  payPeriodId      String?
+  payPeriod        PayPeriod?          @relation(fields: [payPeriodId], references: [id])
   clmControlNumber String?
   totalAmount      Decimal             @db.Decimal(10, 2)
   submittedAt      DateTime?
@@ -140,6 +143,7 @@ model Invoice {
   @@index([status])
   @@index([clientId])
   @@index([billId])
+  @@index([payPeriodId])
 }
 
 model InvoiceLineItem {

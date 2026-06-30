@@ -659,7 +659,7 @@ export async function unsubmitInvoiceAction(formData: FormData) {
 
   await prisma.invoice.update({
     where: { id: invoiceId },
-    data: { status: "DRAFT", submittedAt: null },
+    data: { status: "DRAFT", submittedAt: null, payPeriodId: null },
   });
   revalidatePath(`/portal/therapist/invoices/${invoiceId}`);
 }
@@ -728,6 +728,50 @@ export async function deleteAdminInvoiceAction(formData: FormData) {
   redirect("/portal/admin/invoices");
 }
 
+export async function assignInvoicesToPayPeriodAction(formData: FormData) {
+  await requireAdmin();
+  const payPeriodIdRaw = String(formData.get("payPeriodId") ?? "").trim();
+  const payPeriodId = payPeriodIdRaw || null;
+  const returnTo = String(formData.get("returnTo") ?? "").trim() || "/portal/admin/invoices";
+  const invoiceIds = formData
+    .getAll("invoiceIds")
+    .map((id) => String(id).trim())
+    .filter(Boolean);
+
+  if (!invoiceIds.length) {
+    throw new Error("Select at least one invoice.");
+  }
+
+  if (payPeriodId) {
+    const payPeriod = await prisma.payPeriod.findUnique({ where: { id: payPeriodId } });
+    if (!payPeriod) throw new Error("Pay period not found.");
+  }
+
+  const invoices = await prisma.invoice.findMany({
+    where: { id: { in: invoiceIds } },
+    select: { id: true, status: true, billId: true, invoiceNumber: true },
+  });
+
+  if (invoices.length !== invoiceIds.length) {
+    throw new Error("One or more invoices were not found.");
+  }
+
+  const invalid = invoices.filter((inv) => inv.status !== "SUBMITTED" || inv.billId);
+  if (invalid.length) {
+    const numbers = invalid.map((inv) => `#${inv.invoiceNumber}`).join(", ");
+    throw new Error(`Only submitted, unbilled invoices can be assigned. Invalid: ${numbers}`);
+  }
+
+  await prisma.invoice.updateMany({
+    where: { id: { in: invoiceIds } },
+    data: { payPeriodId },
+  });
+
+  revalidatePath("/portal/admin/invoices");
+  revalidatePath("/portal/admin/billing");
+  redirect(`${returnTo}${returnTo.includes("?") ? "&" : "?"}assigned=${invoiceIds.length}`);
+}
+
 export async function generateBillAction(formData: FormData) {
   const session = await requireAdmin();
   const payPeriodId = String(formData.get("payPeriodId") ?? "");
@@ -737,7 +781,7 @@ export async function generateBillAction(formData: FormData) {
   const invoices = await prisma.invoice.findMany({
     where: {
       status: "SUBMITTED",
-      submittedAt: { lte: payPeriod.cutoffDate },
+      payPeriodId,
     },
     include: {
       client: true,
@@ -748,7 +792,7 @@ export async function generateBillAction(formData: FormData) {
   });
 
   if (!invoices.length) {
-    throw new Error("No submitted invoices are queued for this pay period cutoff.");
+    throw new Error("No submitted invoices are assigned to this pay period.");
   }
 
   const blocked: string[] = [];
