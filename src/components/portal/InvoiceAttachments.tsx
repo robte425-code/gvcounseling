@@ -15,6 +15,18 @@ export type InvoiceAttachmentItem = {
   blobUrl: string;
 };
 
+export function mergeUniqueAttachments(
+  ...lists: InvoiceAttachmentItem[][]
+): InvoiceAttachmentItem[] {
+  const byId = new Map<string, InvoiceAttachmentItem>();
+  for (const list of lists) {
+    for (const item of list) {
+      byId.set(item.id, item);
+    }
+  }
+  return Array.from(byId.values());
+}
+
 export function InvoiceAttachments({
   invoiceId,
   readOnly,
@@ -33,6 +45,7 @@ export function InvoiceAttachments({
   onAttachmentsUploaded?: (uploaded: InvoiceAttachmentItem[]) => void;
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const uploadingRef = useRef(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
@@ -79,6 +92,7 @@ export function InvoiceAttachments({
 
   async function handleUpload(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (uploadingRef.current) return;
     if (!invoiceId || !selectedServiceDate) return;
 
     if (!canUpload) {
@@ -91,10 +105,12 @@ export function InvoiceAttachments({
       return;
     }
 
+    uploadingRef.current = true;
     setUploading(true);
     setError("");
 
     const uploaded: InvoiceAttachmentItem[] = [];
+    try {
     for (const file of selectedFiles) {
       const data = new FormData();
       data.set("serviceDate", selectedServiceDate);
@@ -105,7 +121,6 @@ export function InvoiceAttachments({
       });
       const body = (await res.json()) as { attachment?: InvoiceAttachmentItem; error?: string };
       if (!res.ok) {
-        setUploading(false);
         setError(body.error ?? `Upload failed for ${file.name}`);
         if (uploaded.length) {
           onAttachmentsUploaded?.(uploaded);
@@ -113,7 +128,6 @@ export function InvoiceAttachments({
         return;
       }
       if (!body.attachment?.id) {
-        setUploading(false);
         setError(`Upload failed for ${file.name}: invalid server response.`);
         if (uploaded.length) {
           onAttachmentsUploaded?.(uploaded);
@@ -123,9 +137,12 @@ export function InvoiceAttachments({
       uploaded.push(body.attachment);
     }
 
-    setUploading(false);
     onAttachmentsUploaded?.(uploaded);
     clearSelectedFiles();
+    } finally {
+      uploadingRef.current = false;
+      setUploading(false);
+    }
   }
 
   return (

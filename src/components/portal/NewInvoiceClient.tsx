@@ -2,7 +2,11 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { InvoiceAttachments, type InvoiceAttachmentItem } from "@/components/portal/InvoiceAttachments";
+import {
+  InvoiceAttachments,
+  mergeUniqueAttachments,
+  type InvoiceAttachmentItem,
+} from "@/components/portal/InvoiceAttachments";
 import { InvoiceEditor, type InvoiceLineItem } from "@/components/portal/InvoiceEditor";
 import { buildInvoiceFormData, linesArePersistable } from "@/lib/invoice-form-data";
 import { todayCalendarIso } from "@/lib/constants";
@@ -135,7 +139,7 @@ export function NewInvoiceClient({ clients, initialClientId, therapistFeeSchedul
         lineServiceDates={lineServiceDates}
         savedServiceDates={persistedServiceDates}
         onAttachmentsUploaded={(uploaded) =>
-          setAttachments((prev) => [...prev, ...uploaded])
+          setAttachments((prev) => mergeUniqueAttachments(prev, uploaded))
         }
       />
 

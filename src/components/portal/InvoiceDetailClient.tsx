@@ -2,7 +2,11 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { InvoiceAttachments, type InvoiceAttachmentItem } from "@/components/portal/InvoiceAttachments";
+import {
+  InvoiceAttachments,
+  mergeUniqueAttachments,
+  type InvoiceAttachmentItem,
+} from "@/components/portal/InvoiceAttachments";
 import { InvoiceEditor, type InvoiceLineItem } from "@/components/portal/InvoiceEditor";
 import { buildInvoiceFormData, linesArePersistable } from "@/lib/invoice-form-data";
 import { saveInvoiceDraftAction } from "@/lib/portal-actions";
@@ -104,9 +108,10 @@ export function InvoiceDetailClient({
         attachments={attachmentItems}
         lineServiceDates={lineServiceDates}
         savedServiceDates={persistedServiceDates}
-        onAttachmentsUploaded={(uploaded) =>
-          setAttachmentItems((prev) => [...prev, ...uploaded])
-        }
+        onAttachmentsUploaded={(uploaded) => {
+          setAttachmentItems((prev) => mergeUniqueAttachments(prev, uploaded));
+          router.refresh();
+        }}
       />
 
       {!readOnly && usesTherapistFees && lines.some((line) => !line.amount) && (
