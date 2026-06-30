@@ -23,7 +23,6 @@ import { sendAdminWelcomeEmail, sendTherapistAssignmentEmail, sendTherapistWelco
 import { generateOneTimePassword, hashPassword, verifyPassword } from "@/lib/password";
 import { fetchLniPayPeriods } from "@/lib/lni-pay-periods";
 import { createProcedureCodeFee, createTherapistProcedureCodeFee, updateTherapistProcedureCodeFee, applyTherapistFeeSchedule, loadAllProcedureCodeFees, resolveFeeAmount } from "@/lib/procedure-fees";
-import { toDateOnly } from "@/lib/procedure-fee-schedule";
 import { prisma } from "@/lib/prisma";
 
 function parseDecimal(value: FormDataEntryValue | null): number {
@@ -598,26 +597,13 @@ export async function createInvoiceDraftAction(clientId: string) {
   });
   if (!client) throw new Error("Client not found.");
 
-  const serviceDate = toDateOnly(new Date().toISOString().slice(0, 10));
-  const pricedLineItems = await applyTherapistFeeSchedule(session.user.id, [
-    {
-      serviceDate,
-      procedureCode: "96156",
-      sortOrder: 0,
-    },
-  ]);
-  const totalAmount = pricedLineItems.reduce((s, l) => s + l.amount, 0);
-
   const invoice = await prisma.invoice.create({
     data: {
       therapistId: session.user.id,
       clientId,
       invoiceNumber: await nextInvoiceNumber(session.user.id),
-      totalAmount,
+      totalAmount: 0,
       status: "DRAFT",
-      lineItems: {
-        create: pricedLineItems.map((line) => ({ ...line, units: 1 })),
-      },
     },
   });
 

@@ -7,9 +7,8 @@ import {
   mergeUniqueAttachments,
   type InvoiceAttachmentItem,
 } from "@/components/portal/InvoiceAttachments";
-import { InvoiceEditor, type InvoiceLineItem } from "@/components/portal/InvoiceEditor";
+import { InvoiceEditor, emptyInvoiceLine, type InvoiceLineItem } from "@/components/portal/InvoiceEditor";
 import { buildInvoiceFormData, linesArePersistable } from "@/lib/invoice-form-data";
-import { todayCalendarIso } from "@/lib/constants";
 import { createInvoiceDraftAction, saveInvoiceDraftAction } from "@/lib/portal-actions";
 import { portalButtonClass, portalCardClass } from "@/components/portal/ui";
 import type { FeeScheduleRow } from "@/lib/procedure-fee-schedule";
@@ -34,19 +33,11 @@ function uniqueServiceDates(lines: InvoiceLineItem[]): string[] {
   return [...new Set(dates)];
 }
 
-function defaultLine(): InvoiceLineItem {
-  return {
-    serviceDate: todayCalendarIso(),
-    procedureCode: "96156",
-    amount: "",
-  };
-}
-
 export function NewInvoiceClient({ clients, initialClientId, therapistFeeSchedule }: Props) {
   const router = useRouter();
   const [clientId, setClientId] = useState(initialClientId);
   const [invoiceId, setInvoiceId] = useState<string | null>(null);
-  const [lines, setLines] = useState<InvoiceLineItem[]>([defaultLine()]);
+  const [lines, setLines] = useState<InvoiceLineItem[]>([emptyInvoiceLine()]);
   const [attachments, setAttachments] = useState<InvoiceAttachmentItem[]>([]);
   const [persistedServiceDates, setPersistedServiceDates] = useState<string[]>([]);
   const [draftError, setDraftError] = useState("");
@@ -73,9 +64,11 @@ export function NewInvoiceClient({ clients, initialClientId, therapistFeeSchedul
         const { invoiceId: id } = await createInvoiceDraftAction(clientId);
         if (cancelled) return;
         setInvoiceId(id);
-        await saveInvoiceDraftAction(buildInvoiceFormData(lines, { invoiceId: id, clientId }));
-        if (cancelled) return;
-        setPersistedServiceDates(uniqueServiceDates(lines));
+        if (linesArePersistable(lines)) {
+          await saveInvoiceDraftAction(buildInvoiceFormData(lines, { invoiceId: id, clientId }));
+          if (cancelled) return;
+          setPersistedServiceDates(uniqueServiceDates(lines));
+        }
       } catch (error) {
         if (!cancelled) {
           setDraftError(error instanceof Error ? error.message : "Could not create invoice draft.");
@@ -123,7 +116,7 @@ export function NewInvoiceClient({ clients, initialClientId, therapistFeeSchedul
         <InvoiceEditor
           formId={INVOICE_FORM_ID}
           readOnly={false}
-          initialLines={[defaultLine()]}
+          initialLines={[emptyInvoiceLine()]}
           invoiceId={invoiceId ?? undefined}
           therapistFeeSchedule={therapistFeeSchedule}
           clients={clients}

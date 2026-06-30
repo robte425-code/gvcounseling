@@ -6,7 +6,6 @@ import {
   formatProcedureCodeLabel,
   PROCEDURE_CODE_NOTICES,
   PROCEDURE_CODES,
-  todayCalendarIso,
 } from "@/lib/constants";
 import { resolveFeeAmount, type FeeScheduleRow } from "@/lib/procedure-fee-schedule";
 import { submitInvoiceAction, type SubmitInvoiceState } from "@/lib/portal-actions";
@@ -24,6 +23,10 @@ type LineItem = {
 };
 
 export type InvoiceLineItem = LineItem;
+
+export function emptyInvoiceLine(): LineItem {
+  return { serviceDate: "", procedureCode: "", amount: "" };
+}
 
 type ClientOption = {
   id: string;
@@ -46,12 +49,6 @@ type Props = {
 };
 
 const submitInitialState: SubmitInvoiceState = {};
-
-const defaultLine = (serviceDate?: string): LineItem => ({
-  serviceDate: serviceDate ?? todayCalendarIso(),
-  procedureCode: "96156",
-  amount: "",
-});
 
 function ProcedureCodeNotice({ code }: { code: string }) {
   const notice = PROCEDURE_CODE_NOTICES[code];
@@ -124,7 +121,7 @@ export function InvoiceEditor({
     initialClientId ?? clients?.[0]?.id ?? "",
   );
   const [lines, setLines] = useState<LineItem[]>(() =>
-    (initialLines.length ? initialLines : [defaultLine()]).map(priceLine),
+    (initialLines.length ? initialLines : [emptyInvoiceLine()]).map(priceLine),
   );
 
   useEffect(() => {
@@ -157,10 +154,7 @@ export function InvoiceEditor({
   }
 
   function addLine() {
-    setLines((prev) => {
-      const serviceDate = prev[0]?.serviceDate ?? todayCalendarIso();
-      return [...prev, priceLine(defaultLine(serviceDate))];
-    });
+    setLines((prev) => [...prev, priceLine(emptyInvoiceLine())]);
   }
 
   function removeLine(index: number) {
@@ -240,6 +234,7 @@ export function InvoiceEditor({
                 onChange={(e) => updateLine(index, { procedureCode: e.target.value })}
                 className={portalInputClass}
               >
+                <option value="">Select procedure code</option>
                 {PROCEDURE_CODES.map(({ code, description }) => (
                   <option key={code} value={code}>
                     {code} — {description}
