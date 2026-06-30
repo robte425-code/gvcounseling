@@ -649,13 +649,6 @@ export async function submitInvoiceAction(
     return { error: "Invoice cannot be submitted." };
   }
 
-  const readiness = client837Ready(invoice.client);
-  if (!readiness.ready) {
-    return {
-      error: `Client is missing required billing fields: ${readiness.missing.join(", ")}. Ask admin to update the client record.`,
-    };
-  }
-
   await prisma.invoice.update({
     where: { id: invoice.id },
     data: { status: "SUBMITTED", submittedAt: new Date() },

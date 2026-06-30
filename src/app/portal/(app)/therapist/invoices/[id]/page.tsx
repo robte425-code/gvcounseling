@@ -92,7 +92,8 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
         </p>
         {invoice.status === "DRAFT" && !readiness.ready && (
           <p className="mt-2 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-900">
-            Client missing billing fields: {readiness.missing.join(", ")}. Contact admin before submitting.
+            Client missing L&I billing fields: {readiness.missing.join(", ")}. Admin must complete these
+            before this claim can be included in an 837 file.
           </p>
         )}
         {invoice.billedAt && (
