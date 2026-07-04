@@ -143,7 +143,6 @@ export function AdminInvoicesTable({ invoices, payPeriods, returnTo }: Props) {
             <th className="py-2 pr-4">Service date</th>
             <th className="py-2 pr-4">Status</th>
             <th className="py-2 pr-4">Payment</th>
-            <th className="py-2 pr-4">Pay period</th>
             <th className="py-2 pr-4">Total</th>
             <th className="py-2 pr-4">Submitted</th>
             <th className="py-2" />
@@ -153,7 +152,7 @@ export function AdminInvoicesTable({ invoices, payPeriods, returnTo }: Props) {
           {groups.map((group) => (
             <Fragment key={group.key}>
               <tr key={group.key} className="border-b border-border bg-primary/5">
-                <td colSpan={11} className="py-2.5 pr-4 text-sm font-semibold text-primary-dark">
+                <td colSpan={10} className="py-2.5 pr-4 text-sm font-semibold text-primary-dark">
                   {group.label}
                   <span className="ml-2 font-normal text-muted">
                     ({group.invoices.length} invoice{group.invoices.length === 1 ? "" : "s"})
@@ -204,7 +203,6 @@ export function AdminInvoicesTable({ invoices, payPeriods, returnTo }: Props) {
                       "—"
                     )}
                   </td>
-                  <td className="py-3 pr-4 text-muted">{inv.payPeriodLabel ?? "—"}</td>
                   <td className="py-3 pr-4">{formatCurrency(inv.totalAmount)}</td>
                   <td className="py-3 pr-4">
                     {inv.submittedAt ? formatDate(new Date(inv.submittedAt)) : "—"}
