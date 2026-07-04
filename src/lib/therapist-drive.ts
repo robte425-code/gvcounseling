@@ -1,4 +1,8 @@
-import { getTherapistFolderConfig, therapistDriveFolderName } from "@/lib/google-drive";
+import {
+  CLOSED_CASES_SUBFOLDER,
+  getTherapistFolderConfig,
+  therapistDriveFolderName,
+} from "@/lib/google-drive";
 import { prisma } from "@/lib/prisma";
 
 export type TherapistDriveSource = {
@@ -6,6 +10,7 @@ export type TherapistDriveSource = {
   therapistName: string;
   folderId: string | null;
   folderName: string;
+  closedSubfolderName: string;
 };
 
 function folderConfigForTherapist(user: {
@@ -21,6 +26,7 @@ function folderConfigForTherapist(user: {
       therapistName: `${user.firstName} ${user.lastName}`,
       folderId: folderConfig.maria.folderId,
       folderName: folderConfig.maria.folderName,
+      closedSubfolderName: folderConfig.maria.closedSubfolderName,
     };
   }
   if (user.email === "steven@gvcounseling.com" || user.firstName === "Steven") {
@@ -29,6 +35,7 @@ function folderConfigForTherapist(user: {
       therapistName: `${user.firstName} ${user.lastName}`,
       folderId: folderConfig.steven.folderId,
       folderName: folderConfig.steven.folderName,
+      closedSubfolderName: folderConfig.steven.closedSubfolderName,
     };
   }
   return {
@@ -36,6 +43,7 @@ function folderConfigForTherapist(user: {
     therapistName: `${user.firstName} ${user.lastName}`,
     folderId: null,
     folderName: therapistDriveFolderName(user.firstName, user.lastName),
+    closedSubfolderName: CLOSED_CASES_SUBFOLDER,
   };
 }
 

@@ -67,6 +67,12 @@ export default async function AdminInvoiceDetailPage({
               : ""}
           </p>
         )}
+        {invoice.paymentStatus && (
+          <p className="mt-2 flex flex-wrap items-center gap-2 text-sm text-muted">
+            <StatusBadge status={invoice.paymentStatus} />
+            {invoice.lniPaidAt && <span>LNI paid {formatDate(invoice.lniPaidAt)}</span>}
+          </p>
+        )}
         {invoice.status === "SUBMITTED" && invoice.payPeriod && (
           <p className="mt-2 text-sm text-muted">
             Assigned to pay period{" "}

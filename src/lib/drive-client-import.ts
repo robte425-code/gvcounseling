@@ -1,5 +1,4 @@
 import {
-  CLOSED_CASES_SUBFOLDER,
   downloadReferralDocx,
   findDriveSubfolder,
   findReferralSubmissionFile,
@@ -101,7 +100,7 @@ async function scanTherapistDriveSource(
       const closedParent = await findDriveSubfolder(
         accessToken,
         parentFolderId,
-        CLOSED_CASES_SUBFOLDER,
+        source.closedSubfolderName,
       );
       if (closedParent) {
         const closedFolders = await listClientFolders(accessToken, closedParent.id);
@@ -116,7 +115,9 @@ async function scanTherapistDriveSource(
           );
         }
       } else {
-        errors.push(`${source.therapistName}: no "${CLOSED_CASES_SUBFOLDER}" subfolder found.`);
+        errors.push(
+          `${source.therapistName}: no "${source.closedSubfolderName}" subfolder found.`,
+        );
       }
     }
   } catch (e) {

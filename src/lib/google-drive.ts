@@ -164,15 +164,29 @@ export async function listClientDriveContents(
   };
 }
 
-export function getTherapistFolderConfig() {
+export const CLOSED_CASES_SUBFOLDER = "Closed Cases";
+export const STEVEN_CLOSED_SUBFOLDER = "CLOSED";
+
+export type TherapistFolderEntry = {
+  folderId: string | null;
+  folderName: string;
+  closedSubfolderName: string;
+};
+
+export function getTherapistFolderConfig(): {
+  maria: TherapistFolderEntry;
+  steven: TherapistFolderEntry;
+} {
   return {
     maria: {
       folderId: process.env.GOOGLE_DRIVE_MARIA_FOLDER_ID?.trim() || null,
       folderName: process.env.GOOGLE_DRIVE_MARIA_FOLDER_NAME?.trim() || "Maria: Client files",
+      closedSubfolderName: CLOSED_CASES_SUBFOLDER,
     },
     steven: {
       folderId: process.env.GOOGLE_DRIVE_STEVEN_FOLDER_ID?.trim() || null,
       folderName: process.env.GOOGLE_DRIVE_STEVEN_FOLDER_NAME?.trim() || "Steven: Client files",
+      closedSubfolderName: STEVEN_CLOSED_SUBFOLDER,
     },
   };
 }
@@ -227,8 +241,6 @@ export function parseClientFolderName(name: string): { claimNumber: string; disp
   return { claimNumber, displayName };
 }
 
-export const CLOSED_CASES_SUBFOLDER = "Closed Cases";
-
 export async function findDriveSubfolder(
   accessToken: string,
   parentFolderId: string,
@@ -281,6 +293,44 @@ export async function listClientFolderFiles(
 ): Promise<DriveFile[]> {
   const query = [`'${clientFolderId}' in parents`, "trashed=false"].join(" and ");
   return listFiles(accessToken, query);
+}
+
+export type DriveFileWithLink = DriveFile & { webViewLink: string; size: number };
+
+export async function listClientFolderFilesWithLinks(
+  accessToken: string,
+  clientFolderId: string,
+): Promise<DriveFileWithLink[]> {
+  const query = [`'${clientFolderId}' in parents`, "trashed=false"].join(" and ");
+  const files: DriveFileWithLink[] = [];
+  let pageToken: string | undefined;
+
+  do {
+    const params = new URLSearchParams({
+      q: query,
+      fields: "nextPageToken,files(id,name,mimeType,webViewLink,size)",
+      pageSize: "200",
+      supportsAllDrives: "true",
+      includeItemsFromAllDrives: "true",
+    });
+    if (pageToken) params.set("pageToken", pageToken);
+
+    const data = await driveFetch<
+      DriveListResponse & { files?: (DriveFileMeta & { size?: string | null })[] }
+    >(accessToken, `/files?${params.toString()}`);
+    for (const file of data.files ?? []) {
+      files.push({
+        id: file.id,
+        name: file.name,
+        mimeType: file.mimeType,
+        webViewLink: driveViewLink(file.id, file.mimeType, file.webViewLink),
+        size: Number(file.size ?? 0) || 0,
+      });
+    }
+    pageToken = data.nextPageToken;
+  } while (pageToken);
+
+  return files;
 }
 
 export async function downloadFileBuffer(accessToken: string, file: DriveFile): Promise<Buffer> {

@@ -12,7 +12,7 @@ import {
   unstable_update,
 } from "@/auth";
 import type { ImpersonationUpdate } from "@/types/next-auth";
-import { Gender, InvoiceStatus } from "@/generated/prisma/client";
+import { Gender, InvoiceStatus, PaymentStatus } from "@/generated/prisma/client";
 import { buildEdi837, generateClmControlNumber, type Edi837Claim } from "@/lib/edi837";
 import { client837Ready, parseClaimNumber } from "@/lib/constants";
 import { moveClientDriveFolderToTherapist } from "@/lib/client-drive-move";
@@ -886,6 +886,7 @@ export async function generateBillAction(formData: FormData) {
         where: { id: inv.id },
         data: {
           status: "BILLED" satisfies InvoiceStatus,
+          paymentStatus: "UNPAID" satisfies PaymentStatus,
           billId: created.id,
           billedAt: now,
           clmControlNumber: claim.clmControlNumber,

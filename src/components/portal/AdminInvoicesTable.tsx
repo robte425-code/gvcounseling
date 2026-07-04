@@ -17,6 +17,8 @@ export type AdminInvoiceRow = {
   id: string;
   invoiceNumber: number;
   status: "DRAFT" | "SUBMITTED" | "BILLED";
+  paymentStatus: "PAID" | "UNPAID" | "DENIED" | "APPEAL_IN_PROGRESS" | null;
+  lniPaidAt: string | null;
   totalAmount: number;
   submittedAt: string | null;
   therapistName: string;
@@ -129,6 +131,7 @@ export function AdminInvoicesTable({ invoices, payPeriods, returnTo }: Props) {
             <th className="py-2 pr-4">Client</th>
             <th className="py-2 pr-4">Service date</th>
             <th className="py-2 pr-4">Status</th>
+            <th className="py-2 pr-4">Payment</th>
             <th className="py-2 pr-4">Pay period</th>
             <th className="py-2 pr-4">Total</th>
             <th className="py-2 pr-4">Submitted</th>
@@ -167,6 +170,18 @@ export function AdminInvoicesTable({ invoices, payPeriods, returnTo }: Props) {
               <td className="py-3 pr-4">{inv.serviceDates}</td>
               <td className="py-3 pr-4">
                 <StatusBadge status={inv.status} />
+              </td>
+              <td className="py-3 pr-4">
+                {inv.paymentStatus ? (
+                  <div className="space-y-1">
+                    <StatusBadge status={inv.paymentStatus} />
+                    {inv.lniPaidAt && (
+                      <p className="text-xs text-muted">{formatDate(new Date(inv.lniPaidAt))}</p>
+                    )}
+                  </div>
+                ) : (
+                  "—"
+                )}
               </td>
               <td className="py-3 pr-4 text-muted">{inv.payPeriodLabel ?? "—"}</td>
               <td className="py-3 pr-4">{formatCurrency(inv.totalAmount)}</td>

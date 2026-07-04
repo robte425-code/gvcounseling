@@ -18,6 +18,13 @@ enum InvoiceStatus {
   BILLED
 }
 
+enum PaymentStatus {
+  PAID
+  UNPAID
+  DENIED
+  APPEAL_IN_PROGRESS
+}
+
 enum Gender {
   M
   F
@@ -134,6 +141,8 @@ model Invoice {
   totalAmount      Decimal             @db.Decimal(10, 2)
   submittedAt      DateTime?
   billedAt         DateTime?
+  paymentStatus    PaymentStatus?
+  lniPaidAt        DateTime?
   lineItems        InvoiceLineItem[]
   attachments      InvoiceAttachment[]
   createdAt        DateTime            @default(now())
@@ -141,6 +150,7 @@ model Invoice {
 
   @@unique([therapistId, invoiceNumber])
   @@index([status])
+  @@index([paymentStatus])
   @@index([clientId])
   @@index([billId])
   @@index([payPeriodId])
