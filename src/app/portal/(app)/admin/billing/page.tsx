@@ -28,20 +28,30 @@ export default async function BillingPage({
   const params = await searchParams;
   const periods = await prisma.payPeriod.findMany({
     orderBy: { cutoffDate: "asc" },
-    include: { _count: { select: { bills: true } } },
+    include: {
+      _count: {
+        select: {
+          bills: true,
+          invoices: true,
+        },
+      },
+    },
   });
 
-  const periodRows = await Promise.all(
-    periods.map(async (period) => {
-      const queuedInvoices = await prisma.invoice.count({
-        where: {
-          status: "SUBMITTED",
-          payPeriodId: period.id,
-        },
-      });
-      return { period, queuedInvoices };
-    }),
+  const queuedByPeriod = await prisma.invoice.groupBy({
+    by: ["payPeriodId"],
+    where: { status: "SUBMITTED", payPeriodId: { not: null } },
+    _count: true,
+  });
+  const queuedCountByPeriodId = new Map(
+    queuedByPeriod.map((row) => [row.payPeriodId!, row._count]),
   );
+
+  const periodRows = periods.map((period) => ({
+    period,
+    assignedInvoices: period._count.invoices,
+    queuedInvoices: queuedCountByPeriodId.get(period.id) ?? 0,
+  }));
 
   const syncMessage =
     params.synced === "1"
@@ -54,11 +64,12 @@ export default async function BillingPage({
         <h1 className="font-serif text-3xl font-semibold text-primary-dark">Billing</h1>
         <p className="mt-2 text-sm text-muted">
           Manage pay periods, L&I procedure fees, generate 837 files, and view billing history.
-          Assign submitted invoices to a pay period on the{" "}
+          <strong> Assigned</strong> counts all invoices linked to each pay period.{" "}
+          <strong>Generate 837</strong> uses only submitted invoices not yet on a bill — assign those on the{" "}
           <Link href="/portal/admin/invoices?status=SUBMITTED" className="text-primary hover:underline">
             Invoices
           </Link>{" "}
-          page before generating.
+          page.
         </p>
       </div>
 
@@ -134,13 +145,18 @@ export default async function BillingPage({
             </tr>
           </thead>
           <tbody>
-            {periodRows.map(({ period, queuedInvoices }) => (
+            {periodRows.map(({ period, assignedInvoices, queuedInvoices }) => (
               <tr key={period.id} className="border-b border-border/60 last:border-0">
                 <td className="py-2.5 pr-4">{period.label ?? "—"}</td>
                 <td className="py-2.5 pr-4">{formatDate(period.cutoffDate)}</td>
                 <td className="py-2.5 pr-4">{formatDate(period.paymentDate)}</td>
                 <td className="py-2.5 pr-4">{period._count.bills}</td>
-                <td className="py-2.5 pr-4">{queuedInvoices}</td>
+                <td className="py-2.5 pr-4">
+                  {assignedInvoices}
+                  {queuedInvoices > 0 && queuedInvoices !== assignedInvoices && (
+                    <span className="ml-1 text-xs text-muted">({queuedInvoices} queued)</span>
+                  )}
+                </td>
                 <td className="py-2.5">
                   <div className="flex flex-wrap gap-2">
                     <form action={generateBillAction}>
