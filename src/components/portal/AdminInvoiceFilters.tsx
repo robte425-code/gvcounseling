@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { InvoiceStatus } from "@/generated/prisma/client";
 import {
   portalButtonSecondaryClass,
   portalInputCompactClass,
@@ -16,7 +17,7 @@ export type PayPeriodFilterOption = {
 };
 
 export type AdminInvoiceFilterValues = {
-  status?: string;
+  status?: InvoiceStatus;
   therapistId?: string;
   payPeriodId?: string;
 };
