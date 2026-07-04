@@ -23,6 +23,7 @@ type ClientOption = {
 type Props = {
   clients: ClientOption[];
   initialClientId: string;
+  initialInvoiceNumber: number;
   therapistFeeSchedule?: FeeScheduleRow[];
 };
 
@@ -33,10 +34,16 @@ function uniqueServiceDates(lines: InvoiceLineItem[]): string[] {
   return [...new Set(dates)];
 }
 
-export function NewInvoiceClient({ clients, initialClientId, therapistFeeSchedule }: Props) {
+export function NewInvoiceClient({
+  clients,
+  initialClientId,
+  initialInvoiceNumber,
+  therapistFeeSchedule,
+}: Props) {
   const router = useRouter();
   const [clientId, setClientId] = useState(initialClientId);
   const [invoiceId, setInvoiceId] = useState<string | null>(null);
+  const [invoiceNumber, setInvoiceNumber] = useState<number | null>(initialInvoiceNumber);
   const [lines, setLines] = useState<InvoiceLineItem[]>([emptyInvoiceLine()]);
   const [attachments, setAttachments] = useState<InvoiceAttachmentItem[]>([]);
   const [persistedServiceDates, setPersistedServiceDates] = useState<string[]>([]);
@@ -61,9 +68,10 @@ export function NewInvoiceClient({ clients, initialClientId, therapistFeeSchedul
       creatingDraftRef.current = true;
       setDraftError("");
       try {
-        const { invoiceId: id } = await createInvoiceDraftAction(clientId);
+        const { invoiceId: id, invoiceNumber: number } = await createInvoiceDraftAction(clientId);
         if (cancelled) return;
         setInvoiceId(id);
+        setInvoiceNumber(number);
         if (linesArePersistable(lines)) {
           await saveInvoiceDraftAction(buildInvoiceFormData(lines, { invoiceId: id, clientId }));
           if (cancelled) return;
@@ -110,6 +118,16 @@ export function NewInvoiceClient({ clients, initialClientId, therapistFeeSchedul
 
   return (
     <div className="space-y-8">
+      {invoiceNumber != null && (
+        <div>
+          <p className="font-serif text-xl font-semibold text-primary-dark">
+            Invoice <span className="font-mono">#{invoiceNumber}</span>
+          </p>
+          <p className="mt-1 text-sm text-muted">
+            Your invoice numbers are sequential per therapist and continue from any prior invoices.
+          </p>
+        </div>
+      )}
       <div className={portalCardClass}>
         <h2 className="mb-4 font-serif text-xl font-semibold text-primary-dark">Service lines</h2>
         {draftError ? <p className="mb-4 text-sm text-red-800">{draftError}</p> : null}

@@ -3,6 +3,7 @@ import { requireTherapist } from "@/auth";
 import { NewInvoiceClient } from "@/components/portal/NewInvoiceClient";
 import { portalCardClass } from "@/components/portal/ui";
 import { ClientAssignmentStatus } from "@/generated/prisma/client";
+import { getNextInvoiceNumber } from "@/lib/invoice-numbers";
 import { loadTherapistProcedureCodeFees, serializeFeeSchedule } from "@/lib/procedure-fees";
 import { prisma } from "@/lib/prisma";
 
@@ -13,7 +14,7 @@ export default async function NewInvoicePage({
 }) {
   const session = await requireTherapist();
   const { clientId: preselectedClientId } = await searchParams;
-  const [clients, therapistFees] = await Promise.all([
+  const [clients, therapistFees, nextInvoiceNumber] = await Promise.all([
     prisma.client.findMany({
       where: {
         therapistId: session.user.id,
@@ -22,6 +23,7 @@ export default async function NewInvoicePage({
       orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
     }),
     loadTherapistProcedureCodeFees(session.user.id),
+    getNextInvoiceNumber(prisma, session.user.id),
   ]);
 
   const selectedClientId =
@@ -48,6 +50,7 @@ export default async function NewInvoicePage({
             label: `${c.lniClaimNumber} — ${c.lastName}, ${c.firstName}`,
           }))}
           initialClientId={selectedClientId!}
+          initialInvoiceNumber={nextInvoiceNumber}
           therapistFeeSchedule={serializeFeeSchedule(therapistFees)}
         />
       )}

@@ -24,6 +24,7 @@ import { generateOneTimePassword, hashPassword, verifyPassword } from "@/lib/pas
 import { fetchLniPayPeriods } from "@/lib/lni-pay-periods";
 import { createProcedureCodeFee, createTherapistProcedureCodeFee, updateTherapistProcedureCodeFee, applyTherapistFeeSchedule, loadAllProcedureCodeFees, resolveFeeAmount } from "@/lib/procedure-fees";
 import { prisma } from "@/lib/prisma";
+import { getNextInvoiceNumber } from "@/lib/invoice-numbers";
 
 function parseDecimal(value: FormDataEntryValue | null): number {
   const n = parseFloat(String(value ?? "0"));
@@ -433,15 +434,6 @@ export async function deleteClientAction(formData: FormData) {
   redirect("/portal/admin/clients");
 }
 
-async function nextInvoiceNumber(therapistId: string): Promise<number> {
-  const last = await prisma.invoice.findFirst({
-    where: { therapistId },
-    orderBy: { invoiceNumber: "desc" },
-    select: { invoiceNumber: true },
-  });
-  return (last?.invoiceNumber ?? 0) + 1;
-}
-
 function parseInvoiceLineItems(formData: FormData) {
   const lineCount = parseInt(String(formData.get("lineCount") ?? "0"), 10);
   const lineItems: { serviceDate: Date; procedureCode: string; sortOrder: number }[] = [];
@@ -524,7 +516,7 @@ async function persistInvoiceFromFormData(
       data: {
         therapistId: session.user.id,
         clientId,
-        invoiceNumber: await nextInvoiceNumber(session.user.id),
+        invoiceNumber: await getNextInvoiceNumber(prisma, session.user.id),
         totalAmount,
         status: "DRAFT",
         lineItems: {
@@ -601,7 +593,7 @@ export async function createInvoiceDraftAction(clientId: string) {
     data: {
       therapistId: session.user.id,
       clientId,
-      invoiceNumber: await nextInvoiceNumber(session.user.id),
+      invoiceNumber: await getNextInvoiceNumber(prisma, session.user.id),
       totalAmount: 0,
       status: "DRAFT",
     },
@@ -610,7 +602,7 @@ export async function createInvoiceDraftAction(clientId: string) {
   revalidatePath("/portal/therapist/invoices");
   revalidatePath("/portal/therapist/invoices/new");
 
-  return { invoiceId: invoice.id };
+  return { invoiceId: invoice.id, invoiceNumber: invoice.invoiceNumber };
 }
 
 export type SubmitInvoiceState = { error?: string };
@@ -1523,4 +1515,82 @@ export async function resetAdminPasswordAction(formData: FormData) {
 
   revalidatePath(`/portal/admin/admins/${id}/edit`);
   redirect(`/portal/admin/admins/${id}/edit?passwordReset=1`);
+}
+
+export async function addClientNoteAction(formData: FormData) {
+  const session = await requireSession();
+  const clientId = String(formData.get("clientId") ?? "").trim();
+  const returnTo = String(formData.get("returnTo") ?? "").trim() || "/portal/admin/clients";
+  const body = String(formData.get("body") ?? "").trim();
+
+  if (!clientId) throw new Error("Client is required.");
+  if (!body) throw new Error("Note cannot be empty.");
+
+  const { assertClientNoteAccess } = await import("@/lib/client-notes");
+  await assertClientNoteAccess(clientId, session);
+
+  await prisma.clientNote.create({
+    data: {
+      clientId,
+      authorId: getRealUserId(session),
+      body,
+    },
+  });
+
+  revalidateClientNotePaths(clientId, returnTo);
+
+  const separator = returnTo.includes("?") ? "&" : "?";
+  redirect(`${returnTo}${separator}noted=1`);
+}
+
+function revalidateClientNotePaths(clientId: string, returnTo: string) {
+  revalidatePath(returnTo);
+  revalidatePath(`/portal/admin/clients/${clientId}`);
+  revalidatePath(`/portal/therapist/clients/${clientId}`);
+  revalidatePath(`/portal/therapist/referrals/${clientId}`);
+}
+
+export async function updateClientNoteAction(formData: FormData) {
+  const session = await requireSession();
+  const noteId = String(formData.get("noteId") ?? "").trim();
+  const clientId = String(formData.get("clientId") ?? "").trim();
+  const returnTo = String(formData.get("returnTo") ?? "").trim() || "/portal/admin/clients";
+  const body = String(formData.get("body") ?? "").trim();
+
+  if (!noteId || !clientId) throw new Error("Note is required.");
+  if (!body) throw new Error("Note cannot be empty.");
+
+  const { assertCanModifyClientNote } = await import("@/lib/client-notes");
+  const note = await assertCanModifyClientNote(noteId, session);
+  if (note.clientId !== clientId) throw new Error("Note not found.");
+
+  await prisma.clientNote.update({
+    where: { id: noteId },
+    data: { body },
+  });
+
+  revalidateClientNotePaths(clientId, returnTo);
+
+  const separator = returnTo.includes("?") ? "&" : "?";
+  redirect(`${returnTo}${separator}noteUpdated=1`);
+}
+
+export async function deleteClientNoteAction(formData: FormData) {
+  const session = await requireSession();
+  const noteId = String(formData.get("noteId") ?? "").trim();
+  const clientId = String(formData.get("clientId") ?? "").trim();
+  const returnTo = String(formData.get("returnTo") ?? "").trim() || "/portal/admin/clients";
+
+  if (!noteId || !clientId) throw new Error("Note is required.");
+
+  const { assertCanModifyClientNote } = await import("@/lib/client-notes");
+  const note = await assertCanModifyClientNote(noteId, session);
+  if (note.clientId !== clientId) throw new Error("Note not found.");
+
+  await prisma.clientNote.delete({ where: { id: noteId } });
+
+  revalidateClientNotePaths(clientId, returnTo);
+
+  const separator = returnTo.includes("?") ? "&" : "?";
+  redirect(`${returnTo}${separator}noteDeleted=1`);
 }

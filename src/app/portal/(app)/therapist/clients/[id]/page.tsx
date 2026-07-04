@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { requireTherapist } from "@/auth";
+import { ClientNotesSection } from "@/components/portal/ClientNotesSection";
 import { ClientDetailView } from "@/components/portal/ClientDetailView";
 import { ClientDriveFilesLoading } from "@/components/portal/ClientDriveFilesLoading";
 import { ClientDriveFilesSection } from "@/components/portal/ClientDriveFilesSection";
@@ -13,11 +14,11 @@ export default async function TherapistClientDetailPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ saved?: string }>;
+  searchParams: Promise<{ saved?: string; noted?: string }>;
 }) {
   const session = await requireTherapist();
   const { id } = await params;
-  const { saved } = await searchParams;
+  const { saved, noted } = await searchParams;
 
   const client = await prisma.client.findFirst({
     where: { id, therapistId: session.user.id },
@@ -29,6 +30,11 @@ export default async function TherapistClientDetailPage({
       {saved === "1" && (
         <p className="rounded-lg bg-primary/10 px-3 py-2 text-sm text-primary-dark">
           Client saved successfully.
+        </p>
+      )}
+      {noted === "1" && (
+        <p className="rounded-lg bg-primary/10 px-3 py-2 text-sm text-primary-dark">
+          Note saved.
         </p>
       )}
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -69,6 +75,10 @@ export default async function TherapistClientDetailPage({
           initiatorUserId={session.user.id}
         />
       </Suspense>
+      <ClientNotesSection
+        clientId={client.id}
+        returnTo={`/portal/therapist/clients/${client.id}`}
+      />
     </div>
   );
 }

@@ -192,16 +192,7 @@ export function AdminInvoicesTable({ invoices, payPeriods, returnTo }: Props) {
                     <StatusBadge status={inv.status} />
                   </td>
                   <td className="py-3 pr-4">
-                    {inv.paymentStatus ? (
-                      <div className="space-y-1">
-                        <StatusBadge status={inv.paymentStatus} />
-                        {inv.lniPaidAt && (
-                          <p className="text-xs text-muted">{formatDate(new Date(inv.lniPaidAt))}</p>
-                        )}
-                      </div>
-                    ) : (
-                      "—"
-                    )}
+                    {inv.paymentStatus ? <StatusBadge status={inv.paymentStatus} /> : "—"}
                   </td>
                   <td className="py-3 pr-4">{formatCurrency(inv.totalAmount)}</td>
                   <td className="py-3 pr-4">

@@ -59,6 +59,7 @@ model User {
   therapistProcedureCodeFees TherapistProcedureCodeFee[] @relation("TherapistProcedureCodeFees")
   therapistProcedureCodeFeesCreated TherapistProcedureCodeFee[] @relation("TherapistProcedureCodeFeeCreatedBy")
   googleDriveConnection GoogleDriveConnection?
+  clientNotes         ClientNote[]
 }
 
 model PayPeriod {
@@ -119,10 +120,24 @@ model Client {
   therapistId    String?
   therapist      User?     @relation(fields: [therapistId], references: [id])
   invoices       Invoice[]
+  notes          ClientNote[]
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
   @@index([therapistId])
+}
+
+model ClientNote {
+  id        String   @id @default(cuid())
+  clientId  String
+  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id])
+  body      String   @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([clientId, createdAt])
 }
 
 model Invoice {

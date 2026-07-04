@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { getRealUserId, requireAdmin } from "@/auth";
 import { ClientAssignmentPanel } from "@/components/portal/ClientAssignmentPanel";
+import { ClientNotesSection } from "@/components/portal/ClientNotesSection";
 import { ClientDetailView } from "@/components/portal/ClientDetailView";
 import { ClientDriveResyncButton } from "@/components/portal/ClientDriveResyncButton";
 import { ClientDriveFilesLoading } from "@/components/portal/ClientDriveFilesLoading";
@@ -16,11 +17,11 @@ export default async function AdminClientDetailPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ reopened?: string; saved?: string }>;
+  searchParams: Promise<{ reopened?: string; saved?: string; noted?: string }>;
 }) {
   const session = await requireAdmin();
   const { id } = await params;
-  const { reopened, saved } = await searchParams;
+  const { reopened, saved, noted } = await searchParams;
   const [client, therapists] = await Promise.all([
     prisma.client.findUnique({
       where: { id },
@@ -44,6 +45,11 @@ export default async function AdminClientDetailPage({
       {saved === "1" && (
         <p className="rounded-lg bg-primary/10 px-3 py-2 text-sm text-primary-dark">
           Client saved successfully.
+        </p>
+      )}
+      {noted === "1" && (
+        <p className="rounded-lg bg-primary/10 px-3 py-2 text-sm text-primary-dark">
+          Note saved.
         </p>
       )}
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -93,6 +99,10 @@ export default async function AdminClientDetailPage({
           initiatorUserId={getRealUserId(session)}
         />
       </Suspense>
+      <ClientNotesSection
+        clientId={client.id}
+        returnTo={`/portal/admin/clients/${client.id}`}
+      />
     </div>
   );
 }

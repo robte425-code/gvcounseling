@@ -1,7 +1,13 @@
 import Link from "next/link";
 import { requireTherapist } from "@/auth";
+import { ClientListSearchForm } from "@/components/portal/ClientListSearchForm";
 import { ClientTableRow } from "@/components/portal/ClientTableRow";
 import { StatusBadge, portalButtonClass, portalCardClass } from "@/components/portal/ui";
+import {
+  buildClientListHref,
+  clientListSearchWhere,
+  normalizeClientSearchQuery,
+} from "@/lib/client-list-search";
 import { prisma } from "@/lib/prisma";
 
 const STATUS_FILTERS = [
@@ -20,10 +26,10 @@ function isClientStatus(value: string): value is ClientStatus {
 export default async function TherapistClientsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string }>;
+  searchParams: Promise<{ status?: string; q?: string }>;
 }) {
   const session = await requireTherapist();
-  const { status } = await searchParams;
+  const { status, q } = await searchParams;
   const statusFilter: ClientStatus | undefined =
     status === "all"
       ? undefined
@@ -32,11 +38,14 @@ export default async function TherapistClientsPage({
         : isClientStatus(status)
           ? status
           : "ACTIVE";
+  const query = normalizeClientSearchQuery(q);
+  const searchWhere = clientListSearchWhere(query);
 
   const clients = await prisma.client.findMany({
     where: {
       therapistId: session.user.id,
       ...(statusFilter ? { assignmentStatus: statusFilter } : {}),
+      ...(searchWhere ?? {}),
     },
     orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
   });
@@ -49,12 +58,10 @@ export default async function TherapistClientsPage({
           <p className="mt-2 text-muted">Clients assigned to you.</p>
           <div className="mt-4 flex flex-wrap gap-2">
             {STATUS_FILTERS.map((f) => {
-              const href =
-                f.value === "all"
-                  ? "/portal/therapist/clients?status=all"
-                  : f.value === "ACTIVE"
-                    ? "/portal/therapist/clients"
-                    : `/portal/therapist/clients?status=${f.value}`;
+              const href = buildClientListHref("/portal/therapist/clients", {
+                status: f.value === "ACTIVE" ? undefined : f.value,
+                q: query || undefined,
+              });
               const active =
                 f.value === "all"
                   ? status === "all"
@@ -81,6 +88,12 @@ export default async function TherapistClientsPage({
           New invoice
         </Link>
       </div>
+
+      <ClientListSearchForm
+        basePath="/portal/therapist/clients"
+        query={query}
+        status={status}
+      />
 
       <div className={portalCardClass}>
         <table className="w-full text-left text-sm">
@@ -111,9 +124,11 @@ export default async function TherapistClientsPage({
         </table>
         {clients.length === 0 && (
           <p className="py-8 text-center text-sm text-muted">
-            {statusFilter
-              ? "No clients match this status filter."
-              : "No clients assigned to you yet."}
+            {query
+              ? `No clients match “${query}”.`
+              : statusFilter
+                ? "No clients match this status filter."
+                : "No clients assigned to you yet."}
           </p>
         )}
       </div>

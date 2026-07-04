@@ -1,7 +1,13 @@
 import Link from "next/link";
 import { requireAdmin } from "@/auth";
+import { ClientListSearchForm } from "@/components/portal/ClientListSearchForm";
 import { ClientTableRow } from "@/components/portal/ClientTableRow";
 import { StatusBadge, portalButtonClass, portalCardClass } from "@/components/portal/ui";
+import {
+  buildClientListHref,
+  clientListSearchWhere,
+  normalizeClientSearchQuery,
+} from "@/lib/client-list-search";
 import { prisma } from "@/lib/prisma";
 
 const STATUS_FILTERS = [
@@ -22,14 +28,19 @@ function isClientStatus(value: string | undefined): value is NonNullable<ClientS
 export default async function AdminClientsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string }>;
+  searchParams: Promise<{ status?: string; q?: string }>;
 }) {
   await requireAdmin();
-  const { status } = await searchParams;
+  const { status, q } = await searchParams;
   const statusFilter = isClientStatus(status) ? status : undefined;
+  const query = normalizeClientSearchQuery(q);
+  const searchWhere = clientListSearchWhere(query);
 
   const clients = await prisma.client.findMany({
-    where: statusFilter ? { assignmentStatus: statusFilter } : undefined,
+    where: {
+      ...(statusFilter ? { assignmentStatus: statusFilter } : {}),
+      ...(searchWhere ?? {}),
+    },
     orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
     include: { therapist: { select: { firstName: true, lastName: true } } },
   });
@@ -42,9 +53,10 @@ export default async function AdminClientsPage({
           <p className="mt-2 text-muted">Client registry for 837 billing.</p>
           <div className="mt-4 flex flex-wrap gap-2">
             {STATUS_FILTERS.map((f) => {
-              const href = f.value
-                ? `/portal/admin/clients?status=${f.value}`
-                : "/portal/admin/clients";
+              const href = buildClientListHref("/portal/admin/clients", {
+                status: f.value,
+                q: query || undefined,
+              });
               const active = statusFilter === f.value || (!statusFilter && !f.value);
               return (
                 <Link
@@ -71,6 +83,12 @@ export default async function AdminClientsPage({
           </Link>
         </div>
       </div>
+
+      <ClientListSearchForm
+        basePath="/portal/admin/clients"
+        query={query}
+        status={statusFilter}
+      />
 
       <div className={portalCardClass}>
         <table className="w-full text-left text-sm">
@@ -107,9 +125,11 @@ export default async function AdminClientsPage({
         </table>
         {clients.length === 0 && (
           <p className="py-8 text-center text-sm text-muted">
-            {statusFilter
-              ? "No clients match this status filter."
-              : "No clients yet. Import or add one to get started."}
+            {query
+              ? `No clients match “${query}”.`
+              : statusFilter
+                ? "No clients match this status filter."
+                : "No clients yet. Import or add one to get started."}
           </p>
         )}
       </div>
