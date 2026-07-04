@@ -1,6 +1,9 @@
 import { randomBytes } from "crypto";
 import { ORG } from "@/lib/constants";
 
+/** CMS place of service: 10 = telehealth provided in patient's home. */
+const PLACE_OF_SERVICE = "10";
+
 export type Edi837Client = {
   claimNumber: string;
   lastName: string;
@@ -158,7 +161,7 @@ function buildClaim(hlNumber: number, claim: Edi837Claim): string {
       formatAmount(line.amount),
       "UN",
       String(line.units ?? 1),
-      "11",
+      PLACE_OF_SERVICE,
       "",
       "1",
     );
