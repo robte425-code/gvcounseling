@@ -202,15 +202,58 @@ export async function resolveTherapistFolderId(
   return matches[0]!.id;
 }
 
+/** Strip archived-folder prefixes/suffixes so claim and name can be parsed. */
+export function normalizeClientFolderName(name: string): string {
+  let normalized = name.trim();
+  normalized = normalized.replace(/^CLAIM CLOSED\s*[-:]\s*/i, "");
+  normalized = normalized.replace(/^CLOSED\s*[-:]\s*/i, "");
+  normalized = normalized.replace(/^CLOSED\s+/i, "");
+  return normalized;
+}
+
+function cleanClientDisplayName(name: string): string {
+  return name.replace(/\s*-\s*CLOSED\b.*$/i, "").trim();
+}
+
 export function parseClientFolderName(name: string): { claimNumber: string; displayName: string } | null {
-  const dash = name.indexOf(" - ");
+  const normalized = normalizeClientFolderName(name);
+  const dash = normalized.indexOf(" - ");
   if (dash === -1) return null;
 
-  const claimNumber = parseClaimNumber(name.slice(0, dash).trim());
-  const displayName = name.slice(dash + 3).trim();
+  const claimNumber = parseClaimNumber(normalized.slice(0, dash).trim());
+  const displayName = cleanClientDisplayName(normalized.slice(dash + 3).trim());
   if (!isLniClaimNumber(claimNumber) || !displayName) return null;
 
   return { claimNumber, displayName };
+}
+
+export const CLOSED_CASES_SUBFOLDER = "Closed Cases";
+
+export async function findDriveSubfolder(
+  accessToken: string,
+  parentFolderId: string,
+  name: string,
+): Promise<DriveFile | null> {
+  const query = [
+    `'${parentFolderId}' in parents`,
+    "mimeType='application/vnd.google-apps.folder'",
+    "trashed=false",
+    `name='${name.replace(/\\/g, "\\\\").replace(/'/g, "\\'")}'`,
+  ].join(" and ");
+
+  const params = new URLSearchParams({
+    q: query,
+    fields: "files(id,name,mimeType)",
+    pageSize: "10",
+    supportsAllDrives: "true",
+    includeItemsFromAllDrives: "true",
+  });
+  const res = await fetch(`https://www.googleapis.com/drive/v3/files?${params}`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!res.ok) throw new Error(`Drive list failed (${res.status})`);
+  const data = (await res.json()) as { files?: DriveFile[] };
+  return data.files?.[0] ?? null;
 }
 
 export async function listClientFolders(accessToken: string, parentFolderId: string): Promise<DriveFile[]> {

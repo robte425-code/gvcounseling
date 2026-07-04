@@ -1,5 +1,7 @@
 import {
+  CLOSED_CASES_SUBFOLDER,
   downloadReferralDocx,
+  findDriveSubfolder,
   findReferralSubmissionFile,
   listClientFolders,
   parseClientFolderName,
@@ -12,7 +14,7 @@ import { resolveImportClaimNumber } from "@/lib/constants";
 import { getValidGoogleAccessToken } from "@/lib/google-oauth";
 import { importClientDocumentsFromFolderDetailed } from "@/lib/client-document-import";
 import { upsertClientFromReferral } from "@/lib/import-referral-client";
-import { parseReferralDocx } from "@/lib/referral-parser";
+import { parseReferralDocx, type ParsedReferral } from "@/lib/referral-parser";
 import {
   getAllTherapistDriveSources,
   getTherapistDriveSourceForUser,
@@ -35,14 +37,42 @@ export type DriveFolderTarget = {
   folderName: string;
   therapistId: string;
   therapistName: string;
+  fromClosedCases?: boolean;
 };
+
+function emptyParsedReferral(warnings: string[] = []): ParsedReferral {
+  return { diagnoses: [], warnings };
+}
+
+function addFolderTarget(
+  folders: DriveFolderTarget[],
+  seenClaims: Set<string>,
+  folder: { id: string; name: string },
+  therapistId: string,
+  therapistName: string,
+  fromClosedCases: boolean,
+): void {
+  if (!parseClientFolderName(folder.name)) return;
+  const claim = parseClientFolderName(folder.name)!.claimNumber;
+  if (seenClaims.has(claim)) return;
+  seenClaims.add(claim);
+  folders.push({
+    folderId: folder.id,
+    folderName: folder.name,
+    therapistId,
+    therapistName,
+    fromClosedCases,
+  });
+}
 
 async function scanTherapistDriveSource(
   source: TherapistDriveSource,
   oauthUserId: string,
+  options: { includeClosedCases?: boolean } = {},
 ): Promise<{ folders: DriveFolderTarget[]; errors: string[] }> {
   const folders: DriveFolderTarget[] = [];
   const errors: string[] = [];
+  const seenClaims = new Set<string>();
 
   try {
     const accessToken = await getValidGoogleAccessToken(oauthUserId);
@@ -64,13 +94,30 @@ async function scanTherapistDriveSource(
     const clientFolders = await listClientFolders(accessToken, parentFolderId);
 
     for (const folder of clientFolders) {
-      if (!parseClientFolderName(folder.name)) continue;
-      folders.push({
-        folderId: folder.id,
-        folderName: folder.name,
-        therapistId: source.therapistId,
-        therapistName: source.therapistName,
-      });
+      addFolderTarget(folders, seenClaims, folder, source.therapistId, source.therapistName, false);
+    }
+
+    if (options.includeClosedCases) {
+      const closedParent = await findDriveSubfolder(
+        accessToken,
+        parentFolderId,
+        CLOSED_CASES_SUBFOLDER,
+      );
+      if (closedParent) {
+        const closedFolders = await listClientFolders(accessToken, closedParent.id);
+        for (const folder of closedFolders) {
+          addFolderTarget(
+            folders,
+            seenClaims,
+            folder,
+            source.therapistId,
+            source.therapistName,
+            true,
+          );
+        }
+      } else {
+        errors.push(`${source.therapistName}: no "${CLOSED_CASES_SUBFOLDER}" subfolder found.`);
+      }
     }
   } catch (e) {
     errors.push(
@@ -81,7 +128,10 @@ async function scanTherapistDriveSource(
   return { folders, errors };
 }
 
-export async function scanDriveClientFolders(initiatorUserId: string): Promise<{
+export async function scanDriveClientFolders(
+  initiatorUserId: string,
+  options: { includeClosedCases?: boolean } = {},
+): Promise<{
   folders: DriveFolderTarget[];
   errors: string[];
 }> {
@@ -94,7 +144,7 @@ export async function scanDriveClientFolders(initiatorUserId: string): Promise<{
       source.therapistId,
       initiatorUserId,
     );
-    const scan = await scanTherapistDriveSource(source, oauthUserId);
+    const scan = await scanTherapistDriveSource(source, oauthUserId, options);
     folders.push(...scan.folders);
     errors.push(...scan.errors);
   }
@@ -102,7 +152,11 @@ export async function scanDriveClientFolders(initiatorUserId: string): Promise<{
   return { folders, errors };
 }
 
-export async function scanTherapistDriveClientFolders(therapistUserId: string): Promise<{
+export async function scanTherapistDriveClientFolders(
+  therapistUserId: string,
+  initiatorUserId: string,
+  options: { includeClosedCases?: boolean } = {},
+): Promise<{
   folders: DriveFolderTarget[];
   errors: string[];
 }> {
@@ -114,7 +168,8 @@ export async function scanTherapistDriveClientFolders(therapistUserId: string): 
     };
   }
 
-  return scanTherapistDriveSource(source, therapistUserId);
+  const oauthUserId = await resolveOAuthUserIdForTherapist(therapistUserId, initiatorUserId);
+  return scanTherapistDriveSource(source, oauthUserId, options);
 }
 
 export async function importDriveClientFolder(
@@ -143,17 +198,25 @@ export async function importDriveClientFolder(
 
   try {
     const referralFile = await findReferralSubmissionFile(accessToken, target.folderId);
-    if (!referralFile) {
-      result.skipped = 1;
-      result.warnings.push(`${folderLabel}: no Referral Submission file found.`);
-      return result;
-    }
+    const { merged: supplement, parts } = await importClientDocumentsFromFolderDetailed(
+      accessToken,
+      target.folderId,
+    );
 
-    const [buffer, { merged: supplement, parts }] = await Promise.all([
-      downloadReferralDocx(accessToken, referralFile),
-      importClientDocumentsFromFolderDetailed(accessToken, target.folderId),
-    ]);
-    const parsed = await parseReferralDocx(buffer);
+    let parsed = emptyParsedReferral();
+    if (referralFile) {
+      try {
+        const buffer = await downloadReferralDocx(accessToken, referralFile);
+        parsed = await parseReferralDocx(buffer);
+      } catch (e) {
+        const message = e instanceof Error ? e.message : "Referral parse failed.";
+        parsed.warnings.push(`Referral submission could not be parsed: ${message}`);
+        result.warnings.push(`${folderLabel}: ${parsed.warnings.at(-1)}`);
+      }
+    } else {
+      parsed.warnings.push("No Referral Submission file found; imported from folder name and other documents.");
+      result.warnings.push(`${folderLabel}: ${parsed.warnings.at(-1)}`);
+    }
 
     const resolvedClaim = resolveImportClaimNumber(
       parsedFolder.claimNumber,
@@ -172,6 +235,8 @@ export async function importDriveClientFolder(
       driveFolderId: target.folderId,
       supplement,
       documentParts: parts,
+      assignmentStatus: target.fromClosedCases ? "CLOSED" : "ACTIVE",
+      closedAt: target.fromClosedCases ? new Date() : null,
     });
     if (importResult.error) {
       result.skipped = 1;
@@ -268,6 +333,20 @@ async function syncDriveFolders(
     const oauthUserId = await resolveOAuthUserIdForTherapist(folder.therapistId, initiatorUserId);
 
     if (existing?.assignmentStatus === "CLOSED") {
+      if (folder.fromClosedCases) {
+        if (existing.driveFolderId !== folder.folderId) {
+          await prisma.client.update({
+            where: { id: existing.id },
+            data: { driveFolderId: folder.folderId },
+          });
+          existing.driveFolderId = folder.folderId;
+          result.updated++;
+        } else {
+          result.unchanged++;
+        }
+        continue;
+      }
+
       await prisma.client.update({
         where: { id: existing.id },
         data: {

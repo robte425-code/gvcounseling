@@ -4,9 +4,32 @@ import { ClientTableRow } from "@/components/portal/ClientTableRow";
 import { StatusBadge, portalButtonClass, portalCardClass } from "@/components/portal/ui";
 import { prisma } from "@/lib/prisma";
 
-export default async function AdminClientsPage() {
+const STATUS_FILTERS = [
+  { label: "All", value: undefined },
+  { label: "Active", value: "ACTIVE" },
+  { label: "Unassigned", value: "UNASSIGNED" },
+  { label: "Pending therapist", value: "PENDING_THERAPIST" },
+  { label: "Closed", value: "CLOSED" },
+  { label: "Rejected", value: "REJECTED_BY_ADMIN" },
+] as const;
+
+type ClientStatus = (typeof STATUS_FILTERS)[number]["value"];
+
+function isClientStatus(value: string | undefined): value is NonNullable<ClientStatus> {
+  return STATUS_FILTERS.some((f) => f.value === value);
+}
+
+export default async function AdminClientsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ status?: string }>;
+}) {
   await requireAdmin();
+  const { status } = await searchParams;
+  const statusFilter = isClientStatus(status) ? status : undefined;
+
   const clients = await prisma.client.findMany({
+    where: statusFilter ? { assignmentStatus: statusFilter } : undefined,
     orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
     include: { therapist: { select: { firstName: true, lastName: true } } },
   });
@@ -17,6 +40,27 @@ export default async function AdminClientsPage() {
         <div>
           <h1 className="font-serif text-3xl font-semibold text-primary-dark">Clients</h1>
           <p className="mt-2 text-muted">Client registry for 837 billing.</p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            {STATUS_FILTERS.map((f) => {
+              const href = f.value
+                ? `/portal/admin/clients?status=${f.value}`
+                : "/portal/admin/clients";
+              const active = statusFilter === f.value || (!statusFilter && !f.value);
+              return (
+                <Link
+                  key={href}
+                  href={href}
+                  className={`rounded-full border px-3 py-1 text-sm ${
+                    active
+                      ? "border-primary bg-primary/10 text-primary-dark"
+                      : "border-border hover:bg-primary/10"
+                  }`}
+                >
+                  {f.label}
+                </Link>
+              );
+            })}
+          </div>
         </div>
         <div className="flex gap-3">
           <Link href="/portal/admin/clients/import" className={portalButtonClass}>
@@ -62,7 +106,11 @@ export default async function AdminClientsPage() {
           </tbody>
         </table>
         {clients.length === 0 && (
-          <p className="py-8 text-center text-sm text-muted">No clients yet. Import or add one to get started.</p>
+          <p className="py-8 text-center text-sm text-muted">
+            {statusFilter
+              ? "No clients match this status filter."
+              : "No clients yet. Import or add one to get started."}
+          </p>
         )}
       </div>
     </div>

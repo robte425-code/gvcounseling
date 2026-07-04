@@ -29,6 +29,9 @@ export type ReferralImportOptions = {
   supplement?: ClientDocumentSupplement;
   /** Per-document parse results for validation and repair */
   documentParts?: ClientDocumentPart[];
+  /** Override assignment status for new imports (e.g. CLOSED from archived folders). */
+  assignmentStatus?: ClientAssignmentStatus;
+  closedAt?: Date | null;
 };
 
 function pickClientName(
@@ -188,7 +191,14 @@ export async function upsertClientFromReferral(
     vrcEmail: mergedReferral.vrcEmail ?? existing?.vrcEmail ?? null,
     vrcPhone: mergedReferral.vrcPhone ?? existing?.vrcPhone ?? null,
     therapistId: existing?.therapistId ?? therapistId,
-    assignmentStatus: existing?.assignmentStatus ?? ClientAssignmentStatus.ACTIVE,
+    assignmentStatus:
+      existing?.assignmentStatus ??
+      options.assignmentStatus ??
+      ClientAssignmentStatus.ACTIVE,
+    closedAt:
+      options.closedAt !== undefined
+        ? options.closedAt
+        : existing?.closedAt ?? null,
     driveFolderId: options.driveFolderId ?? existing?.driveFolderId ?? null,
   };
 

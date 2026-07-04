@@ -4,10 +4,33 @@ import { ClientTableRow } from "@/components/portal/ClientTableRow";
 import { StatusBadge, portalButtonClass, portalCardClass } from "@/components/portal/ui";
 import { prisma } from "@/lib/prisma";
 
-export default async function TherapistClientsPage() {
+const STATUS_FILTERS = [
+  { label: "All", value: undefined },
+  { label: "Active", value: "ACTIVE" },
+  { label: "Pending review", value: "PENDING_THERAPIST" },
+  { label: "Closed", value: "CLOSED" },
+] as const;
+
+type ClientStatus = (typeof STATUS_FILTERS)[number]["value"];
+
+function isClientStatus(value: string | undefined): value is NonNullable<ClientStatus> {
+  return STATUS_FILTERS.some((f) => f.value === value);
+}
+
+export default async function TherapistClientsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ status?: string }>;
+}) {
   const session = await requireTherapist();
+  const { status } = await searchParams;
+  const statusFilter = isClientStatus(status) ? status : undefined;
+
   const clients = await prisma.client.findMany({
-    where: { therapistId: session.user.id },
+    where: {
+      therapistId: session.user.id,
+      ...(statusFilter ? { assignmentStatus: statusFilter } : {}),
+    },
     orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
   });
 
@@ -17,6 +40,27 @@ export default async function TherapistClientsPage() {
         <div>
           <h1 className="font-serif text-3xl font-semibold text-primary-dark">My clients</h1>
           <p className="mt-2 text-muted">Clients assigned to you.</p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            {STATUS_FILTERS.map((f) => {
+              const href = f.value
+                ? `/portal/therapist/clients?status=${f.value}`
+                : "/portal/therapist/clients";
+              const active = statusFilter === f.value || (!statusFilter && !f.value);
+              return (
+                <Link
+                  key={href}
+                  href={href}
+                  className={`rounded-full border px-3 py-1 text-sm ${
+                    active
+                      ? "border-primary bg-primary/10 text-primary-dark"
+                      : "border-border hover:bg-primary/10"
+                  }`}
+                >
+                  {f.label}
+                </Link>
+              );
+            })}
+          </div>
         </div>
         <Link href="/portal/therapist/invoices/new" className={portalButtonClass}>
           New invoice
@@ -51,7 +95,11 @@ export default async function TherapistClientsPage() {
           </tbody>
         </table>
         {clients.length === 0 && (
-          <p className="py-8 text-center text-sm text-muted">No clients assigned to you yet.</p>
+          <p className="py-8 text-center text-sm text-muted">
+            {statusFilter
+              ? "No clients match this status filter."
+              : "No clients assigned to you yet."}
+          </p>
         )}
       </div>
     </div>
