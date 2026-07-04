@@ -22,6 +22,21 @@ function formatInvoiceServiceDates(lineItems: { serviceDate: Date }[]): string {
   return dates.map((date) => formatCalendarIso(date)).join(", ");
 }
 
+function earliestServiceDateIso(lineItems: { serviceDate: Date }[]): string | null {
+  if (lineItems.length === 0) return null;
+  let min = lineItems[0].serviceDate;
+  for (let i = 1; i < lineItems.length; i++) {
+    if (lineItems[i].serviceDate < min) min = lineItems[i].serviceDate;
+  }
+  return calendarIsoFromDate(min);
+}
+
+function payPeriodSortKey(
+  period: { cutoffDate: Date } | null | undefined,
+): string {
+  return period ? calendarIsoFromDate(period.cutoffDate) : "";
+}
+
 function payPeriodLabel(
   period: { label: string | null; cutoffDate: Date } | null,
 ): string | null {
@@ -86,7 +101,6 @@ export default async function AdminInvoicesPage({
   const [invoices, payPeriods, therapists] = await Promise.all([
     prisma.invoice.findMany({
       where: buildInvoiceWhere(filters),
-      orderBy: { updatedAt: "desc" },
       include: {
         client: true,
         therapist: { select: { firstName: true, lastName: true } },
@@ -106,21 +120,26 @@ export default async function AdminInvoicesPage({
     }),
   ]);
 
-  const invoiceRows: AdminInvoiceRow[] = invoices.map((inv) => ({
-    id: inv.id,
-    invoiceNumber: inv.invoiceNumber,
-    status: inv.status,
-    paymentStatus: inv.paymentStatus,
-    lniPaidAt: inv.lniPaidAt?.toISOString() ?? null,
-    totalAmount: Number(inv.totalAmount),
-    submittedAt: inv.submittedAt?.toISOString() ?? null,
-    therapistName: `${inv.therapist.firstName} ${inv.therapist.lastName}`,
-    clientLabel: `${inv.client.lastName}, ${inv.client.firstName} (${inv.client.lniClaimNumber})`,
-    serviceDates: formatInvoiceServiceDates(inv.lineItems),
-    payPeriodLabel:
-      payPeriodLabel(inv.payPeriod) ?? payPeriodLabel(inv.bill?.payPeriod ?? null),
-    assignable: inv.status === "SUBMITTED" && !inv.billId,
-  }));
+  const invoiceRows: AdminInvoiceRow[] = invoices.map((inv) => {
+    const period = inv.payPeriod ?? inv.bill?.payPeriod ?? null;
+    return {
+      id: inv.id,
+      invoiceNumber: inv.invoiceNumber,
+      status: inv.status,
+      paymentStatus: inv.paymentStatus,
+      lniPaidAt: inv.lniPaidAt?.toISOString() ?? null,
+      totalAmount: Number(inv.totalAmount),
+      submittedAt: inv.submittedAt?.toISOString() ?? null,
+      therapistName: `${inv.therapist.firstName} ${inv.therapist.lastName}`,
+      clientLabel: `${inv.client.lastName}, ${inv.client.firstName} (${inv.client.lniClaimNumber})`,
+      serviceDates: formatInvoiceServiceDates(inv.lineItems),
+      payPeriodId: inv.payPeriodId,
+      payPeriodLabel: payPeriodLabel(period),
+      payPeriodSortKey: payPeriodSortKey(period),
+      earliestServiceDate: earliestServiceDateIso(inv.lineItems),
+      assignable: inv.status === "SUBMITTED" && !inv.billId,
+    };
+  });
 
   const periodOptions: PayPeriodOption[] = payPeriods.map((period) => ({
     id: period.id,

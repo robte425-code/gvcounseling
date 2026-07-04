@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, Fragment } from "react";
 import { ConfirmSubmitButton } from "@/components/portal/ConfirmSubmitButton";
 import { InvoiceTableRow } from "@/components/portal/InvoiceTableRow";
 import {
@@ -24,9 +24,55 @@ export type AdminInvoiceRow = {
   therapistName: string;
   clientLabel: string;
   serviceDates: string;
+  payPeriodId: string | null;
   payPeriodLabel: string | null;
+  payPeriodSortKey: string;
+  earliestServiceDate: string | null;
   assignable: boolean;
 };
+
+export type AdminInvoiceGroup = {
+  key: string;
+  label: string;
+  invoices: AdminInvoiceRow[];
+};
+
+const UNASSIGNED_GROUP_KEY = "__unassigned__";
+
+export function groupInvoicesByPayPeriod(invoices: AdminInvoiceRow[]): AdminInvoiceGroup[] {
+  const byPeriod = new Map<string, AdminInvoiceRow[]>();
+
+  for (const inv of invoices) {
+    const key = inv.payPeriodId ?? UNASSIGNED_GROUP_KEY;
+    const group = byPeriod.get(key);
+    if (group) group.push(inv);
+    else byPeriod.set(key, [inv]);
+  }
+
+  return [...byPeriod.entries()]
+    .map(([key, items]) => ({
+      key,
+      label: items[0]?.payPeriodLabel ?? "Unassigned",
+      payPeriodSortKey: items[0]?.payPeriodSortKey ?? "",
+      invoices: [...items].sort((a, b) => {
+        const dateCompare = (a.earliestServiceDate ?? "").localeCompare(
+          b.earliestServiceDate ?? "",
+        );
+        if (dateCompare !== 0) return dateCompare;
+        return a.invoiceNumber - b.invoiceNumber;
+      }),
+    }))
+    .sort((a, b) => {
+      if (a.key === UNASSIGNED_GROUP_KEY) return 1;
+      if (b.key === UNASSIGNED_GROUP_KEY) return -1;
+      return b.payPeriodSortKey.localeCompare(a.payPeriodSortKey);
+    })
+    .map(({ key, label, invoices: groupInvoices }) => ({
+      key,
+      label,
+      invoices: groupInvoices,
+    }));
+}
 
 export type PayPeriodOption = {
   id: string;
@@ -45,6 +91,7 @@ function formatPayPeriodOption(period: PayPeriodOption): string {
 
 export function AdminInvoicesTable({ invoices, payPeriods, returnTo }: Props) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const groups = useMemo(() => groupInvoicesByPayPeriod(invoices), [invoices]);
   const assignableIds = useMemo(
     () => new Set(invoices.filter((inv) => inv.assignable).map((inv) => inv.id)),
     [invoices],
@@ -139,56 +186,68 @@ export function AdminInvoicesTable({ invoices, payPeriods, returnTo }: Props) {
           </tr>
         </thead>
         <tbody>
-          {invoices.map((inv) => (
-            <InvoiceTableRow
-              key={inv.id}
-              href={`/portal/admin/invoices/${inv.id}`}
-              leading={
-                <input
-                  type="checkbox"
-                  aria-label={`Select invoice #${inv.invoiceNumber}`}
-                  checked={selected.has(inv.id)}
-                  disabled={!inv.assignable}
-                  onChange={(e) => toggleOne(inv.id, e.target.checked)}
-                />
-              }
-              actions={
-                <form action={deleteAdminInvoiceAction}>
-                  <input type="hidden" name="invoiceId" value={inv.id} />
-                  <ConfirmSubmitButton
-                    confirmMessage={`Delete invoice #${inv.invoiceNumber}?`}
-                    className={`${portalButtonSecondaryClass} border-red-200 px-3 py-1 text-xs text-red-700 hover:bg-red-50`}
-                  >
-                    Delete
-                  </ConfirmSubmitButton>
-                </form>
-              }
-            >
-              <td className="py-3 pr-4">{inv.invoiceNumber}</td>
-              <td className="py-3 pr-4">{inv.therapistName}</td>
-              <td className="py-3 pr-4">{inv.clientLabel}</td>
-              <td className="py-3 pr-4">{inv.serviceDates}</td>
-              <td className="py-3 pr-4">
-                <StatusBadge status={inv.status} />
-              </td>
-              <td className="py-3 pr-4">
-                {inv.paymentStatus ? (
-                  <div className="space-y-1">
-                    <StatusBadge status={inv.paymentStatus} />
-                    {inv.lniPaidAt && (
-                      <p className="text-xs text-muted">{formatDate(new Date(inv.lniPaidAt))}</p>
+          {groups.map((group) => (
+            <Fragment key={group.key}>
+              <tr key={group.key} className="border-b border-border bg-primary/5">
+                <td colSpan={11} className="py-2.5 pr-4 text-sm font-semibold text-primary-dark">
+                  {group.label}
+                  <span className="ml-2 font-normal text-muted">
+                    ({group.invoices.length} invoice{group.invoices.length === 1 ? "" : "s"})
+                  </span>
+                </td>
+              </tr>
+              {group.invoices.map((inv) => (
+                <InvoiceTableRow
+                  key={inv.id}
+                  href={`/portal/admin/invoices/${inv.id}`}
+                  leading={
+                    <input
+                      type="checkbox"
+                      aria-label={`Select invoice #${inv.invoiceNumber}`}
+                      checked={selected.has(inv.id)}
+                      disabled={!inv.assignable}
+                      onChange={(e) => toggleOne(inv.id, e.target.checked)}
+                    />
+                  }
+                  actions={
+                    <form action={deleteAdminInvoiceAction}>
+                      <input type="hidden" name="invoiceId" value={inv.id} />
+                      <ConfirmSubmitButton
+                        confirmMessage={`Delete invoice #${inv.invoiceNumber}?`}
+                        className={`${portalButtonSecondaryClass} border-red-200 px-3 py-1 text-xs text-red-700 hover:bg-red-50`}
+                      >
+                        Delete
+                      </ConfirmSubmitButton>
+                    </form>
+                  }
+                >
+                  <td className="py-3 pr-4">{inv.invoiceNumber}</td>
+                  <td className="py-3 pr-4">{inv.therapistName}</td>
+                  <td className="py-3 pr-4">{inv.clientLabel}</td>
+                  <td className="py-3 pr-4">{inv.serviceDates}</td>
+                  <td className="py-3 pr-4">
+                    <StatusBadge status={inv.status} />
+                  </td>
+                  <td className="py-3 pr-4">
+                    {inv.paymentStatus ? (
+                      <div className="space-y-1">
+                        <StatusBadge status={inv.paymentStatus} />
+                        {inv.lniPaidAt && (
+                          <p className="text-xs text-muted">{formatDate(new Date(inv.lniPaidAt))}</p>
+                        )}
+                      </div>
+                    ) : (
+                      "—"
                     )}
-                  </div>
-                ) : (
-                  "—"
-                )}
-              </td>
-              <td className="py-3 pr-4 text-muted">{inv.payPeriodLabel ?? "—"}</td>
-              <td className="py-3 pr-4">{formatCurrency(inv.totalAmount)}</td>
-              <td className="py-3 pr-4">
-                {inv.submittedAt ? formatDate(new Date(inv.submittedAt)) : "—"}
-              </td>
-            </InvoiceTableRow>
+                  </td>
+                  <td className="py-3 pr-4 text-muted">{inv.payPeriodLabel ?? "—"}</td>
+                  <td className="py-3 pr-4">{formatCurrency(inv.totalAmount)}</td>
+                  <td className="py-3 pr-4">
+                    {inv.submittedAt ? formatDate(new Date(inv.submittedAt)) : "—"}
+                  </td>
+                </InvoiceTableRow>
+              ))}
+            </Fragment>
           ))}
         </tbody>
       </table>

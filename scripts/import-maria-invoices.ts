@@ -9,6 +9,7 @@ dotenv.config({ path: ".env" });
 import { writeFileSync } from "fs";
 import * as XLSX from "xlsx";
 import type { PaymentStatus } from "../src/generated/prisma/client";
+import { inferPaymentStatusFromSpreadsheet } from "../src/lib/invoice-payment-status";
 import { parseLniDate } from "../src/lib/lni-pay-periods";
 import { resolveFeeAmount, type FeeScheduleRow } from "../src/lib/procedure-fee-schedule";
 
@@ -344,22 +345,6 @@ function inferLineItems(amount: number, serviceDate: Date): LineItem[] {
   throw new Error(`Unknown amount $${amount.toFixed(2)} for DOS ${serviceDate.toISOString().slice(0, 10)}`);
 }
 
-function inferPaymentStatus(
-  lniPaid: Date | null,
-  lniPayment: string,
-): { paymentStatus: PaymentStatus; lniPaidAt: Date | null } {
-  const pay = lniPayment.trim();
-  if (/denied/i.test(pay)) {
-    return { paymentStatus: "DENIED", lniPaidAt: lniPaid };
-  }
-  if (/^verified/i.test(pay) || pay === "Verified on 12/24/24 bill") {
-    return { paymentStatus: "PAID", lniPaidAt: lniPaid };
-  }
-  if (lniPaid) {
-    return { paymentStatus: "PAID", lniPaidAt: lniPaid };
-  }
-  return { paymentStatus: "UNPAID", lniPaidAt: null };
-}
 
 /** Spreadsheet claim:invoiceNum pairs that collide with another row's invoice #. */
 const INVOICE_NUMBER_REMAPS: Record<string, number> = {
@@ -589,7 +574,10 @@ async function main() {
       continue;
     }
 
-    const { paymentStatus, lniPaidAt } = inferPaymentStatus(row.lniPaid, row.lniPayment);
+    const { paymentStatus, lniPaidAt } = inferPaymentStatusFromSpreadsheet(
+      row.lniPaid,
+      row.lniPayment,
+    );
     const existing = existingByNumber.get(resolvedNum) ?? existingBySpreadsheetKey.get(rowKey);
 
     if (existing) {

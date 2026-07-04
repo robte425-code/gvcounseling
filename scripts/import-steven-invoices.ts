@@ -12,7 +12,7 @@ dotenv.config({ path: ".env" });
 
 import { writeFileSync } from "fs";
 import * as XLSX from "xlsx";
-import type { PaymentStatus } from "../src/generated/prisma/client";
+import { inferPaymentStatusFromSpreadsheet } from "../src/lib/invoice-payment-status";
 import { parseLniDate } from "../src/lib/lni-pay-periods";
 
 const SPREADSHEET_PATH = "/Users/ghim/Downloads/Steven_ Client Billing Status (1).xlsx";
@@ -145,15 +145,6 @@ function inferLineItem(amount: number): { procedureCode: string; amount: number;
   throw new Error(`Unknown amount $${amount.toFixed(2)} — expected 85, 42.50, or 63.75`);
 }
 
-function inferPaymentStatus(lniPaid: Date | null): {
-  paymentStatus: PaymentStatus;
-  lniPaidAt: Date | null;
-} {
-  if (lniPaid) {
-    return { paymentStatus: "PAID", lniPaidAt: lniPaid };
-  }
-  return { paymentStatus: "UNPAID", lniPaidAt: null };
-}
 
 /** Spreadsheet cutoffs that differ from the official L&I schedule. */
 const CUTOFF_ALIASES: Record<string, string> = {
@@ -285,7 +276,10 @@ async function main() {
       continue;
     }
 
-    const { paymentStatus, lniPaidAt } = inferPaymentStatus(row.lniPaid);
+    const { paymentStatus, lniPaidAt } = inferPaymentStatusFromSpreadsheet(
+      row.lniPaid,
+      row.lniPayment,
+    );
     const existing = existingByNumber.get(row.invoiceNum);
 
     if (existing) {
