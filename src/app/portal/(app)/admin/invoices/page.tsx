@@ -10,39 +10,15 @@ import {
   type PayPeriodOption,
 } from "@/components/portal/AdminInvoicesTable";
 import { portalCardClass } from "@/components/portal/ui";
-import { formatDate, formatCalendarIso, calendarIsoFromDate } from "@/lib/constants";
+import { formatDate } from "@/lib/constants";
+import {
+  earliestServiceDateIso,
+  formatInvoiceServiceDates,
+  payPeriodLabel,
+  payPeriodSortKey,
+} from "@/lib/invoice-pay-period-grouping";
 import { prisma } from "@/lib/prisma";
 import type { InvoiceStatus, Prisma } from "@/generated/prisma/client";
-
-function formatInvoiceServiceDates(lineItems: { serviceDate: Date }[]): string {
-  const dates = [
-    ...new Set(lineItems.map((line) => calendarIsoFromDate(line.serviceDate))),
-  ].sort();
-  if (dates.length === 0) return "—";
-  return dates.map((date) => formatCalendarIso(date)).join(", ");
-}
-
-function earliestServiceDateIso(lineItems: { serviceDate: Date }[]): string | null {
-  if (lineItems.length === 0) return null;
-  let min = lineItems[0].serviceDate;
-  for (let i = 1; i < lineItems.length; i++) {
-    if (lineItems[i].serviceDate < min) min = lineItems[i].serviceDate;
-  }
-  return calendarIsoFromDate(min);
-}
-
-function payPeriodSortKey(
-  period: { cutoffDate: Date } | null | undefined,
-): string {
-  return period ? calendarIsoFromDate(period.cutoffDate) : "";
-}
-
-function payPeriodLabel(
-  period: { label: string | null; cutoffDate: Date } | null,
-): string | null {
-  if (!period) return null;
-  return period.label ?? formatDate(period.cutoffDate);
-}
 
 const INVOICE_STATUSES = ["DRAFT", "SUBMITTED", "BILLED"] as const;
 

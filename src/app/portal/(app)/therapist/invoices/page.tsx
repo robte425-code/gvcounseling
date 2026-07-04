@@ -1,10 +1,16 @@
 import Link from "next/link";
 import { requireTherapist } from "@/auth";
-import { ConfirmSubmitButton } from "@/components/portal/ConfirmSubmitButton";
-import { InvoiceTableRow } from "@/components/portal/InvoiceTableRow";
-import { StatusBadge, portalButtonClass, portalButtonSecondaryClass, portalCardClass } from "@/components/portal/ui";
-import { formatCurrency, formatDate } from "@/lib/constants";
-import { deleteInvoiceAction } from "@/lib/portal-actions";
+import {
+  TherapistInvoicesTable,
+  type TherapistInvoiceRow,
+} from "@/components/portal/TherapistInvoicesTable";
+import { portalButtonClass, portalCardClass } from "@/components/portal/ui";
+import {
+  earliestServiceDateIso,
+  formatInvoiceServiceDates,
+  payPeriodLabel,
+  payPeriodSortKey,
+} from "@/lib/invoice-pay-period-grouping";
 import { prisma } from "@/lib/prisma";
 
 export default async function TherapistInvoicesPage({
@@ -20,8 +26,31 @@ export default async function TherapistInvoicesPage({
       therapistId: session.user.id,
       ...(status ? { status: status as "DRAFT" | "SUBMITTED" | "BILLED" } : {}),
     },
-    orderBy: { updatedAt: "desc" },
-    include: { client: true },
+    include: {
+      client: true,
+      lineItems: { select: { serviceDate: true }, orderBy: { sortOrder: "asc" } },
+      payPeriod: { select: { label: true, cutoffDate: true } },
+      bill: { select: { payPeriod: { select: { label: true, cutoffDate: true } } } },
+    },
+  });
+
+  const invoiceRows: TherapistInvoiceRow[] = invoices.map((inv) => {
+    const period = inv.payPeriod ?? inv.bill?.payPeriod ?? null;
+    return {
+      id: inv.id,
+      invoiceNumber: inv.invoiceNumber,
+      status: inv.status,
+      paymentStatus: inv.paymentStatus,
+      lniPaidAt: inv.lniPaidAt?.toISOString() ?? null,
+      clientLabel: `${inv.client.lastName}, ${inv.client.firstName}`,
+      serviceDates: formatInvoiceServiceDates(inv.lineItems),
+      totalAmount: Number(inv.totalAmount),
+      updatedAt: inv.updatedAt.toISOString(),
+      payPeriodId: inv.payPeriodId,
+      payPeriodLabel: payPeriodLabel(period),
+      payPeriodSortKey: payPeriodSortKey(period),
+      earliestServiceDate: earliestServiceDateIso(inv.lineItems),
+    };
   });
 
   return (
@@ -33,49 +62,7 @@ export default async function TherapistInvoicesPage({
         </Link>
       </div>
       <div className={portalCardClass}>
-        <table className="w-full text-left text-sm">
-          <thead>
-            <tr className="border-b border-border text-muted">
-              <th className="py-2 pr-4">#</th>
-              <th className="py-2 pr-4">Client</th>
-              <th className="py-2 pr-4">Status</th>
-              <th className="py-2 pr-4">Total</th>
-              <th className="py-2 pr-4">Updated</th>
-              <th className="py-2" />
-            </tr>
-          </thead>
-          <tbody>
-            {invoices.map((inv) => (
-              <InvoiceTableRow
-                key={inv.id}
-                href={`/portal/therapist/invoices/${inv.id}`}
-                actions={
-                  inv.status === "DRAFT" ? (
-                    <form action={deleteInvoiceAction}>
-                      <input type="hidden" name="invoiceId" value={inv.id} />
-                      <ConfirmSubmitButton
-                        confirmMessage={`Delete invoice #${inv.invoiceNumber}?`}
-                        className={`${portalButtonSecondaryClass} border-red-200 px-3 py-1 text-xs text-red-700 hover:bg-red-50`}
-                      >
-                        Delete
-                      </ConfirmSubmitButton>
-                    </form>
-                  ) : null
-                }
-              >
-                <td className="py-3 pr-4">{inv.invoiceNumber}</td>
-                <td className="py-3 pr-4">
-                  {inv.client.lastName}, {inv.client.firstName}
-                </td>
-                <td className="py-3 pr-4">
-                  <StatusBadge status={inv.status} />
-                </td>
-                <td className="py-3 pr-4">{formatCurrency(Number(inv.totalAmount))}</td>
-                <td className="py-3 pr-4">{formatDate(inv.updatedAt)}</td>
-              </InvoiceTableRow>
-            ))}
-          </tbody>
-        </table>
+        <TherapistInvoicesTable invoices={invoiceRows} />
       </div>
     </div>
   );

@@ -11,6 +11,7 @@ import {
   portalLabelCompactClass,
 } from "@/components/portal/ui";
 import { formatCurrency, formatDate } from "@/lib/constants";
+import { groupInvoicesByPayPeriod } from "@/lib/invoice-pay-period-grouping";
 import { assignInvoicesToPayPeriodAction, deleteAdminInvoiceAction } from "@/lib/portal-actions";
 
 export type AdminInvoiceRow = {
@@ -36,43 +37,6 @@ export type AdminInvoiceGroup = {
   label: string;
   invoices: AdminInvoiceRow[];
 };
-
-const UNASSIGNED_GROUP_KEY = "__unassigned__";
-
-export function groupInvoicesByPayPeriod(invoices: AdminInvoiceRow[]): AdminInvoiceGroup[] {
-  const byPeriod = new Map<string, AdminInvoiceRow[]>();
-
-  for (const inv of invoices) {
-    const key = inv.payPeriodId ?? UNASSIGNED_GROUP_KEY;
-    const group = byPeriod.get(key);
-    if (group) group.push(inv);
-    else byPeriod.set(key, [inv]);
-  }
-
-  return [...byPeriod.entries()]
-    .map(([key, items]) => ({
-      key,
-      label: items[0]?.payPeriodLabel ?? "Unassigned",
-      payPeriodSortKey: items[0]?.payPeriodSortKey ?? "",
-      invoices: [...items].sort((a, b) => {
-        const dateCompare = (a.earliestServiceDate ?? "").localeCompare(
-          b.earliestServiceDate ?? "",
-        );
-        if (dateCompare !== 0) return dateCompare;
-        return a.invoiceNumber - b.invoiceNumber;
-      }),
-    }))
-    .sort((a, b) => {
-      if (a.key === UNASSIGNED_GROUP_KEY) return 1;
-      if (b.key === UNASSIGNED_GROUP_KEY) return -1;
-      return b.payPeriodSortKey.localeCompare(a.payPeriodSortKey);
-    })
-    .map(({ key, label, invoices: groupInvoices }) => ({
-      key,
-      label,
-      invoices: groupInvoices,
-    }));
-}
 
 export type PayPeriodOption = {
   id: string;
