@@ -1,4 +1,4 @@
-import type { Prisma } from "@/generated/prisma";
+import type { Prisma } from "@/generated/prisma/client";
 
 export function normalizeClientSearchQuery(query: string | undefined): string {
   return query?.trim() ?? "";
