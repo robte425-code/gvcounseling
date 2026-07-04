@@ -95,8 +95,8 @@ async function main() {
               diagnoses: client.diagnoses,
               warnings: [],
               claimNumber: client.lniClaimNumber,
-              dateOfInjury: client.dateOfInjury,
-              vrcName: client.vrcName,
+              dateOfInjury: client.dateOfInjury ?? undefined,
+              vrcName: client.vrcName ?? undefined,
             },
             {
               diagnoses: client.diagnoses,

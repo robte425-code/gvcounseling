@@ -174,7 +174,10 @@ export async function scanTherapistDriveClientFolders(
 
 export async function importDriveClientFolder(
   oauthUserId: string,
-  target: Pick<DriveFolderTarget, "folderId" | "folderName" | "therapistId" | "therapistName">,
+  target: Pick<
+    DriveFolderTarget,
+    "folderId" | "folderName" | "therapistId" | "therapistName" | "fromClosedCases"
+  >,
 ): Promise<DriveImportResult> {
   const accessToken = await getValidGoogleAccessToken(oauthUserId);
   const folderLabel = `${target.therapistName}/${target.folderName}`;
