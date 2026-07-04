@@ -192,8 +192,8 @@ export async function upsertClientFromReferral(
     vrcPhone: mergedReferral.vrcPhone ?? existing?.vrcPhone ?? null,
     therapistId: existing?.therapistId ?? therapistId,
     assignmentStatus:
-      existing?.assignmentStatus ??
       options.assignmentStatus ??
+      existing?.assignmentStatus ??
       ClientAssignmentStatus.ACTIVE,
     closedAt:
       options.closedAt !== undefined

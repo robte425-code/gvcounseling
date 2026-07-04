@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requireTherapist } from "@/auth";
 import { NewInvoiceClient } from "@/components/portal/NewInvoiceClient";
 import { portalCardClass } from "@/components/portal/ui";
+import { ClientAssignmentStatus } from "@/generated/prisma/client";
 import { loadTherapistProcedureCodeFees, serializeFeeSchedule } from "@/lib/procedure-fees";
 import { prisma } from "@/lib/prisma";
 
@@ -14,7 +15,10 @@ export default async function NewInvoicePage({
   const { clientId: preselectedClientId } = await searchParams;
   const [clients, therapistFees] = await Promise.all([
     prisma.client.findMany({
-      where: { therapistId: session.user.id, assignmentStatus: "ACTIVE" },
+      where: {
+        therapistId: session.user.id,
+        assignmentStatus: ClientAssignmentStatus.ACTIVE,
+      },
       orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
     }),
     loadTherapistProcedureCodeFees(session.user.id),
@@ -35,7 +39,7 @@ export default async function NewInvoicePage({
       </div>
       {clients.length === 0 ? (
         <p className={portalCardClass}>
-          No clients assigned to you yet. Ask the admin to add clients or import Referral Submission files.
+          No active clients assigned to you yet. Ask the admin to add clients or import Referral Submission files.
         </p>
       ) : (
         <NewInvoiceClient

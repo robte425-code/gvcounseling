@@ -238,8 +238,9 @@ export async function importDriveClientFolder(
       driveFolderId: target.folderId,
       supplement,
       documentParts: parts,
-      assignmentStatus: target.fromClosedCases ? "CLOSED" : "ACTIVE",
-      closedAt: target.fromClosedCases ? new Date() : null,
+      ...(target.fromClosedCases
+        ? { assignmentStatus: "CLOSED" as const, closedAt: new Date() }
+        : {}),
     });
     if (importResult.error) {
       result.skipped = 1;
