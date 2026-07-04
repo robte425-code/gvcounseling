@@ -5,16 +5,16 @@ import { StatusBadge, portalButtonClass, portalCardClass } from "@/components/po
 import { prisma } from "@/lib/prisma";
 
 const STATUS_FILTERS = [
-  { label: "All", value: undefined },
+  { label: "All", value: "all" },
   { label: "Active", value: "ACTIVE" },
   { label: "Pending review", value: "PENDING_THERAPIST" },
   { label: "Closed", value: "CLOSED" },
 ] as const;
 
-type ClientStatus = (typeof STATUS_FILTERS)[number]["value"];
+type ClientStatus = Exclude<(typeof STATUS_FILTERS)[number]["value"], "all">;
 
-function isClientStatus(value: string | undefined): value is NonNullable<ClientStatus> {
-  return STATUS_FILTERS.some((f) => f.value === value);
+function isClientStatus(value: string): value is ClientStatus {
+  return STATUS_FILTERS.some((f) => f.value === value && f.value !== "all");
 }
 
 export default async function TherapistClientsPage({
@@ -24,7 +24,14 @@ export default async function TherapistClientsPage({
 }) {
   const session = await requireTherapist();
   const { status } = await searchParams;
-  const statusFilter = isClientStatus(status) ? status : undefined;
+  const statusFilter: ClientStatus | undefined =
+    status === "all"
+      ? undefined
+      : status === undefined
+        ? "ACTIVE"
+        : isClientStatus(status)
+          ? status
+          : "ACTIVE";
 
   const clients = await prisma.client.findMany({
     where: {
@@ -42,10 +49,18 @@ export default async function TherapistClientsPage({
           <p className="mt-2 text-muted">Clients assigned to you.</p>
           <div className="mt-4 flex flex-wrap gap-2">
             {STATUS_FILTERS.map((f) => {
-              const href = f.value
-                ? `/portal/therapist/clients?status=${f.value}`
-                : "/portal/therapist/clients";
-              const active = statusFilter === f.value || (!statusFilter && !f.value);
+              const href =
+                f.value === "all"
+                  ? "/portal/therapist/clients?status=all"
+                  : f.value === "ACTIVE"
+                    ? "/portal/therapist/clients"
+                    : `/portal/therapist/clients?status=${f.value}`;
+              const active =
+                f.value === "all"
+                  ? status === "all"
+                  : f.value === "ACTIVE"
+                    ? status === undefined || status === "ACTIVE"
+                    : statusFilter === f.value;
               return (
                 <Link
                   key={href}
