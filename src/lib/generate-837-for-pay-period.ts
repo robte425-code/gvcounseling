@@ -1,4 +1,10 @@
-import { buildEdi837, generateClmControlNumber, type Edi837Claim, type Edi837Result } from "@/lib/edi837";
+import {
+  buildEdi837,
+  generateClmControlNumber,
+  type Edi837Claim,
+  type Edi837Result,
+  type IsaUsageIndicator,
+} from "@/lib/edi837";
 import { client837Ready, resolveClientBirthDate } from "@/lib/constants";
 import { invoice837PayPeriodWhere } from "@/lib/invoice-list-filters";
 import { loadAllProcedureCodeFees, resolveFeeAmount } from "@/lib/procedure-fees";
@@ -112,7 +118,10 @@ async function buildEdiClaimsForInvoices(invoices: InvoiceFor837[]): Promise<Edi
   return claims;
 }
 
-export async function generate837ForPayPeriod(payPeriodId: string): Promise<Edi837Result> {
+export async function generate837ForPayPeriod(
+  payPeriodId: string,
+  options?: { usageIndicator?: IsaUsageIndicator },
+): Promise<Edi837Result> {
   const payPeriod = await prisma.payPeriod.findUnique({ where: { id: payPeriodId } });
   if (!payPeriod) throw new Error("Pay period not found.");
 
@@ -129,5 +138,5 @@ export async function generate837ForPayPeriod(payPeriodId: string): Promise<Edi8
   }
 
   const claims = await buildEdiClaimsForInvoices(invoices);
-  return buildEdi837(claims);
+  return buildEdi837(claims, { usageIndicator: options?.usageIndicator });
 }

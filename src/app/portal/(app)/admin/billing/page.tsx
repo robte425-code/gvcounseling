@@ -1,19 +1,19 @@
 import Link from "next/link";
 import { requireAdmin } from "@/auth";
-import { Generate837Form } from "@/components/portal/Generate837Form";
-import { ConfirmSubmitButton } from "@/components/portal/ConfirmSubmitButton";
+import { BillingPayPeriodsTable } from "@/components/portal/BillingPayPeriodsTable";
 import {
   createPayPeriodAction,
-  emailVrcsForPayPeriodAction,
   syncPayPeriodsFromLniAction,
 } from "@/lib/portal-actions";
 import { LNI_PAYMENT_STATUS_URL } from "@/lib/lni-pay-periods";
+import { getIsaUsageIndicator } from "@/lib/edi837";
 import {
   portalButtonClass,
   portalButtonSecondaryClass,
   portalCardClass,
   portalInputCompactClass,
   portalLabelCompactClass,
+  portalSectionHeadingClass,
 } from "@/components/portal/ui";
 import { formatDate } from "@/lib/constants";
 import { prisma } from "@/lib/prisma";
@@ -60,10 +60,16 @@ export default async function BillingPage({
   );
 
   const periodRows = periods.map((period) => ({
-    period,
+    id: period.id,
+    label: period.label,
+    cutoffLabel: formatDate(period.cutoffDate),
+    paymentLabel: formatDate(period.paymentDate),
+    periodLabel: period.label ?? formatDate(period.cutoffDate),
     assignedInvoices: period._count.invoices,
     billedInvoices: billedCountByPeriodId.get(period.id) ?? 0,
   }));
+
+  const totalAssigned = periodRows.reduce((sum, row) => sum + row.assignedInvoices, 0);
 
   const syncMessage =
     params.synced === "1"
@@ -77,28 +83,46 @@ export default async function BillingPage({
   const vrcSkipped = params.vrcSkipped?.split(";;").filter(Boolean) ?? [];
   const vrcErrors = params.vrcErrors?.split(";;").filter(Boolean) ?? [];
 
+  const hasAlerts = Boolean(syncMessage || vrcEmailMessage || vrcSkipped.length || vrcErrors.length);
+
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="font-serif text-3xl font-semibold text-primary-dark">Billing</h1>
-        <p className="mt-2 text-sm text-muted">
-          Manage pay periods, L&I procedure fees, generate 837 files, and email VRCs session
-          documentation. <strong>Generate 837</strong> builds a file from all submitted or billed
-          invoices assigned to that pay period and downloads it immediately — nothing is stored.
-        </p>
+    <div className="space-y-8">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="font-serif text-3xl font-semibold text-primary-dark">Billing</h1>
+          <p className="mt-2 max-w-2xl text-sm text-muted">
+            Sync pay periods, generate 837 files for L&I upload, and email VRC session documentation.
+            Generated files download immediately and are not stored.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-3">
+          <div className={`${portalCardClass} min-w-[7rem] px-4 py-3 shadow-none`}>
+            <p className="text-xs font-medium uppercase tracking-wide text-muted">Pay periods</p>
+            <p className="mt-1 text-2xl font-semibold tabular-nums text-primary-dark">
+              {periodRows.length}
+            </p>
+          </div>
+          <div className={`${portalCardClass} min-w-[7rem] px-4 py-3 shadow-none`}>
+            <p className="text-xs font-medium uppercase tracking-wide text-muted">Assigned</p>
+            <p className="mt-1 text-2xl font-semibold tabular-nums text-primary-dark">
+              {totalAssigned}
+            </p>
+          </div>
+        </div>
       </div>
 
-      {syncMessage && (
-        <p className="rounded-xl bg-primary/10 px-4 py-3 text-sm text-primary-dark" role="status">
-          {syncMessage}
-        </p>
-      )}
-
-      {vrcEmailMessage && (
+      {hasAlerts && (
         <div className="space-y-2">
-          <p className="rounded-xl bg-primary/10 px-4 py-3 text-sm text-primary-dark" role="status">
-            {vrcEmailMessage}
-          </p>
+          {syncMessage && (
+            <p className="rounded-xl bg-primary/10 px-4 py-3 text-sm text-primary-dark" role="status">
+              {syncMessage}
+            </p>
+          )}
+          {vrcEmailMessage && (
+            <p className="rounded-xl bg-primary/10 px-4 py-3 text-sm text-primary-dark" role="status">
+              {vrcEmailMessage}
+            </p>
+          )}
           {vrcSkipped.length > 0 && (
             <p className="rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-950" role="status">
               Skipped: {vrcSkipped.join(" ")}
@@ -112,17 +136,17 @@ export default async function BillingPage({
         </div>
       )}
 
-      <div className={portalCardClass}>
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h2 className="font-serif text-lg font-semibold text-primary-dark">Pay periods</h2>
-            <p className="mt-0.5 text-xs text-muted">
-              Sync from L&I (Bill Cutoff → cutoff, Warrant Date → expected payment) or add manually.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
+      <div className="grid gap-6 lg:grid-cols-12">
+        <section className={`${portalCardClass} lg:col-span-4`}>
+          <p className={portalSectionHeadingClass}>Setup</p>
+          <h2 className="mt-1 font-serif text-lg font-semibold text-primary-dark">Pay periods</h2>
+          <p className="mt-1 text-xs text-muted">
+            Bill Cutoff maps to cutoff date; Warrant Date maps to expected payment.
+          </p>
+
+          <div className="mt-4 flex flex-col gap-2">
             <form action={syncPayPeriodsFromLniAction}>
-              <button type="submit" className={portalButtonClass}>
+              <button type="submit" className={`${portalButtonClass} w-full`}>
                 Sync from L&I
               </button>
             </form>
@@ -130,98 +154,82 @@ export default async function BillingPage({
               href={LNI_PAYMENT_STATUS_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className={portalButtonSecondaryClass}
+              className={`${portalButtonSecondaryClass} w-full text-center`}
             >
               View on LNI.wa.gov
             </a>
+            <Link
+              href="/portal/admin/invoices?status=SUBMITTED"
+              className={`${portalButtonSecondaryClass} w-full text-center`}
+            >
+              Assign invoices
+            </Link>
           </div>
-        </div>
 
-        <form
-          action={createPayPeriodAction}
-          className="mt-4 grid gap-3 border-t border-border pt-4 sm:grid-cols-2 lg:grid-cols-5"
-        >
-          <div>
-            <label htmlFor="label" className={portalLabelCompactClass}>
-              Label
-            </label>
-            <input id="label" name="label" className={portalInputCompactClass} placeholder="June 2026" />
-          </div>
-          <div>
-            <label htmlFor="cutoffDate" className={portalLabelCompactClass}>
-              Cutoff date
-            </label>
-            <input id="cutoffDate" name="cutoffDate" type="date" required className={portalInputCompactClass} />
-          </div>
-          <div>
-            <label htmlFor="paymentDate" className={portalLabelCompactClass}>
-              Expected payment
-            </label>
-            <input id="paymentDate" name="paymentDate" type="date" className={portalInputCompactClass} />
-          </div>
-          <div className="flex items-end sm:col-span-2 lg:col-span-2">
-            <button type="submit" className={portalButtonSecondaryClass}>
+          <form action={createPayPeriodAction} className="mt-6 space-y-3 border-t border-border pt-6">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted">Add manually</p>
+            <div>
+              <label htmlFor="label" className={portalLabelCompactClass}>
+                Label
+              </label>
+              <input
+                id="label"
+                name="label"
+                className={portalInputCompactClass}
+                placeholder="June 2026"
+              />
+            </div>
+            <div>
+              <label htmlFor="cutoffDate" className={portalLabelCompactClass}>
+                Cutoff date
+              </label>
+              <input
+                id="cutoffDate"
+                name="cutoffDate"
+                type="date"
+                required
+                className={portalInputCompactClass}
+              />
+            </div>
+            <div>
+              <label htmlFor="paymentDate" className={portalLabelCompactClass}>
+                Expected payment
+              </label>
+              <input
+                id="paymentDate"
+                name="paymentDate"
+                type="date"
+                className={portalInputCompactClass}
+              />
+            </div>
+            <button type="submit" className={`${portalButtonSecondaryClass} w-full`}>
               Add pay period
             </button>
-          </div>
-        </form>
+          </form>
+        </section>
 
-        <table className="mt-4 w-full text-left text-sm">
-          <thead>
-            <tr className="border-b border-border text-muted">
-              <th className="py-2 pr-4">Label</th>
-              <th className="py-2 pr-4">Cutoff</th>
-              <th className="py-2 pr-4">Expected payment</th>
-              <th className="py-2 pr-4">Assigned</th>
-              <th className="py-2">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {periodRows.map(({ period, assignedInvoices, billedInvoices }) => (
-              <tr key={period.id} className="border-b border-border/60 last:border-0">
-                <td className="py-2.5 pr-4">{period.label ?? "—"}</td>
-                <td className="py-2.5 pr-4">{formatDate(period.cutoffDate)}</td>
-                <td className="py-2.5 pr-4">{formatDate(period.paymentDate)}</td>
-                <td className="py-2.5 pr-4">
-                  <Link
-                    href={`/portal/admin/invoices?payPeriodId=${period.id}`}
-                    className="text-primary hover:underline"
-                  >
-                    {assignedInvoices}
-                  </Link>
-                </td>
-                <td className="py-2.5">
-                  <div className="flex flex-wrap gap-2">
-                    <Generate837Form
-                      payPeriodId={period.id}
-                      assignedInvoices={assignedInvoices}
-                      periodLabel={period.label ?? formatDate(period.cutoffDate)}
-                    />
-                    <form action={emailVrcsForPayPeriodAction}>
-                      <input type="hidden" name="payPeriodId" value={period.id} />
-                      <ConfirmSubmitButton
-                        confirmMessage={`Email VRCs for all billed clients in ${period.label ?? formatDate(period.cutoffDate)}? Each VRC will receive session documentation uploaded with their client's invoice.`}
-                        className={portalButtonSecondaryClass}
-                        disabled={billedInvoices === 0}
-                      >
-                        Email VRCs
-                      </ConfirmSubmitButton>
-                    </form>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        {periodRows.length === 0 && (
-          <p className="py-6 text-center text-sm text-muted">
-            No pay periods with assigned invoices. Assign invoices on the Invoices page, or sync pay
-            periods from L&I above.
+        <section className={`${portalCardClass} lg:col-span-8`}>
+          <p className={portalSectionHeadingClass}>837 & VRC</p>
+          <h2 className="mt-1 font-serif text-lg font-semibold text-primary-dark">
+            Generate & notify
+          </h2>
+          <p className="mt-1 text-xs text-muted">
+            Only pay periods with assigned invoices appear here. Choose Test or Production before
+            generating.
           </p>
-        )}
+
+          <div className="mt-5">
+            <BillingPayPeriodsTable
+              rows={periodRows}
+              defaultUsageIndicator={getIsaUsageIndicator()}
+            />
+          </div>
+        </section>
       </div>
 
-      <LniFeesSection />
+      <section>
+        <LniFeesSection />
+      </section>
     </div>
   );
 }

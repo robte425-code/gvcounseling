@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/auth";
+import { parseIsaUsageIndicatorParam } from "@/lib/edi837";
 import { generate837ForPayPeriod } from "@/lib/generate-837-for-pay-period";
 
 export async function GET(request: Request) {
@@ -11,7 +12,8 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "payPeriodId is required." }, { status: 400 });
     }
 
-    const edi = await generate837ForPayPeriod(payPeriodId);
+    const usageIndicator = parseIsaUsageIndicatorParam(searchParams.get("usageIndicator"));
+    const edi = await generate837ForPayPeriod(payPeriodId, { usageIndicator });
 
     return new NextResponse(edi.content, {
       headers: {

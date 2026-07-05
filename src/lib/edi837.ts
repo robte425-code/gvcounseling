@@ -172,14 +172,23 @@ function buildClaim(hlNumber: number, claim: Edi837Claim): string {
   return out;
 }
 
-function resolveIsaUsageIndicator(): "T" | "P" {
+export type IsaUsageIndicator = "T" | "P";
+
+function resolveIsaUsageIndicator(): IsaUsageIndicator {
   const value = process.env.EDI_ISA_USAGE_INDICATOR?.trim().toUpperCase();
   return value === "P" ? "P" : "T";
 }
 
 /** ISA15 — T = test interchange, P = production. Defaults to T for L&I test uploads. */
-export function getIsaUsageIndicator(): "T" | "P" {
+export function getIsaUsageIndicator(): IsaUsageIndicator {
   return resolveIsaUsageIndicator();
+}
+
+export function parseIsaUsageIndicatorParam(
+  value: string | null | undefined,
+): IsaUsageIndicator | undefined {
+  const normalized = value?.trim().toUpperCase();
+  return normalized === "T" || normalized === "P" ? normalized : undefined;
 }
 
 export function parseIsaUsageIndicatorFromEdi(ediContent: string): "T" | "P" | null {
@@ -188,15 +197,19 @@ export function parseIsaUsageIndicatorFromEdi(ediContent: string): "T" | "P" | n
   return null;
 }
 
-export function buildEdi837(claims: Edi837Claim[], now = new Date()): Edi837Result {
+export function buildEdi837(
+  claims: Edi837Claim[],
+  options?: { now?: Date; usageIndicator?: IsaUsageIndicator },
+): Edi837Result {
   if (!claims.length) {
     throw new Error("No claims to include in 837 file");
   }
 
+  const now = options?.now ?? new Date();
   const isaControl = generateNumericControl(9);
   const gsControl = padLeft(1, 8);
   const stControl = padLeft(1, 9);
-  const usageIndicator = resolveIsaUsageIndicator();
+  const usageIndicator = options?.usageIndicator ?? resolveIsaUsageIndicator();
   const date = formatDate(now);
   const time = formatTime(now);
   const yyMMdd = date.slice(2);

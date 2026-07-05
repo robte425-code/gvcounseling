@@ -2,14 +2,21 @@
 
 import { useState } from "react";
 import { portalButtonClass } from "@/components/portal/ui";
+import type { IsaUsageIndicator } from "@/lib/edi837";
 
 type Props = {
   payPeriodId: string;
-  assignedInvoices: number;
   periodLabel: string;
+  usageIndicator: IsaUsageIndicator;
+  compact?: boolean;
 };
 
-export function Generate837Form({ payPeriodId, assignedInvoices, periodLabel }: Props) {
+export function Generate837Form({
+  payPeriodId,
+  periodLabel,
+  usageIndicator,
+  compact = false,
+}: Props) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -19,7 +26,7 @@ export function Generate837Form({ payPeriodId, assignedInvoices, periodLabel }: 
 
     try {
       const response = await fetch(
-        `/api/portal/bills/generate?payPeriodId=${encodeURIComponent(payPeriodId)}`,
+        `/api/portal/bills/generate?payPeriodId=${encodeURIComponent(payPeriodId)}&usageIndicator=${usageIndicator}`,
       );
 
       if (!response.ok) {
@@ -45,10 +52,9 @@ export function Generate837Form({ payPeriodId, assignedInvoices, periodLabel }: 
     }
   }
 
-  const label =
-    assignedInvoices > 0
-      ? `Generate 837 (${assignedInvoices})`
-      : "Generate 837";
+  const buttonClass = compact
+    ? `${portalButtonClass} px-4 py-1.5 text-xs`
+    : portalButtonClass;
 
   return (
     <div className="inline-flex flex-col gap-1">
@@ -57,9 +63,9 @@ export function Generate837Form({ payPeriodId, assignedInvoices, periodLabel }: 
         onClick={handleGenerate}
         disabled={pending}
         title={`Generate and download an 837 for invoices assigned to ${periodLabel}`}
-        className={`${portalButtonClass} disabled:cursor-not-allowed`}
+        className={`${buttonClass} disabled:cursor-not-allowed`}
       >
-        {pending ? "Generating…" : label}
+        {pending ? "Generating…" : "Generate 837"}
       </button>
       {error && (
         <p className="max-w-xs text-xs text-red-700" role="alert">

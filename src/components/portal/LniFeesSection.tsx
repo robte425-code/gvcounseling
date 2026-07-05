@@ -4,7 +4,7 @@ import { formatCurrency, formatDate, PROCEDURE_CODES } from "@/lib/constants";
 import { getCurrentProcedureFeeFromSchedule, loadAllProcedureCodeFees } from "@/lib/procedure-fees";
 import {
   portalButtonSecondaryClass,
-  portalCardCompactClass,
+  portalCardClass,
   portalInputCompactClass,
   portalLabelCompactClass,
   portalSectionHeadingClass,
@@ -19,11 +19,12 @@ export async function LniFeesSection() {
   }));
 
   return (
-    <div className={portalCardCompactClass}>
+    <div className={portalCardClass}>
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className={`${portalSectionHeadingClass} font-serif text-base normal-case text-primary-dark`}>
-          L&I fees
-        </h2>
+        <div>
+          <p className={portalSectionHeadingClass}>Fee schedule</p>
+          <h2 className="mt-1 font-serif text-lg font-semibold text-primary-dark">L&I fees</h2>
+        </div>
         <Link
           href="/portal/admin/billing/fees/history"
           className={`${portalButtonSecondaryClass} px-4 py-1.5 text-xs`}
@@ -31,39 +32,41 @@ export async function LniFeesSection() {
           Fee history
         </Link>
       </div>
-      <p className="mt-1 text-xs text-muted">
+      <p className="mt-2 text-sm text-muted">
         Rates billed to L&I in 837 files. Therapist invoices use each therapist&apos;s own fee schedule.
       </p>
 
-      <table className="mt-3 w-full text-left text-xs sm:text-sm">
-        <thead>
-          <tr className="border-b border-border text-muted">
-            <th className="py-1.5 pr-3">Procedure</th>
-            <th className="py-1.5 pr-3">Current fee</th>
-            <th className="py-1.5 pr-3">Effective from</th>
-          </tr>
-        </thead>
-        <tbody>
-          {currentFees.map(({ code, description, current }) => (
-            <tr key={code} className="border-b border-border/60 last:border-0">
-              <td className="py-1.5 pr-3">
-                <span className="font-mono">{code}</span>
-                <span className="text-muted"> · {description}</span>
-              </td>
-              <td className="py-1.5 pr-3 whitespace-nowrap">
-                {current ? formatCurrency(current.amount) : <span className="text-muted">Not set</span>}
-              </td>
-              <td className="py-1.5 pr-3 whitespace-nowrap">
-                {current ? formatDate(current.effectiveFrom) : <span className="text-muted">—</span>}
-              </td>
+      <div className="mt-4 overflow-hidden rounded-xl border border-border">
+        <table className="w-full text-left text-sm">
+          <thead>
+            <tr className="border-b border-border bg-primary/[0.03] text-muted">
+              <th className="px-4 py-2.5 font-medium">Procedure</th>
+              <th className="px-4 py-2.5 font-medium">Current fee</th>
+              <th className="px-4 py-2.5 font-medium">Effective from</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {currentFees.map(({ code, description, current }) => (
+              <tr key={code} className="border-b border-border/60 last:border-0">
+                <td className="px-4 py-2.5">
+                  <span className="font-mono font-medium">{code}</span>
+                  <span className="text-muted"> · {description}</span>
+                </td>
+                <td className="px-4 py-2.5 whitespace-nowrap">
+                  {current ? formatCurrency(current.amount) : <span className="text-muted">Not set</span>}
+                </td>
+                <td className="px-4 py-2.5 whitespace-nowrap">
+                  {current ? formatDate(current.effectiveFrom) : <span className="text-muted">—</span>}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
 
       <form
         action={createProcedureCodeFeeAction}
-        className="mt-3 grid gap-2 border-t border-border pt-3 sm:grid-cols-2 lg:grid-cols-5"
+        className="mt-4 grid gap-3 rounded-xl border border-border bg-primary/[0.02] p-4 sm:grid-cols-2 lg:grid-cols-5"
       >
         <div className="sm:col-span-2">
           <label htmlFor="feeProcedureCode" className={portalLabelCompactClass}>
@@ -105,7 +108,7 @@ export async function LniFeesSection() {
           />
         </div>
         <div className="flex items-end">
-          <button type="submit" className={`${portalButtonSecondaryClass} px-4 py-1.5 text-xs`}>
+          <button type="submit" className={portalButtonSecondaryClass}>
             Save fee
           </button>
         </div>
