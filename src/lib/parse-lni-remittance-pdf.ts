@@ -1,0 +1,351 @@
+export type RemittanceBillSection = "PAID" | "DENIED" | "IN_PROCESS";
+
+export type RemittanceServiceLine = {
+  serviceDateFrom: string;
+  serviceDateTo: string;
+  units: number;
+  procedureCode: string;
+  billed: number;
+  allowed: number;
+  nonCovered: number;
+  payable: number;
+  eobCode?: string;
+};
+
+export type RemittanceBill = {
+  section: RemittanceBillSection;
+  claimNumber: string;
+  patientName: string;
+  icn: string;
+  serviceProviderId: string;
+  serviceProviderNpi: string;
+  serviceProviderName: string;
+  serviceLines: RemittanceServiceLine[];
+  billTotalBilled: number;
+  billTotalAllowed: number;
+  billTotalNonCovered: number;
+  billTotalPayable: number;
+  eobCodes: string[];
+};
+
+export type ParsedRemittanceAdvice = {
+  remittanceNumber: string;
+  warrantRegister: string;
+  invoiceDate: string;
+  reportDate: string | null;
+  payeeNumber: string;
+  payeeName: string;
+  totalPaid: number;
+  bills: RemittanceBill[];
+  eobCodeDescriptions: Record<string, string>;
+};
+
+const CLAIM_NUMBER = /[A-Z]{2}\d{5,6}/;
+const SERVICE_LINE =
+  /(\d{6})\s+(\d{6})\s+([\d.]+)\s+(\w+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)(?:\s+([A-Z]?\d{2,3}|P\d{2}))?/g;
+
+function normalizeWhitespace(text: string): string {
+  return text.replace(/\s+/g, " ").trim();
+}
+
+/** Normalize L&I provider id for comparison (0480003 ↔ 480003). */
+export function normalizeLniProviderId(value: string): string {
+  const digits = value.replace(/\D/g, "");
+  return digits.padStart(7, "0");
+}
+
+function parseMoney(value: string): number {
+  return Number.parseFloat(value.replace(/,/g, ""));
+}
+
+function parseServiceDate(mmddyy: string): string {
+  const month = mmddyy.slice(0, 2);
+  const day = mmddyy.slice(2, 4);
+  const yearSuffix = Number.parseInt(mmddyy.slice(4, 6), 10);
+  const year = yearSuffix >= 70 ? 1900 + yearSuffix : 2000 + yearSuffix;
+  return `${year}-${month}-${day}`;
+}
+
+function parseServiceLineMatch(match: RegExpExecArray): RemittanceServiceLine {
+  return {
+    serviceDateFrom: parseServiceDate(match[1]!),
+    serviceDateTo: parseServiceDate(match[2]!),
+    units: Number.parseFloat(match[3]!),
+    procedureCode: match[4]!,
+    billed: parseMoney(match[5]!),
+    allowed: parseMoney(match[6]!),
+    nonCovered: parseMoney(match[7]!),
+    payable: parseMoney(match[8]!),
+    eobCode: match[9] || undefined,
+  };
+}
+
+function extractEobDescriptions(text: string): Record<string, string> {
+  const descriptions: Record<string, string> = {};
+  const block = text.match(
+    /DESCRIPTION OF THE EXPLANATION CODES UTILIZED ABOVE:.*?(\d{3}\s+[^0-9]+?)(?=PAYMENTS AND PAYMENT DENIALS|WASHINGTON STATE|$)/i,
+  )?.[1];
+  if (!block) return descriptions;
+
+  const pattern = /(\d{3})\s+([A-Z][A-Z0-9\s.,'/-]+?)(?=\s+\d{3}\s+[A-Z]|$)/g;
+  let match: RegExpExecArray | null;
+  while ((match = pattern.exec(block)) !== null) {
+    descriptions[match[1]!] = match[2]!.trim();
+  }
+  return descriptions;
+}
+
+function parseBillTotal(text: string): {
+  billed: number;
+  allowed: number;
+  nonCovered: number;
+  payable: number;
+} | null {
+  const match = text.match(
+    /\*\*\*BILL TOTAL \. \. \.\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)/,
+  );
+  if (!match) return null;
+  return {
+    billed: parseMoney(match[1]!),
+    allowed: parseMoney(match[2]!),
+    nonCovered: parseMoney(match[3]!),
+    payable: parseMoney(match[4]!),
+  };
+}
+
+function parseBillChunk(
+  bodyBeforePat: string,
+  patAndTotal: string,
+  context: {
+    section: RemittanceBillSection;
+    serviceProviderId: string;
+    serviceProviderNpi: string;
+    serviceProviderName: string;
+  },
+): RemittanceBill | null {
+  const chunk = bodyBeforePat + patAndTotal;
+  const icnMatch = chunk.match(
+    /PAT ACCT\/RX NUM-\s*([A-Z0-9]+)\s+ICN-\s*(\d+)/i,
+  );
+  if (!icnMatch) return null;
+
+  const claimNumber = icnMatch[1]!.toUpperCase();
+  const icn = icnMatch[2]!;
+  const beforeIcn = chunk.slice(0, icnMatch.index ?? chunk.length);
+
+  const claimStart = beforeIcn.search(CLAIM_NUMBER);
+  if (claimStart < 0) return null;
+
+  const billBody = beforeIcn.slice(claimStart);
+  const claimLineMatch = billBody.match(
+    new RegExp(
+      `^(${CLAIM_NUMBER.source})\\s+(.+?)\\s+(\\d{6})\\s+(\\d{6})\\s+([\\d.]+)\\s+(\\w+)\\s+([\\d.]+)\\s+([\\d.]+)\\s+([\\d.]+)\\s+([\\d.]+)(?:\\s+([A-Z]?\\d{2,3}|P\\d{2}))?`,
+    ),
+  );
+  if (!claimLineMatch) return null;
+
+  const patientName = claimLineMatch[2]!.trim();
+  const serviceLines: RemittanceServiceLine[] = [
+    parseServiceLineMatch(claimLineMatch as unknown as RegExpExecArray),
+  ];
+
+  const afterFirstLine = billBody.slice(claimLineMatch[0]!.length);
+  SERVICE_LINE.lastIndex = 0;
+  let lineMatch: RegExpExecArray | null;
+  while ((lineMatch = SERVICE_LINE.exec(afterFirstLine)) !== null) {
+    if (lineMatch.index > 0 && afterFirstLine[lineMatch.index - 1] === "-") continue;
+    serviceLines.push(parseServiceLineMatch(lineMatch));
+  }
+
+  const totals = parseBillTotal(patAndTotal);
+  if (!totals) return null;
+
+  const eobCodes = [
+    ...new Set(
+      serviceLines
+        .map((line) => line.eobCode)
+        .filter(
+          (code): code is string =>
+            typeof code === "string" && code.length > 0 && !/^\d+\.\d+$/.test(code),
+        ),
+    ),
+  ];
+
+  return {
+    section: context.section,
+    claimNumber,
+    patientName,
+    icn,
+    serviceProviderId: context.serviceProviderId,
+    serviceProviderNpi: context.serviceProviderNpi,
+    serviceProviderName: context.serviceProviderName,
+    serviceLines,
+    billTotalBilled: totals.billed,
+    billTotalAllowed: totals.allowed,
+    billTotalNonCovered: totals.nonCovered,
+    billTotalPayable: totals.payable,
+    eobCodes,
+  };
+}
+
+function findContextAt(
+  position: number,
+  providers: Array<{ index: number; id: string; npi: string; name: string }>,
+  sections: Array<{ index: number; section: RemittanceBillSection }>,
+) {
+  let provider = providers[0];
+  let section: RemittanceBillSection = "PAID";
+
+  for (const marker of providers) {
+    if (marker.index <= position) provider = marker;
+    else break;
+  }
+  for (const marker of sections) {
+    if (marker.index <= position) section = marker.section;
+    else break;
+  }
+
+  if (!provider) {
+    throw new Error("Could not determine service provider for remittance bill.");
+  }
+
+  return {
+    section,
+    serviceProviderId: provider.id,
+    serviceProviderNpi: provider.npi,
+    serviceProviderName: provider.name,
+  };
+}
+
+function parseDetailBills(text: string): RemittanceBill[] {
+  const normalized = normalizeWhitespace(text);
+  const bills: RemittanceBill[] = [];
+
+  const providers: Array<{ index: number; id: string; npi: string; name: string }> = [];
+  const providerPattern =
+    /SERVICE PROVIDER NAME\s+(.+?)\s+SERVICE PROVIDER NUMBER\s+(\d+)\s+NPI\s+(\d+)/gi;
+  let providerMatch: RegExpExecArray | null;
+  while ((providerMatch = providerPattern.exec(normalized)) !== null) {
+    providers.push({
+      index: providerMatch.index,
+      name: providerMatch[1]!.trim(),
+      id: normalizeLniProviderId(providerMatch[2]!),
+      npi: providerMatch[3]!,
+    });
+  }
+
+  const sections: Array<{ index: number; section: RemittanceBillSection }> = [];
+  const sectionPattern =
+    /(PAID BILLS - PRACTITIONER BILL|DENIED BILLS - PRACTITIONER BILL|BILLS-IN-PROCESS - PRACTITIONER BILL)/gi;
+  let sectionMatch: RegExpExecArray | null;
+  while ((sectionMatch = sectionPattern.exec(normalized)) !== null) {
+    const label = sectionMatch[1]!.toUpperCase();
+    const section: RemittanceBillSection = label.startsWith("PAID")
+      ? "PAID"
+      : label.startsWith("DENIED")
+        ? "DENIED"
+        : "IN_PROCESS";
+    sections.push({ index: sectionMatch.index, section });
+  }
+
+  const billMarkerPattern = /PAT ACCT\/RX NUM-/gi;
+  const billStarts: number[] = [];
+  let billStartMatch: RegExpExecArray | null;
+  while ((billStartMatch = billMarkerPattern.exec(normalized)) !== null) {
+    billStarts.push(billStartMatch.index);
+  }
+
+  const detailStart = normalized.search(/REMITTANCE ADVICE DETAIL/i);
+
+  for (let i = 0; i < billStarts.length; i++) {
+    const patStart = billStarts[i]!;
+    const prevPatEnd =
+      i === 0
+        ? detailStart >= 0
+          ? detailStart
+          : 0
+        : normalized.indexOf("***BILL TOTAL", billStarts[i - 1]!) + "***BILL TOTAL".length;
+
+    const totalStart = normalized.indexOf("***BILL TOTAL", patStart);
+    const totalEnd =
+      totalStart >= 0
+        ? normalized.indexOf(". . .", totalStart) + 40
+        : patStart + 200;
+
+    const bodyBeforePat = normalized.slice(prevPatEnd, patStart);
+    const patAndTotal = normalized.slice(patStart, totalEnd);
+    const context = findContextAt(patStart, providers, sections);
+    const bill = parseBillChunk(bodyBeforePat, patAndTotal, context);
+    if (bill) bills.push(bill);
+  }
+
+  return bills;
+}
+
+export function parseLniRemittanceText(text: string): ParsedRemittanceAdvice {
+  const normalized = normalizeWhitespace(text);
+
+  const remittanceNumber =
+    normalized.match(/REMITTANCE ADVICE:\s*(\d+)/i)?.[1] ??
+    (() => {
+      throw new Error("Could not find remittance advice number.");
+    })();
+
+  const warrantRegister =
+    normalized.match(/WARRANT REGISTER(?::| NUMBER:)\s*(\d+)/i)?.[1] ??
+    (() => {
+      throw new Error("Could not find warrant register number.");
+    })();
+
+  const invoiceDate =
+    normalized.match(/INVOICE DATE:\s*(\d{2}\/\d{2}\/\d{4})/i)?.[1] ??
+    (() => {
+      throw new Error("Could not find invoice date.");
+    })();
+
+  const reportDate = normalized.match(/REPORT DATE:\s*(\d{2}\/\d{2}\/\d{4})/i)?.[1] ?? null;
+
+  const payeeNumber =
+    normalized.match(/PAYEE NUMBER:\s*(\d+)/i)?.[1] ??
+    (() => {
+      throw new Error("Could not find payee number.");
+    })();
+
+  const payeeName =
+    normalized.match(/PAYEE NAME:\s*([^]+?)\s+GRANDVIEW COUNSELING/i)?.[1]?.trim() ??
+    "GRANDVIEW COUNSELING LLC";
+
+  const totalPaid = parseMoney(
+    normalized.match(/\*\*\*\*\*\* TOTAL AMOUNT \*\*\*\*\*\*\s+([\d,.]+)/i)?.[1] ?? "0",
+  );
+
+  const detailStart = normalized.search(/REMITTANCE ADVICE DETAIL/i);
+  const detailText = detailStart >= 0 ? normalized.slice(detailStart) : normalized;
+  const bills = parseDetailBills(detailText);
+  const eobCodeDescriptions = extractEobDescriptions(normalized);
+
+  if (!bills.length) {
+    throw new Error("No remittance bills found in PDF.");
+  }
+
+  return {
+    remittanceNumber,
+    warrantRegister,
+    invoiceDate,
+    reportDate,
+    payeeNumber,
+    payeeName,
+    totalPaid,
+    bills,
+    eobCodeDescriptions,
+  };
+}
+
+export async function parseLniRemittancePdf(buffer: Buffer): Promise<ParsedRemittanceAdvice> {
+  const { extractPdfText } = await import("@/lib/pdf-text");
+  const result = await extractPdfText(buffer);
+  if (!result.text.trim()) {
+    throw new Error(result.parseError ?? result.ocrError ?? "Could not extract text from remittance PDF.");
+  }
+  return parseLniRemittanceText(result.text);
+}

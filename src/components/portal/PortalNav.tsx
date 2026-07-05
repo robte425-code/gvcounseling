@@ -8,6 +8,7 @@ import { prisma } from "@/lib/prisma";
 const adminLinks = [
   { href: "/portal/admin/dashboard", label: "Dashboard" },
   { href: "/portal/admin/billing", label: "Billing" },
+  { href: "/portal/admin/pay", label: "Pay" },
   { href: "/portal/admin/clients", label: "Clients" },
   { href: "/portal/admin/therapists", label: "Therapists" },
   { href: "/portal/admin/admins", label: "Admins" },

@@ -47,6 +47,9 @@ export default async function AdminDashboardPage() {
         <Link href="/portal/admin/billing" className={portalButtonClass}>
           Billing
         </Link>
+        <Link href="/portal/admin/pay" className={portalButtonClass}>
+          Pay
+        </Link>
         <Link href="/portal/admin/clients/import" className={portalButtonClass}>
           Import clients
         </Link>

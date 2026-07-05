@@ -26,6 +26,9 @@ import { prisma } from "@/lib/prisma";
 import { getNextInvoiceNumber } from "@/lib/invoice-numbers";
 import { emailVrcsForPayPeriod, parseVrcEmailDestinationParam } from "@/lib/vrc-billing-emails";
 import { faxLniForPayPeriod, parseLniFaxDestinationParam } from "@/lib/lni-billing-faxes";
+import { matchRemittanceBills } from "@/lib/match-remittance-to-invoices";
+import { parseLniRemittancePdf } from "@/lib/parse-lni-remittance-pdf";
+import { applyRemittanceAdvice, importRemittancePreview } from "@/lib/remittance-advice";
 
 function parseDecimal(value: FormDataEntryValue | null): number {
   const n = parseFloat(String(value ?? "0"));
@@ -1512,4 +1515,38 @@ export async function deleteClientNoteAction(formData: FormData) {
 
   const separator = returnTo.includes("?") ? "&" : "?";
   redirect(`${returnTo}${separator}noteDeleted=1`);
+}
+
+export async function importRemittanceAdviceAction(formData: FormData) {
+  const session = await requireAdmin();
+  const file = formData.get("file");
+  if (!(file instanceof File) || file.size === 0) {
+    throw new Error("Remittance PDF is required.");
+  }
+
+  const buffer = Buffer.from(await file.arrayBuffer());
+  const parsed = await parseLniRemittancePdf(buffer);
+  const matches = await matchRemittanceBills(parsed.bills);
+  const { remittanceAdviceId } = await importRemittancePreview({
+    parsed,
+    matches,
+    sourceFilename: file.name,
+    importedById: session.user.id,
+  });
+
+  revalidatePath("/portal/admin/pay");
+  redirect(`/portal/admin/pay/${remittanceAdviceId}`);
+}
+
+export async function applyRemittanceAdviceAction(formData: FormData) {
+  await requireAdmin();
+  const remittanceAdviceId = String(formData.get("remittanceAdviceId") ?? "").trim();
+  if (!remittanceAdviceId) throw new Error("Remittance is required.");
+
+  await applyRemittanceAdvice(remittanceAdviceId);
+
+  revalidatePath("/portal/admin/pay");
+  revalidatePath(`/portal/admin/pay/${remittanceAdviceId}`);
+  revalidatePath("/portal/admin/invoices");
+  redirect(`/portal/admin/pay/${remittanceAdviceId}?applied=1`);
 }

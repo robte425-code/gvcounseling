@@ -25,6 +25,22 @@ enum PaymentStatus {
   APPEAL_IN_PROGRESS
 }
 
+enum RemittanceBillSection {
+  PAID
+  DENIED
+  IN_PROCESS
+}
+
+enum TherapistPayRunStatus {
+  DRAFT
+  FINALIZED
+}
+
+enum RemittanceAdviceStatus {
+  PREVIEW
+  APPLIED
+}
+
 enum Gender {
   M
   F
@@ -59,6 +75,8 @@ model User {
   therapistProcedureCodeFeesCreated TherapistProcedureCodeFee[] @relation("TherapistProcedureCodeFeeCreatedBy")
   googleDriveConnection GoogleDriveConnection?
   clientNotes         ClientNote[]
+  importedRemittances RemittanceAdvice[] @relation("RemittanceImportedBy")
+  therapistPayPayouts TherapistPayRunPayout[]
 }
 
 model PayPeriod {
@@ -158,6 +176,8 @@ model Invoice {
   lniPaidAt        DateTime?
   lineItems        InvoiceLineItem[]
   attachments      InvoiceAttachment[]
+  remittanceLines  RemittanceAdviceLine[]
+  payRunLines      TherapistPayRunLine[]
   createdAt        DateTime            @default(now())
   updatedAt        DateTime            @updatedAt
 
@@ -234,4 +254,86 @@ model GoogleDriveConnection {
   expiresAt    DateTime
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+}
+
+model RemittanceAdvice {
+  id               String   @id @default(cuid())
+  remittanceNumber String
+  warrantRegister  String
+  invoiceDate      DateTime
+  reportDate       DateTime?
+  payeeNumber      String
+  payeeName        String
+  totalPaid        Decimal  @db.Decimal(10, 2)
+  status           RemittanceAdviceStatus @default(PREVIEW)
+  appliedAt        DateTime?
+  sourceFilename   String?
+  importedAt       DateTime @default(now())
+  importedById     String
+  importedBy       User     @relation("RemittanceImportedBy", fields: [importedById], references: [id])
+  lines            RemittanceAdviceLine[]
+  payRun           TherapistPayRun?
+
+  @@unique([remittanceNumber, warrantRegister])
+  @@index([invoiceDate])
+}
+
+model RemittanceAdviceLine {
+  id                 String                @id @default(cuid())
+  remittanceAdviceId String
+  remittanceAdvice   RemittanceAdvice      @relation(fields: [remittanceAdviceId], references: [id], onDelete: Cascade)
+  section            RemittanceBillSection
+  claimNumber        String
+  icn                String
+  patientName        String?
+  serviceProviderId  String
+  serviceProviderNpi String?
+  serviceProviderName String?
+  billTotalPayable   Decimal               @db.Decimal(10, 2)
+  eobCodes           String[]
+  serviceLines       Json
+  matchedInvoiceId   String?
+  matchedInvoice     Invoice?              @relation(fields: [matchedInvoiceId], references: [id])
+  matchNote          String?
+
+  @@index([remittanceAdviceId])
+  @@index([claimNumber])
+  @@index([matchedInvoiceId])
+}
+
+model TherapistPayRun {
+  id                 String                @id @default(cuid())
+  remittanceAdviceId String                @unique
+  remittanceAdvice   RemittanceAdvice      @relation(fields: [remittanceAdviceId], references: [id], onDelete: Cascade)
+  status             TherapistPayRunStatus @default(DRAFT)
+  finalizedAt        DateTime?
+  payouts            TherapistPayRunPayout[]
+  createdAt          DateTime              @default(now())
+  updatedAt          DateTime              @updatedAt
+}
+
+model TherapistPayRunPayout {
+  id              String              @id @default(cuid())
+  payRunId        String
+  payRun          TherapistPayRun     @relation(fields: [payRunId], references: [id], onDelete: Cascade)
+  therapistId     String
+  therapist       User                @relation(fields: [therapistId], references: [id])
+  therapistAmount Decimal             @db.Decimal(10, 2)
+  lniPaidAmount   Decimal             @db.Decimal(10, 2)
+  invoiceCount    Int
+  lines           TherapistPayRunLine[]
+
+  @@unique([payRunId, therapistId])
+}
+
+model TherapistPayRunLine {
+  id              String              @id @default(cuid())
+  payoutId        String
+  payout          TherapistPayRunPayout @relation(fields: [payoutId], references: [id], onDelete: Cascade)
+  invoiceId       String
+  invoice         Invoice             @relation(fields: [invoiceId], references: [id])
+  lniPaidAmount   Decimal             @db.Decimal(10, 2)
+  therapistAmount Decimal             @db.Decimal(10, 2)
+
+  @@unique([payoutId, invoiceId])
 }
