@@ -1,5 +1,6 @@
 import { isTextExtractable } from "@/lib/client-document-types";
 import { ocrPdfBuffer } from "@/lib/google-vision-ocr";
+import { PDFParse } from "pdf-parse";
 
 const MAX_OCR_PAGES = 3;
 
@@ -15,64 +16,33 @@ function isPdfBuffer(buffer: Buffer): boolean {
   return buffer.length >= 4 && buffer.subarray(0, 4).toString() === "%PDF";
 }
 
-async function tryPdfJsExtract(
+async function tryPdfParseExtract(
   buffer: Buffer,
-  sortByPosition = false,
 ): Promise<{ text: string; pages: number; error?: string }> {
+  let parser: PDFParse | null = null;
   try {
-    const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
-    const doc = await pdfjs
-      .getDocument({ data: new Uint8Array(buffer), useSystemFonts: true })
-      .promise;
-
-    const parts: string[] = [];
-    for (let pageNum = 1; pageNum <= doc.numPages; pageNum++) {
-      const page = await doc.getPage(pageNum);
-      const content = await page.getTextContent();
-      let pageText: string;
-      if (sortByPosition) {
-        const items = content.items.flatMap((item) => {
-          if (!("str" in item) || typeof item.str !== "string") return [];
-          const transform = "transform" in item && Array.isArray(item.transform) ? item.transform : null;
-          if (!transform) return [{ str: item.str, y: 0, x: 0 }];
-          return [{ str: item.str, y: transform[5] ?? 0, x: transform[4] ?? 0 }];
-        });
-        items.sort((a, b) => {
-          const yDiff = b.y - a.y;
-          if (Math.abs(yDiff) > 4) return yDiff;
-          return a.x - b.x;
-        });
-        pageText = items.map((item) => item.str).join(" ");
-      } else {
-        pageText = content.items
-          .map((item) => ("str" in item && typeof item.str === "string" ? item.str : ""))
-          .join(" ");
-      }
-      parts.push(pageText);
-    }
-
-    const pages = doc.numPages;
-    await doc.destroy();
-    return { text: parts.join("\n"), pages };
+    parser = new PDFParse({ data: buffer });
+    const result = await parser.getText();
+    const text =
+      result.pages.length > 0
+        ? result.pages.map((page) => page.text).join("\n")
+        : result.text;
+    return { text, pages: result.total };
   } catch (e) {
     return {
       text: "",
       pages: 0,
       error: e instanceof Error ? e.message : "PDF text extraction failed",
     };
+  } finally {
+    if (parser) await parser.destroy();
   }
 }
 
-async function extractWithPdfJs(
+async function extractWithPdfParser(
   buffer: Buffer,
 ): Promise<{ text: string; pages: number; error?: string }> {
-  const unsorted = await tryPdfJsExtract(buffer, false);
-  if (isTextExtractable(unsorted.text, unsorted.pages)) return unsorted;
-
-  const sorted = await tryPdfJsExtract(buffer, true);
-  if (isTextExtractable(sorted.text, sorted.pages)) return sorted;
-
-  return unsorted.text.length >= sorted.text.length ? unsorted : sorted;
+  return tryPdfParseExtract(buffer);
 }
 
 export async function extractPdfText(buffer: Buffer): Promise<PdfExtractResult> {
@@ -80,7 +50,7 @@ export async function extractPdfText(buffer: Buffer): Promise<PdfExtractResult> 
     return { text: "", pages: 0, usedOcr: false, parseError: "Not a PDF file" };
   }
 
-  const parsed = await extractWithPdfJs(buffer);
+  const parsed = await extractWithPdfParser(buffer);
 
   if (isTextExtractable(parsed.text, parsed.pages)) {
     return { text: parsed.text, pages: parsed.pages, usedOcr: false };
@@ -108,13 +78,13 @@ export async function extractPdfText(buffer: Buffer): Promise<PdfExtractResult> 
 
 const MAX_REMITTANCE_OCR_PAGES = 10;
 
-/** Remittance advice PDFs are multi-page; OCR more pages and prefer pdf.js stream order. */
+/** Remittance advice PDFs are multi-page; OCR more pages when text extraction is sparse. */
 export async function extractRemittancePdfText(buffer: Buffer): Promise<PdfExtractResult> {
   if (!isPdfBuffer(buffer)) {
     return { text: "", pages: 0, usedOcr: false, parseError: "Not a PDF file" };
   }
 
-  const parsed = await extractWithPdfJs(buffer);
+  const parsed = await extractWithPdfParser(buffer);
 
   if (isTextExtractable(parsed.text, parsed.pages)) {
     return { text: parsed.text, pages: parsed.pages, usedOcr: false };

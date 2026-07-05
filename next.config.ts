@@ -4,7 +4,7 @@ const nextConfig: NextConfig = {
   images: {
     formats: ["image/avif", "image/webp"],
   },
-  serverExternalPackages: ["pdfjs-dist", "word-extractor"],
+  serverExternalPackages: ["pdf-parse", "word-extractor"],
   experimental: {
     serverActions: {
       bodySizeLimit: "5mb",
