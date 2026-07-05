@@ -31,6 +31,8 @@ export type ClientFormClient = {
   residenceZip: string | null;
   workerPhone: string | null;
   employerName: string | null;
+  selfInsured: boolean;
+  employerFax: string | null;
   attendingDoctorName: string | null;
   attendingDoctorAddress: string | null;
   attendingDoctorPhone: string | null;
@@ -126,6 +128,27 @@ export async function ClientForm({ client, mode, cancelHref }: ClientFormProps) 
           <div>
             <label className={portalLabelCompactClass}>Employer name</label>
             <input name="employerName" defaultValue={client?.employerName ?? ""} className={portalInputCompactClass} />
+          </div>
+          <div className="flex items-end gap-2">
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                name="selfInsured"
+                value="true"
+                defaultChecked={client?.selfInsured ?? false}
+                className="size-4 rounded border-border"
+              />
+              Self-insured employer
+            </label>
+          </div>
+          <div>
+            <label className={portalLabelCompactClass}>Employer fax</label>
+            <input
+              name="employerFax"
+              defaultValue={client?.employerFax ?? ""}
+              placeholder="For self-insured fax copy"
+              className={portalInputCompactClass}
+            />
           </div>
           <div>
             <label className={portalLabelCompactClass}>Date of birth</label>

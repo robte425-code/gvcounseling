@@ -90,6 +90,8 @@ model Client {
   residenceZip          String?
   workerPhone           String?
   employerName          String?
+  selfInsured           Boolean   @default(false)
+  employerFax           String?
   attendingDoctorName   String?
   attendingDoctorAddress String?
   attendingDoctorPhone  String?

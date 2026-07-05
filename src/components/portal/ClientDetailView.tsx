@@ -26,6 +26,8 @@ export type ClientDetailData = {
   residenceZip: string | null;
   workerPhone: string | null;
   employerName: string | null;
+  selfInsured: boolean;
+  employerFax: string | null;
   attendingDoctorName: string | null;
   attendingDoctorAddress: string | null;
   attendingDoctorPhone: string | null;
@@ -123,6 +125,12 @@ export function ClientDetailView({
         <DetailField label="Injury date" value={formatDate(client.dateOfInjury)} />
         <DetailField label="Phone" value={display(client.workerPhone)} />
         <DetailField label="Employer" value={display(client.employerName)} />
+        {client.selfInsured && (
+          <>
+            <DetailField label="Self-insured" value="Yes" />
+            <DetailField label="Employer fax" value={display(client.employerFax)} />
+          </>
+        )}
         <DetailField
           label="Diagnoses"
           value={client.diagnoses.length ? client.diagnoses.join(", ") : null}

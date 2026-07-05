@@ -11,6 +11,7 @@ import {
   defaultVrcEmailDestination,
   getVrcEmailTestRecipient,
 } from "@/lib/vrc-billing-emails";
+import { defaultLniFaxDestination } from "@/lib/lni-fax-constants";
 import {
   portalButtonClass,
   portalButtonSecondaryClass,
@@ -35,6 +36,10 @@ export default async function BillingPage({
     sent?: string;
     vrcSkipped?: string;
     vrcErrors?: string;
+    lniFaxed?: string;
+    faxSent?: string;
+    lniFaxSkipped?: string;
+    lniFaxErrors?: string;
   }>;
 }) {
   await requireAdmin();
@@ -87,7 +92,22 @@ export default async function BillingPage({
   const vrcSkipped = params.vrcSkipped?.split(";;").filter(Boolean) ?? [];
   const vrcErrors = params.vrcErrors?.split(";;").filter(Boolean) ?? [];
 
-  const hasAlerts = Boolean(syncMessage || vrcEmailMessage || vrcSkipped.length || vrcErrors.length);
+  const lniFaxMessage =
+    params.lniFaxed === "1"
+      ? `Sent ${params.faxSent ?? "0"} fax${params.faxSent === "1" ? "" : "es"} to L&I (and employer copies where applicable).`
+      : null;
+  const lniFaxSkipped = params.lniFaxSkipped?.split(";;").filter(Boolean) ?? [];
+  const lniFaxErrors = params.lniFaxErrors?.split(";;").filter(Boolean) ?? [];
+
+  const hasAlerts = Boolean(
+    syncMessage ||
+      vrcEmailMessage ||
+      lniFaxMessage ||
+      vrcSkipped.length ||
+      vrcErrors.length ||
+      lniFaxSkipped.length ||
+      lniFaxErrors.length,
+  );
 
   return (
     <div className="space-y-8">
@@ -95,8 +115,9 @@ export default async function BillingPage({
         <div>
           <h1 className="font-serif text-3xl font-semibold text-primary-dark">Billing</h1>
           <p className="mt-2 max-w-2xl text-sm text-muted">
-            Sync pay periods, generate 837 files for L&I upload, and email VRCs session documentation (excluding invoice PDFs).
-            Generated files download immediately and are not stored.
+            Sync pay periods, generate 837 files for L&I upload, email VRCs session documentation,
+            and fax session documentation to L&I (excluding invoice PDFs). Generated files download
+            immediately and are not stored.
           </p>
         </div>
         <div className="flex flex-wrap gap-3">
@@ -127,6 +148,11 @@ export default async function BillingPage({
               {vrcEmailMessage}
             </p>
           )}
+          {lniFaxMessage && (
+            <p className="rounded-xl bg-primary/10 px-4 py-3 text-sm text-primary-dark" role="status">
+              {lniFaxMessage}
+            </p>
+          )}
           {vrcSkipped.length > 0 && (
             <p className="rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-950" role="status">
               Skipped: {vrcSkipped.join(" ")}
@@ -137,6 +163,16 @@ export default async function BillingPage({
               Errors: {vrcErrors.join(" ")}
             </p>
           )}
+          {lniFaxSkipped.length > 0 && (
+            <p className="rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-950" role="status">
+              Fax skipped: {lniFaxSkipped.join(" ")}
+            </p>
+          )}
+          {lniFaxErrors.length > 0 && (
+            <p className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-900" role="alert">
+              Fax errors: {lniFaxErrors.join(" ")}
+            </p>
+          )}
         </div>
       )}
 
@@ -144,6 +180,7 @@ export default async function BillingPage({
         rows={periodRows}
         defaultUsageIndicator={getIsaUsageIndicator()}
         defaultVrcEmailDestination={defaultVrcEmailDestination()}
+        defaultLniFaxDestination={defaultLniFaxDestination()}
         vrcEmailTestRecipient={getVrcEmailTestRecipient()}
         setup={
           <>

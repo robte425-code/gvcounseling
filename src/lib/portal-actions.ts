@@ -25,6 +25,7 @@ import { createProcedureCodeFee, createTherapistProcedureCodeFee, updateTherapis
 import { prisma } from "@/lib/prisma";
 import { getNextInvoiceNumber } from "@/lib/invoice-numbers";
 import { emailVrcsForPayPeriod, parseVrcEmailDestinationParam } from "@/lib/vrc-billing-emails";
+import { faxLniForPayPeriod, parseLniFaxDestinationParam } from "@/lib/lni-billing-faxes";
 
 function parseDecimal(value: FormDataEntryValue | null): number {
   const n = parseFloat(String(value ?? "0"));
@@ -332,6 +333,8 @@ export async function saveClientAction(formData: FormData) {
     residenceZip: String(formData.get("residenceZip") ?? "").trim() || null,
     workerPhone: String(formData.get("workerPhone") ?? "").trim() || null,
     employerName: String(formData.get("employerName") ?? "").trim() || null,
+    selfInsured: String(formData.get("selfInsured") ?? "") === "true",
+    employerFax: String(formData.get("employerFax") ?? "").trim() || null,
     attendingDoctorName: String(formData.get("attendingDoctorName") ?? "").trim() || null,
     attendingDoctorAddress: String(formData.get("attendingDoctorAddress") ?? "").trim() || null,
     attendingDoctorPhone: String(formData.get("attendingDoctorPhone") ?? "").trim() || null,
@@ -788,6 +791,35 @@ export async function emailVrcsForPayPeriodAction(formData: FormData) {
   }
   if (result.errors.length) {
     params.set("vrcErrors", result.errors.slice(0, 5).join(";;"));
+  }
+
+  redirect(`/portal/admin/billing?${params.toString()}`);
+}
+
+export async function faxLniForPayPeriodAction(formData: FormData) {
+  const session = await requireAdmin();
+  const payPeriodId = String(formData.get("payPeriodId") ?? "").trim();
+  if (!payPeriodId) throw new Error("Pay period is required.");
+
+  const lniFaxDestination =
+    parseLniFaxDestinationParam(String(formData.get("lniFaxDestination") ?? "")) ?? "lni";
+
+  const result = await faxLniForPayPeriod({
+    payPeriodId,
+    initiatorUserId: session.user.id,
+    lniFaxDestination,
+  });
+
+  revalidatePath("/portal/admin/billing");
+
+  const params = new URLSearchParams();
+  params.set("lniFaxed", "1");
+  params.set("faxSent", String(result.sent));
+  if (result.skipped.length) {
+    params.set("lniFaxSkipped", result.skipped.slice(0, 5).join(";;"));
+  }
+  if (result.errors.length) {
+    params.set("lniFaxErrors", result.errors.slice(0, 5).join(";;"));
   }
 
   redirect(`/portal/admin/billing?${params.toString()}`);

@@ -5,11 +5,14 @@ import { BillingPayPeriodsTable, type BillingPayPeriodRow } from "@/components/p
 import { portalCardClass, portalSectionHeadingClass } from "@/components/portal/ui";
 import type { IsaUsageIndicator } from "@/lib/edi837";
 import type { VrcEmailDestination } from "@/lib/vrc-billing-emails";
+import type { LniFaxDestination } from "@/lib/lni-fax-constants";
+import { LNI_FAX_TEST_FORMATTED } from "@/lib/lni-fax-constants";
 
 type Props = {
   rows: BillingPayPeriodRow[];
   defaultUsageIndicator: IsaUsageIndicator;
   defaultVrcEmailDestination: VrcEmailDestination;
+  defaultLniFaxDestination: LniFaxDestination;
   vrcEmailTestRecipient: string;
   setup: ReactNode;
   addPayPeriod: ReactNode;
@@ -25,12 +28,16 @@ function BillingModeToggles({
   onUsageIndicatorChange,
   vrcEmailDestination,
   onVrcEmailDestinationChange,
+  lniFaxDestination,
+  onLniFaxDestinationChange,
   vrcEmailTestRecipient,
 }: {
   usageIndicator: IsaUsageIndicator;
   onUsageIndicatorChange: (value: IsaUsageIndicator) => void;
   vrcEmailDestination: VrcEmailDestination;
   onVrcEmailDestinationChange: (value: VrcEmailDestination) => void;
+  lniFaxDestination: LniFaxDestination;
+  onLniFaxDestinationChange: (value: LniFaxDestination) => void;
   vrcEmailTestRecipient: string;
 }) {
   return (
@@ -98,6 +105,39 @@ function BillingModeToggles({
           </button>
         </div>
       </div>
+
+      <div className="space-y-2 rounded-xl border border-border bg-primary/[0.03] p-3">
+        <div>
+          <p className="text-sm font-medium text-primary-dark">Fax L&I</p>
+          <p className="mt-0.5 text-xs text-muted">
+            {lniFaxDestination === "test"
+              ? `Test fax — ${LNI_FAX_TEST_FORMATTED}`
+              : "Send to L&I (360-902-4567)"}
+          </p>
+        </div>
+        <div
+          className="inline-flex w-full rounded-full border border-border bg-surface p-1 shadow-sm"
+          role="group"
+          aria-label="L&I fax destination"
+        >
+          <button
+            type="button"
+            className={`${segmentClass(lniFaxDestination === "test")} flex-1`}
+            aria-pressed={lniFaxDestination === "test"}
+            onClick={() => onLniFaxDestinationChange("test")}
+          >
+            Test fax
+          </button>
+          <button
+            type="button"
+            className={`${segmentClass(lniFaxDestination === "lni")} flex-1`}
+            aria-pressed={lniFaxDestination === "lni"}
+            onClick={() => onLniFaxDestinationChange("lni")}
+          >
+            L&I
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -106,6 +146,7 @@ export function BillingWorkspace({
   rows,
   defaultUsageIndicator,
   defaultVrcEmailDestination,
+  defaultLniFaxDestination,
   vrcEmailTestRecipient,
   setup,
   addPayPeriod,
@@ -113,6 +154,8 @@ export function BillingWorkspace({
   const [usageIndicator, setUsageIndicator] = useState<IsaUsageIndicator>(defaultUsageIndicator);
   const [vrcEmailDestination, setVrcEmailDestination] =
     useState<VrcEmailDestination>(defaultVrcEmailDestination);
+  const [lniFaxDestination, setLniFaxDestination] =
+    useState<LniFaxDestination>(defaultLniFaxDestination);
 
   return (
     <div className="grid gap-6 lg:grid-cols-12">
@@ -123,19 +166,21 @@ export function BillingWorkspace({
           onUsageIndicatorChange={setUsageIndicator}
           vrcEmailDestination={vrcEmailDestination}
           onVrcEmailDestinationChange={setVrcEmailDestination}
+          lniFaxDestination={lniFaxDestination}
+          onLniFaxDestinationChange={setLniFaxDestination}
           vrcEmailTestRecipient={vrcEmailTestRecipient}
         />
         {addPayPeriod}
       </section>
 
       <section className={`${portalCardClass} lg:col-span-8`}>
-        <p className={portalSectionHeadingClass}>837 & VRC</p>
+        <p className={portalSectionHeadingClass}>837, VRC & L&I fax</p>
         <h2 className="mt-1 font-serif text-lg font-semibold text-primary-dark">
           Generate & notify
         </h2>
         <p className="mt-1 text-xs text-muted">
-          Only pay periods with assigned invoices appear here. Set 837 and VRC modes in the setup
-          panel before generating or emailing.
+          Only pay periods with assigned invoices appear here. Set 837, VRC, and L&I fax modes in
+          the setup panel before generating, emailing, or faxing.
         </p>
 
         <div className="mt-5">
@@ -143,6 +188,7 @@ export function BillingWorkspace({
             rows={rows}
             usageIndicator={usageIndicator}
             vrcEmailDestination={vrcEmailDestination}
+            lniFaxDestination={lniFaxDestination}
             vrcEmailTestRecipient={vrcEmailTestRecipient}
           />
         </div>
