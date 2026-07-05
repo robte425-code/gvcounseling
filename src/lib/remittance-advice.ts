@@ -99,7 +99,7 @@ export async function buildTherapistPayPreview(
       feeRowsByTherapist.get(invoice.therapistId) ?? [],
     );
 
-    const existing = payouts.get(invoice.therapistId);
+    const payout = payouts.get(invoice.therapistId);
     const line = {
       invoiceId: invoice.id,
       invoiceNumber: invoice.invoiceNumber,
@@ -108,12 +108,20 @@ export async function buildTherapistPayPreview(
       therapistAmount,
     };
 
-    if (existing) {
-      existing.invoiceCount += 1;
-      existing.lniPaidAmount = Math.round((existing.lniPaidAmount + line.lniPaidAmount) * 100) / 100;
-      existing.therapistAmount =
-        Math.round((existing.therapistAmount + line.therapistAmount) * 100) / 100;
-      existing.lines.push(line);
+    if (payout) {
+      const existingLine = payout.lines.find((entry) => entry.invoiceId === invoice.id);
+      if (existingLine) {
+        existingLine.lniPaidAmount =
+          Math.round((existingLine.lniPaidAmount + line.lniPaidAmount) * 100) / 100;
+        payout.lniPaidAmount = Math.round((payout.lniPaidAmount + line.lniPaidAmount) * 100) / 100;
+        continue;
+      }
+
+      payout.invoiceCount += 1;
+      payout.lniPaidAmount = Math.round((payout.lniPaidAmount + line.lniPaidAmount) * 100) / 100;
+      payout.therapistAmount =
+        Math.round((payout.therapistAmount + line.therapistAmount) * 100) / 100;
+      payout.lines.push(line);
       continue;
     }
 
