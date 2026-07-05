@@ -4,7 +4,6 @@ import { Generate837Form } from "@/components/portal/Generate837Form";
 import { ConfirmSubmitButton } from "@/components/portal/ConfirmSubmitButton";
 import {
   createPayPeriodAction,
-  deletePayPeriodAction,
   emailVrcsForPayPeriodAction,
   syncPayPeriodsFromLniAction,
 } from "@/lib/portal-actions";
@@ -37,7 +36,8 @@ export default async function BillingPage({
   await requireAdmin();
   const params = await searchParams;
   const periods = await prisma.payPeriod.findMany({
-    orderBy: { cutoffDate: "asc" },
+    where: { invoices: { some: {} } },
+    orderBy: { cutoffDate: "desc" },
     include: {
       _count: {
         select: {
@@ -183,16 +183,12 @@ export default async function BillingPage({
                 <td className="py-2.5 pr-4">{formatDate(period.cutoffDate)}</td>
                 <td className="py-2.5 pr-4">{formatDate(period.paymentDate)}</td>
                 <td className="py-2.5 pr-4">
-                  {assignedInvoices > 0 ? (
-                    <Link
-                      href={`/portal/admin/invoices?payPeriodId=${period.id}`}
-                      className="text-primary hover:underline"
-                    >
-                      {assignedInvoices}
-                    </Link>
-                  ) : (
-                    <span className="text-muted">0</span>
-                  )}
+                  <Link
+                    href={`/portal/admin/invoices?payPeriodId=${period.id}`}
+                    className="text-primary hover:underline"
+                  >
+                    {assignedInvoices}
+                  </Link>
                 </td>
                 <td className="py-2.5">
                   <div className="flex flex-wrap gap-2">
@@ -211,17 +207,6 @@ export default async function BillingPage({
                         Email VRCs
                       </ConfirmSubmitButton>
                     </form>
-                    {assignedInvoices === 0 && (
-                      <form action={deletePayPeriodAction}>
-                        <input type="hidden" name="id" value={period.id} />
-                        <ConfirmSubmitButton
-                          confirmMessage={`Delete pay period ${period.label ?? formatDate(period.cutoffDate)}?`}
-                          className={`${portalButtonSecondaryClass} text-red-700`}
-                        >
-                          Delete
-                        </ConfirmSubmitButton>
-                      </form>
-                    )}
                   </div>
                 </td>
               </tr>
@@ -230,7 +215,8 @@ export default async function BillingPage({
         </table>
         {periodRows.length === 0 && (
           <p className="py-6 text-center text-sm text-muted">
-            No pay periods yet. Click <strong>Sync from L&I</strong> or add one above.
+            No pay periods with assigned invoices. Assign invoices on the Invoices page, or sync pay
+            periods from L&I above.
           </p>
         )}
       </div>
