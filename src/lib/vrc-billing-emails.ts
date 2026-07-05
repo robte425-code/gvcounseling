@@ -14,21 +14,38 @@ export const VRC_BILLING_EMAIL_SIGNATURE = {
   email: "ghim@gvcounseling.com",
 } as const;
 
-/** When set, all VRC billing emails are sent here instead of the VRC address. */
-export function getVrcEmailRedirectTo(): string | null {
+export const VRC_EMAIL_TEST_RECIPIENT = VRC_BILLING_EMAIL_SIGNATURE.email;
+
+export type VrcEmailDestination = "vrc" | "test";
+
+/** Optional override for the test inbox (defaults to ghim@gvcounseling.com). */
+export function getVrcEmailTestRecipient(): string {
   const value = process.env.VRC_EMAIL_REDIRECT_TO?.trim();
-  return value || null;
+  return value || VRC_EMAIL_TEST_RECIPIENT;
 }
 
-function resolveVrcRecipient(intendedEmail: string): {
+export function defaultVrcEmailDestination(): VrcEmailDestination {
+  return "test";
+}
+
+export function parseVrcEmailDestinationParam(
+  value: string | null | undefined,
+): VrcEmailDestination | undefined {
+  const normalized = value?.trim().toLowerCase();
+  return normalized === "vrc" || normalized === "test" ? normalized : undefined;
+}
+
+function resolveVrcRecipient(
+  intendedEmail: string,
+  destination: VrcEmailDestination,
+): {
   to: string;
   redirected: boolean;
 } {
-  const redirect = getVrcEmailRedirectTo();
-  if (!redirect) {
+  if (destination === "vrc") {
     return { to: intendedEmail, redirected: false };
   }
-  return { to: redirect, redirected: true };
+  return { to: getVrcEmailTestRecipient(), redirected: true };
 }
 
 type EmailAttachment = {
@@ -140,7 +157,9 @@ function collectVrcAttachments(
 export async function emailVrcsForPayPeriod(options: {
   payPeriodId: string;
   initiatorUserId: string;
+  vrcEmailDestination?: VrcEmailDestination;
 }): Promise<VrcBillingEmailResult> {
+  const vrcEmailDestination = options.vrcEmailDestination ?? "vrc";
   const payPeriod = await prisma.payPeriod.findUnique({ where: { id: options.payPeriodId } });
   if (!payPeriod) throw new Error("Pay period not found.");
 
@@ -225,7 +244,7 @@ export async function emailVrcsForPayPeriod(options: {
 
       const vrcName = client.vrcName?.trim() || "VRC";
       const intendedEmail = client.vrcEmail.trim();
-      const { to, redirected } = resolveVrcRecipient(intendedEmail);
+      const { to, redirected } = resolveVrcRecipient(intendedEmail, vrcEmailDestination);
       const subject = redirected
         ? `[TEST] BHI session notification — ${client.lniClaimNumber} (for ${vrcFirstName(vrcName)})`
         : `BHI session notification — ${client.lniClaimNumber}`;

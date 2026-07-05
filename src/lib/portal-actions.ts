@@ -24,7 +24,7 @@ import { fetchLniPayPeriods } from "@/lib/lni-pay-periods";
 import { createProcedureCodeFee, createTherapistProcedureCodeFee, updateTherapistProcedureCodeFee, applyTherapistFeeSchedule } from "@/lib/procedure-fees";
 import { prisma } from "@/lib/prisma";
 import { getNextInvoiceNumber } from "@/lib/invoice-numbers";
-import { emailVrcsForPayPeriod } from "@/lib/vrc-billing-emails";
+import { emailVrcsForPayPeriod, parseVrcEmailDestinationParam } from "@/lib/vrc-billing-emails";
 
 function parseDecimal(value: FormDataEntryValue | null): number {
   const n = parseFloat(String(value ?? "0"));
@@ -769,9 +769,13 @@ export async function emailVrcsForPayPeriodAction(formData: FormData) {
   const payPeriodId = String(formData.get("payPeriodId") ?? "").trim();
   if (!payPeriodId) throw new Error("Pay period is required.");
 
+  const vrcEmailDestination =
+    parseVrcEmailDestinationParam(String(formData.get("vrcEmailDestination") ?? "")) ?? "vrc";
+
   const result = await emailVrcsForPayPeriod({
     payPeriodId,
     initiatorUserId: session.user.id,
+    vrcEmailDestination,
   });
 
   revalidatePath("/portal/admin/billing");

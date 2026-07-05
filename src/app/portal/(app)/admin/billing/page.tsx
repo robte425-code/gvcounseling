@@ -1,13 +1,16 @@
 import Link from "next/link";
 import { requireAdmin } from "@/auth";
-import { BillingPayPeriodsTable } from "@/components/portal/BillingPayPeriodsTable";
+import { BillingWorkspace } from "@/components/portal/BillingWorkspace";
 import {
   createPayPeriodAction,
   syncPayPeriodsFromLniAction,
 } from "@/lib/portal-actions";
 import { LNI_PAYMENT_STATUS_URL } from "@/lib/lni-pay-periods";
 import { getIsaUsageIndicator } from "@/lib/edi837";
-import { getVrcEmailRedirectTo } from "@/lib/vrc-billing-emails";
+import {
+  defaultVrcEmailDestination,
+  getVrcEmailTestRecipient,
+} from "@/lib/vrc-billing-emails";
 import {
   portalButtonClass,
   portalButtonSecondaryClass,
@@ -83,7 +86,6 @@ export default async function BillingPage({
       : null;
   const vrcSkipped = params.vrcSkipped?.split(";;").filter(Boolean) ?? [];
   const vrcErrors = params.vrcErrors?.split(";;").filter(Boolean) ?? [];
-  const vrcEmailRedirectTo = getVrcEmailRedirectTo();
 
   const hasAlerts = Boolean(syncMessage || vrcEmailMessage || vrcSkipped.length || vrcErrors.length);
 
@@ -138,36 +140,43 @@ export default async function BillingPage({
         </div>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-12">
-        <section className={`${portalCardClass} lg:col-span-4`}>
-          <p className={portalSectionHeadingClass}>Setup</p>
-          <h2 className="mt-1 font-serif text-lg font-semibold text-primary-dark">Pay periods</h2>
-          <p className="mt-1 text-xs text-muted">
-            Bill Cutoff maps to cutoff date; Warrant Date maps to expected payment.
-          </p>
+      <BillingWorkspace
+        rows={periodRows}
+        defaultUsageIndicator={getIsaUsageIndicator()}
+        defaultVrcEmailDestination={defaultVrcEmailDestination()}
+        vrcEmailTestRecipient={getVrcEmailTestRecipient()}
+        setup={
+          <>
+            <p className={portalSectionHeadingClass}>Setup</p>
+            <h2 className="mt-1 font-serif text-lg font-semibold text-primary-dark">Pay periods</h2>
+            <p className="mt-1 text-xs text-muted">
+              Bill Cutoff maps to cutoff date; Warrant Date maps to expected payment.
+            </p>
 
-          <div className="mt-4 flex flex-col gap-2">
-            <form action={syncPayPeriodsFromLniAction}>
-              <button type="submit" className={`${portalButtonClass} w-full`}>
-                Sync from L&I
-              </button>
-            </form>
-            <a
-              href={LNI_PAYMENT_STATUS_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={`${portalButtonSecondaryClass} w-full text-center`}
-            >
-              View on LNI.wa.gov
-            </a>
-            <Link
-              href="/portal/admin/invoices?status=SUBMITTED"
-              className={`${portalButtonSecondaryClass} w-full text-center`}
-            >
-              Assign invoices
-            </Link>
-          </div>
-
+            <div className="mt-4 flex flex-col gap-2">
+              <form action={syncPayPeriodsFromLniAction}>
+                <button type="submit" className={`${portalButtonClass} w-full`}>
+                  Sync from L&I
+                </button>
+              </form>
+              <a
+                href={LNI_PAYMENT_STATUS_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`${portalButtonSecondaryClass} w-full text-center`}
+              >
+                View on LNI.wa.gov
+              </a>
+              <Link
+                href="/portal/admin/invoices?status=SUBMITTED"
+                className={`${portalButtonSecondaryClass} w-full text-center`}
+              >
+                Assign invoices
+              </Link>
+            </div>
+          </>
+        }
+        addPayPeriod={
           <form action={createPayPeriodAction} className="mt-6 space-y-3 border-t border-border pt-6">
             <p className="text-xs font-semibold uppercase tracking-wide text-muted">Add manually</p>
             <div>
@@ -208,34 +217,8 @@ export default async function BillingPage({
               Add pay period
             </button>
           </form>
-        </section>
-
-        <section className={`${portalCardClass} lg:col-span-8`}>
-          <p className={portalSectionHeadingClass}>837 & VRC</p>
-          <h2 className="mt-1 font-serif text-lg font-semibold text-primary-dark">
-            Generate & notify
-          </h2>
-          <p className="mt-1 text-xs text-muted">
-            Only pay periods with assigned invoices appear here. Choose Test or Production before
-            generating.
-          </p>
-          {vrcEmailRedirectTo && (
-            <p className="mt-3 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-950" role="status">
-              <strong>VRC email test mode:</strong> all Email VRC messages are sent to{" "}
-              {vrcEmailRedirectTo} instead of each VRC&apos;s address. Remove{" "}
-              <code className="rounded bg-amber-100 px-1">VRC_EMAIL_REDIRECT_TO</code> from Vercel
-              env to send to VRCs.
-            </p>
-          )}
-
-          <div className="mt-5">
-            <BillingPayPeriodsTable
-              rows={periodRows}
-              defaultUsageIndicator={getIsaUsageIndicator()}
-            />
-          </div>
-        </section>
-      </div>
+        }
+      />
 
       <section>
         <LniFeesSection />
