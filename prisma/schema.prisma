@@ -265,6 +265,7 @@ model RemittanceAdvice {
   payeeNumber      String
   payeeName        String
   totalPaid        Decimal  @db.Decimal(10, 2)
+  eobCodeDescriptions Json  @default("{}")
   status           RemittanceAdviceStatus @default(PREVIEW)
   appliedAt        DateTime?
   sourceFilename   String?

@@ -82,12 +82,14 @@ function parseServiceLineMatch(match: RegExpExecArray): RemittanceServiceLine {
 
 function extractEobDescriptions(text: string): Record<string, string> {
   const descriptions: Record<string, string> = {};
-  const block = text.match(
-    /DESCRIPTION OF THE EXPLANATION CODES UTILIZED ABOVE:.*?(\d{3}\s+[^0-9]+?)(?=PAYMENTS AND PAYMENT DENIALS|WASHINGTON STATE|$)/i,
-  )?.[1];
-  if (!block) return descriptions;
+  const marker = text.search(/DESCRIPTION OF THE EXPLANATION CODES UTILIZED ABOVE:/i);
+  if (marker < 0) return descriptions;
 
-  const pattern = /(\d{3})\s+([A-Z][A-Z0-9\s.,'/-]+?)(?=\s+\d{3}\s+[A-Z]|$)/g;
+  const afterMarker = text.slice(marker);
+  const end = afterMarker.search(/PAYMENTS AND PAYMENT DENIALS|WASHINGTON STATE DEPARTMENT/i);
+  const block = end >= 0 ? afterMarker.slice(0, end) : afterMarker;
+
+  const pattern = /(\d{3}|P\d{2})\s+(.+?)(?=(?:\s\d{3}\s+[A-Z]|\sP\d{2}\s+[A-Z]|$))/g;
   let match: RegExpExecArray | null;
   while ((match = pattern.exec(block)) !== null) {
     descriptions[match[1]!] = match[2]!.trim();

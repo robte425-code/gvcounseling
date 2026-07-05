@@ -174,6 +174,7 @@ export async function importRemittancePreview(options: {
       payeeNumber: options.parsed.payeeNumber,
       payeeName: options.parsed.payeeName,
       totalPaid: options.parsed.totalPaid,
+      eobCodeDescriptions: options.parsed.eobCodeDescriptions,
       sourceFilename: options.sourceFilename ?? null,
       importedById: options.importedById,
       status: "PREVIEW",

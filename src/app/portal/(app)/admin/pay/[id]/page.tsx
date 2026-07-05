@@ -24,6 +24,13 @@ function sectionLabel(section: string): string {
   }
 }
 
+function parseEobCodeDescriptions(value: unknown): Record<string, string> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  return Object.fromEntries(
+    Object.entries(value).filter((entry): entry is [string, string] => typeof entry[1] === "string"),
+  );
+}
+
 export default async function PayRemittanceDetailPage({
   params,
   searchParams,
@@ -115,6 +122,10 @@ export default async function PayRemittanceDetailPage({
     (sum, payout) => sum + payout.therapistAmount,
     0,
   );
+  const eobCodeDescriptions = parseEobCodeDescriptions(remittance.eobCodeDescriptions);
+  const usedEobCodes = [
+    ...new Set(remittance.lines.flatMap((line) => line.eobCodes)),
+  ].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
 
   return (
     <div className="space-y-8">
@@ -196,11 +207,45 @@ export default async function PayRemittanceDetailPage({
                   <p className="mt-1 text-xs text-amber-800">{line.matchNote}</p>
                 )}
                 {line.eobCodes.length > 0 && (
-                  <p className="mt-1 text-xs text-muted">EOB: {line.eobCodes.join(", ")}</p>
+                  <ul className="mt-1 space-y-0.5 text-xs text-muted">
+                    {line.eobCodes.map((code) => (
+                      <li key={code}>
+                        <span className="font-medium text-primary-dark">EOB {code}</span>
+                        {eobCodeDescriptions[code] ? (
+                          <span>: {eobCodeDescriptions[code]}</span>
+                        ) : (
+                          <span className="text-amber-800"> (description not available)</span>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
                 )}
               </li>
             ))}
           </ul>
+
+          {usedEobCodes.length > 0 && (
+            <div className="mt-4 border-t border-border pt-4">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted">
+                EOB code reference
+              </p>
+              <ul className="mt-2 space-y-2">
+                {usedEobCodes.map((code) => (
+                  <li key={code} className="text-xs">
+                    <span className="font-medium text-primary-dark">{code}</span>
+                    {eobCodeDescriptions[code] ? (
+                      <span className="text-muted"> — {eobCodeDescriptions[code]}</span>
+                    ) : (
+                      <span className="text-amber-800">
+                        {" "}
+                        — description not available (delete preview and re-import to load from PDF)
+                      </span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </section>
 
         <section className={`${portalCardClass} lg:col-span-4`}>
