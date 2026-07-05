@@ -182,6 +182,12 @@ export function getIsaUsageIndicator(): "T" | "P" {
   return resolveIsaUsageIndicator();
 }
 
+export function parseIsaUsageIndicatorFromEdi(ediContent: string): "T" | "P" | null {
+  const match = ediContent.match(/\*1\*([TP])\*:/);
+  if (match?.[1] === "T" || match?.[1] === "P") return match[1];
+  return null;
+}
+
 export function buildEdi837(claims: Edi837Claim[], now = new Date()): Edi837Result {
   if (!claims.length) {
     throw new Error("No claims to include in 837 file");

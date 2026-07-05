@@ -766,6 +766,114 @@ export async function assignInvoicesToPayPeriodAction(formData: FormData) {
   redirect(`${returnTo}${returnTo.includes("?") ? "&" : "?"}assigned=${invoiceIds.length}`);
 }
 
+type InvoiceFor837 = {
+  invoiceNumber: number;
+  clmControlNumber: string | null;
+  client: {
+    lniClaimNumber: string;
+    lastName: string;
+    firstName: string;
+    attendingNpi: string | null;
+    addressLine1: string | null;
+    city: string | null;
+    state: string;
+    zip: string | null;
+    dateOfBirth: Date | null;
+    gender: "M" | "F" | "U" | null;
+    dateOfInjury: Date | null;
+    diagnoses: string[];
+  };
+  therapist: {
+    lastName: string;
+    firstName: string;
+    lniProviderId: string | null;
+    npi: string | null;
+  };
+  lineItems: {
+    procedureCode: string;
+    amount: unknown;
+    serviceDate: Date;
+    units: number;
+  }[];
+};
+
+async function buildEdiClaimsForInvoices(invoices: InvoiceFor837[]): Promise<Edi837Claim[]> {
+  const blocked: string[] = [];
+  for (const inv of invoices) {
+    const readiness = client837Ready(inv.client);
+    if (!readiness.ready) {
+      blocked.push(`${inv.client.lniClaimNumber} (${readiness.missing.join(", ")})`);
+    }
+    if (!inv.therapist.lniProviderId) {
+      blocked.push(`${inv.client.lniClaimNumber} (therapist L&I ID missing)`);
+    }
+    if (!inv.therapist.npi) {
+      blocked.push(`${inv.client.lniClaimNumber} (therapist NPI missing)`);
+    }
+  }
+  if (blocked.length) {
+    throw new Error(`Cannot generate bill. Missing data: ${blocked.slice(0, 5).join("; ")}`);
+  }
+
+  const lniFeeSchedule = await loadAllProcedureCodeFees();
+  const missingFees: string[] = [];
+
+  const claims: Edi837Claim[] = invoices.map((inv) => {
+    const dx = inv.client.diagnoses;
+    return {
+      clmControlNumber: inv.clmControlNumber ?? generateClmControlNumber(),
+      client: {
+        claimNumber: inv.client.lniClaimNumber,
+        lastName: inv.client.lastName,
+        firstName: inv.client.firstName,
+        addressLine1: inv.client.addressLine1!,
+        city: inv.client.city!,
+        state: inv.client.state,
+        zip: inv.client.zip!,
+        dateOfBirth: resolveClientBirthDate(inv.client)!,
+        gender: inv.client.gender ?? "U",
+        dateOfInjury: inv.client.dateOfInjury,
+        primaryDiagnosis: dx[0]!,
+        additionalDiagnoses: dx.slice(1),
+      },
+      therapist: {
+        lastName: inv.therapist.lastName,
+        firstName: inv.therapist.firstName,
+        lniProviderId: inv.therapist.lniProviderId!,
+        npi: inv.therapist.npi!,
+      },
+      lines: inv.lineItems.map((line) => {
+        const feeAmount = resolveFeeAmount(lniFeeSchedule, line.procedureCode, line.serviceDate);
+        if (feeAmount === null) {
+          missingFees.push(
+            `${line.procedureCode} on ${line.serviceDate.toISOString().slice(0, 10)} (invoice #${inv.invoiceNumber})`,
+          );
+        }
+        return {
+          procedureCode: line.procedureCode,
+          amount: feeAmount ?? Number(line.amount),
+          serviceDate: line.serviceDate,
+          units: line.units,
+        };
+      }),
+    };
+  });
+
+  if (missingFees.length) {
+    throw new Error(
+      `Cannot generate bill. No L&I fee on file for: ${missingFees.slice(0, 5).join("; ")}. Add fees on the Billing page.`,
+    );
+  }
+
+  return claims;
+}
+
+const invoice837Include = {
+  client: true,
+  therapist: true,
+  lineItems: { orderBy: { sortOrder: "asc" as const } },
+};
+
 export async function generateBillAction(formData: FormData) {
   const payPeriodId = String(formData.get("payPeriodId") ?? "");
 
@@ -776,86 +884,20 @@ export async function generateBillAction(formData: FormData) {
 
     const invoices = await prisma.invoice.findMany({
       where: invoice837QueueWhere(payPeriodId),
-      include: {
-        client: true,
-        therapist: true,
-        lineItems: { orderBy: { sortOrder: "asc" } },
-      },
+      include: invoice837Include,
       orderBy: [{ therapist: { lastName: "asc" } }, { invoiceNumber: "asc" }],
     });
 
     if (!invoices.length) {
+      const billCount = await prisma.bill.count({ where: { payPeriodId } });
       throw new Error(
-        "No invoices are ready for 837 generation in this pay period. Assign invoices to this pay period on the Invoices page — they must not already be on a bill.",
+        billCount > 0
+          ? "An 837 file was already generated for this pay period. Open Billing → History to download it, or use Regenerate on the bill detail page."
+          : "No invoices are ready for 837 generation in this pay period. Assign invoices to this pay period on the Invoices page — they must not already be on a bill.",
       );
     }
 
-    const blocked: string[] = [];
-    for (const inv of invoices) {
-      const readiness = client837Ready(inv.client);
-      if (!readiness.ready) {
-        blocked.push(`${inv.client.lniClaimNumber} (${readiness.missing.join(", ")})`);
-      }
-      if (!inv.therapist.lniProviderId) {
-        blocked.push(`${inv.client.lniClaimNumber} (therapist L&I ID missing)`);
-      }
-      if (!inv.therapist.npi) {
-        blocked.push(`${inv.client.lniClaimNumber} (therapist NPI missing)`);
-      }
-    }
-    if (blocked.length) {
-      throw new Error(`Cannot generate bill. Missing data: ${blocked.slice(0, 5).join("; ")}`);
-    }
-
-    const lniFeeSchedule = await loadAllProcedureCodeFees();
-    const missingFees: string[] = [];
-
-    const claims: Edi837Claim[] = invoices.map((inv) => {
-      const dx = inv.client.diagnoses;
-      return {
-        clmControlNumber: inv.clmControlNumber ?? generateClmControlNumber(),
-        client: {
-          claimNumber: inv.client.lniClaimNumber,
-          lastName: inv.client.lastName,
-          firstName: inv.client.firstName,
-          addressLine1: inv.client.addressLine1!,
-          city: inv.client.city!,
-          state: inv.client.state,
-          zip: inv.client.zip!,
-          dateOfBirth: resolveClientBirthDate(inv.client)!,
-          gender: inv.client.gender ?? "U",
-          dateOfInjury: inv.client.dateOfInjury,
-          primaryDiagnosis: dx[0]!,
-          additionalDiagnoses: dx.slice(1),
-        },
-        therapist: {
-          lastName: inv.therapist.lastName,
-          firstName: inv.therapist.firstName,
-          lniProviderId: inv.therapist.lniProviderId!,
-          npi: inv.therapist.npi!,
-        },
-        lines: inv.lineItems.map((line) => {
-          const feeAmount = resolveFeeAmount(lniFeeSchedule, line.procedureCode, line.serviceDate);
-          if (feeAmount === null) {
-            missingFees.push(
-              `${line.procedureCode} on ${line.serviceDate.toISOString().slice(0, 10)} (invoice #${inv.invoiceNumber})`,
-            );
-          }
-          return {
-            procedureCode: line.procedureCode,
-            amount: feeAmount ?? Number(line.amount),
-            serviceDate: line.serviceDate,
-            units: line.units,
-          };
-        }),
-      };
-    });
-
-    if (missingFees.length) {
-      throw new Error(
-        `Cannot generate bill. No L&I fee on file for: ${missingFees.slice(0, 5).join("; ")}. Add fees on the Billing page.`,
-      );
-    }
+    const claims = await buildEdiClaimsForInvoices(invoices);
 
     const edi = buildEdi837(claims);
     const now = new Date();
@@ -903,6 +945,49 @@ export async function generateBillAction(formData: FormData) {
     if (payPeriodId) params.set("payPeriodId", payPeriodId);
     params.set("billError", message);
     redirect(`/portal/admin/billing?${params.toString()}`);
+  }
+}
+
+export async function regenerateBillEdiAction(formData: FormData) {
+  const billId = String(formData.get("billId") ?? "");
+
+  try {
+    await requireAdmin();
+
+    const bill = await prisma.bill.findUnique({
+      where: { id: billId },
+      include: {
+        invoices: {
+          include: invoice837Include,
+          orderBy: [{ therapist: { lastName: "asc" } }, { invoiceNumber: "asc" }],
+        },
+      },
+    });
+    if (!bill) throw new Error("Bill not found.");
+    if (!bill.invoices.length) throw new Error("This bill has no invoices.");
+
+    const claims = await buildEdiClaimsForInvoices(bill.invoices);
+    const edi = buildEdi837(claims);
+
+    await prisma.bill.update({
+      where: { id: billId },
+      data: {
+        filename: edi.filename,
+        isaControl: edi.isaControl,
+        gsControl: edi.gsControl,
+        invoiceCount: edi.claimCount,
+        totalAmount: edi.totalAmount,
+        ediContent: edi.content,
+      },
+    });
+
+    revalidatePath(`/portal/admin/bills/${billId}`);
+    revalidatePath(`/portal/admin/billing/${bill.payPeriodId}/bills`);
+    redirect(`/portal/admin/bills/${billId}?regenerated=1`);
+  } catch (error) {
+    if (isNextRedirectError(error)) throw error;
+    const message = error instanceof Error ? error.message : "Could not regenerate 837 file.";
+    redirect(`/portal/admin/bills/${billId}?billError=${encodeURIComponent(message)}`);
   }
 }
 
