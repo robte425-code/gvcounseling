@@ -1,55 +1,71 @@
 "use client";
 
-import { useFormStatus } from "react-dom";
+import { useState } from "react";
 import { portalButtonClass } from "@/components/portal/ui";
 
 type Props = {
   payPeriodId: string;
-  queuedInvoices: number;
+  assignedInvoices: number;
   periodLabel: string;
-  generateAction: (formData: FormData) => Promise<void>;
 };
 
-function Generate837SubmitButton({
-  queuedInvoices,
-  periodLabel,
-}: {
-  queuedInvoices: number;
-  periodLabel: string;
-}) {
-  const { pending } = useFormStatus();
-  const disabled = pending;
+export function Generate837Form({ payPeriodId, assignedInvoices, periodLabel }: Props) {
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  return (
-    <button
-      type="submit"
-      disabled={disabled}
-      title={
-        queuedInvoices === 0
-          ? `No invoices are ready for 837 generation in ${periodLabel}. Assign invoices to this pay period on the Invoices page.`
-          : `Generate an 837 for ${queuedInvoices} invoice${queuedInvoices === 1 ? "" : "s"} not yet on a bill`
+  async function handleGenerate() {
+    setPending(true);
+    setError(null);
+
+    try {
+      const response = await fetch(
+        `/api/portal/bills/generate?payPeriodId=${encodeURIComponent(payPeriodId)}`,
+      );
+
+      if (!response.ok) {
+        const body = (await response.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(body?.error ?? "Could not generate 837 file.");
       }
-      className={`${portalButtonClass} disabled:cursor-not-allowed`}
-    >
-      {pending
-        ? "Generating…"
-        : queuedInvoices > 0
-          ? `Generate 837 (${queuedInvoices})`
-          : "Generate 837"}
-    </button>
-  );
-}
 
-export function Generate837Form({
-  payPeriodId,
-  queuedInvoices,
-  periodLabel,
-  generateAction,
-}: Props) {
+      const blob = await response.blob();
+      const disposition = response.headers.get("Content-Disposition") ?? "";
+      const filenameMatch = /filename="([^"]+)"/.exec(disposition);
+      const filename = filenameMatch?.[1] ?? "837.edi";
+
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = filename;
+      anchor.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not generate 837 file.");
+    } finally {
+      setPending(false);
+    }
+  }
+
+  const label =
+    assignedInvoices > 0
+      ? `Generate 837 (${assignedInvoices})`
+      : "Generate 837";
+
   return (
-    <form action={generateAction}>
-      <input type="hidden" name="payPeriodId" value={payPeriodId} />
-      <Generate837SubmitButton queuedInvoices={queuedInvoices} periodLabel={periodLabel} />
-    </form>
+    <div className="inline-flex flex-col gap-1">
+      <button
+        type="button"
+        onClick={handleGenerate}
+        disabled={pending}
+        title={`Generate and download an 837 for invoices assigned to ${periodLabel}`}
+        className={`${portalButtonClass} disabled:cursor-not-allowed`}
+      >
+        {pending ? "Generating…" : label}
+      </button>
+      {error && (
+        <p className="max-w-xs text-xs text-red-700" role="alert">
+          {error}
+        </p>
+      )}
+    </div>
   );
 }

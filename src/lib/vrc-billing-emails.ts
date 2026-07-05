@@ -85,7 +85,6 @@ export async function emailVrcsForPayPeriod(options: {
     where: {
       payPeriodId: options.payPeriodId,
       status: "BILLED",
-      billId: { not: null },
     },
     include: {
       client: {
@@ -106,7 +105,7 @@ export async function emailVrcsForPayPeriod(options: {
   });
 
   if (!invoices.length) {
-    throw new Error("No billed invoices in this pay period. Generate an 837 first.");
+    throw new Error("No billed invoices in this pay period.");
   }
 
   const byClient = new Map<

@@ -34,18 +34,14 @@ export default async function EditTherapistPage({
     where: { id, role: "THERAPIST" },
     include: {
       googleDriveConnection: { select: { googleEmail: true } },
-      _count: { select: { clients: true, invoices: true, billsGenerated: true } },
+      _count: { select: { clients: true, invoices: true } },
     },
   });
   if (!therapist) notFound();
 
-  const canDelete = therapist._count.invoices === 0 && therapist._count.billsGenerated === 0;
+  const canDelete = therapist._count.invoices === 0;
   const deleteBlockedReason =
-    therapist._count.invoices > 0
-      ? `${therapist._count.invoices} invoice(s) on record`
-      : therapist._count.billsGenerated > 0
-        ? `${therapist._count.billsGenerated} L&I bill(s) generated`
-        : null;
+    therapist._count.invoices > 0 ? `${therapist._count.invoices} invoice(s) on record` : null;
 
   return (
     <div className="space-y-6">

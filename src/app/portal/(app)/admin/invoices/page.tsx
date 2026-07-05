@@ -88,7 +88,6 @@ export default async function AdminInvoicesPage({
         therapist: { select: { firstName: true, lastName: true } },
         lineItems: { select: { serviceDate: true }, orderBy: { sortOrder: "asc" } },
         payPeriod: { select: { label: true, cutoffDate: true } },
-        bill: { select: { payPeriod: { select: { label: true, cutoffDate: true } } } },
       },
     }),
     prisma.payPeriod.findMany({
@@ -103,7 +102,7 @@ export default async function AdminInvoicesPage({
   ]);
 
   const invoiceRows: AdminInvoiceRow[] = invoices.map((inv) => {
-    const period = inv.payPeriod ?? inv.bill?.payPeriod ?? null;
+    const period = inv.payPeriod;
     return {
       id: inv.id,
       invoiceNumber: inv.invoiceNumber,
@@ -119,7 +118,7 @@ export default async function AdminInvoicesPage({
       payPeriodLabel: payPeriodLabel(period),
       payPeriodSortKey: payPeriodSortKey(period),
       earliestServiceDate: earliestServiceDateIso(inv.lineItems),
-      assignable: inv.status === "SUBMITTED" && !inv.billId,
+      assignable: inv.status === "SUBMITTED",
     };
   });
 

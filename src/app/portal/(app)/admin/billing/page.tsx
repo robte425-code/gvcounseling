@@ -6,7 +6,6 @@ import {
   createPayPeriodAction,
   deletePayPeriodAction,
   emailVrcsForPayPeriodAction,
-  generateBillAction,
   syncPayPeriodsFromLniAction,
 } from "@/lib/portal-actions";
 import { LNI_PAYMENT_STATUS_URL } from "@/lib/lni-pay-periods";
@@ -33,8 +32,6 @@ export default async function BillingPage({
     sent?: string;
     vrcSkipped?: string;
     vrcErrors?: string;
-    billError?: string;
-    payPeriodId?: string;
   }>;
 }) {
   await requireAdmin();
@@ -44,44 +41,28 @@ export default async function BillingPage({
     include: {
       _count: {
         select: {
-          bills: true,
           invoices: true,
         },
       },
     },
   });
 
-  const queuedByPeriod = await prisma.invoice.groupBy({
+  const billedByPeriod = await prisma.invoice.groupBy({
     by: ["payPeriodId"],
     where: {
       payPeriodId: { not: null },
-      billId: null,
-      status: { in: ["SUBMITTED", "BILLED"] },
-    },
-    _count: true,
-  });
-  const queuedCountByPeriodId = new Map(
-    queuedByPeriod.map((row) => [row.payPeriodId!, row._count]),
-  );
-
-  const onBillByPeriod = await prisma.invoice.groupBy({
-    by: ["payPeriodId"],
-    where: {
-      payPeriodId: { not: null },
-      billId: { not: null },
       status: "BILLED",
     },
     _count: true,
   });
-  const onBillCountByPeriodId = new Map(
-    onBillByPeriod.map((row) => [row.payPeriodId!, row._count]),
+  const billedCountByPeriodId = new Map(
+    billedByPeriod.map((row) => [row.payPeriodId!, row._count]),
   );
 
   const periodRows = periods.map((period) => ({
     period,
     assignedInvoices: period._count.invoices,
-    queuedInvoices: queuedCountByPeriodId.get(period.id) ?? 0,
-    onBillInvoices: onBillCountByPeriodId.get(period.id) ?? 0,
+    billedInvoices: billedCountByPeriodId.get(period.id) ?? 0,
   }));
 
   const syncMessage =
@@ -101,10 +82,9 @@ export default async function BillingPage({
       <div>
         <h1 className="font-serif text-3xl font-semibold text-primary-dark">Billing</h1>
         <p className="mt-2 text-sm text-muted">
-          Manage pay periods, L&I procedure fees, generate 837 files, email VRCs session documentation, and view billing history.
-          <strong> Assigned</strong> counts all invoices linked to each pay period.{" "}
-          <strong>Ready</strong> counts invoices not yet on an 837 file.{" "}
-          <strong>Generate 837</strong> includes all ready invoices for that pay period.
+          Manage pay periods, L&I procedure fees, generate 837 files, and email VRCs session
+          documentation. <strong>Generate 837</strong> builds a file from all submitted or billed
+          invoices assigned to that pay period and downloads it immediately — nothing is stored.
         </p>
       </div>
 
@@ -130,12 +110,6 @@ export default async function BillingPage({
             </p>
           )}
         </div>
-      )}
-
-      {params.billError && (
-        <p className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-900" role="alert">
-          {params.billError}
-        </p>
       )}
 
       <div className={portalCardClass}>
@@ -198,27 +172,23 @@ export default async function BillingPage({
               <th className="py-2 pr-4">Label</th>
               <th className="py-2 pr-4">Cutoff</th>
               <th className="py-2 pr-4">Expected payment</th>
-              <th className="py-2 pr-4">837 files</th>
               <th className="py-2 pr-4">Assigned</th>
-              <th className="py-2 pr-4">Ready</th>
               <th className="py-2">Actions</th>
             </tr>
           </thead>
           <tbody>
-            {periodRows.map(({ period, assignedInvoices, queuedInvoices, onBillInvoices }) => (
+            {periodRows.map(({ period, assignedInvoices, billedInvoices }) => (
               <tr key={period.id} className="border-b border-border/60 last:border-0">
                 <td className="py-2.5 pr-4">{period.label ?? "—"}</td>
                 <td className="py-2.5 pr-4">{formatDate(period.cutoffDate)}</td>
                 <td className="py-2.5 pr-4">{formatDate(period.paymentDate)}</td>
-                <td className="py-2.5 pr-4">{period._count.bills}</td>
-                <td className="py-2.5 pr-4">{assignedInvoices}</td>
                 <td className="py-2.5 pr-4">
-                  {queuedInvoices > 0 ? (
+                  {assignedInvoices > 0 ? (
                     <Link
                       href={`/portal/admin/invoices?payPeriodId=${period.id}`}
                       className="text-primary hover:underline"
                     >
-                      {queuedInvoices}
+                      {assignedInvoices}
                     </Link>
                   ) : (
                     <span className="text-muted">0</span>
@@ -228,27 +198,20 @@ export default async function BillingPage({
                   <div className="flex flex-wrap gap-2">
                     <Generate837Form
                       payPeriodId={period.id}
-                      queuedInvoices={queuedInvoices}
+                      assignedInvoices={assignedInvoices}
                       periodLabel={period.label ?? formatDate(period.cutoffDate)}
-                      generateAction={generateBillAction}
                     />
                     <form action={emailVrcsForPayPeriodAction}>
                       <input type="hidden" name="payPeriodId" value={period.id} />
                       <ConfirmSubmitButton
                         confirmMessage={`Email VRCs for all billed clients in ${period.label ?? formatDate(period.cutoffDate)}? Each VRC will receive session documentation uploaded with their client's invoice.`}
                         className={portalButtonSecondaryClass}
-                        disabled={onBillInvoices === 0}
+                        disabled={billedInvoices === 0}
                       >
                         Email VRCs
                       </ConfirmSubmitButton>
                     </form>
-                    <Link
-                      href={`/portal/admin/billing/${period.id}/bills`}
-                      className={portalButtonSecondaryClass}
-                    >
-                      History
-                    </Link>
-                    {period._count.bills === 0 && (
+                    {assignedInvoices === 0 && (
                       <form action={deletePayPeriodAction}>
                         <input type="hidden" name="id" value={period.id} />
                         <ConfirmSubmitButton

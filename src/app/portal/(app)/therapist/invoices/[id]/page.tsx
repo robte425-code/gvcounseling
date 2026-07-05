@@ -22,7 +22,6 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
       therapist: true,
       lineItems: { orderBy: { sortOrder: "asc" } },
       attachments: { orderBy: { createdAt: "desc" } },
-      bill: true,
     },
   });
 

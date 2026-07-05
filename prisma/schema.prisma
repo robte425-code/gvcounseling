@@ -54,7 +54,6 @@ model User {
   updatedAt          DateTime  @updatedAt
   clients            Client[]
   invoices           Invoice[]
-  billsGenerated     Bill[]    @relation("BillGeneratedBy")
   procedureCodeFees  ProcedureCodeFee[] @relation("ProcedureCodeFeeCreatedBy")
   therapistProcedureCodeFees TherapistProcedureCodeFee[] @relation("TherapistProcedureCodeFees")
   therapistProcedureCodeFeesCreated TherapistProcedureCodeFee[] @relation("TherapistProcedureCodeFeeCreatedBy")
@@ -69,7 +68,6 @@ model PayPeriod {
   label       String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-  bills       Bill[]
   invoices    Invoice[]
 }
 
@@ -148,8 +146,6 @@ model Invoice {
   therapist        User                @relation(fields: [therapistId], references: [id])
   clientId         String
   client           Client              @relation(fields: [clientId], references: [id])
-  billId           String?
-  bill             Bill?               @relation(fields: [billId], references: [id])
   payPeriodId      String?
   payPeriod        PayPeriod?          @relation(fields: [payPeriodId], references: [id])
   clmControlNumber String?
@@ -167,7 +163,6 @@ model Invoice {
   @@index([status])
   @@index([paymentStatus])
   @@index([clientId])
-  @@index([billId])
   @@index([payPeriodId])
 }
 
@@ -195,24 +190,6 @@ model InvoiceAttachment {
   createdAt   DateTime @default(now())
 
   @@index([invoiceId])
-}
-
-model Bill {
-  id            String    @id @default(cuid())
-  payPeriodId   String
-  payPeriod     PayPeriod @relation(fields: [payPeriodId], references: [id])
-  filename      String
-  isaControl    String
-  gsControl     String
-  invoiceCount  Int
-  totalAmount   Decimal   @db.Decimal(12, 2)
-  ediContent    String    @db.Text
-  generatedAt   DateTime  @default(now())
-  generatedById String
-  generatedBy   User      @relation("BillGeneratedBy", fields: [generatedById], references: [id])
-  invoices      Invoice[]
-
-  @@index([payPeriodId])
 }
 
 model ProcedureCodeFee {

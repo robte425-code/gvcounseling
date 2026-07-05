@@ -75,7 +75,6 @@ export default async function TherapistInvoicesPage({
         client: true,
         lineItems: { select: { serviceDate: true }, orderBy: { sortOrder: "asc" } },
         payPeriod: { select: { label: true, cutoffDate: true } },
-        bill: { select: { payPeriod: { select: { label: true, cutoffDate: true } } } },
       },
     }),
     prisma.payPeriod.findMany({
@@ -85,7 +84,7 @@ export default async function TherapistInvoicesPage({
   ]);
 
   const invoiceRows: TherapistInvoiceRow[] = invoices.map((inv) => {
-    const period = inv.payPeriod ?? inv.bill?.payPeriod ?? null;
+    const period = inv.payPeriod;
     return {
       id: inv.id,
       invoiceNumber: inv.invoiceNumber,

@@ -1,0 +1,5 @@
+ALTER TABLE "Invoice" DROP CONSTRAINT IF EXISTS "Invoice_billId_fkey";
+UPDATE "Invoice" SET "billId" = NULL WHERE "billId" IS NOT NULL;
+DROP TABLE IF EXISTS "Bill";
+DROP INDEX IF EXISTS "Invoice_billId_idx";
+ALTER TABLE "Invoice" DROP COLUMN IF EXISTS "billId";
