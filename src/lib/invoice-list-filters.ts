@@ -80,3 +80,21 @@ export function mergeInvoiceWhere(
   if (!extra) return base;
   return { AND: [base, extra] };
 }
+
+/** Invoices assigned to a pay period and not yet on an 837 file. */
+export function invoice837QueueWhere(payPeriodId: string): Prisma.InvoiceWhereInput {
+  return {
+    payPeriodId,
+    billId: null,
+    status: { in: ["SUBMITTED", "BILLED"] },
+  };
+}
+
+/** Invoices included on a generated 837 for a pay period. */
+export function invoiceOn837Where(payPeriodId: string): Prisma.InvoiceWhereInput {
+  return {
+    payPeriodId,
+    status: "BILLED",
+    billId: { not: null },
+  };
+}

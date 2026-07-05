@@ -53,27 +53,35 @@ export default async function BillingPage({
 
   const queuedByPeriod = await prisma.invoice.groupBy({
     by: ["payPeriodId"],
-    where: { status: "SUBMITTED", payPeriodId: { not: null } },
+    where: {
+      payPeriodId: { not: null },
+      billId: null,
+      status: { in: ["SUBMITTED", "BILLED"] },
+    },
     _count: true,
   });
   const queuedCountByPeriodId = new Map(
     queuedByPeriod.map((row) => [row.payPeriodId!, row._count]),
   );
 
-  const billedByPeriod = await prisma.invoice.groupBy({
+  const onBillByPeriod = await prisma.invoice.groupBy({
     by: ["payPeriodId"],
-    where: { status: "BILLED", payPeriodId: { not: null } },
+    where: {
+      payPeriodId: { not: null },
+      billId: { not: null },
+      status: "BILLED",
+    },
     _count: true,
   });
-  const billedCountByPeriodId = new Map(
-    billedByPeriod.map((row) => [row.payPeriodId!, row._count]),
+  const onBillCountByPeriodId = new Map(
+    onBillByPeriod.map((row) => [row.payPeriodId!, row._count]),
   );
 
   const periodRows = periods.map((period) => ({
     period,
     assignedInvoices: period._count.invoices,
     queuedInvoices: queuedCountByPeriodId.get(period.id) ?? 0,
-    billedInvoices: billedCountByPeriodId.get(period.id) ?? 0,
+    onBillInvoices: onBillCountByPeriodId.get(period.id) ?? 0,
   }));
 
   const syncMessage =
@@ -95,11 +103,8 @@ export default async function BillingPage({
         <p className="mt-2 text-sm text-muted">
           Manage pay periods, L&I procedure fees, generate 837 files, email VRCs session documentation, and view billing history.
           <strong> Assigned</strong> counts all invoices linked to each pay period.{" "}
-          <strong>Generate 837</strong> uses only submitted invoices not yet on a bill — assign those on the{" "}
-          <Link href="/portal/admin/invoices?status=SUBMITTED" className="text-primary hover:underline">
-            Invoices
-          </Link>{" "}
-          page.
+          <strong>Ready</strong> counts invoices not yet on an 837 file.{" "}
+          <strong>Generate 837</strong> includes all ready invoices for that pay period.
         </p>
       </div>
 
@@ -195,12 +200,12 @@ export default async function BillingPage({
               <th className="py-2 pr-4">Expected payment</th>
               <th className="py-2 pr-4">837 files</th>
               <th className="py-2 pr-4">Assigned</th>
-              <th className="py-2 pr-4">Submitted</th>
+              <th className="py-2 pr-4">Ready</th>
               <th className="py-2">Actions</th>
             </tr>
           </thead>
           <tbody>
-            {periodRows.map(({ period, assignedInvoices, queuedInvoices, billedInvoices }) => (
+            {periodRows.map(({ period, assignedInvoices, queuedInvoices, onBillInvoices }) => (
               <tr key={period.id} className="border-b border-border/60 last:border-0">
                 <td className="py-2.5 pr-4">{period.label ?? "—"}</td>
                 <td className="py-2.5 pr-4">{formatDate(period.cutoffDate)}</td>
@@ -210,7 +215,7 @@ export default async function BillingPage({
                 <td className="py-2.5 pr-4">
                   {queuedInvoices > 0 ? (
                     <Link
-                      href={`/portal/admin/invoices?status=SUBMITTED&payPeriodId=${period.id}`}
+                      href={`/portal/admin/invoices?payPeriodId=${period.id}`}
                       className="text-primary hover:underline"
                     >
                       {queuedInvoices}
@@ -232,7 +237,7 @@ export default async function BillingPage({
                       <ConfirmSubmitButton
                         confirmMessage={`Email VRCs for all billed clients in ${period.label ?? formatDate(period.cutoffDate)}? Each VRC will receive session documentation uploaded with their client's invoice.`}
                         className={portalButtonSecondaryClass}
-                        disabled={billedInvoices === 0}
+                        disabled={onBillInvoices === 0}
                       >
                         Email VRCs
                       </ConfirmSubmitButton>

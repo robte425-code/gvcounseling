@@ -85,6 +85,7 @@ export async function emailVrcsForPayPeriod(options: {
     where: {
       payPeriodId: options.payPeriodId,
       status: "BILLED",
+      billId: { not: null },
     },
     include: {
       client: {

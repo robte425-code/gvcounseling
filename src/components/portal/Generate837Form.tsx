@@ -26,8 +26,8 @@ function Generate837SubmitButton({
       disabled={disabled}
       title={
         queuedInvoices === 0
-          ? `No submitted invoices are assigned to ${periodLabel}. Click to see details, or assign invoices with status Submitted on the Invoices page.`
-          : `Generate an 837 for ${queuedInvoices} submitted invoice${queuedInvoices === 1 ? "" : "s"}`
+          ? `No invoices are ready for 837 generation in ${periodLabel}. Assign invoices to this pay period on the Invoices page.`
+          : `Generate an 837 for ${queuedInvoices} invoice${queuedInvoices === 1 ? "" : "s"} not yet on a bill`
       }
       className={`${portalButtonClass} disabled:cursor-not-allowed`}
     >

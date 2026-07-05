@@ -14,6 +14,7 @@ import {
 import type { ImpersonationUpdate } from "@/types/next-auth";
 import { Gender, InvoiceStatus, PaymentStatus } from "@/generated/prisma/client";
 import { buildEdi837, generateClmControlNumber, type Edi837Claim } from "@/lib/edi837";
+import { invoice837QueueWhere } from "@/lib/invoice-list-filters";
 import { client837Ready, parseClaimNumber, resolveClientBirthDate } from "@/lib/constants";
 import { moveClientDriveFolderToTherapist } from "@/lib/client-drive-move";
 import { ensureTherapistDriveFolder, removeTherapistDriveFolder, deleteInvoiceDriveAttachments } from "@/lib/google-drive";
@@ -774,10 +775,7 @@ export async function generateBillAction(formData: FormData) {
     if (!payPeriod) throw new Error("Pay period not found.");
 
     const invoices = await prisma.invoice.findMany({
-      where: {
-        status: "SUBMITTED",
-        payPeriodId,
-      },
+      where: invoice837QueueWhere(payPeriodId),
       include: {
         client: true,
         therapist: true,
@@ -787,7 +785,9 @@ export async function generateBillAction(formData: FormData) {
     });
 
     if (!invoices.length) {
-      throw new Error("No submitted invoices are assigned to this pay period.");
+      throw new Error(
+        "No invoices are ready for 837 generation in this pay period. Assign invoices to this pay period on the Invoices page — they must not already be on a bill.",
+      );
     }
 
     const blocked: string[] = [];
