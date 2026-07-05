@@ -188,23 +188,122 @@ function parseBillChunk(
   };
 }
 
+type ProviderMarker = {
+  index: number;
+  id: string;
+  npi: string;
+  name: string;
+  kind: "name" | "totals";
+};
+
+type ProviderSection = {
+  start: number;
+  end: number;
+  provider: Omit<ProviderMarker, "index" | "kind">;
+};
+
+function collectProviderMarkers(text: string): ProviderMarker[] {
+  const markers: ProviderMarker[] = [];
+  const namesById = new Map<string, string>();
+
+  const namePattern =
+    /SERVICE\s+PROVIDER\s+NAME\s+(.+?)\s+SERVICE\s+PROVIDER\s+NUMBER\s+(\d+)\s+NPI\s+(\d+)/gi;
+  let nameMatch: RegExpExecArray | null;
+  while ((nameMatch = namePattern.exec(text)) !== null) {
+    const id = normalizeLniProviderId(nameMatch[2]!);
+    const name = nameMatch[1]!.trim();
+    namesById.set(id, name);
+    markers.push({
+      index: nameMatch.index,
+      id,
+      npi: nameMatch[3]!,
+      name,
+      kind: "name",
+    });
+  }
+
+  const totalsPattern = /TOTALS\s+FOR\s+SERVICE\s+PROVIDER\s+(\d+)\s+NPI\s+(\d+)/gi;
+  let totalsMatch: RegExpExecArray | null;
+  while ((totalsMatch = totalsPattern.exec(text)) !== null) {
+    const id = normalizeLniProviderId(totalsMatch[1]!);
+    markers.push({
+      index: totalsMatch.index,
+      id,
+      npi: totalsMatch[2]!,
+      name: namesById.get(id) ?? "",
+      kind: "totals",
+    });
+  }
+
+  return markers.sort((a, b) => a.index - b.index);
+}
+
+function buildProviderSections(text: string, markers: ProviderMarker[]): ProviderSection[] {
+  if (!markers.length) return [];
+
+  const sections: ProviderSection[] = [];
+  let sectionStart = 0;
+  let current: Omit<ProviderMarker, "index" | "kind"> | null = null;
+
+  for (const marker of markers) {
+    if (marker.kind === "name") {
+      if (current) {
+        sections.push({ start: sectionStart, end: marker.index, provider: current });
+      }
+      current = { id: marker.id, npi: marker.npi, name: marker.name };
+      sectionStart = marker.index;
+      continue;
+    }
+
+    const totalsProvider = {
+      id: marker.id,
+      npi: marker.npi,
+      name: marker.name,
+    };
+    if (!current) current = totalsProvider;
+    sections.push({
+      start: sectionStart,
+      end: marker.index + 80,
+      provider: totalsProvider,
+    });
+    current = null;
+    sectionStart = marker.index + 80;
+  }
+
+  if (current) {
+    sections.push({ start: sectionStart, end: text.length, provider: current });
+  }
+
+  return sections;
+}
+
+function findProviderAt(position: number, sections: ProviderSection[]): ProviderSection["provider"] | null {
+  for (const section of sections) {
+    if (position >= section.start && position < section.end) {
+      return section.provider;
+    }
+  }
+
+  for (const section of sections) {
+    if (section.end > position) return section.provider;
+  }
+
+  return sections.at(-1)?.provider ?? null;
+}
+
 function findContextAt(
   position: number,
-  providers: Array<{ index: number; id: string; npi: string; name: string }>,
+  providerSections: ProviderSection[],
   sections: Array<{ index: number; section: RemittanceBillSection }>,
 ) {
-  let provider = providers[0];
   let section: RemittanceBillSection = "PAID";
 
-  for (const marker of providers) {
-    if (marker.index <= position) provider = marker;
-    else break;
-  }
   for (const marker of sections) {
     if (marker.index <= position) section = marker.section;
     else break;
   }
 
+  const provider = findProviderAt(position, providerSections);
   if (!provider) {
     throw new Error("Could not determine service provider for remittance bill.");
   }
@@ -221,18 +320,8 @@ function parseDetailBills(text: string): RemittanceBill[] {
   const normalized = normalizeWhitespace(text);
   const bills: RemittanceBill[] = [];
 
-  const providers: Array<{ index: number; id: string; npi: string; name: string }> = [];
-  const providerPattern =
-    /SERVICE PROVIDER NAME\s+(.+?)\s+SERVICE PROVIDER NUMBER\s+(\d+)\s+NPI\s+(\d+)/gi;
-  let providerMatch: RegExpExecArray | null;
-  while ((providerMatch = providerPattern.exec(normalized)) !== null) {
-    providers.push({
-      index: providerMatch.index,
-      name: providerMatch[1]!.trim(),
-      id: normalizeLniProviderId(providerMatch[2]!),
-      npi: providerMatch[3]!,
-    });
-  }
+  const providerMarkers = collectProviderMarkers(normalized);
+  const providerSections = buildProviderSections(normalized, providerMarkers);
 
   const sections: Array<{ index: number; section: RemittanceBillSection }> = [];
   const sectionPattern =
@@ -274,7 +363,7 @@ function parseDetailBills(text: string): RemittanceBill[] {
 
     const bodyBeforePat = normalized.slice(prevPatEnd, patStart);
     const patAndTotal = normalized.slice(patStart, totalEnd);
-    const context = findContextAt(patStart, providers, sections);
+    const context = findContextAt(patStart, providerSections, sections);
     const bill = parseBillChunk(bodyBeforePat, patAndTotal, context);
     if (bill) bills.push(bill);
   }

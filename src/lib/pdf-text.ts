@@ -28,11 +28,18 @@ async function tryPdfJsExtract(
     for (let pageNum = 1; pageNum <= doc.numPages; pageNum++) {
       const page = await doc.getPage(pageNum);
       const content = await page.getTextContent();
-      parts.push(
-        content.items
-          .map((item) => ("str" in item && typeof item.str === "string" ? item.str : ""))
-          .join(" "),
-      );
+      const items = content.items.flatMap((item) => {
+        if (!("str" in item) || typeof item.str !== "string") return [];
+        const transform = "transform" in item && Array.isArray(item.transform) ? item.transform : null;
+        if (!transform) return [{ str: item.str, y: 0, x: 0 }];
+        return [{ str: item.str, y: transform[5] ?? 0, x: transform[4] ?? 0 }];
+      });
+      items.sort((a, b) => {
+        const yDiff = b.y - a.y;
+        if (Math.abs(yDiff) > 4) return yDiff;
+        return a.x - b.x;
+      });
+      parts.push(items.map((item) => item.str).join(" "));
     }
 
     const pages = doc.numPages;
