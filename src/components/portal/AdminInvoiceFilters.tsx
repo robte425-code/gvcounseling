@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useRef } from "react";
 import type { InvoiceStatus } from "@/generated/prisma/client";
 import {
   INVOICE_PAYMENT_FILTER_OPTIONS,
@@ -50,12 +53,16 @@ type Props = {
 };
 
 export function AdminInvoiceFilters({ therapists, payPeriods, values, resultCount }: Props) {
+  const formRef = useRef<HTMLFormElement>(null);
   const hasFilters = Boolean(
     values.status || values.therapistId || values.payPeriodId || values.paymentStatus,
   );
 
+  const applyFilters = () => formRef.current?.requestSubmit();
+
   return (
     <form
+      ref={formRef}
       method="get"
       action="/portal/admin/invoices"
       className="flex flex-wrap items-end gap-3 rounded-xl border border-border bg-primary/5 p-4"
@@ -69,6 +76,7 @@ export function AdminInvoiceFilters({ therapists, payPeriods, values, resultCoun
           name="status"
           className={portalInputCompactClass}
           defaultValue={values.status ?? ""}
+          onChange={applyFilters}
         >
           {STATUS_OPTIONS.map((option) => (
             <option key={option.value || "all"} value={option.value}>
@@ -87,6 +95,7 @@ export function AdminInvoiceFilters({ therapists, payPeriods, values, resultCoun
           name="therapistId"
           className={portalInputCompactClass}
           defaultValue={values.therapistId ?? ""}
+          onChange={applyFilters}
         >
           <option value="">All therapists</option>
           {therapists.map((therapist) => (
@@ -106,6 +115,7 @@ export function AdminInvoiceFilters({ therapists, payPeriods, values, resultCoun
           name="payPeriodId"
           className={portalInputCompactClass}
           defaultValue={values.payPeriodId ?? ""}
+          onChange={applyFilters}
         >
           <option value="">All pay periods</option>
           <option value="none">Unassigned</option>
@@ -126,6 +136,7 @@ export function AdminInvoiceFilters({ therapists, payPeriods, values, resultCoun
           name="paymentStatus"
           className={portalInputCompactClass}
           defaultValue={values.paymentStatus ?? ""}
+          onChange={applyFilters}
         >
           {INVOICE_PAYMENT_FILTER_OPTIONS.map((option) => (
             <option key={option.value || "all"} value={option.value}>
@@ -135,9 +146,6 @@ export function AdminInvoiceFilters({ therapists, payPeriods, values, resultCoun
         </select>
       </div>
 
-      <button type="submit" className={portalButtonSecondaryClass}>
-        Apply filters
-      </button>
       {hasFilters && (
         <Link href="/portal/admin/invoices" className={portalButtonSecondaryClass}>
           Clear

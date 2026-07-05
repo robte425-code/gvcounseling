@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { requireAdmin } from "@/auth";
+import { Generate837Form } from "@/components/portal/Generate837Form";
 import { ConfirmSubmitButton } from "@/components/portal/ConfirmSubmitButton";
 import {
   createPayPeriodAction,
@@ -32,6 +33,8 @@ export default async function BillingPage({
     sent?: string;
     vrcSkipped?: string;
     vrcErrors?: string;
+    billError?: string;
+    payPeriodId?: string;
   }>;
 }) {
   await requireAdmin();
@@ -124,6 +127,12 @@ export default async function BillingPage({
         </div>
       )}
 
+      {params.billError && (
+        <p className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-900" role="alert">
+          {params.billError}
+        </p>
+      )}
+
       <div className={portalCardClass}>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
@@ -186,6 +195,7 @@ export default async function BillingPage({
               <th className="py-2 pr-4">Expected payment</th>
               <th className="py-2 pr-4">837 files</th>
               <th className="py-2 pr-4">Assigned</th>
+              <th className="py-2 pr-4">Submitted</th>
               <th className="py-2">Actions</th>
             </tr>
           </thead>
@@ -196,24 +206,27 @@ export default async function BillingPage({
                 <td className="py-2.5 pr-4">{formatDate(period.cutoffDate)}</td>
                 <td className="py-2.5 pr-4">{formatDate(period.paymentDate)}</td>
                 <td className="py-2.5 pr-4">{period._count.bills}</td>
+                <td className="py-2.5 pr-4">{assignedInvoices}</td>
                 <td className="py-2.5 pr-4">
-                  {assignedInvoices}
-                  {queuedInvoices > 0 && queuedInvoices !== assignedInvoices && (
-                    <span className="ml-1 text-xs text-muted">({queuedInvoices} queued)</span>
+                  {queuedInvoices > 0 ? (
+                    <Link
+                      href={`/portal/admin/invoices?status=SUBMITTED&payPeriodId=${period.id}`}
+                      className="text-primary hover:underline"
+                    >
+                      {queuedInvoices}
+                    </Link>
+                  ) : (
+                    <span className="text-muted">0</span>
                   )}
                 </td>
                 <td className="py-2.5">
                   <div className="flex flex-wrap gap-2">
-                    <form action={generateBillAction}>
-                      <input type="hidden" name="payPeriodId" value={period.id} />
-                      <button
-                        type="submit"
-                        disabled={queuedInvoices === 0}
-                        className={portalButtonClass}
-                      >
-                        Generate 837
-                      </button>
-                    </form>
+                    <Generate837Form
+                      payPeriodId={period.id}
+                      queuedInvoices={queuedInvoices}
+                      periodLabel={period.label ?? formatDate(period.cutoffDate)}
+                      generateAction={generateBillAction}
+                    />
                     <form action={emailVrcsForPayPeriodAction}>
                       <input type="hidden" name="payPeriodId" value={period.id} />
                       <ConfirmSubmitButton
