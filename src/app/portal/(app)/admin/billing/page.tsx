@@ -7,6 +7,7 @@ import {
 } from "@/lib/portal-actions";
 import { LNI_PAYMENT_STATUS_URL } from "@/lib/lni-pay-periods";
 import { getIsaUsageIndicator } from "@/lib/edi837";
+import { getVrcEmailRedirectTo } from "@/lib/vrc-billing-emails";
 import {
   portalButtonClass,
   portalButtonSecondaryClass,
@@ -82,6 +83,7 @@ export default async function BillingPage({
       : null;
   const vrcSkipped = params.vrcSkipped?.split(";;").filter(Boolean) ?? [];
   const vrcErrors = params.vrcErrors?.split(";;").filter(Boolean) ?? [];
+  const vrcEmailRedirectTo = getVrcEmailRedirectTo();
 
   const hasAlerts = Boolean(syncMessage || vrcEmailMessage || vrcSkipped.length || vrcErrors.length);
 
@@ -217,6 +219,14 @@ export default async function BillingPage({
             Only pay periods with assigned invoices appear here. Choose Test or Production before
             generating.
           </p>
+          {vrcEmailRedirectTo && (
+            <p className="mt-3 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-950" role="status">
+              <strong>VRC email test mode:</strong> all Email VRC messages are sent to{" "}
+              {vrcEmailRedirectTo} instead of each VRC&apos;s address. Remove{" "}
+              <code className="rounded bg-amber-100 px-1">VRC_EMAIL_REDIRECT_TO</code> from Vercel
+              env to send to VRCs.
+            </p>
+          )}
 
           <div className="mt-5">
             <BillingPayPeriodsTable

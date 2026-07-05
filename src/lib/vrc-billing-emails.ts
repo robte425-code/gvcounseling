@@ -14,6 +14,23 @@ export const VRC_BILLING_EMAIL_SIGNATURE = {
   email: "ghim@gvcounseling.com",
 } as const;
 
+/** When set, all VRC billing emails are sent here instead of the VRC address. */
+export function getVrcEmailRedirectTo(): string | null {
+  const value = process.env.VRC_EMAIL_REDIRECT_TO?.trim();
+  return value || null;
+}
+
+function resolveVrcRecipient(intendedEmail: string): {
+  to: string;
+  redirected: boolean;
+} {
+  const redirect = getVrcEmailRedirectTo();
+  if (!redirect) {
+    return { to: intendedEmail, redirected: false };
+  }
+  return { to: redirect, redirected: true };
+}
+
 type EmailAttachment = {
   filename: string;
   content: string;
@@ -164,11 +181,26 @@ export async function emailVrcsForPayPeriod(options: {
       }
 
       const vrcName = client.vrcName?.trim() || "VRC";
-      const subject = `BHI session documentation — ${client.lniClaimNumber}`;
+      const intendedEmail = client.vrcEmail.trim();
+      const { to, redirected } = resolveVrcRecipient(intendedEmail);
+      const subject = redirected
+        ? `[TEST] BHI session documentation — ${client.lniClaimNumber} (for ${vrcName})`
+        : `BHI session documentation — ${client.lniClaimNumber}`;
+      const body = buildVrcEmailBody(vrcName, lineItems);
+      const text = redirected
+        ? [
+            "[TEST MODE — VRC billing emails are redirected]",
+            `Intended recipient: ${intendedEmail}`,
+            `VRC: ${vrcName}`,
+            `Client: ${label}`,
+            "",
+            body,
+          ].join("\n")
+        : body;
 
-      await sendEmailTo(client.vrcEmail.trim(), {
+      await sendEmailTo(to, {
         subject,
-        text: buildVrcEmailBody(vrcName, lineItems),
+        text,
         attachments: emailAttachments,
       });
 
