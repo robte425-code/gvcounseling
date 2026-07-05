@@ -17,6 +17,12 @@ import {
   payPeriodLabel,
   payPeriodSortKey,
 } from "@/lib/invoice-pay-period-grouping";
+import {
+  invoicePayPeriodWhere,
+  invoicePaymentWhere,
+  isInvoicePaymentFilter,
+  mergeInvoiceWhere,
+} from "@/lib/invoice-list-filters";
 import { prisma } from "@/lib/prisma";
 import type { InvoiceStatus, Prisma } from "@/generated/prisma/client";
 
@@ -30,12 +36,16 @@ function parseInvoiceFilters(searchParams: {
   status?: string;
   therapistId?: string;
   payPeriodId?: string;
+  paymentStatus?: string;
   assigned?: string;
 }): AdminInvoiceFilterValues {
   return {
     status: isInvoiceStatus(searchParams.status) ? searchParams.status : undefined,
     therapistId: searchParams.therapistId?.trim() || undefined,
     payPeriodId: searchParams.payPeriodId?.trim() || undefined,
+    paymentStatus: isInvoicePaymentFilter(searchParams.paymentStatus)
+      ? searchParams.paymentStatus
+      : undefined,
   };
 }
 
@@ -50,13 +60,10 @@ function buildInvoiceWhere(filters: AdminInvoiceFilterValues): Prisma.InvoiceWhe
     where.therapistId = filters.therapistId;
   }
 
-  if (filters.payPeriodId === "none") {
-    where.payPeriodId = null;
-  } else if (filters.payPeriodId) {
-    where.payPeriodId = filters.payPeriodId;
-  }
-
-  return where;
+  return mergeInvoiceWhere(
+    mergeInvoiceWhere(where, invoicePayPeriodWhere(filters.payPeriodId)),
+    invoicePaymentWhere(filters.paymentStatus),
+  );
 }
 
 export default async function AdminInvoicesPage({
@@ -66,6 +73,7 @@ export default async function AdminInvoicesPage({
     status?: string;
     therapistId?: string;
     payPeriodId?: string;
+    paymentStatus?: string;
     assigned?: string;
   }>;
 }) {

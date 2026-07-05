@@ -1,7 +1,10 @@
 export const ORG = {
   name: "GRANDVIEW COUNSELING",
+  /** L&I provider number (0479998 without leading zero). Used in 837 ISA/GS and claim segments. */
   lniProviderId: "479998",
+  /** National Provider Identifier. Used in 837 billing provider (NM1*85). */
   npi: "1568247872",
+  /** Federal EIN / FEIN. Used in 837 REF*EI segment. */
   taxId: "933096824",
   addressLine1: "5608 17TH AVENUE NW, STE. 596",
   city: "SEATTLE",
@@ -15,6 +18,18 @@ export const ORG = {
   receiverCity: "OLYMPIA",
   receiverState: "WA",
   receiverZip: "98504",
+  /** Additional WA/state registry numbers (not emitted in 837 today). */
+  registry: {
+    ubi: "605323747",
+    dateOfIncorporation: "2023-08-08",
+    providerOneApplicationNumber: "20230902362203",
+    naicsCode: "621330",
+    workersCompAccountId: "535530-00",
+    esdNumber: "000968786003",
+    applicationId: "20231213212189",
+    grandviewProviderNumber: "0479998",
+    ffnwbAccountNumber: "396263",
+  },
 } as const;
 
 export const PROCEDURE_CODES = [
@@ -216,10 +231,18 @@ export function isReferralSubmissionFilename(filename: string): boolean {
   return REFERRAL_FILENAME_PATTERN.test(base);
 }
 
+export function resolveClientBirthDate(client: {
+  dateOfBirth: Date | null;
+  dateOfInjury?: Date | null;
+}): Date | null {
+  return client.dateOfBirth ?? client.dateOfInjury ?? null;
+}
+
 export function client837Ready(client: {
   attendingNpi: string | null;
   diagnoses: string[];
   dateOfBirth: Date | null;
+  dateOfInjury?: Date | null;
   gender: string | null;
   addressLine1: string | null;
   city: string | null;
@@ -228,7 +251,7 @@ export function client837Ready(client: {
   const missing: string[] = [];
   if (!client.attendingNpi) missing.push("Attending NPI");
   if (!client.diagnoses.length) missing.push("Diagnosis");
-  if (!client.dateOfBirth) missing.push("Date of birth");
+  if (!resolveClientBirthDate(client)) missing.push("Date of birth or injury date");
   if (!client.gender) missing.push("Gender");
   if (!client.addressLine1) missing.push("Address");
   if (!client.city) missing.push("City");

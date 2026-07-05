@@ -24,9 +24,10 @@ export type TherapistInvoiceRow = {
 
 type Props = {
   invoices: TherapistInvoiceRow[];
+  hasFilters?: boolean;
 };
 
-export function TherapistInvoicesTable({ invoices }: Props) {
+export function TherapistInvoicesTable({ invoices, hasFilters = false }: Props) {
   const groups = groupInvoicesByPayPeriod(invoices);
 
   return (
@@ -90,7 +91,7 @@ export function TherapistInvoicesTable({ invoices }: Props) {
         {invoices.length === 0 && (
           <tr>
             <td colSpan={8} className="py-6 text-center text-sm text-muted">
-              No invoices yet.
+              {hasFilters ? "No invoices match these filters." : "No invoices yet."}
             </td>
           </tr>
         )}

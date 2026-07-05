@@ -11,16 +11,8 @@ import {
   portalLabelCompactClass,
 } from "@/components/portal/ui";
 
-export type TherapistFilterOption = {
-  id: string;
-  label: string;
-};
-
-export type { PayPeriodFilterOption };
-
-export type AdminInvoiceFilterValues = {
+export type TherapistInvoiceFilterValues = {
   status?: InvoiceStatus;
-  therapistId?: string;
   payPeriodId?: string;
   paymentStatus?: InvoicePaymentFilter;
 };
@@ -32,40 +24,36 @@ const STATUS_OPTIONS = [
   { value: "BILLED", label: "Billed" },
 ] as const;
 
-export function buildAdminInvoicesHref(values: AdminInvoiceFilterValues): string {
+export function buildTherapistInvoicesHref(values: TherapistInvoiceFilterValues): string {
   const params = new URLSearchParams();
   if (values.status) params.set("status", values.status);
-  if (values.therapistId) params.set("therapistId", values.therapistId);
   if (values.payPeriodId) params.set("payPeriodId", values.payPeriodId);
   if (values.paymentStatus) params.set("paymentStatus", values.paymentStatus);
   const query = params.toString();
-  return query ? `/portal/admin/invoices?${query}` : "/portal/admin/invoices";
+  return query ? `/portal/therapist/invoices?${query}` : "/portal/therapist/invoices";
 }
 
 type Props = {
-  therapists: TherapistFilterOption[];
   payPeriods: PayPeriodFilterOption[];
-  values: AdminInvoiceFilterValues;
+  values: TherapistInvoiceFilterValues;
   resultCount: number;
 };
 
-export function AdminInvoiceFilters({ therapists, payPeriods, values, resultCount }: Props) {
-  const hasFilters = Boolean(
-    values.status || values.therapistId || values.payPeriodId || values.paymentStatus,
-  );
+export function TherapistInvoiceFilters({ payPeriods, values, resultCount }: Props) {
+  const hasFilters = Boolean(values.status || values.payPeriodId || values.paymentStatus);
 
   return (
     <form
       method="get"
-      action="/portal/admin/invoices"
+      action="/portal/therapist/invoices"
       className="flex flex-wrap items-end gap-3 rounded-xl border border-border bg-primary/5 p-4"
     >
       <div className="min-w-[10rem]">
-        <label htmlFor="invoice-filter-status" className={portalLabelCompactClass}>
+        <label htmlFor="therapist-invoice-filter-status" className={portalLabelCompactClass}>
           Status
         </label>
         <select
-          id="invoice-filter-status"
+          id="therapist-invoice-filter-status"
           name="status"
           className={portalInputCompactClass}
           defaultValue={values.status ?? ""}
@@ -79,30 +67,11 @@ export function AdminInvoiceFilters({ therapists, payPeriods, values, resultCoun
       </div>
 
       <div className="min-w-[12rem] flex-1">
-        <label htmlFor="invoice-filter-therapist" className={portalLabelCompactClass}>
-          Therapist
-        </label>
-        <select
-          id="invoice-filter-therapist"
-          name="therapistId"
-          className={portalInputCompactClass}
-          defaultValue={values.therapistId ?? ""}
-        >
-          <option value="">All therapists</option>
-          {therapists.map((therapist) => (
-            <option key={therapist.id} value={therapist.id}>
-              {therapist.label}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <div className="min-w-[12rem] flex-1">
-        <label htmlFor="invoice-filter-pay-period" className={portalLabelCompactClass}>
+        <label htmlFor="therapist-invoice-filter-pay-period" className={portalLabelCompactClass}>
           Pay period
         </label>
         <select
-          id="invoice-filter-pay-period"
+          id="therapist-invoice-filter-pay-period"
           name="payPeriodId"
           className={portalInputCompactClass}
           defaultValue={values.payPeriodId ?? ""}
@@ -118,11 +87,11 @@ export function AdminInvoiceFilters({ therapists, payPeriods, values, resultCoun
       </div>
 
       <div className="min-w-[10rem]">
-        <label htmlFor="invoice-filter-payment" className={portalLabelCompactClass}>
+        <label htmlFor="therapist-invoice-filter-payment" className={portalLabelCompactClass}>
           Payment
         </label>
         <select
-          id="invoice-filter-payment"
+          id="therapist-invoice-filter-payment"
           name="paymentStatus"
           className={portalInputCompactClass}
           defaultValue={values.paymentStatus ?? ""}
@@ -139,7 +108,7 @@ export function AdminInvoiceFilters({ therapists, payPeriods, values, resultCoun
         Apply filters
       </button>
       {hasFilters && (
-        <Link href="/portal/admin/invoices" className={portalButtonSecondaryClass}>
+        <Link href="/portal/therapist/invoices" className={portalButtonSecondaryClass}>
           Clear
         </Link>
       )}

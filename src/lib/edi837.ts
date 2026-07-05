@@ -102,7 +102,8 @@ function hiSegment(primary: string, additional: string[]): string {
 function buildClaim(hlNumber: number, claim: Edi837Claim): string {
   const { client, therapist, lines } = claim;
   const total = lines.reduce((sum, l) => sum + l.amount, 0);
-  const injuryDate = client.dateOfInjury ?? client.dateOfBirth;
+  const demographicDate = client.dateOfBirth;
+  const injuryDate = client.dateOfInjury ?? demographicDate;
 
   let out = "";
   out += seg("HL", String(hlNumber), "1", "22", "0");
@@ -120,7 +121,7 @@ function buildClaim(hlNumber: number, claim: Edi837Claim): string {
   );
   out += seg("N3", client.addressLine1.toUpperCase());
   out += seg("N4", client.city.toUpperCase(), client.state.toUpperCase(), client.zip.replace(/\D/g, ""));
-  out += seg("DMG", "D8", formatDate(client.dateOfBirth), client.gender);
+  out += seg("DMG", "D8", formatDate(demographicDate), client.gender);
   out += seg("NM1", "PR", "2", ORG.receiverName, "", "", "", "PI", ORG.receiverId);
   out += seg("N4", ORG.receiverCity, ORG.receiverState, ORG.receiverZip);
   out += seg("REF", "G2", ORG.lniProviderId);

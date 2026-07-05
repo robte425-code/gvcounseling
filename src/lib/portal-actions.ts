@@ -14,7 +14,7 @@ import {
 import type { ImpersonationUpdate } from "@/types/next-auth";
 import { Gender, InvoiceStatus, PaymentStatus } from "@/generated/prisma/client";
 import { buildEdi837, generateClmControlNumber, type Edi837Claim } from "@/lib/edi837";
-import { client837Ready, parseClaimNumber } from "@/lib/constants";
+import { client837Ready, parseClaimNumber, resolveClientBirthDate } from "@/lib/constants";
 import { moveClientDriveFolderToTherapist } from "@/lib/client-drive-move";
 import { ensureTherapistDriveFolder, removeTherapistDriveFolder, deleteInvoiceDriveAttachments } from "@/lib/google-drive";
 import { getDriveAccessTokenForClient } from "@/lib/google-drive-access";
@@ -25,6 +25,7 @@ import { fetchLniPayPeriods } from "@/lib/lni-pay-periods";
 import { createProcedureCodeFee, createTherapistProcedureCodeFee, updateTherapistProcedureCodeFee, applyTherapistFeeSchedule, loadAllProcedureCodeFees, resolveFeeAmount } from "@/lib/procedure-fees";
 import { prisma } from "@/lib/prisma";
 import { getNextInvoiceNumber } from "@/lib/invoice-numbers";
+import { emailVrcsForPayPeriod } from "@/lib/vrc-billing-emails";
 
 function parseDecimal(value: FormDataEntryValue | null): number {
   const n = parseFloat(String(value ?? "0"));
@@ -819,7 +820,7 @@ export async function generateBillAction(formData: FormData) {
         city: inv.client.city!,
         state: inv.client.state,
         zip: inv.client.zip!,
-        dateOfBirth: inv.client.dateOfBirth!,
+        dateOfBirth: resolveClientBirthDate(inv.client)!,
         gender: inv.client.gender ?? "U",
         dateOfInjury: inv.client.dateOfInjury,
         primaryDiagnosis: dx[0]!,
@@ -893,6 +894,31 @@ export async function generateBillAction(formData: FormData) {
   revalidatePath(`/portal/admin/billing/${payPeriodId}/bills`);
   revalidatePath("/portal/admin/invoices");
   redirect(`/portal/admin/bills/${bill.id}?generated=1`);
+}
+
+export async function emailVrcsForPayPeriodAction(formData: FormData) {
+  const session = await requireAdmin();
+  const payPeriodId = String(formData.get("payPeriodId") ?? "").trim();
+  if (!payPeriodId) throw new Error("Pay period is required.");
+
+  const result = await emailVrcsForPayPeriod({
+    payPeriodId,
+    initiatorUserId: session.user.id,
+  });
+
+  revalidatePath("/portal/admin/billing");
+
+  const params = new URLSearchParams();
+  params.set("vrcEmailed", "1");
+  params.set("sent", String(result.sent));
+  if (result.skipped.length) {
+    params.set("vrcSkipped", result.skipped.slice(0, 5).join(";;"));
+  }
+  if (result.errors.length) {
+    params.set("vrcErrors", result.errors.slice(0, 5).join(";;"));
+  }
+
+  redirect(`/portal/admin/billing?${params.toString()}`);
 }
 
 export async function assignClientTherapistAction(formData: FormData) {
