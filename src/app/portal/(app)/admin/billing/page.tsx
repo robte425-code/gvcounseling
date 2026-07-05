@@ -93,7 +93,7 @@ export default async function BillingPage({
         <div>
           <h1 className="font-serif text-3xl font-semibold text-primary-dark">Billing</h1>
           <p className="mt-2 max-w-2xl text-sm text-muted">
-            Sync pay periods, generate 837 files for L&I upload, and notify VRCs when sessions are billed.
+            Sync pay periods, generate 837 files for L&I upload, and email VRCs session documentation (excluding invoice PDFs).
             Generated files download immediately and are not stored.
           </p>
         </div>

@@ -1,5 +1,11 @@
 import { calendarIsoFromDate, formatDate } from "@/lib/constants";
 import { sendEmailTo } from "@/lib/email";
+import {
+  downloadFileBuffer,
+  getDriveFileMeta,
+  parseDriveFileIdFromUrl,
+} from "@/lib/google-drive";
+import { getDriveAccessTokenForClient } from "@/lib/google-drive-access";
 import { prisma } from "@/lib/prisma";
 
 export const VRC_BILLING_EMAIL_SIGNATURE = {
@@ -25,11 +31,29 @@ function resolveVrcRecipient(intendedEmail: string): {
   return { to: redirect, redirected: true };
 }
 
+type EmailAttachment = {
+  filename: string;
+  content: string;
+  contentType?: string;
+};
+
+type InvoiceAttachmentRecord = {
+  id: string;
+  filename: string;
+  blobUrl: string;
+  contentType: string;
+};
+
 export type VrcBillingEmailResult = {
   sent: number;
   skipped: string[];
   errors: string[];
 };
+
+/** Session/supporting files for VRC email — excludes invoice PDFs. */
+function isVrcEmailAttachment(filename: string): boolean {
+  return !/invoice/i.test(filename);
+}
 
 function formatServiceDatesPhrase(dates: Date[]): string {
   const unique = [...new Set(dates.map((d) => calendarIsoFromDate(d)))].sort();
@@ -55,20 +79,62 @@ function vrcFirstName(vrcName: string): string {
   return first;
 }
 
-function buildVrcEmailBody(vrcName: string, serviceDates: Date[]): string {
+function buildVrcEmailBody(vrcName: string, serviceDates: Date[], hasAttachments: boolean): string {
   const greetingName = vrcFirstName(vrcName);
   const serviceDatePhrase = formatServiceDatesPhrase(serviceDates);
   const { name, phone, email } = VRC_BILLING_EMAIL_SIGNATURE;
+  const sessionLine = hasAttachments
+    ? `Please find attached documentation of the BHI session conducted with the client on ${serviceDatePhrase}.`
+    : `This confirms that a BHI session was conducted with the client on ${serviceDatePhrase}.`;
 
   return [
     `Dear ${greetingName},`,
     "",
-    `This confirms that a BHI session was conducted with the client on ${serviceDatePhrase}.`,
+    sessionLine,
     "",
     name,
     `M: ${phone}`,
     `E: ${email}`,
   ].join("\n");
+}
+
+async function loadAttachmentForEmail(
+  accessToken: string,
+  attachment: InvoiceAttachmentRecord,
+): Promise<EmailAttachment> {
+  const fileId = parseDriveFileIdFromUrl(attachment.blobUrl);
+  if (!fileId) {
+    throw new Error(`Could not read Google Drive file link for ${attachment.filename}.`);
+  }
+
+  const meta = await getDriveFileMeta(accessToken, fileId);
+  const buffer = await downloadFileBuffer(accessToken, {
+    id: meta.id,
+    name: meta.name,
+    mimeType: meta.mimeType,
+  });
+
+  return {
+    filename: attachment.filename,
+    content: buffer.toString("base64"),
+    contentType: attachment.contentType || meta.mimeType,
+  };
+}
+
+function collectVrcAttachments(
+  attachments: InvoiceAttachmentRecord[],
+): InvoiceAttachmentRecord[] {
+  const seen = new Set<string>();
+  const eligible: InvoiceAttachmentRecord[] = [];
+
+  for (const attachment of attachments) {
+    if (!isVrcEmailAttachment(attachment.filename)) continue;
+    if (seen.has(attachment.id)) continue;
+    seen.add(attachment.id);
+    eligible.push(attachment);
+  }
+
+  return eligible;
 }
 
 export async function emailVrcsForPayPeriod(options: {
@@ -94,7 +160,9 @@ export async function emailVrcsForPayPeriod(options: {
           vrcEmail: true,
         },
       },
+      therapist: { select: { id: true } },
       lineItems: { select: { serviceDate: true } },
+      attachments: true,
     },
     orderBy: [{ client: { lastName: "asc" } }, { invoiceNumber: "asc" }],
   });
@@ -107,7 +175,9 @@ export async function emailVrcsForPayPeriod(options: {
     string,
     {
       client: (typeof invoices)[number]["client"];
+      therapistId: string;
       lineItems: Date[];
+      attachments: InvoiceAttachmentRecord[];
     }
   >();
 
@@ -115,17 +185,20 @@ export async function emailVrcsForPayPeriod(options: {
     const existing = byClient.get(invoice.clientId);
     if (existing) {
       existing.lineItems.push(...invoice.lineItems.map((line) => line.serviceDate));
+      existing.attachments.push(...invoice.attachments);
       continue;
     }
     byClient.set(invoice.clientId, {
       client: invoice.client,
+      therapistId: invoice.therapistId,
       lineItems: invoice.lineItems.map((line) => line.serviceDate),
+      attachments: [...invoice.attachments],
     });
   }
 
   const result: VrcBillingEmailResult = { sent: 0, skipped: [], errors: [] };
 
-  for (const { client, lineItems } of byClient.values()) {
+  for (const { client, therapistId, lineItems, attachments } of byClient.values()) {
     const label = `${client.lniClaimNumber} (${client.lastName}, ${client.firstName})`;
 
     if (!client.vrcEmail?.trim()) {
@@ -133,26 +206,47 @@ export async function emailVrcsForPayPeriod(options: {
       continue;
     }
 
+    const vrcAttachments = collectVrcAttachments(attachments);
+    if (vrcAttachments.length === 0) {
+      result.skipped.push(`${label}: no session files (invoice PDFs are not emailed to VRCs)`);
+      continue;
+    }
+
     try {
+      const accessToken = await getDriveAccessTokenForClient({
+        therapistId,
+        initiatorUserId: options.initiatorUserId,
+      });
+
+      const emailAttachments: EmailAttachment[] = [];
+      for (const attachment of vrcAttachments) {
+        emailAttachments.push(await loadAttachmentForEmail(accessToken, attachment));
+      }
+
       const vrcName = client.vrcName?.trim() || "VRC";
       const intendedEmail = client.vrcEmail.trim();
       const { to, redirected } = resolveVrcRecipient(intendedEmail);
       const subject = redirected
         ? `[TEST] BHI session notification — ${client.lniClaimNumber} (for ${vrcFirstName(vrcName)})`
         : `BHI session notification — ${client.lniClaimNumber}`;
-      const body = buildVrcEmailBody(vrcName, lineItems);
+      const body = buildVrcEmailBody(vrcName, lineItems, true);
       const text = redirected
         ? [
             "[TEST MODE — VRC billing emails are redirected]",
             `Intended recipient: ${intendedEmail}`,
             `VRC: ${vrcName}`,
             `Client: ${label}`,
+            `Attachments: ${vrcAttachments.map((a) => a.filename).join(", ")}`,
             "",
             body,
           ].join("\n")
         : body;
 
-      await sendEmailTo(to, { subject, text });
+      await sendEmailTo(to, {
+        subject,
+        text,
+        attachments: emailAttachments,
+      });
 
       result.sent += 1;
     } catch (error) {
