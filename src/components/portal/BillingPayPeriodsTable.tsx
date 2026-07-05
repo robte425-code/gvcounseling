@@ -115,7 +115,7 @@ export function BillingPayPeriodsTable({ rows, defaultUsageIndicator }: Props) {
                   <form action={emailVrcsForPayPeriodAction}>
                     <input type="hidden" name="payPeriodId" value={row.id} />
                     <ConfirmSubmitButton
-                      confirmMessage={`Email VRCs for all billed clients in ${row.periodLabel}? Each VRC will receive session documentation uploaded with their client's invoice.`}
+                      confirmMessage={`Email VRCs for all billed clients in ${row.periodLabel}? Each VRC will receive a notification email with the session date(s).`}
                       className={`${portalButtonSecondaryClass} px-4 py-1.5 text-xs`}
                       disabled={row.billedInvoices === 0}
                     >
