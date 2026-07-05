@@ -70,11 +70,14 @@ export async function matchRemittanceBills(
 
   return bills.map((bill) => {
     const billKeys = billLineKeys(bill);
-    const providerId = normalizeLniProviderId(bill.serviceProviderId);
+    const providerId = bill.serviceProviderId
+      ? normalizeLniProviderId(bill.serviceProviderId)
+      : "";
 
     const candidates = invoices.filter((invoice) => {
       if (usedInvoiceIds.has(invoice.id)) return false;
       if (invoice.client.lniClaimNumber !== bill.claimNumber) return false;
+      if (!providerId) return true;
       const therapistProvider = invoice.therapist.lniProviderId
         ? normalizeLniProviderId(invoice.therapist.lniProviderId)
         : null;
@@ -98,7 +101,9 @@ export async function matchRemittanceBills(
         matchedInvoiceId: null,
         matchNote:
           candidates.length === 0
-            ? `No billed invoice for claim ${bill.claimNumber} / provider ${bill.serviceProviderId}`
+            ? providerId
+              ? `No billed invoice for claim ${bill.claimNumber} / provider ${bill.serviceProviderId}`
+              : `No billed invoice for claim ${bill.claimNumber}`
             : `No invoice matched service lines (${(bestScore * 100).toFixed(0)}% overlap)`,
         paymentStatus: remittanceSectionToPaymentStatus(bill.section),
       };

@@ -222,6 +222,21 @@ function collectProviderMarkers(text: string): ProviderMarker[] {
     });
   }
 
+  const numberOnlyPattern = /SERVICE\s+PROVIDER\s+NUMBER\s+(\d+)\s+NPI\s+(\d+)/gi;
+  let numberMatch: RegExpExecArray | null;
+  while ((numberMatch = numberOnlyPattern.exec(text)) !== null) {
+    const before = text.slice(Math.max(0, numberMatch.index - 40), numberMatch.index);
+    if (/SERVICE\s+PROVIDER\s+NAME\s*$/i.test(before)) continue;
+    const id = normalizeLniProviderId(numberMatch[1]!);
+    markers.push({
+      index: numberMatch.index,
+      id,
+      npi: numberMatch[2]!,
+      name: namesById.get(id) ?? "",
+      kind: "name",
+    });
+  }
+
   const totalsPattern = /TOTALS\s+FOR\s+SERVICE\s+PROVIDER\s+(\d+)\s+NPI\s+(\d+)/gi;
   let totalsMatch: RegExpExecArray | null;
   while ((totalsMatch = totalsPattern.exec(text)) !== null) {
@@ -291,37 +306,60 @@ function findProviderAt(position: number, sections: ProviderSection[]): Provider
   return sections.at(-1)?.provider ?? null;
 }
 
+type BillContext = {
+  section: RemittanceBillSection;
+  serviceProviderId: string;
+  serviceProviderNpi: string;
+  serviceProviderName: string;
+};
+
 function findContextAt(
-  position: number,
+  providerPosition: number,
+  billSectionPosition: number,
   providerSections: ProviderSection[],
   sections: Array<{ index: number; section: RemittanceBillSection }>,
-) {
+  lastProvider: BillContext | null,
+): BillContext {
   let section: RemittanceBillSection = "PAID";
 
   for (const marker of sections) {
-    if (marker.index <= position) section = marker.section;
+    if (marker.index <= billSectionPosition) section = marker.section;
     else break;
   }
 
-  const provider = findProviderAt(position, providerSections);
-  if (!provider) {
-    throw new Error("Could not determine service provider for remittance bill.");
+  const provider = findProviderAt(providerPosition, providerSections);
+  if (provider) {
+    return {
+      section,
+      serviceProviderId: provider.id,
+      serviceProviderNpi: provider.npi,
+      serviceProviderName: provider.name,
+    };
+  }
+
+  if (lastProvider) {
+    return { ...lastProvider, section };
   }
 
   return {
     section,
-    serviceProviderId: provider.id,
-    serviceProviderNpi: provider.npi,
-    serviceProviderName: provider.name,
+    serviceProviderId: "",
+    serviceProviderNpi: "",
+    serviceProviderName: "",
   };
 }
 
-function parseDetailBills(text: string): RemittanceBill[] {
-  const normalized = normalizeWhitespace(text);
+function parseDetailBills(
+  detailText: string,
+  fullText: string,
+  detailOffset: number,
+): RemittanceBill[] {
+  const normalized = normalizeWhitespace(detailText);
+  const fullNormalized = normalizeWhitespace(fullText);
   const bills: RemittanceBill[] = [];
 
-  const providerMarkers = collectProviderMarkers(normalized);
-  const providerSections = buildProviderSections(normalized, providerMarkers);
+  const providerMarkers = collectProviderMarkers(fullNormalized);
+  const providerSections = buildProviderSections(fullNormalized, providerMarkers);
 
   const sections: Array<{ index: number; section: RemittanceBillSection }> = [];
   const sectionPattern =
@@ -346,6 +384,7 @@ function parseDetailBills(text: string): RemittanceBill[] {
 
   const detailStart = normalized.search(/REMITTANCE ADVICE DETAIL/i);
 
+  let lastProvider: BillContext | null = null;
   for (let i = 0; i < billStarts.length; i++) {
     const patStart = billStarts[i]!;
     const prevPatEnd =
@@ -363,7 +402,21 @@ function parseDetailBills(text: string): RemittanceBill[] {
 
     const bodyBeforePat = normalized.slice(prevPatEnd, patStart);
     const patAndTotal = normalized.slice(patStart, totalEnd);
-    const context = findContextAt(patStart, providerSections, sections);
+    const context = findContextAt(
+      patStart + detailOffset,
+      patStart,
+      providerSections,
+      sections,
+      lastProvider,
+    );
+    if (context.serviceProviderId) {
+      lastProvider = {
+        serviceProviderId: context.serviceProviderId,
+        serviceProviderNpi: context.serviceProviderNpi,
+        serviceProviderName: context.serviceProviderName,
+        section: context.section,
+      };
+    }
     const bill = parseBillChunk(bodyBeforePat, patAndTotal, context);
     if (bill) bills.push(bill);
   }
@@ -410,7 +463,7 @@ export function parseLniRemittanceText(text: string): ParsedRemittanceAdvice {
 
   const detailStart = normalized.search(/REMITTANCE ADVICE DETAIL/i);
   const detailText = detailStart >= 0 ? normalized.slice(detailStart) : normalized;
-  const bills = parseDetailBills(detailText);
+  const bills = parseDetailBills(detailText, normalized, detailStart >= 0 ? detailStart : 0);
   const eobCodeDescriptions = extractEobDescriptions(normalized);
 
   if (!bills.length) {
@@ -431,8 +484,8 @@ export function parseLniRemittanceText(text: string): ParsedRemittanceAdvice {
 }
 
 export async function parseLniRemittancePdf(buffer: Buffer): Promise<ParsedRemittanceAdvice> {
-  const { extractPdfText } = await import("@/lib/pdf-text");
-  const result = await extractPdfText(buffer);
+  const { extractRemittancePdfText } = await import("@/lib/pdf-text");
+  const result = await extractRemittancePdfText(buffer);
   if (!result.text.trim()) {
     throw new Error(result.parseError ?? result.ocrError ?? "Could not extract text from remittance PDF.");
   }
