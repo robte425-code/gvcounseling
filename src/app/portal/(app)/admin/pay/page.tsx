@@ -1,17 +1,23 @@
 import Link from "next/link";
 import { requireAdmin } from "@/auth";
-import { RemittanceImportForm } from "@/components/portal/RemittancePayPanel";
+import { RemittanceImportForm, DeleteRemittancePreviewForm } from "@/components/portal/RemittancePayPanel";
 import { portalCardClass, portalSectionHeadingClass } from "@/components/portal/ui";
 import { formatCurrency, formatDate } from "@/lib/constants";
 import { prisma } from "@/lib/prisma";
 
-export default async function PayPage() {
+export default async function PayPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ deleted?: string }>;
+}) {
   await requireAdmin();
+  const query = await searchParams;
 
   const remittances = await prisma.remittanceAdvice.findMany({
     orderBy: { invoiceDate: "desc" },
     include: {
       _count: { select: { lines: true } },
+      lines: { select: { matchedInvoiceId: true } },
       payRun: {
         include: {
           payouts: {
@@ -22,6 +28,12 @@ export default async function PayPage() {
     },
   });
 
+  const previewUnmatched = remittances.filter(
+    (remittance) =>
+      remittance.status === "PREVIEW" &&
+      remittance.lines.some((line) => !line.matchedInvoiceId),
+  );
+
   return (
     <div className="space-y-8">
       <div>
@@ -31,6 +43,24 @@ export default async function PayPage() {
           payment status, and calculate therapist pay from fee schedules.
         </p>
       </div>
+
+      {query.deleted === "1" && (
+        <p className="rounded-xl bg-primary/10 px-4 py-3 text-sm text-primary-dark" role="status">
+          Preview remittance deleted. You can import the same PDF again.
+        </p>
+      )}
+
+      {previewUnmatched.length > 0 && (
+        <p className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-900" role="alert">
+          <span className="font-semibold">
+            {previewUnmatched.length} preview remittance
+            {previewUnmatched.length === 1 ? "" : "s"} with unmatched bills
+          </span>
+          {" — "}
+          every bill must match an invoice before applying. Open each preview below to resolve
+          matching issues.
+        </p>
+      )}
 
       <section className={portalCardClass}>
         <p className={portalSectionHeadingClass}>Import</p>
@@ -55,34 +85,61 @@ export default async function PayPage() {
                 (sum, payout) => sum + Number(payout.therapistAmount),
                 0,
               );
+              const unmatchedCount = remittance.lines.filter(
+                (line) => !line.matchedInvoiceId,
+              ).length;
+              const hasUnmatchedPreview =
+                remittance.status === "PREVIEW" && unmatchedCount > 0;
               return (
                 <li
                   key={remittance.id}
-                  className="rounded-xl border border-border bg-primary/[0.02] p-4 transition hover:border-primary/20"
+                  className={`rounded-xl border p-4 transition ${
+                    hasUnmatchedPreview
+                      ? "border-red-300 bg-red-50/40 hover:border-red-400"
+                      : "border-border bg-primary/[0.02] hover:border-primary/20"
+                  }`}
                 >
-                  <Link href={`/portal/admin/pay/${remittance.id}`} className="block">
-                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                      <div>
-                        <p className="font-medium text-primary-dark">
-                          RA {remittance.remittanceNumber} · {formatDate(remittance.invoiceDate)}
-                        </p>
-                        <p className="mt-1 text-xs text-muted">
-                          Warrant {remittance.warrantRegister} · {remittance._count.lines} bills ·{" "}
-                          {remittance.status === "APPLIED" ? "Applied" : "Preview"}
-                        </p>
-                      </div>
-                      <div className="text-sm">
-                        <p className="font-semibold text-primary-dark">
-                          L&I paid {formatCurrency(Number(remittance.totalPaid))}
-                        </p>
-                        {therapistTotal != null && (
-                          <p className="text-xs text-muted">
-                            Therapist pay {formatCurrency(therapistTotal)}
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <Link href={`/portal/admin/pay/${remittance.id}`} className="block min-w-0 flex-1">
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                          <p className="font-medium text-primary-dark">
+                            RA {remittance.remittanceNumber} · {formatDate(remittance.invoiceDate)}
                           </p>
-                        )}
+                          <p className="mt-1 text-xs text-muted">
+                            Warrant {remittance.warrantRegister} · {remittance._count.lines} bills ·{" "}
+                            {remittance.status === "APPLIED" ? "Applied" : "Preview"}
+                            {hasUnmatchedPreview && (
+                              <>
+                                {" · "}
+                                <span className="font-medium text-red-800">
+                                  {unmatchedCount} unmatched
+                                </span>
+                              </>
+                            )}
+                          </p>
+                        </div>
+                        <div className="text-sm">
+                          <p className="font-semibold text-primary-dark">
+                            L&I paid {formatCurrency(Number(remittance.totalPaid))}
+                          </p>
+                          {therapistTotal != null && (
+                            <p className="text-xs text-muted">
+                              Therapist pay {formatCurrency(therapistTotal)}
+                            </p>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  </Link>
+                    </Link>
+                    {remittance.status === "PREVIEW" && (
+                      <DeleteRemittancePreviewForm
+                        remittanceAdviceId={remittance.id}
+                        remittanceNumber={remittance.remittanceNumber}
+                        warrantRegister={remittance.warrantRegister}
+                        compact
+                      />
+                    )}
+                  </div>
                 </li>
               );
             })}

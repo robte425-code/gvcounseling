@@ -199,6 +199,20 @@ export async function importRemittancePreview(options: {
   return { remittanceAdviceId: remittance.id };
 }
 
+export async function deleteRemittancePreview(remittanceAdviceId: string): Promise<void> {
+  const remittance = await prisma.remittanceAdvice.findUnique({
+    where: { id: remittanceAdviceId },
+    select: { id: true, status: true, remittanceNumber: true, warrantRegister: true },
+  });
+
+  if (!remittance) throw new Error("Remittance advice not found.");
+  if (remittance.status !== "PREVIEW") {
+    throw new Error("Only preview remittances can be deleted.");
+  }
+
+  await prisma.remittanceAdvice.delete({ where: { id: remittanceAdviceId } });
+}
+
 export async function applyRemittanceAdvice(remittanceAdviceId: string): Promise<void> {
   const remittance = await prisma.remittanceAdvice.findUnique({
     where: { id: remittanceAdviceId },
@@ -220,6 +234,13 @@ export async function applyRemittanceAdvice(remittanceAdviceId: string): Promise
 
   if (!remittance) throw new Error("Remittance advice not found.");
   if (remittance.status === "APPLIED") throw new Error("This remittance has already been applied.");
+
+  const unmatchedCount = remittance.lines.filter((line) => !line.matchedInvoiceId).length;
+  if (unmatchedCount > 0) {
+    throw new Error(
+      `Cannot apply remittance: ${unmatchedCount} bill(s) could not be matched to an invoice. Fix matching before applying.`,
+    );
+  }
 
   const therapistPayPreview = await buildTherapistPayPreview(
     remittance.lines.map((line) => ({

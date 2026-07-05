@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireAdmin } from "@/auth";
-import { ApplyRemittanceForm } from "@/components/portal/RemittancePayPanel";
+import { ApplyRemittanceForm, DeleteRemittancePreviewForm } from "@/components/portal/RemittancePayPanel";
 import {
   portalButtonSecondaryClass,
   portalCardClass,
@@ -145,6 +145,17 @@ export default async function PayRemittanceDetailPage({
         </p>
       )}
 
+      {remittance.status === "PREVIEW" && unmatchedCount > 0 && (
+        <p className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-900" role="alert">
+          <span className="font-semibold">
+            {unmatchedCount} unmatched bill{unmatchedCount === 1 ? "" : "s"}
+          </span>
+          {" — "}
+          every bill must match an invoice before this remittance can be applied. Review each
+          unmatched bill below and fix missing invoices or matching issues.
+        </p>
+      )}
+
       <div className="grid gap-6 lg:grid-cols-12">
         <section className={`${portalCardClass} lg:col-span-8`}>
           <p className={portalSectionHeadingClass}>Bills</p>
@@ -155,7 +166,11 @@ export default async function PayRemittanceDetailPage({
             {remittance.lines.map((line) => (
               <li
                 key={line.id}
-                className="rounded-lg border border-border px-3 py-2 text-sm"
+                className={`rounded-lg border px-3 py-2 text-sm ${
+                  !line.matchedInvoiceId
+                    ? "border-red-300 bg-red-50/50"
+                    : "border-border"
+                }`}
               >
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
@@ -226,12 +241,17 @@ export default async function PayRemittanceDetailPage({
           </ul>
 
           {remittance.status === "PREVIEW" && (
-            <div className="mt-6 border-t border-border pt-6">
+            <div className="mt-6 space-y-4 border-t border-border pt-6">
               <ApplyRemittanceForm
                 remittanceAdviceId={remittance.id}
                 matchedCount={matchedCount}
                 unmatchedCount={unmatchedCount}
                 therapistTotal={therapistTotal}
+              />
+              <DeleteRemittancePreviewForm
+                remittanceAdviceId={remittance.id}
+                remittanceNumber={remittance.remittanceNumber}
+                warrantRegister={remittance.warrantRegister}
               />
             </div>
           )}

@@ -26,7 +26,7 @@ import { prisma } from "@/lib/prisma";
 import { getNextInvoiceNumber } from "@/lib/invoice-numbers";
 import { emailVrcsForPayPeriod, parseVrcEmailDestinationParam } from "@/lib/vrc-billing-emails";
 import { faxLniForPayPeriod, parseLniFaxDestinationParam } from "@/lib/lni-billing-faxes";
-import { applyRemittanceAdvice, importRemittanceFromUpload } from "@/lib/remittance-advice";
+import { applyRemittanceAdvice, deleteRemittancePreview, importRemittanceFromUpload } from "@/lib/remittance-advice";
 
 function parseDecimal(value: FormDataEntryValue | null): number {
   const n = parseFloat(String(value ?? "0"));
@@ -1516,6 +1516,28 @@ export async function deleteClientNoteAction(formData: FormData) {
 }
 
 export type ApplyRemittanceState = { error?: string };
+
+export type DeleteRemittancePreviewState = { error?: string };
+
+export async function deleteRemittancePreviewAction(
+  _prevState: DeleteRemittancePreviewState,
+  formData: FormData,
+): Promise<DeleteRemittancePreviewState> {
+  await requireAdmin();
+  const remittanceAdviceId = String(formData.get("remittanceAdviceId") ?? "").trim();
+  if (!remittanceAdviceId) return { error: "Remittance is required." };
+
+  try {
+    await deleteRemittancePreview(remittanceAdviceId);
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : "Could not delete remittance.",
+    };
+  }
+
+  revalidatePath("/portal/admin/pay");
+  redirect("/portal/admin/pay?deleted=1");
+}
 
 export async function importRemittanceAdviceAction(formData: FormData) {
   const session = await requireAdmin();

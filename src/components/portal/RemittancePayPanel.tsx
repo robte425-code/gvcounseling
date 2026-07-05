@@ -4,10 +4,12 @@ import { useActionState, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   applyRemittanceAdviceAction,
+  deleteRemittancePreviewAction,
   type ApplyRemittanceState,
+  type DeleteRemittancePreviewState,
 } from "@/lib/portal-actions";
 import { ConfirmSubmitButton } from "@/components/portal/ConfirmSubmitButton";
-import { portalButtonClass, portalLabelCompactClass } from "@/components/portal/ui";
+import { portalButtonClass, portalButtonSecondaryClass, portalLabelCompactClass } from "@/components/portal/ui";
 
 export function RemittanceImportForm() {
   const router = useRouter();
@@ -86,21 +88,78 @@ export function ApplyRemittanceForm({
   therapistTotal,
 }: ApplyProps) {
   const [state, formAction, pending] = useActionState(applyRemittanceAdviceAction, applyInitialState);
+  const hasUnmatched = unmatchedCount > 0;
 
   return (
     <form action={formAction}>
       <input type="hidden" name="remittanceAdviceId" value={remittanceAdviceId} />
+      {hasUnmatched && (
+        <p className="mb-3 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-900" role="alert">
+          <span className="font-semibold">
+            {unmatchedCount} unmatched bill{unmatchedCount === 1 ? "" : "s"}
+          </span>
+          {" — "}
+          every bill must match an invoice before this remittance can be applied. Review the bills
+          list and resolve missing invoices or matching issues.
+        </p>
+      )}
       {state.error && (
         <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800" role="alert">
           {state.error}
         </p>
       )}
       <ConfirmSubmitButton
-        confirmMessage={`Apply this remittance?\n\n${matchedCount} matched bill(s) will update invoice payment status (paid, denied, or in-process).\n${unmatchedCount} unmatched bill(s) will be recorded only.\n\nTherapist pay total: $${therapistTotal.toFixed(2)} (from fee schedule on paid invoices).`}
+        confirmMessage={`Apply this remittance?\n\n${matchedCount} matched bill(s) will update invoice payment status (paid, denied, or in-process).\n\nTherapist pay total: $${therapistTotal.toFixed(2)} (from fee schedule on paid invoices).`}
         className={portalButtonClass}
-        disabled={pending}
+        disabled={pending || hasUnmatched}
       >
         {pending ? "Applying…" : "Apply remittance & create pay run"}
+      </ConfirmSubmitButton>
+    </form>
+  );
+}
+
+type DeletePreviewProps = {
+  remittanceAdviceId: string;
+  remittanceNumber: string;
+  warrantRegister: string;
+  compact?: boolean;
+};
+
+const deletePreviewInitialState: DeleteRemittancePreviewState = {};
+
+export function DeleteRemittancePreviewForm({
+  remittanceAdviceId,
+  remittanceNumber,
+  warrantRegister,
+  compact = false,
+}: DeletePreviewProps) {
+  const [state, formAction, pending] = useActionState(
+    deleteRemittancePreviewAction,
+    deletePreviewInitialState,
+  );
+
+  return (
+    <form action={formAction} className={compact ? "shrink-0" : undefined}>
+      <input type="hidden" name="remittanceAdviceId" value={remittanceAdviceId} />
+      {state.error && (
+        <p
+          className={`${compact ? "mb-2" : "mb-3"} rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800`}
+          role="alert"
+        >
+          {state.error}
+        </p>
+      )}
+      <ConfirmSubmitButton
+        confirmMessage={`Delete preview for remittance ${remittanceNumber} (warrant ${warrantRegister})?\n\nYou can import the same PDF again afterward.`}
+        className={
+          compact
+            ? `${portalButtonSecondaryClass} border-red-200 px-3 py-1.5 text-xs text-red-700 hover:bg-red-50`
+            : `${portalButtonSecondaryClass} border-red-200 text-red-700 hover:bg-red-50`
+        }
+        disabled={pending}
+      >
+        {pending ? "Deleting…" : compact ? "Delete" : "Delete preview"}
       </ConfirmSubmitButton>
     </form>
   );
