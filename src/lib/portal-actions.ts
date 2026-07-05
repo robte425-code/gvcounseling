@@ -26,9 +26,7 @@ import { prisma } from "@/lib/prisma";
 import { getNextInvoiceNumber } from "@/lib/invoice-numbers";
 import { emailVrcsForPayPeriod, parseVrcEmailDestinationParam } from "@/lib/vrc-billing-emails";
 import { faxLniForPayPeriod, parseLniFaxDestinationParam } from "@/lib/lni-billing-faxes";
-import { matchRemittanceBills } from "@/lib/match-remittance-to-invoices";
-import { parseLniRemittancePdf } from "@/lib/parse-lni-remittance-pdf";
-import { applyRemittanceAdvice, importRemittancePreview } from "@/lib/remittance-advice";
+import { applyRemittanceAdvice, importRemittanceFromUpload } from "@/lib/remittance-advice";
 
 function parseDecimal(value: FormDataEntryValue | null): number {
   const n = parseFloat(String(value ?? "0"));
@@ -1517,6 +1515,8 @@ export async function deleteClientNoteAction(formData: FormData) {
   redirect(`${returnTo}${separator}noteDeleted=1`);
 }
 
+export type ApplyRemittanceState = { error?: string };
+
 export async function importRemittanceAdviceAction(formData: FormData) {
   const session = await requireAdmin();
   const file = formData.get("file");
@@ -1525,11 +1525,8 @@ export async function importRemittanceAdviceAction(formData: FormData) {
   }
 
   const buffer = Buffer.from(await file.arrayBuffer());
-  const parsed = await parseLniRemittancePdf(buffer);
-  const matches = await matchRemittanceBills(parsed.bills);
-  const { remittanceAdviceId } = await importRemittancePreview({
-    parsed,
-    matches,
+  const { remittanceAdviceId } = await importRemittanceFromUpload({
+    buffer,
     sourceFilename: file.name,
     importedById: session.user.id,
   });
@@ -1538,12 +1535,21 @@ export async function importRemittanceAdviceAction(formData: FormData) {
   redirect(`/portal/admin/pay/${remittanceAdviceId}`);
 }
 
-export async function applyRemittanceAdviceAction(formData: FormData) {
+export async function applyRemittanceAdviceAction(
+  _prevState: ApplyRemittanceState,
+  formData: FormData,
+): Promise<ApplyRemittanceState> {
   await requireAdmin();
   const remittanceAdviceId = String(formData.get("remittanceAdviceId") ?? "").trim();
-  if (!remittanceAdviceId) throw new Error("Remittance is required.");
+  if (!remittanceAdviceId) return { error: "Remittance is required." };
 
-  await applyRemittanceAdvice(remittanceAdviceId);
+  try {
+    await applyRemittanceAdvice(remittanceAdviceId);
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : "Could not apply remittance.",
+    };
+  }
 
   revalidatePath("/portal/admin/pay");
   revalidatePath(`/portal/admin/pay/${remittanceAdviceId}`);

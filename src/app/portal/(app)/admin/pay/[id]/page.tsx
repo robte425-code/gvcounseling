@@ -77,32 +77,39 @@ export default async function PayRemittanceDetailPage({
   const matchedCount = remittance.lines.filter((line) => line.matchedInvoiceId).length;
   const unmatchedCount = remittance.lines.length - matchedCount;
 
-  const therapistPayPreview =
-    remittance.status === "PREVIEW"
-      ? await buildTherapistPayPreview(
-          remittance.lines.map((line) => ({
-            bill: {
-              section: line.section,
-              claimNumber: line.claimNumber,
-              icn: line.icn,
-              patientName: line.patientName ?? "",
-              serviceProviderId: line.serviceProviderId,
-              serviceProviderNpi: line.serviceProviderNpi ?? "",
-              serviceProviderName: line.serviceProviderName ?? "",
-              serviceLines: line.serviceLines as never,
-              billTotalBilled: 0,
-              billTotalAllowed: 0,
-              billTotalNonCovered: 0,
-              billTotalPayable: Number(line.billTotalPayable),
-              eobCodes: line.eobCodes,
-            },
-            matchedInvoiceId: line.matchedInvoiceId,
-            matchNote: line.matchNote,
-            paymentStatus:
-              line.section === "PAID" ? "PAID" : line.section === "DENIED" ? "DENIED" : "UNPAID",
-          })),
-        )
-      : [];
+  let therapistPayPreview: Awaited<ReturnType<typeof buildTherapistPayPreview>> = [];
+  let therapistPayPreviewError: string | null = null;
+
+  if (remittance.status === "PREVIEW") {
+    try {
+      therapistPayPreview = await buildTherapistPayPreview(
+        remittance.lines.map((line) => ({
+          bill: {
+            section: line.section,
+            claimNumber: line.claimNumber,
+            icn: line.icn,
+            patientName: line.patientName ?? "",
+            serviceProviderId: line.serviceProviderId,
+            serviceProviderNpi: line.serviceProviderNpi ?? "",
+            serviceProviderName: line.serviceProviderName ?? "",
+            serviceLines: line.serviceLines as never,
+            billTotalBilled: 0,
+            billTotalAllowed: 0,
+            billTotalNonCovered: 0,
+            billTotalPayable: Number(line.billTotalPayable),
+            eobCodes: line.eobCodes,
+          },
+          matchedInvoiceId: line.matchedInvoiceId,
+          matchNote: line.matchNote,
+          paymentStatus:
+            line.section === "PAID" ? "PAID" : line.section === "DENIED" ? "DENIED" : "UNPAID",
+        })),
+      );
+    } catch (error) {
+      therapistPayPreviewError =
+        error instanceof Error ? error.message : "Could not calculate therapist pay preview.";
+    }
+  }
 
   const therapistTotal = therapistPayPreview.reduce(
     (sum, payout) => sum + payout.therapistAmount,
@@ -189,6 +196,11 @@ export default async function PayRemittanceDetailPage({
           <p className="mt-1 text-xs text-muted">
             Based on therapist fee schedules for L&I-paid invoices only.
           </p>
+          {therapistPayPreviewError && (
+            <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900" role="alert">
+              {therapistPayPreviewError}
+            </p>
+          )}
 
           <ul className="mt-4 space-y-3">
             {(remittance.status === "APPLIED"

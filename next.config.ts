@@ -5,6 +5,12 @@ const nextConfig: NextConfig = {
     formats: ["image/avif", "image/webp"],
   },
   serverExternalPackages: ["pdfjs-dist", "word-extractor"],
+  experimental: {
+    serverActions: {
+      bodySizeLimit: "5mb",
+    },
+    proxyClientMaxBodySize: "5mb",
+  },
 };
 
 export default nextConfig;

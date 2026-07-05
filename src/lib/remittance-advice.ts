@@ -1,5 +1,7 @@
 import type { PaymentStatus, Prisma } from "@/generated/prisma/client";
+import { matchRemittanceBills } from "@/lib/match-remittance-to-invoices";
 import type { MatchedRemittanceBill } from "@/lib/match-remittance-to-invoices";
+import { parseLniRemittancePdf } from "@/lib/parse-lni-remittance-pdf";
 import type { ParsedRemittanceAdvice } from "@/lib/parse-lni-remittance-pdf";
 import { resolveFeeAmount } from "@/lib/procedure-fee-schedule";
 import { prisma } from "@/lib/prisma";
@@ -128,12 +130,27 @@ export async function buildTherapistPayPreview(
   return [...payouts.values()].sort((a, b) => a.therapistName.localeCompare(b.therapistName));
 }
 
+export async function importRemittanceFromUpload(options: {
+  buffer: Buffer;
+  sourceFilename: string;
+  importedById: string;
+}): Promise<{ remittanceAdviceId: string }> {
+  const parsed = await parseLniRemittancePdf(options.buffer);
+  const matches = await matchRemittanceBills(parsed.bills);
+  return importRemittancePreview({
+    parsed,
+    matches,
+    sourceFilename: options.sourceFilename,
+    importedById: options.importedById,
+  });
+}
+
 export async function importRemittancePreview(options: {
   parsed: ParsedRemittanceAdvice;
   matches: MatchedRemittanceBill[];
   sourceFilename?: string;
   importedById: string;
-}): Promise<{ remittanceAdviceId: string; therapistPayPreview: TherapistPayPreview[] }> {
+}): Promise<{ remittanceAdviceId: string }> {
   const existing = await prisma.remittanceAdvice.findUnique({
     where: {
       remittanceNumber_warrantRegister: {
@@ -147,8 +164,6 @@ export async function importRemittancePreview(options: {
       `Remittance ${options.parsed.remittanceNumber} (warrant ${options.parsed.warrantRegister}) was already imported.`,
     );
   }
-
-  const therapistPayPreview = await buildTherapistPayPreview(options.matches);
 
   const remittance = await prisma.remittanceAdvice.create({
     data: {
@@ -181,7 +196,7 @@ export async function importRemittancePreview(options: {
     },
   });
 
-  return { remittanceAdviceId: remittance.id, therapistPayPreview };
+  return { remittanceAdviceId: remittance.id };
 }
 
 export async function applyRemittanceAdvice(remittanceAdviceId: string): Promise<void> {
