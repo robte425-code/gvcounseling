@@ -2,11 +2,10 @@
 
 import Link from "next/link";
 import { useRef } from "react";
-import type { InvoiceStatus } from "@/generated/prisma/client";
 import {
   INVOICE_PAYMENT_FILTER_OPTIONS,
-  type InvoicePaymentFilter,
   type PayPeriodFilterOption,
+  type TherapistInvoiceFilterValues,
 } from "@/lib/invoice-list-filters";
 import {
   portalButtonSecondaryClass,
@@ -14,11 +13,7 @@ import {
   portalLabelCompactClass,
 } from "@/components/portal/ui";
 
-export type TherapistInvoiceFilterValues = {
-  status?: InvoiceStatus;
-  payPeriodId?: string;
-  paymentStatus?: InvoicePaymentFilter;
-};
+export type { TherapistInvoiceFilterValues, PayPeriodFilterOption };
 
 const STATUS_OPTIONS = [
   { value: "", label: "All statuses" },
@@ -26,15 +21,6 @@ const STATUS_OPTIONS = [
   { value: "SUBMITTED", label: "Submitted" },
   { value: "BILLED", label: "Billed" },
 ] as const;
-
-export function buildTherapistInvoicesHref(values: TherapistInvoiceFilterValues): string {
-  const params = new URLSearchParams();
-  if (values.status) params.set("status", values.status);
-  if (values.payPeriodId) params.set("payPeriodId", values.payPeriodId);
-  if (values.paymentStatus) params.set("paymentStatus", values.paymentStatus);
-  const query = params.toString();
-  return query ? `/portal/therapist/invoices?${query}` : "/portal/therapist/invoices";
-}
 
 type Props = {
   payPeriods: PayPeriodFilterOption[];

@@ -1,9 +1,6 @@
 import Link from "next/link";
 import { requireTherapist } from "@/auth";
-import {
-  TherapistInvoiceFilters,
-  type TherapistInvoiceFilterValues,
-} from "@/components/portal/TherapistInvoiceFilters";
+import { TherapistInvoiceFilters } from "@/components/portal/TherapistInvoiceFilters";
 import {
   TherapistInvoicesTable,
   type TherapistInvoiceRow,
@@ -21,6 +18,7 @@ import {
   invoicePaymentWhere,
   isInvoicePaymentFilter,
   mergeInvoiceWhere,
+  type TherapistInvoiceFilterValues,
 } from "@/lib/invoice-list-filters";
 import { prisma } from "@/lib/prisma";
 import type { InvoiceStatus, Prisma } from "@/generated/prisma/client";

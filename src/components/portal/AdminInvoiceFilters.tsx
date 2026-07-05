@@ -2,11 +2,11 @@
 
 import Link from "next/link";
 import { useRef } from "react";
-import type { InvoiceStatus } from "@/generated/prisma/client";
 import {
   INVOICE_PAYMENT_FILTER_OPTIONS,
-  type InvoicePaymentFilter,
+  type AdminInvoiceFilterValues,
   type PayPeriodFilterOption,
+  type TherapistFilterOption,
 } from "@/lib/invoice-list-filters";
 import {
   portalButtonSecondaryClass,
@@ -14,19 +14,7 @@ import {
   portalLabelCompactClass,
 } from "@/components/portal/ui";
 
-export type TherapistFilterOption = {
-  id: string;
-  label: string;
-};
-
-export type { PayPeriodFilterOption };
-
-export type AdminInvoiceFilterValues = {
-  status?: InvoiceStatus;
-  therapistId?: string;
-  payPeriodId?: string;
-  paymentStatus?: InvoicePaymentFilter;
-};
+export type { AdminInvoiceFilterValues, PayPeriodFilterOption, TherapistFilterOption };
 
 const STATUS_OPTIONS = [
   { value: "", label: "All statuses" },
@@ -34,16 +22,6 @@ const STATUS_OPTIONS = [
   { value: "SUBMITTED", label: "Submitted" },
   { value: "BILLED", label: "Billed" },
 ] as const;
-
-export function buildAdminInvoicesHref(values: AdminInvoiceFilterValues): string {
-  const params = new URLSearchParams();
-  if (values.status) params.set("status", values.status);
-  if (values.therapistId) params.set("therapistId", values.therapistId);
-  if (values.payPeriodId) params.set("payPeriodId", values.payPeriodId);
-  if (values.paymentStatus) params.set("paymentStatus", values.paymentStatus);
-  const query = params.toString();
-  return query ? `/portal/admin/invoices?${query}` : "/portal/admin/invoices";
-}
 
 type Props = {
   therapists: TherapistFilterOption[];
