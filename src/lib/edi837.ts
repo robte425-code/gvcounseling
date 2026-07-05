@@ -172,6 +172,16 @@ function buildClaim(hlNumber: number, claim: Edi837Claim): string {
   return out;
 }
 
+function resolveIsaUsageIndicator(): "T" | "P" {
+  const value = process.env.EDI_ISA_USAGE_INDICATOR?.trim().toUpperCase();
+  return value === "P" ? "P" : "T";
+}
+
+/** ISA15 — T = test interchange, P = production. Defaults to T for L&I test uploads. */
+export function getIsaUsageIndicator(): "T" | "P" {
+  return resolveIsaUsageIndicator();
+}
+
 export function buildEdi837(claims: Edi837Claim[], now = new Date()): Edi837Result {
   if (!claims.length) {
     throw new Error("No claims to include in 837 file");
@@ -180,6 +190,7 @@ export function buildEdi837(claims: Edi837Claim[], now = new Date()): Edi837Resu
   const isaControl = generateNumericControl(9);
   const gsControl = padLeft(1, 8);
   const stControl = padLeft(1, 9);
+  const usageIndicator = resolveIsaUsageIndicator();
   const date = formatDate(now);
   const time = formatTime(now);
   const yyMMdd = date.slice(2);
@@ -233,7 +244,7 @@ export function buildEdi837(claims: Edi837Claim[], now = new Date()): Edi837Resu
     "00501",
     isaControl,
     "1",
-    "P",
+    usageIndicator,
     ":",
   );
   isa += gs;

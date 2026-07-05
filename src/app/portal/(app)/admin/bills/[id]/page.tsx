@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { requireAdmin } from "@/auth";
 import { portalButtonClass, portalButtonSecondaryClass, portalCardClass } from "@/components/portal/ui";
 import { formatCurrency, formatDate } from "@/lib/constants";
+import { getIsaUsageIndicator } from "@/lib/edi837";
 import { prisma } from "@/lib/prisma";
 
 export default async function BillDetailPage({
@@ -28,11 +29,21 @@ export default async function BillDetailPage({
   });
   if (!bill) notFound();
 
+  const usageIndicator = getIsaUsageIndicator();
+
   return (
     <div className="space-y-8">
       {generated === "1" && (
         <p className="rounded-xl bg-primary/10 px-4 py-3 text-sm text-primary-dark">
           837 file generated successfully. Invoices are now marked as billed.
+          {usageIndicator === "T" && (
+            <>
+              {" "}
+              This file uses ISA usage indicator <strong>T</strong> (test). After L&I approves your
+              test upload, set <code className="text-xs">EDI_ISA_USAGE_INDICATOR=P</code> in Vercel
+              before generating production bills.
+            </>
+          )}
         </p>
       )}
       <div className="flex flex-wrap items-start justify-between gap-4">
