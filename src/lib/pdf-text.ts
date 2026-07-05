@@ -1,6 +1,5 @@
 import { isTextExtractable } from "@/lib/client-document-types";
 import { ocrPdfBuffer } from "@/lib/google-vision-ocr";
-import { PDFParse } from "pdf-parse";
 
 const MAX_OCR_PAGES = 3;
 
@@ -16,33 +15,31 @@ function isPdfBuffer(buffer: Buffer): boolean {
   return buffer.length >= 4 && buffer.subarray(0, 4).toString() === "%PDF";
 }
 
-async function tryPdfParseExtract(
+async function tryUnpdfExtract(
   buffer: Buffer,
 ): Promise<{ text: string; pages: number; error?: string }> {
-  let parser: PDFParse | null = null;
   try {
-    parser = new PDFParse({ data: buffer });
-    const result = await parser.getText();
-    const text =
-      result.pages.length > 0
-        ? result.pages.map((page) => page.text).join("\n")
-        : result.text;
-    return { text, pages: result.total };
+    const { extractText, getDocumentProxy } = await import("unpdf");
+    const pdf = await getDocumentProxy(new Uint8Array(buffer));
+    const { totalPages, text } = await extractText(pdf, { mergePages: false });
+    const pageTexts = Array.isArray(text) ? text : [text];
+    return {
+      text: pageTexts.join("\n"),
+      pages: totalPages,
+    };
   } catch (e) {
     return {
       text: "",
       pages: 0,
       error: e instanceof Error ? e.message : "PDF text extraction failed",
     };
-  } finally {
-    if (parser) await parser.destroy();
   }
 }
 
 async function extractWithPdfParser(
   buffer: Buffer,
 ): Promise<{ text: string; pages: number; error?: string }> {
-  return tryPdfParseExtract(buffer);
+  return tryUnpdfExtract(buffer);
 }
 
 export async function extractPdfText(buffer: Buffer): Promise<PdfExtractResult> {
