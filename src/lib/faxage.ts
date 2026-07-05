@@ -44,9 +44,50 @@ export type SendFaxOptions = {
 };
 
 export type SendFaxResult = {
-  jobId: string | null;
+  jobId: string;
   raw: string;
 };
+
+/** Faxage tagnumber header format: 1.XXX.XXX.XXXX (14 chars max). */
+export function normalizeFaxageTagNumber(value: string): string {
+  const trimmed = value.trim();
+  if (/^1\.\d{3}\.\d{3}\.\d{4}$/.test(trimmed)) {
+    return trimmed;
+  }
+
+  const digits = trimmed.replace(/\D/g, "");
+  const ten =
+    digits.length === 11 && digits.startsWith("1") ? digits.slice(1) : digits.length === 10 ? digits : null;
+  if (!ten) {
+    throw new Error(
+      `Invalid FAXAGE_TAGNUMBER (expected 10-digit outbound fax or 1.XXX.XXX.XXXX format): ${value}`,
+    );
+  }
+
+  return `1.${ten.slice(0, 3)}.${ten.slice(3, 6)}.${ten.slice(6)}`;
+}
+
+function truncateRecipname(value: string): string {
+  return value.trim().slice(0, 32);
+}
+
+function parseFaxageResponse(raw: string): SendFaxResult {
+  const trimmed = raw.trim();
+  if (!trimmed) {
+    throw new Error("Faxage returned an empty response.");
+  }
+
+  if (/^ERR\d{2}:/i.test(trimmed)) {
+    throw new Error(trimmed);
+  }
+
+  const jobMatch = trimmed.match(/JOBID:\s*(\d+)/i);
+  if (!jobMatch?.[1]) {
+    throw new Error(`Unexpected Faxage response: ${trimmed}`);
+  }
+
+  return { jobId: jobMatch[1], raw: trimmed };
+}
 
 export async function sendFax(options: SendFaxOptions): Promise<SendFaxResult> {
   const config = getFaxageConfig();
@@ -64,10 +105,10 @@ export async function sendFax(options: SendFaxOptions): Promise<SendFaxResult> {
   body.append("company", config.company);
   body.append("password", config.password);
   body.append("operation", "sendfax");
-  body.append("recipname", options.recipname);
+  body.append("recipname", truncateRecipname(options.recipname));
   body.append("faxno", faxno);
   body.append("tagname", config.tagname);
-  body.append("tagnumber", config.tagnumber);
+  body.append("tagnumber", normalizeFaxageTagNumber(config.tagnumber));
 
   for (let i = 0; i < options.filenames.length; i++) {
     body.append("faxfilenames[]", options.filenames[i]!);
@@ -85,11 +126,5 @@ export async function sendFax(options: SendFaxOptions): Promise<SendFaxResult> {
     throw new Error(`Faxage HTTP ${res.status}: ${raw || res.statusText}`);
   }
 
-  const lower = raw.toLowerCase();
-  if (lower.startsWith("err:") || lower.startsWith("error:")) {
-    throw new Error(raw);
-  }
-
-  const jobMatch = raw.match(/jobid[:\s]+(\S+)/i);
-  return { jobId: jobMatch?.[1] ?? null, raw };
+  return parseFaxageResponse(raw);
 }

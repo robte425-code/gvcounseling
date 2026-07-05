@@ -802,7 +802,7 @@ export async function faxLniForPayPeriodAction(formData: FormData) {
   if (!payPeriodId) throw new Error("Pay period is required.");
 
   const lniFaxDestination =
-    parseLniFaxDestinationParam(String(formData.get("lniFaxDestination") ?? "")) ?? "lni";
+    parseLniFaxDestinationParam(String(formData.get("lniFaxDestination") ?? "")) ?? "test";
 
   const result = await faxLniForPayPeriod({
     payPeriodId,

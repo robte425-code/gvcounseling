@@ -92,9 +92,12 @@ export default async function BillingPage({
   const vrcSkipped = params.vrcSkipped?.split(";;").filter(Boolean) ?? [];
   const vrcErrors = params.vrcErrors?.split(";;").filter(Boolean) ?? [];
 
+  const faxSentCount = Number(params.faxSent ?? "0");
   const lniFaxMessage =
     params.lniFaxed === "1"
-      ? `Sent ${params.faxSent ?? "0"} fax${params.faxSent === "1" ? "" : "es"} to L&I (and employer copies where applicable).`
+      ? faxSentCount > 0
+        ? `Sent ${params.faxSent} fax${faxSentCount === 1 ? "" : "es"} to L&I (and employer copies where applicable).`
+        : "No faxes were sent for this pay period."
       : null;
   const lniFaxSkipped = params.lniFaxSkipped?.split(";;").filter(Boolean) ?? [];
   const lniFaxErrors = params.lniFaxErrors?.split(";;").filter(Boolean) ?? [];
