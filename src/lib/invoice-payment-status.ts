@@ -6,7 +6,11 @@ export type InferredPayment = {
 };
 
 /**
- * Map spreadsheet "LNI Payment" column (+ optional LNI paid date) to PaymentStatus.
+ * Map spreadsheet "LNI Payment" column to PaymentStatus.
+ *
+ * Column 11 ("LNI Paid") may contain expected warrant dates before L&I verifies
+ * payment — it must not mark an invoice paid on its own. Only explicit values in
+ * "LNI Payment" (e.g. "Verified") mean paid.
  */
 export function inferPaymentStatusFromSpreadsheet(
   lniPaid: Date | null,
@@ -28,10 +32,6 @@ export function inferPaymentStatusFromSpreadsheet(
 
   if (/in process/i.test(pay) || /action is being taken/i.test(pay)) {
     return { paymentStatus: "UNPAID", lniPaidAt: null };
-  }
-
-  if (lniPaid) {
-    return { paymentStatus: "PAID", lniPaidAt: lniPaid };
   }
 
   return { paymentStatus: "UNPAID", lniPaidAt: null };
