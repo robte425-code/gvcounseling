@@ -113,6 +113,20 @@ function parseBillTotal(text: string): {
   };
 }
 
+function parseServiceLineFromClaimRow(match: RegExpMatchArray): RemittanceServiceLine {
+  return {
+    serviceDateFrom: parseServiceDate(match[3]!),
+    serviceDateTo: parseServiceDate(match[4]!),
+    units: Number.parseFloat(match[5]!),
+    procedureCode: match[6]!,
+    billed: parseMoney(match[7]!),
+    allowed: parseMoney(match[8]!),
+    nonCovered: parseMoney(match[9]!),
+    payable: parseMoney(match[10]!),
+    eobCode: match[11] || undefined,
+  };
+}
+
 function parseBillChunk(
   bodyBeforePat: string,
   patAndTotal: string,
@@ -146,7 +160,7 @@ function parseBillChunk(
 
   const patientName = claimLineMatch[2]!.trim();
   const serviceLines: RemittanceServiceLine[] = [
-    parseServiceLineMatch(claimLineMatch as unknown as RegExpExecArray),
+    parseServiceLineFromClaimRow(claimLineMatch),
   ];
 
   const afterFirstLine = billBody.slice(claimLineMatch[0]!.length);
