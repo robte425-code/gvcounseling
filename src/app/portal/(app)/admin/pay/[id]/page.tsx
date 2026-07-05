@@ -7,8 +7,9 @@ import {
   portalCardClass,
   portalSectionHeadingClass,
 } from "@/components/portal/ui";
-import { formatCurrency, formatDate } from "@/lib/constants";
+import { formatCurrency, formatCalendarIso, formatDate } from "@/lib/constants";
 import { buildTherapistPayPreview } from "@/lib/remittance-advice";
+import type { RemittanceServiceLine } from "@/lib/parse-lni-remittance-pdf";
 import { prisma } from "@/lib/prisma";
 
 function sectionLabel(section: string): string {
@@ -29,6 +30,22 @@ function parseEobCodeDescriptions(value: unknown): Record<string, string> {
   return Object.fromEntries(
     Object.entries(value).filter((entry): entry is [string, string] => typeof entry[1] === "string"),
   );
+}
+
+function formatBillServiceDate(serviceLines: unknown): string | null {
+  if (!Array.isArray(serviceLines) || serviceLines.length === 0) return null;
+
+  const dates = [
+    ...new Set(
+      serviceLines
+        .map((line) => (line as RemittanceServiceLine).serviceDateFrom)
+        .filter((date): date is string => typeof date === "string" && date.length > 0),
+    ),
+  ].sort();
+
+  if (!dates.length) return null;
+  if (dates.length === 1) return formatCalendarIso(dates[0]!);
+  return `${formatCalendarIso(dates[0]!)} – ${formatCalendarIso(dates[dates.length - 1]!)}`;
 }
 
 export default async function PayRemittanceDetailPage({
@@ -174,7 +191,9 @@ export default async function PayRemittanceDetailPage({
             {matchedCount} matched · {unmatchedCount} unmatched
           </h2>
           <ul className="mt-4 space-y-2">
-            {remittance.lines.map((line) => (
+            {remittance.lines.map((line) => {
+              const serviceDate = formatBillServiceDate(line.serviceLines);
+              return (
               <li
                 key={line.id}
                 className={`rounded-lg border px-3 py-2 text-sm ${
@@ -186,6 +205,12 @@ export default async function PayRemittanceDetailPage({
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
                     <span className="font-medium text-primary-dark">{line.claimNumber}</span>
+                    {serviceDate && (
+                      <>
+                        <span className="mx-2 text-muted">·</span>
+                        <span>{serviceDate}</span>
+                      </>
+                    )}
                     <span className="mx-2 text-muted">·</span>
                     <span className="text-muted">{sectionLabel(line.section)}</span>
                     {line.matchedInvoice && (
@@ -221,7 +246,8 @@ export default async function PayRemittanceDetailPage({
                   </ul>
                 )}
               </li>
-            ))}
+              );
+            })}
           </ul>
 
           {usedEobCodes.length > 0 && (
