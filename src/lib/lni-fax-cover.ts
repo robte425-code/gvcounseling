@@ -39,6 +39,7 @@ export async function generateLniFaxCoverPdf(options: {
   y -= 36;
 
   const lines: Array<{ label: string; value: string }> = [
+    { label: "L&I claim #", value: options.claimNumber },
     { label: "Client", value: options.clientName },
     { label: "Service date(s)", value: options.serviceDatesPhrase },
     { label: "Provider", value: name },
