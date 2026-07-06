@@ -91,6 +91,8 @@ export default async function TherapistInvoicesPage({
       status: inv.status,
       paymentStatus: inv.paymentStatus,
       lniPaidAt: inv.lniPaidAt?.toISOString() ?? null,
+      lniEobCodes: inv.lniEobCodes,
+      lniEobCodeDescriptions: inv.lniEobCodeDescriptions,
       clientLabel: `${inv.client.lastName}, ${inv.client.firstName}`,
       serviceDates: formatInvoiceServiceDates(inv.lineItems),
       totalAmount: Number(inv.totalAmount),

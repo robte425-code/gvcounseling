@@ -109,6 +109,8 @@ export default async function AdminInvoicesPage({
       status: inv.status,
       paymentStatus: inv.paymentStatus,
       lniPaidAt: inv.lniPaidAt?.toISOString() ?? null,
+      lniEobCodes: inv.lniEobCodes,
+      lniEobCodeDescriptions: inv.lniEobCodeDescriptions,
       totalAmount: Number(inv.totalAmount),
       submittedAt: inv.submittedAt?.toISOString() ?? null,
       therapistName: `${inv.therapist.firstName} ${inv.therapist.lastName}`,

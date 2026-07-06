@@ -107,7 +107,7 @@ export function AdminInvoiceFilters({ therapists, payPeriods, values, resultCoun
 
       <div className="min-w-[10rem]">
         <label htmlFor="invoice-filter-payment" className={portalLabelCompactClass}>
-          Payment
+          L&I payment
         </label>
         <select
           id="invoice-filter-payment"

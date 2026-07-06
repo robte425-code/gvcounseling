@@ -83,7 +83,7 @@ export function TherapistInvoiceFilters({ payPeriods, values, resultCount }: Pro
 
       <div className="min-w-[10rem]">
         <label htmlFor="therapist-invoice-filter-payment" className={portalLabelCompactClass}>
-          Payment
+          L&I payment
         </label>
         <select
           id="therapist-invoice-filter-payment"

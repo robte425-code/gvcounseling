@@ -77,3 +77,25 @@ export function inferPaymentStatusFromSpreadsheet(
 
   return { paymentStatus: "UNPAID", lniPaidAt: null };
 }
+
+export function parseInvoiceEobDescriptions(value: unknown): Record<string, string> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  return Object.fromEntries(
+    Object.entries(value).filter((entry): entry is [string, string] => typeof entry[1] === "string"),
+  );
+}
+
+/** Human-readable L&I EOB notes for invoice list/detail (from remittance advice). */
+export function formatInvoiceEobNotes(
+  codes: string[],
+  descriptions: Record<string, string>,
+): string | null {
+  if (!codes.length) return null;
+
+  const parts = codes.map((code) => {
+    const description = descriptions[code];
+    return description ? `EOB ${code}: ${description}` : `EOB ${code}`;
+  });
+
+  return parts.join(" ");
+}

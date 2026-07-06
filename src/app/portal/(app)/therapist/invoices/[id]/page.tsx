@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireSession } from "@/auth";
 import { InvoiceDetailClient } from "@/components/portal/InvoiceDetailClient";
+import { InvoiceLniPaymentSection } from "@/components/portal/InvoiceLniPaymentSection";
 import { StatusBadge, portalButtonClass } from "@/components/portal/ui";
 import { formatCurrency, formatDate, calendarIsoFromDate } from "@/lib/constants";
 import {
@@ -94,6 +95,12 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
             {invoice.clmControlNumber ? ` · CLM ${invoice.clmControlNumber}` : ""}
           </p>
         )}
+        <InvoiceLniPaymentSection
+          paymentStatus={invoice.paymentStatus}
+          lniPaidAt={invoice.lniPaidAt}
+          lniEobCodes={invoice.lniEobCodes}
+          lniEobCodeDescriptions={invoice.lniEobCodeDescriptions}
+        />
       </div>
 
       <InvoiceDetailClient
