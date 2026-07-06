@@ -41,8 +41,14 @@ export type ParsedRemittanceAdvice = {
 };
 
 const CLAIM_NUMBER = /[A-Z]{2}\d{5,6}/;
+const EOB_CODE = /(\d{3}|P\d{2})/i;
+const EOB_CODE_SUFFIX = `(?:\\s+(${EOB_CODE.source}))(?![\\d.])`;
+
 const SERVICE_LINE =
-  /(\d{6})\s+(\d{6})\s+([\d.]+)\s+(\w+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)(?:\s+([A-Z]?\d{2,3}|P\d{2}))?/g;
+  new RegExp(
+    `(\\d{6})\\s+(\\d{6})\\s+([\\d.]+)\\s+(\\w+)\\s+([\\d.]+)\\s+([\\d.]+)\\s+([\\d.]+)\\s+([\\d.]+)${EOB_CODE_SUFFIX}?`,
+    "g",
+  );
 
 function normalizeWhitespace(text: string): string {
   return text.replace(/\s+/g, " ").trim();
@@ -76,23 +82,47 @@ function parseServiceLineMatch(match: RegExpExecArray): RemittanceServiceLine {
     allowed: parseMoney(match[6]!),
     nonCovered: parseMoney(match[7]!),
     payable: parseMoney(match[8]!),
-    eobCode: match[9] || undefined,
+    eobCode: match[9] ? normalizeEobCode(match[9]) : undefined,
   };
 }
 
 function extractEobDescriptions(text: string): Record<string, string> {
   const descriptions: Record<string, string> = {};
-  const marker = text.search(/DESCRIPTION OF THE EXPLANATION CODES UTILIZED ABOVE:/i);
+  const marker = text.search(
+    /THE FOLLOWING IS A DESCRIPTION OF THE EXPLANATION CODES UTILIZED ABOVE:/i,
+  );
   if (marker < 0) return descriptions;
 
   const afterMarker = text.slice(marker);
   const end = afterMarker.search(/PAYMENTS AND PAYMENT DENIALS|WASHINGTON STATE DEPARTMENT/i);
   const block = end >= 0 ? afterMarker.slice(0, end) : afterMarker;
 
-  const pattern = /(\d{3}|P\d{2})\s+(.+?)(?=(?:\s\d{3}\s+[A-Z]|\sP\d{2}\s+[A-Z]|$))/g;
+  const pattern = /(\d{3}|P\d{2})\s+(.+?)(?=(?:\s(?:\d{3}|P\d{2})\s+[A-Z]|\s*$))/gi;
   let match: RegExpExecArray | null;
   while ((match = pattern.exec(block)) !== null) {
-    descriptions[match[1]!] = match[2]!.trim();
+    descriptions[match[1]!.toUpperCase()] = match[2]!.trim();
+  }
+  return descriptions;
+}
+
+export function normalizeEobCode(code: string): string {
+  return code.toUpperCase();
+}
+
+export function isEobCode(value: string): boolean {
+  const normalized = normalizeEobCode(value);
+  return /^\d{3}$/.test(normalized) || /^P\d{2}$/.test(normalized);
+}
+
+export function resolveEobDescriptions(
+  codes: string[],
+  catalog: Record<string, string>,
+): Record<string, string> {
+  const descriptions: Record<string, string> = {};
+  for (const code of codes) {
+    const normalized = normalizeEobCode(code);
+    const description = catalog[normalized] ?? catalog[code];
+    if (description) descriptions[normalized] = description;
   }
   return descriptions;
 }
@@ -125,8 +155,43 @@ function parseServiceLineFromClaimRow(match: RegExpMatchArray): RemittanceServic
     allowed: parseMoney(match[8]!),
     nonCovered: parseMoney(match[9]!),
     payable: parseMoney(match[10]!),
-    eobCode: match[11] || undefined,
+    eobCode: match[11] ? normalizeEobCode(match[11]) : undefined,
   };
+}
+
+function extractEobAfterBillTotal(patAndTotal: string): string | undefined {
+  const match = patAndTotal.match(
+    new RegExp(
+      `\\*\\*\\*BILL TOTAL \\. \\. \\.\\s+[\\d.]+\\s+[\\d.]+\\s+[\\d.]+\\s+[\\d.]+${EOB_CODE_SUFFIX}(?=\\s+(?:PAT|${CLAIM_NUMBER.source}))`,
+      "i",
+    ),
+  );
+  return match?.[1] ? normalizeEobCode(match[1]) : undefined;
+}
+
+function collectBillEobCodes(
+  serviceLines: RemittanceServiceLine[],
+  patAndTotal: string,
+): string[] {
+  const codes = new Set<string>();
+  for (const line of serviceLines) {
+    if (line.eobCode && isEobCode(line.eobCode)) codes.add(normalizeEobCode(line.eobCode));
+  }
+  const afterTotal = extractEobAfterBillTotal(patAndTotal);
+  if (afterTotal && isEobCode(afterTotal)) codes.add(afterTotal);
+  return [...codes];
+}
+
+function sanitizeBillEobCodes(
+  bill: RemittanceBill,
+  catalog: Record<string, string>,
+): RemittanceBill {
+  const eobCodes = bill.eobCodes.filter((code) => Boolean(catalog[code]));
+  const serviceLines = bill.serviceLines.map((line) => ({
+    ...line,
+    eobCode: line.eobCode && catalog[line.eobCode] ? line.eobCode : undefined,
+  }));
+  return { ...bill, eobCodes, serviceLines };
 }
 
 function parseBillChunk(
@@ -155,7 +220,7 @@ function parseBillChunk(
   const billBody = beforeIcn.slice(claimStart);
   const claimLineMatch = billBody.match(
     new RegExp(
-      `^(${CLAIM_NUMBER.source})\\s+(.+?)\\s+(\\d{6})\\s+(\\d{6})\\s+([\\d.]+)\\s+(\\w+)\\s+([\\d.]+)\\s+([\\d.]+)\\s+([\\d.]+)\\s+([\\d.]+)(?:\\s+([A-Z]?\\d{2,3}|P\\d{2}))?`,
+      `^(${CLAIM_NUMBER.source})\\s+(.+?)\\s+(\\d{6})\\s+(\\d{6})\\s+([\\d.]+)\\s+(\\w+)\\s+([\\d.]+)\\s+([\\d.]+)\\s+([\\d.]+)\\s+([\\d.]+)${EOB_CODE_SUFFIX}?`,
     ),
   );
   if (!claimLineMatch) return null;
@@ -176,16 +241,7 @@ function parseBillChunk(
   const totals = parseBillTotal(patAndTotal);
   if (!totals) return null;
 
-  const eobCodes = [
-    ...new Set(
-      serviceLines
-        .map((line) => line.eobCode)
-        .filter(
-          (code): code is string =>
-            typeof code === "string" && code.length > 0 && !/^\d+\.\d+$/.test(code),
-        ),
-    ),
-  ];
+  const eobCodes = collectBillEobCodes(serviceLines, patAndTotal);
 
   return {
     section: context.section,
@@ -479,8 +535,10 @@ export function parseLniRemittanceText(text: string): ParsedRemittanceAdvice {
 
   const detailStart = normalized.search(/REMITTANCE ADVICE DETAIL/i);
   const detailText = detailStart >= 0 ? normalized.slice(detailStart) : normalized;
-  const bills = parseDetailBills(detailText, normalized, detailStart >= 0 ? detailStart : 0);
   const eobCodeDescriptions = extractEobDescriptions(normalized);
+  const bills = parseDetailBills(detailText, normalized, detailStart >= 0 ? detailStart : 0).map(
+    (bill) => sanitizeBillEobCodes(bill, eobCodeDescriptions),
+  );
 
   if (!bills.length) {
     throw new Error("No remittance bills found in PDF.");

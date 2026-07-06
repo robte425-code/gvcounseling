@@ -1,8 +1,10 @@
-import type { PaymentStatus, Prisma } from "@/generated/prisma/client";
+import type { Prisma } from "@/generated/prisma/client";
+import { paymentUpdateFromRemittance, remittanceSectionToPaymentStatus } from "@/lib/invoice-payment-status";
 import { matchRemittanceBills } from "@/lib/match-remittance-to-invoices";
 import type { MatchedRemittanceBill } from "@/lib/match-remittance-to-invoices";
 import { parseLniRemittancePdf } from "@/lib/parse-lni-remittance-pdf";
-import type { ParsedRemittanceAdvice } from "@/lib/parse-lni-remittance-pdf";
+import type { ParsedRemittanceAdvice, RemittanceBill, RemittanceServiceLine } from "@/lib/parse-lni-remittance-pdf";
+import { resolveEobDescriptions } from "@/lib/parse-lni-remittance-pdf";
 import { resolveFeeAmount } from "@/lib/procedure-fee-schedule";
 import { prisma } from "@/lib/prisma";
 
@@ -187,25 +189,59 @@ export async function importRemittancePreview(options: {
       importedById: options.importedById,
       status: "PREVIEW",
       lines: {
-        create: options.matches.map((match) => ({
-          section: match.bill.section,
-          claimNumber: match.bill.claimNumber,
-          icn: match.bill.icn,
-          patientName: match.bill.patientName,
-          serviceProviderId: match.bill.serviceProviderId,
-          serviceProviderNpi: match.bill.serviceProviderNpi,
-          serviceProviderName: match.bill.serviceProviderName,
-          billTotalPayable: match.bill.billTotalPayable,
-          eobCodes: match.bill.eobCodes,
-          serviceLines: match.bill.serviceLines as Prisma.InputJsonValue,
-          matchedInvoiceId: match.matchedInvoiceId,
-          matchNote: match.matchNote,
-        })),
+        create: options.matches.map((match) => {
+          const eobCodeDescriptions = resolveEobDescriptions(
+            match.bill.eobCodes,
+            options.parsed.eobCodeDescriptions,
+          );
+          return {
+            section: match.bill.section,
+            claimNumber: match.bill.claimNumber,
+            icn: match.bill.icn,
+            patientName: match.bill.patientName,
+            serviceProviderId: match.bill.serviceProviderId,
+            serviceProviderNpi: match.bill.serviceProviderNpi,
+            serviceProviderName: match.bill.serviceProviderName,
+            billTotalPayable: match.bill.billTotalPayable,
+            eobCodes: match.bill.eobCodes,
+            eobCodeDescriptions,
+            serviceLines: match.bill.serviceLines as Prisma.InputJsonValue,
+            matchedInvoiceId: match.matchedInvoiceId,
+            matchNote: match.matchNote,
+          };
+        }),
       },
     },
   });
 
+  for (const match of options.matches) {
+    await syncInvoiceEobFromLine({
+      matchedInvoiceId: match.matchedInvoiceId,
+      eobCodes: match.bill.eobCodes,
+      eobCodeDescriptions: resolveEobDescriptions(
+        match.bill.eobCodes,
+        options.parsed.eobCodeDescriptions,
+      ),
+    });
+  }
+
   return { remittanceAdviceId: remittance.id };
+}
+
+async function syncInvoiceEobFromLine(options: {
+  matchedInvoiceId: string | null;
+  eobCodes: string[];
+  eobCodeDescriptions: Record<string, string>;
+}): Promise<void> {
+  if (!options.matchedInvoiceId) return;
+
+  await prisma.invoice.update({
+    where: { id: options.matchedInvoiceId },
+    data: {
+      lniEobCodes: options.eobCodes,
+      lniEobCodeDescriptions: options.eobCodeDescriptions,
+    },
+  });
 }
 
 export async function deleteRemittancePreview(remittanceAdviceId: string): Promise<void> {
@@ -220,6 +256,108 @@ export async function deleteRemittancePreview(remittanceAdviceId: string): Promi
   }
 
   await prisma.remittanceAdvice.delete({ where: { id: remittanceAdviceId } });
+}
+
+/** Undo an applied remittance: reset matched invoices and delete RA + pay run. */
+export async function revertAppliedRemittance(remittanceAdviceId: string): Promise<void> {
+  const remittance = await prisma.remittanceAdvice.findUnique({
+    where: { id: remittanceAdviceId },
+    include: { lines: { select: { matchedInvoiceId: true } } },
+  });
+
+  if (!remittance) throw new Error("Remittance advice not found.");
+  if (remittance.status !== "APPLIED") {
+    throw new Error("Only applied remittances can be reverted.");
+  }
+
+  await prisma.$transaction(async (tx) => {
+    for (const line of remittance.lines) {
+      if (!line.matchedInvoiceId) continue;
+      await tx.invoice.update({
+        where: { id: line.matchedInvoiceId },
+        data: {
+          paymentStatus: "UNPAID",
+          lniPaidAt: null,
+          lniEobCodes: [],
+          lniEobCodeDescriptions: {},
+        },
+      });
+    }
+
+    await tx.remittanceAdvice.delete({ where: { id: remittanceAdviceId } });
+  });
+}
+
+function parseLineEobDescriptions(value: unknown): Record<string, string> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  return Object.fromEntries(
+    Object.entries(value).filter((entry): entry is [string, string] => typeof entry[1] === "string"),
+  );
+}
+
+function lineToRemittanceBill(line: {
+  section: RemittanceBill["section"];
+  claimNumber: string;
+  patientName: string | null;
+  icn: string;
+  serviceProviderId: string;
+  serviceProviderNpi: string | null;
+  serviceProviderName: string | null;
+  billTotalPayable: unknown;
+  eobCodes: string[];
+  serviceLines: unknown;
+}): RemittanceBill {
+  return {
+    section: line.section,
+    claimNumber: line.claimNumber,
+    patientName: line.patientName ?? "",
+    icn: line.icn,
+    serviceProviderId: line.serviceProviderId,
+    serviceProviderNpi: line.serviceProviderNpi ?? "",
+    serviceProviderName: line.serviceProviderName ?? "",
+    serviceLines: line.serviceLines as RemittanceServiceLine[],
+    billTotalBilled: 0,
+    billTotalAllowed: 0,
+    billTotalNonCovered: 0,
+    billTotalPayable: Number(line.billTotalPayable),
+    eobCodes: line.eobCodes,
+  };
+}
+
+export async function rematchRemittanceAdvice(remittanceAdviceId: string): Promise<void> {
+  const remittance = await prisma.remittanceAdvice.findUnique({
+    where: { id: remittanceAdviceId },
+    include: { lines: { orderBy: { claimNumber: "asc" } } },
+  });
+
+  if (!remittance) throw new Error("Remittance advice not found.");
+  if (remittance.status !== "PREVIEW") {
+    throw new Error("Only preview remittances can be re-matched.");
+  }
+
+  const bills = remittance.lines.map(lineToRemittanceBill);
+  const matches = await matchRemittanceBills(bills);
+
+  for (let index = 0; index < remittance.lines.length; index++) {
+    const line = remittance.lines[index]!;
+    const match = matches[index];
+    await prisma.remittanceAdviceLine.update({
+      where: { id: line.id },
+      data: {
+        matchedInvoiceId: match?.matchedInvoiceId ?? null,
+        matchNote: match?.matchNote ?? null,
+      },
+    });
+
+    if (match?.matchedInvoiceId) {
+      const eobCodeDescriptions = parseLineEobDescriptions(line.eobCodeDescriptions);
+      await syncInvoiceEobFromLine({
+        matchedInvoiceId: match.matchedInvoiceId,
+        eobCodes: line.eobCodes,
+        eobCodeDescriptions,
+      });
+    }
+  }
 }
 
 export async function applyRemittanceAdvice(remittanceAdviceId: string): Promise<void> {
@@ -270,7 +408,7 @@ export async function applyRemittanceAdvice(remittanceAdviceId: string): Promise
       },
       matchedInvoiceId: line.matchedInvoiceId,
       matchNote: line.matchNote,
-      paymentStatus: line.section === "PAID" ? "PAID" : line.section === "DENIED" ? "DENIED" : "UNPAID",
+      paymentStatus: remittanceSectionToPaymentStatus(line.section),
     })),
   );
 
@@ -278,14 +416,18 @@ export async function applyRemittanceAdvice(remittanceAdviceId: string): Promise
     for (const line of remittance.lines) {
       if (!line.matchedInvoiceId) continue;
 
-      const paymentStatus: PaymentStatus =
-        line.section === "PAID" ? "PAID" : line.section === "DENIED" ? "DENIED" : "UNPAID";
+      const { paymentStatus, lniPaidAt } = paymentUpdateFromRemittance(
+        line.section,
+        remittance.invoiceDate,
+      );
 
       await tx.invoice.update({
         where: { id: line.matchedInvoiceId },
         data: {
           paymentStatus,
-          lniPaidAt: paymentStatus === "PAID" ? remittance.invoiceDate : null,
+          lniPaidAt,
+          lniEobCodes: line.eobCodes,
+          lniEobCodeDescriptions: parseLineEobDescriptions(line.eobCodeDescriptions),
         },
       });
     }

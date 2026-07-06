@@ -3,33 +3,38 @@ import { notFound } from "next/navigation";
 import { requireAdmin } from "@/auth";
 import { ApplyRemittanceForm, DeleteRemittancePreviewForm } from "@/components/portal/RemittancePayPanel";
 import {
-  portalButtonSecondaryClass,
   portalCardClass,
   portalSectionHeadingClass,
+  StatusBadge,
 } from "@/components/portal/ui";
 import { formatCurrency, formatCalendarIso, formatDate } from "@/lib/constants";
+import {
+  paymentStatusLabel,
+  remittanceSectionToPaymentStatus,
+} from "@/lib/invoice-payment-status";
 import { buildTherapistPayPreview } from "@/lib/remittance-advice";
 import type { RemittanceServiceLine } from "@/lib/parse-lni-remittance-pdf";
 import { prisma } from "@/lib/prisma";
-
-function sectionLabel(section: string): string {
-  switch (section) {
-    case "PAID":
-      return "Paid";
-    case "DENIED":
-      return "Denied";
-    case "IN_PROCESS":
-      return "In process";
-    default:
-      return section;
-  }
-}
 
 function parseEobCodeDescriptions(value: unknown): Record<string, string> {
   if (!value || typeof value !== "object" || Array.isArray(value)) return {};
   return Object.fromEntries(
     Object.entries(value).filter((entry): entry is [string, string] => typeof entry[1] === "string"),
   );
+}
+
+function lineClientName(line: {
+  patientName: string | null;
+  matchedInvoice: {
+    client: { firstName: string; lastName: string };
+  } | null;
+}): string | null {
+  if (line.matchedInvoice?.client) {
+    const { firstName, lastName } = line.matchedInvoice.client;
+    return `${lastName}, ${firstName}`;
+  }
+  const name = line.patientName?.trim();
+  return name || null;
 }
 
 function formatBillServiceDate(serviceLines: unknown): string | null {
@@ -68,7 +73,9 @@ export default async function PayRemittanceDetailPage({
             select: {
               id: true,
               invoiceNumber: true,
+              paymentStatus: true,
               therapist: { select: { firstName: true, lastName: true } },
+              client: { select: { firstName: true, lastName: true } },
             },
           },
         },
@@ -100,6 +107,11 @@ export default async function PayRemittanceDetailPage({
 
   const matchedCount = remittance.lines.filter((line) => line.matchedInvoiceId).length;
   const unmatchedCount = remittance.lines.length - matchedCount;
+  const paymentStatusMismatchCount = remittance.lines.filter((line) => {
+    if (!line.matchedInvoice) return false;
+    const expected = remittanceSectionToPaymentStatus(line.section);
+    return line.matchedInvoice.paymentStatus !== expected;
+  }).length;
 
   let therapistPayPreview: Awaited<ReturnType<typeof buildTherapistPayPreview>> = [];
   let therapistPayPreviewError: string | null = null;
@@ -125,8 +137,7 @@ export default async function PayRemittanceDetailPage({
           },
           matchedInvoiceId: line.matchedInvoiceId,
           matchNote: line.matchNote,
-          paymentStatus:
-            line.section === "PAID" ? "PAID" : line.section === "DENIED" ? "DENIED" : "UNPAID",
+          paymentStatus: remittanceSectionToPaymentStatus(line.section),
         })),
       );
     } catch (error) {
@@ -173,6 +184,17 @@ export default async function PayRemittanceDetailPage({
         </p>
       )}
 
+      {remittance.status === "PREVIEW" && paymentStatusMismatchCount > 0 && (
+        <p className="rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-900" role="status">
+          <span className="font-semibold">
+            {paymentStatusMismatchCount} invoice payment status
+            {paymentStatusMismatchCount === 1 ? "" : "es"} differ from L&I
+          </span>
+          {" — "}
+          applying this remittance will update each matched invoice to the L&I status shown below.
+        </p>
+      )}
+
       {remittance.status === "PREVIEW" && unmatchedCount > 0 && (
         <p className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-900" role="alert">
           <span className="font-semibold">
@@ -193,6 +215,11 @@ export default async function PayRemittanceDetailPage({
           <ul className="mt-4 space-y-2">
             {remittance.lines.map((line) => {
               const serviceDate = formatBillServiceDate(line.serviceLines);
+              const clientName = lineClientName(line);
+              const lniPaymentStatus = remittanceSectionToPaymentStatus(line.section);
+              const invoicePaymentStatus = line.matchedInvoice?.paymentStatus ?? null;
+              const paymentStatusMismatch =
+                line.matchedInvoice != null && invoicePaymentStatus !== lniPaymentStatus;
               return (
               <li
                 key={line.id}
@@ -205,6 +232,12 @@ export default async function PayRemittanceDetailPage({
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
                     <span className="font-medium text-primary-dark">{line.claimNumber}</span>
+                    {clientName && (
+                      <>
+                        <span className="mx-2 text-muted">·</span>
+                        <span>{clientName}</span>
+                      </>
+                    )}
                     {serviceDate && (
                       <>
                         <span className="mx-2 text-muted">·</span>
@@ -212,7 +245,7 @@ export default async function PayRemittanceDetailPage({
                       </>
                     )}
                     <span className="mx-2 text-muted">·</span>
-                    <span className="text-muted">{sectionLabel(line.section)}</span>
+                    <span className="text-muted">{paymentStatusLabel(lniPaymentStatus)}</span>
                     {line.matchedInvoice && (
                       <>
                         <span className="mx-2 text-muted">·</span>
@@ -231,18 +264,40 @@ export default async function PayRemittanceDetailPage({
                 {line.matchNote && (
                   <p className="mt-1 text-xs text-amber-800">{line.matchNote}</p>
                 )}
+                {line.matchedInvoice && (
+                  <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs">
+                    <span className="text-muted">L&I:</span>
+                    <StatusBadge status={lniPaymentStatus} />
+                    <span className="text-muted">·</span>
+                    <span className="text-muted">Invoice:</span>
+                    {invoicePaymentStatus ? (
+                      <StatusBadge status={invoicePaymentStatus} />
+                    ) : (
+                      <span className="text-muted">Not set</span>
+                    )}
+                    {paymentStatusMismatch && remittance.status === "PREVIEW" && (
+                      <span className="text-amber-800">
+                        → {paymentStatusLabel(lniPaymentStatus)} on apply
+                      </span>
+                    )}
+                  </div>
+                )}
                 {line.eobCodes.length > 0 && (
                   <ul className="mt-1 space-y-0.5 text-xs text-muted">
-                    {line.eobCodes.map((code) => (
+                    {line.eobCodes.map((code) => {
+                      const lineEobDescriptions = parseEobCodeDescriptions(line.eobCodeDescriptions);
+                      const description = lineEobDescriptions[code] ?? eobCodeDescriptions[code];
+                      return (
                       <li key={code}>
                         <span className="font-medium text-primary-dark">EOB {code}</span>
-                        {eobCodeDescriptions[code] ? (
-                          <span>: {eobCodeDescriptions[code]}</span>
+                        {description ? (
+                          <span>: {description}</span>
                         ) : (
                           <span className="text-amber-800"> (description not available)</span>
                         )}
                       </li>
-                    ))}
+                      );
+                    })}
                   </ul>
                 )}
               </li>

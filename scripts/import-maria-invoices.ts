@@ -506,8 +506,9 @@ async function main() {
   const missingClients = new Set<string>();
   const paymentCounts: Record<PaymentStatus, number> = {
     PAID: 0,
-    UNPAID: 0,
     DENIED: 0,
+    IN_PROCESS: 0,
+    UNPAID: 0,
     APPEAL_IN_PROGRESS: 0,
   };
 
@@ -737,7 +738,7 @@ async function main() {
   );
   logLine(
     logLines,
-    `Payment: PAID=${paymentCounts.PAID} UNPAID=${paymentCounts.UNPAID} DENIED=${paymentCounts.DENIED}`,
+    `Payment: PAID=${paymentCounts.PAID} DENIED=${paymentCounts.DENIED} IN_PROCESS=${paymentCounts.IN_PROCESS} UNPAID=${paymentCounts.UNPAID}`,
   );
   logLine(logLines, `Results: ${RESULTS_PATH}`);
   logLine(logLines, `Log: ${LOG_PATH}`);

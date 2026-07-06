@@ -1,3 +1,6 @@
+import type { PaymentStatus } from "@/generated/prisma/client";
+import { paymentStatusLabel } from "@/lib/invoice-payment-status";
+
 export const portalInputClass =
   "w-full rounded-xl border border-border bg-surface px-4 py-3 text-sm text-foreground outline-none transition-shadow focus:border-primary focus:ring-2 focus:ring-primary/20";
 
@@ -37,8 +40,9 @@ export const statusBadge: Record<string, string> = {
   BILLED: "bg-primary/10 text-primary-dark",
   READY: "bg-primary/10 text-primary-dark",
   PAID: "bg-emerald-100 text-emerald-900",
-  UNPAID: "bg-amber-100 text-amber-900",
   DENIED: "bg-red-100 text-red-800",
+  IN_PROCESS: "bg-amber-100 text-amber-900",
+  UNPAID: "bg-slate-100 text-slate-800",
   APPEAL_IN_PROGRESS: "bg-sky-100 text-sky-900",
   UNASSIGNED: "bg-slate-100 text-slate-800",
   PENDING_THERAPIST: "bg-amber-100 text-amber-900",
@@ -48,22 +52,32 @@ export const statusBadge: Record<string, string> = {
   CLOSED: "bg-slate-200 text-slate-800",
 };
 
+const statusLabels: Record<string, string> = {
+  UNASSIGNED: "Unassigned",
+  PENDING_THERAPIST: "Pending therapist",
+  REJECTED_BY_ADMIN: "Rejected",
+  CLOSED: "Closed",
+  INACTIVE: "Inactive",
+};
+
+function badgeLabel(status: string): string {
+  switch (status) {
+    case "PAID":
+    case "DENIED":
+    case "IN_PROCESS":
+    case "UNPAID":
+    case "APPEAL_IN_PROGRESS":
+      return paymentStatusLabel(status as PaymentStatus);
+    default:
+      return statusLabels[status] ?? status.toLowerCase().replace(/_/g, " ");
+  }
+}
+
 export function StatusBadge({ status }: { status: string }) {
-  const labels: Record<string, string> = {
-    UNASSIGNED: "Unassigned",
-    PENDING_THERAPIST: "Pending therapist",
-    REJECTED_BY_ADMIN: "Rejected",
-    CLOSED: "Closed",
-    INACTIVE: "Inactive",
-    PAID: "Paid",
-    UNPAID: "Unpaid",
-    DENIED: "Denied",
-    APPEAL_IN_PROGRESS: "Appeal in progress",
-  };
-  const label = labels[status] ?? status.toLowerCase().replace(/_/g, " ");
+  const label = badgeLabel(status);
   return (
     <span
-      className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wide ${statusBadge[status] ?? "bg-muted/15 text-muted"}`}
+      className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold tracking-wide ${statusBadge[status] ?? "bg-muted/15 text-muted"}`}
     >
       {label}
     </span>

@@ -1,7 +1,8 @@
 import type { PaymentStatus } from "@/generated/prisma/client";
 import { calendarIsoFromDate } from "@/lib/constants";
+import { remittanceSectionToPaymentStatus } from "@/lib/invoice-payment-status";
 import { normalizeLniProviderId } from "@/lib/parse-lni-remittance-pdf";
-import type { RemittanceBill, RemittanceBillSection } from "@/lib/parse-lni-remittance-pdf";
+import type { RemittanceBill } from "@/lib/parse-lni-remittance-pdf";
 import { prisma } from "@/lib/prisma";
 
 export type MatchedRemittanceBill = {
@@ -27,17 +28,6 @@ function invoiceLineKeys(
   return lineItems.map((line) =>
     serviceLineKey(line.procedureCode, calendarIsoFromDate(line.serviceDate)),
   );
-}
-
-export function remittanceSectionToPaymentStatus(section: RemittanceBillSection): PaymentStatus {
-  switch (section) {
-    case "PAID":
-      return "PAID";
-    case "DENIED":
-      return "DENIED";
-    case "IN_PROCESS":
-      return "UNPAID";
-  }
 }
 
 function lineOverlapScore(billKeys: string[], invoiceKeys: string[]): number {
@@ -154,14 +144,23 @@ export async function matchRemittanceBills(
       ? normalizeLniProviderId(bill.serviceProviderId)
       : "";
 
-    const candidates = invoices.filter((invoice) => {
-      if (invoice.client.lniClaimNumber !== bill.claimNumber) return false;
-      if (!providerId) return true;
-      const therapistProvider = invoice.therapist.lniProviderId
-        ? normalizeLniProviderId(invoice.therapist.lniProviderId)
-        : null;
-      return therapistProvider === providerId;
-    });
+    const claimInvoices = invoices.filter(
+      (invoice) => invoice.client.lniClaimNumber === bill.claimNumber,
+    );
+
+    const providerMatchedInvoices = providerId
+      ? claimInvoices.filter((invoice) => {
+          const therapistProvider = invoice.therapist.lniProviderId
+            ? normalizeLniProviderId(invoice.therapist.lniProviderId)
+            : null;
+          return therapistProvider === providerId;
+        })
+      : claimInvoices;
+
+    // L&I remittance lines sometimes list a different provider id than the therapist
+    // who owns the claim in our system; fall back to claim + service date matching.
+    const candidates =
+      providerMatchedInvoices.length > 0 ? providerMatchedInvoices : claimInvoices;
 
     const pickBest = (pool: typeof invoices) => {
       let best: (typeof invoices)[number] | null = null;
@@ -186,12 +185,23 @@ export async function matchRemittanceBills(
       ({ best, bestScore, bestNote } = pickBest(candidates));
     }
 
+    if (
+      best &&
+      bestScore >= MIN_NEAR_DATE_MATCH_SCORE &&
+      providerId &&
+      providerMatchedInvoices.length === 0
+    ) {
+      bestNote = bestNote
+        ? `${bestNote}; RA provider ${bill.serviceProviderId} differed from therapist`
+        : `Matched by claim/service date; RA provider ${bill.serviceProviderId} differed from therapist`;
+    }
+
     if (!best || bestScore < MIN_NEAR_DATE_MATCH_SCORE) {
       return {
         bill,
         matchedInvoiceId: null,
         matchNote:
-          candidates.length === 0
+          claimInvoices.length === 0
             ? providerId
               ? `No billed invoice for claim ${bill.claimNumber} / provider ${bill.serviceProviderId}`
               : `No billed invoice for claim ${bill.claimNumber}`

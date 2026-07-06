@@ -20,8 +20,9 @@ enum InvoiceStatus {
 
 enum PaymentStatus {
   PAID
-  UNPAID
   DENIED
+  IN_PROCESS
+  UNPAID
   APPEAL_IN_PROGRESS
 }
 
@@ -174,6 +175,8 @@ model Invoice {
   billedAt         DateTime?
   paymentStatus    PaymentStatus?
   lniPaidAt        DateTime?
+  lniEobCodes      String[]            @default([])
+  lniEobCodeDescriptions Json            @default("{}")
   lineItems        InvoiceLineItem[]
   attachments      InvoiceAttachment[]
   remittanceLines  RemittanceAdviceLine[]
@@ -292,6 +295,7 @@ model RemittanceAdviceLine {
   serviceProviderName String?
   billTotalPayable   Decimal               @db.Decimal(10, 2)
   eobCodes           String[]
+  eobCodeDescriptions Json               @default("{}")
   serviceLines       Json
   matchedInvoiceId   String?
   matchedInvoice     Invoice?              @relation(fields: [matchedInvoiceId], references: [id])

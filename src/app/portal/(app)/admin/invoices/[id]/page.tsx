@@ -6,6 +6,13 @@ import { StatusBadge } from "@/components/portal/ui";
 import { formatCurrency, formatDate, calendarIsoFromDate } from "@/lib/constants";
 import { prisma } from "@/lib/prisma";
 
+function parseInvoiceEobDescriptions(value: unknown): Record<string, string> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  return Object.fromEntries(
+    Object.entries(value).filter((entry): entry is [string, string] => typeof entry[1] === "string"),
+  );
+}
+
 export default async function AdminInvoiceDetailPage({
   params,
 }: {
@@ -71,6 +78,24 @@ export default async function AdminInvoiceDetailPage({
             <StatusBadge status={invoice.paymentStatus} />
             {invoice.lniPaidAt && <span>LNI paid {formatDate(invoice.lniPaidAt)}</span>}
           </p>
+        )}
+        {invoice.lniEobCodes.length > 0 && (
+          <div className="mt-3 rounded-xl border border-border bg-primary/[0.03] px-4 py-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted">L&I EOB codes</p>
+            <ul className="mt-2 space-y-1 text-sm text-foreground">
+              {invoice.lniEobCodes.map((code) => {
+                const descriptions = parseInvoiceEobDescriptions(invoice.lniEobCodeDescriptions);
+                return (
+                  <li key={code}>
+                    <span className="font-medium text-primary-dark">EOB {code}</span>
+                    {descriptions[code] ? (
+                      <span className="text-muted"> — {descriptions[code]}</span>
+                    ) : null}
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
         )}
         {invoice.status === "SUBMITTED" && invoice.payPeriod && (
           <p className="mt-2 text-sm text-muted">

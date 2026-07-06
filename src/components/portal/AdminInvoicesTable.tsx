@@ -18,7 +18,7 @@ export type AdminInvoiceRow = {
   id: string;
   invoiceNumber: number;
   status: "DRAFT" | "SUBMITTED" | "BILLED";
-  paymentStatus: "PAID" | "UNPAID" | "DENIED" | "APPEAL_IN_PROGRESS" | null;
+  paymentStatus: "PAID" | "DENIED" | "IN_PROCESS" | "UNPAID" | "APPEAL_IN_PROGRESS" | null;
   lniPaidAt: string | null;
   totalAmount: number;
   submittedAt: string | null;

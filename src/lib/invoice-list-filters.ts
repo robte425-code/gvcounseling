@@ -1,4 +1,4 @@
-import type { InvoiceStatus, Prisma } from "@/generated/prisma/client";
+import type { InvoiceStatus, PaymentStatus, Prisma } from "@/generated/prisma/client";
 
 export type PayPeriodFilterOption = {
   id: string;
@@ -10,7 +10,7 @@ export type TherapistFilterOption = {
   label: string;
 };
 
-export type InvoicePaymentFilter = "PAID" | "UNPAID";
+export type InvoicePaymentFilter = PaymentStatus;
 
 export type AdminInvoiceFilterValues = {
   status?: InvoiceStatus;
@@ -28,7 +28,10 @@ export type TherapistInvoiceFilterValues = {
 export const INVOICE_PAYMENT_FILTER_OPTIONS = [
   { value: "", label: "All payments" },
   { value: "PAID", label: "Paid" },
+  { value: "DENIED", label: "Denied" },
+  { value: "IN_PROCESS", label: "In process" },
   { value: "UNPAID", label: "Unpaid" },
+  { value: "APPEAL_IN_PROGRESS", label: "Appeal in progress" },
 ] as const;
 
 export function buildAdminInvoicesHref(values: AdminInvoiceFilterValues): string {
@@ -51,7 +54,13 @@ export function buildTherapistInvoicesHref(values: TherapistInvoiceFilterValues)
 }
 
 export function isInvoicePaymentFilter(value: string | undefined): value is InvoicePaymentFilter {
-  return value === "PAID" || value === "UNPAID";
+  return (
+    value === "PAID" ||
+    value === "DENIED" ||
+    value === "IN_PROCESS" ||
+    value === "UNPAID" ||
+    value === "APPEAL_IN_PROGRESS"
+  );
 }
 
 export function invoicePaymentWhere(
