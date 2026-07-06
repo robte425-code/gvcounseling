@@ -5,6 +5,7 @@ import {
   type AdminInvoiceRow,
   type PayPeriodOption,
 } from "@/components/portal/AdminInvoicesTable";
+import { AdminUnassignedInvoicesTile } from "@/components/portal/AdminUnassignedInvoicesTile";
 import { portalCardClass } from "@/components/portal/ui";
 import { formatDate } from "@/lib/constants";
 import {
@@ -12,6 +13,7 @@ import {
   formatInvoiceServiceDates,
   payPeriodLabel,
   payPeriodSortKey,
+  startOfUtcDay,
 } from "@/lib/invoice-pay-period-grouping";
 import {
   buildAdminInvoicesHref,
@@ -25,6 +27,15 @@ import { prisma } from "@/lib/prisma";
 import type { InvoiceStatus, Prisma } from "@/generated/prisma/client";
 
 const INVOICE_STATUSES = ["DRAFT", "SUBMITTED", "BILLED"] as const;
+
+type InvoiceWithRelations = Prisma.InvoiceGetPayload<{
+  include: {
+    client: true;
+    therapist: { select: { firstName: true; lastName: true } };
+    lineItems: { select: { serviceDate: true } };
+    payPeriod: { select: { label: true; cutoffDate: true } };
+  };
+}>;
 
 function isInvoiceStatus(value: string | undefined): value is InvoiceStatus {
   return INVOICE_STATUSES.includes(value as InvoiceStatus);
@@ -64,6 +75,49 @@ function buildInvoiceWhere(filters: AdminInvoiceFilterValues): Prisma.InvoiceWhe
   );
 }
 
+function buildUnassignedInvoiceWhere(filters: AdminInvoiceFilterValues): Prisma.InvoiceWhereInput {
+  const where: Prisma.InvoiceWhereInput = {
+    status: "SUBMITTED",
+    payPeriodId: null,
+  };
+
+  if (filters.therapistId) {
+    where.therapistId = filters.therapistId;
+  }
+
+  return mergeInvoiceWhere(where, invoicePaymentWhere(filters.paymentStatus));
+}
+
+function toAdminInvoiceRow(inv: InvoiceWithRelations): AdminInvoiceRow {
+  const period = inv.payPeriod;
+  return {
+    id: inv.id,
+    invoiceNumber: inv.invoiceNumber,
+    status: inv.status,
+    paymentStatus: inv.paymentStatus,
+    lniPaidAt: inv.lniPaidAt?.toISOString() ?? null,
+    lniEobCodes: inv.lniEobCodes,
+    lniEobCodeDescriptions: inv.lniEobCodeDescriptions,
+    totalAmount: Number(inv.totalAmount),
+    submittedAt: inv.submittedAt?.toISOString() ?? null,
+    therapistName: `${inv.therapist.firstName} ${inv.therapist.lastName}`,
+    clientLabel: `${inv.client.lastName}, ${inv.client.firstName} (${inv.client.lniClaimNumber})`,
+    serviceDates: formatInvoiceServiceDates(inv.lineItems),
+    payPeriodId: inv.payPeriodId,
+    payPeriodLabel: payPeriodLabel(period),
+    payPeriodSortKey: payPeriodSortKey(period),
+    earliestServiceDate: earliestServiceDateIso(inv.lineItems),
+    assignable: inv.status === "SUBMITTED",
+  };
+}
+
+const invoiceInclude = {
+  client: true,
+  therapist: { select: { firstName: true, lastName: true } },
+  lineItems: { select: { serviceDate: true }, orderBy: { sortOrder: "asc" as const } },
+  payPeriod: { select: { label: true, cutoffDate: true } },
+};
+
 export default async function AdminInvoicesPage({
   searchParams,
 }: {
@@ -79,16 +133,16 @@ export default async function AdminInvoicesPage({
   const params = await searchParams;
   const filters = parseInvoiceFilters(params);
   const returnTo = buildAdminInvoicesHref(filters);
+  const today = startOfUtcDay();
 
-  const [invoices, payPeriods, therapists] = await Promise.all([
+  const [invoices, unassignedInvoices, payPeriods, therapists, nextPayPeriod] = await Promise.all([
     prisma.invoice.findMany({
       where: buildInvoiceWhere(filters),
-      include: {
-        client: true,
-        therapist: { select: { firstName: true, lastName: true } },
-        lineItems: { select: { serviceDate: true }, orderBy: { sortOrder: "asc" } },
-        payPeriod: { select: { label: true, cutoffDate: true } },
-      },
+      include: invoiceInclude,
+    }),
+    prisma.invoice.findMany({
+      where: buildUnassignedInvoiceWhere(filters),
+      include: invoiceInclude,
     }),
     prisma.payPeriod.findMany({
       orderBy: { cutoffDate: "desc" },
@@ -99,35 +153,25 @@ export default async function AdminInvoicesPage({
       orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
       select: { id: true, firstName: true, lastName: true },
     }),
+    prisma.payPeriod.findFirst({
+      where: { cutoffDate: { gte: today } },
+      orderBy: { cutoffDate: "asc" },
+      select: { id: true },
+    }),
   ]);
 
-  const invoiceRows: AdminInvoiceRow[] = invoices.map((inv) => {
-    const period = inv.payPeriod;
-    return {
-      id: inv.id,
-      invoiceNumber: inv.invoiceNumber,
-      status: inv.status,
-      paymentStatus: inv.paymentStatus,
-      lniPaidAt: inv.lniPaidAt?.toISOString() ?? null,
-      lniEobCodes: inv.lniEobCodes,
-      lniEobCodeDescriptions: inv.lniEobCodeDescriptions,
-      totalAmount: Number(inv.totalAmount),
-      submittedAt: inv.submittedAt?.toISOString() ?? null,
-      therapistName: `${inv.therapist.firstName} ${inv.therapist.lastName}`,
-      clientLabel: `${inv.client.lastName}, ${inv.client.firstName} (${inv.client.lniClaimNumber})`,
-      serviceDates: formatInvoiceServiceDates(inv.lineItems),
-      payPeriodId: inv.payPeriodId,
-      payPeriodLabel: payPeriodLabel(period),
-      payPeriodSortKey: payPeriodSortKey(period),
-      earliestServiceDate: earliestServiceDateIso(inv.lineItems),
-      assignable: inv.status === "SUBMITTED",
-    };
-  });
+  const unassignedRows = unassignedInvoices.map(toAdminInvoiceRow);
+  const unassignedIds = new Set(unassignedRows.map((row) => row.id));
+  const invoiceRows = invoices
+    .map(toAdminInvoiceRow)
+    .filter((row) => !unassignedIds.has(row.id));
 
   const periodOptions: PayPeriodOption[] = payPeriods.map((period) => ({
     id: period.id,
     label: period.label ?? `Cutoff ${formatDate(period.cutoffDate)}`,
   }));
+
+  const nextPayPeriodId = nextPayPeriod?.id ?? payPeriods[0]?.id ?? null;
 
   const assignedCount = params.assigned ? Number.parseInt(params.assigned, 10) : 0;
   const assignedMessage =
@@ -152,7 +196,14 @@ export default async function AdminInvoicesPage({
         }))}
         payPeriods={periodOptions}
         values={filters}
-        resultCount={invoiceRows.length}
+        resultCount={invoiceRows.length + unassignedRows.length}
+      />
+
+      <AdminUnassignedInvoicesTile
+        invoices={unassignedRows}
+        payPeriods={periodOptions}
+        nextPayPeriodId={nextPayPeriodId}
+        returnTo={returnTo}
       />
 
       {assignedMessage && (

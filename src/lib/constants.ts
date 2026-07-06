@@ -42,6 +42,9 @@ export const PROCEDURE_CODES = [
   { code: "9919M", description: "Case management telephone calls" },
   { code: "9918M", description: "Electronic Provider Communication" },
   { code: "1073M", description: "Telephone or online communication bundled" },
+  { code: "98966", description: "Telephone evaluation and management - 5-10 minutes" },
+  { code: "98967", description: "Telephone evaluation and management - 11-20 minutes" },
+  { code: "98968", description: "Telephone evaluation and management - 21-30 minutes" },
 ] as const;
 
 export type ProcedureCodeNotice = {

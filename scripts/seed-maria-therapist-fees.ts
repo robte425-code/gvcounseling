@@ -9,7 +9,42 @@ dotenv.config({ path: ".env" });
 import { prisma } from "../src/lib/prisma";
 import { createTherapistProcedureCodeFee, loadTherapistProcedureCodeFees } from "../src/lib/procedure-fees";
 
+/** Matches import-maria-invoices.ts / parse-maria-invoice-pdf.ts fee schedules. */
 const SCHEDULES = [
+  {
+    effectiveFrom: "2024-03-01",
+    fees: {
+      "96156": 65,
+      "96158": 32.5,
+      "96159": 16.25,
+      "90837": 90,
+      "90834": 67.5,
+      "90832": 35,
+      "9919M": 30.29,
+      "9918M": 24.23,
+      "1073M": 27.56,
+      "98966": 12,
+      "98967": 22.2,
+      "98968": 30.29,
+    },
+  },
+  {
+    effectiveFrom: "2024-05-10",
+    fees: {
+      "96156": 70,
+      "96158": 35,
+      "96159": 17.5,
+      "90837": 90,
+      "90834": 67.5,
+      "90832": 35,
+      "9919M": 30.29,
+      "9918M": 24.23,
+      "1073M": 27.56,
+      "98966": 12,
+      "98967": 22.2,
+      "98968": 30.29,
+    },
+  },
   {
     effectiveFrom: "2025-03-01",
     fees: {
@@ -22,6 +57,9 @@ const SCHEDULES = [
       "9919M": 33.21,
       "9918M": 26.57,
       "1073M": 30.21,
+      "98966": 12,
+      "98967": 22.2,
+      "98968": 30.29,
     },
   },
   {
@@ -35,6 +73,10 @@ const SCHEDULES = [
       "90832": 48.5,
       "9919M": 34.45,
       "9918M": 27.56,
+      "1073M": 31.34,
+      "98966": 12,
+      "98967": 22.2,
+      "98968": 30.29,
     },
   },
 ] as const;
