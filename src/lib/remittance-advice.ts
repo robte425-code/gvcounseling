@@ -417,56 +417,59 @@ export async function applyRemittanceAdvice(remittanceAdviceId: string): Promise
     })),
   );
 
-  await prisma.$transaction(async (tx) => {
-    for (const line of activeLines) {
-      if (!line.matchedInvoiceId) continue;
+  await prisma.$transaction(
+    async (tx) => {
+      for (const line of activeLines) {
+        if (!line.matchedInvoiceId) continue;
 
-      const { paymentStatus, lniPaidAt } = paymentUpdateFromRemittance(
-        line.section,
-        remittance.invoiceDate,
-      );
+        const { paymentStatus, lniPaidAt } = paymentUpdateFromRemittance(
+          line.section,
+          remittance.invoiceDate,
+        );
 
-      await tx.invoice.update({
-        where: { id: line.matchedInvoiceId },
+        await tx.invoice.update({
+          where: { id: line.matchedInvoiceId },
+          data: {
+            paymentStatus,
+            lniPaidAt,
+            lniEobCodes: line.eobCodes,
+            lniEobCodeDescriptions: parseLineEobDescriptions(line.eobCodeDescriptions),
+          },
+        });
+      }
+
+      const payRun = await tx.therapistPayRun.create({
         data: {
-          paymentStatus,
-          lniPaidAt,
-          lniEobCodes: line.eobCodes,
-          lniEobCodeDescriptions: parseLineEobDescriptions(line.eobCodeDescriptions),
+          remittanceAdviceId: remittance.id,
+          status: "DRAFT",
+          payouts: {
+            create: therapistPayPreview.map((payout) => ({
+              therapistId: payout.therapistId,
+              therapistAmount: payout.therapistAmount,
+              lniPaidAmount: payout.lniPaidAmount,
+              invoiceCount: payout.invoiceCount,
+              lines: {
+                create: payout.lines.map((line) => ({
+                  invoiceId: line.invoiceId,
+                  lniPaidAmount: line.lniPaidAmount,
+                  therapistAmount: line.therapistAmount,
+                })),
+              },
+            })),
+          },
         },
       });
-    }
 
-    const payRun = await tx.therapistPayRun.create({
-      data: {
-        remittanceAdviceId: remittance.id,
-        status: "DRAFT",
-        payouts: {
-          create: therapistPayPreview.map((payout) => ({
-            therapistId: payout.therapistId,
-            therapistAmount: payout.therapistAmount,
-            lniPaidAmount: payout.lniPaidAmount,
-            invoiceCount: payout.invoiceCount,
-            lines: {
-              create: payout.lines.map((line) => ({
-                invoiceId: line.invoiceId,
-                lniPaidAmount: line.lniPaidAmount,
-                therapistAmount: line.therapistAmount,
-              })),
-            },
-          })),
+      await tx.remittanceAdvice.update({
+        where: { id: remittance.id },
+        data: {
+          status: "APPLIED",
+          appliedAt: new Date(),
         },
-      },
-    });
+      });
 
-    await tx.remittanceAdvice.update({
-      where: { id: remittance.id },
-      data: {
-        status: "APPLIED",
-        appliedAt: new Date(),
-      },
-    });
-
-    void payRun;
-  });
+      void payRun;
+    },
+    { timeout: 120_000 },
+  );
 }
