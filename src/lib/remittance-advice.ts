@@ -1,5 +1,5 @@
 import type { Prisma } from "@/generated/prisma/client";
-import { paymentUpdateFromRemittance, remittanceSectionToPaymentStatus } from "@/lib/invoice-payment-status";
+import { remittanceSectionToPaymentStatus, resolvePaymentFromRemittanceLines, parseInvoiceEobDescriptions } from "@/lib/invoice-payment-status";
 import { matchRemittanceBills } from "@/lib/match-remittance-to-invoices";
 import type { MatchedRemittanceBill } from "@/lib/match-remittance-to-invoices";
 import { countUnresolvedRemittanceLines } from "@/lib/remittance-line-supersede";
@@ -290,10 +290,147 @@ export async function revertAppliedRemittance(remittanceAdviceId: string): Promi
 }
 
 function parseLineEobDescriptions(value: unknown): Record<string, string> {
-  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
-  return Object.fromEntries(
-    Object.entries(value).filter((entry): entry is [string, string] => typeof entry[1] === "string"),
+  return parseInvoiceEobDescriptions(value);
+}
+
+/** Recompute invoice L&I payment from all applied, non-superseded remittance matches. */
+export async function reconcileInvoicePaymentStatus(
+  invoiceId: string,
+  tx?: Pick<typeof prisma, "remittanceAdviceLine" | "invoice">,
+): Promise<boolean> {
+  const db = tx ?? prisma;
+  const lines = await db.remittanceAdviceLine.findMany({
+    where: {
+      matchedInvoiceId: invoiceId,
+      supersededAt: null,
+      remittanceAdvice: { status: "APPLIED" },
+    },
+    select: {
+      section: true,
+      eobCodes: true,
+      eobCodeDescriptions: true,
+      remittanceAdvice: { select: { invoiceDate: true } },
+    },
+  });
+
+  const resolved = resolvePaymentFromRemittanceLines(
+    lines.map((line) => ({
+      section: line.section,
+      remittanceDate: line.remittanceAdvice.invoiceDate,
+      eobCodes: line.eobCodes,
+      eobCodeDescriptions: line.eobCodeDescriptions,
+    })),
   );
+
+  if (!resolved) return false;
+
+  const current = await db.invoice.findUnique({
+    where: { id: invoiceId },
+    select: {
+      paymentStatus: true,
+      lniPaidAt: true,
+      lniEobCodes: true,
+      lniEobCodeDescriptions: true,
+    },
+  });
+  if (!current) return false;
+
+  const sameStatus = current.paymentStatus === resolved.paymentStatus;
+  const samePaidAt =
+    (current.lniPaidAt?.getTime() ?? null) === (resolved.lniPaidAt?.getTime() ?? null);
+  const sameEob =
+    JSON.stringify(current.lniEobCodes) === JSON.stringify(resolved.eobCodes) &&
+    JSON.stringify(current.lniEobCodeDescriptions) === JSON.stringify(resolved.eobCodeDescriptions);
+  if (sameStatus && samePaidAt && sameEob) return false;
+
+  await db.invoice.update({
+    where: { id: invoiceId },
+    data: {
+      paymentStatus: resolved.paymentStatus,
+      lniPaidAt: resolved.lniPaidAt,
+      lniEobCodes: resolved.eobCodes,
+      lniEobCodeDescriptions: resolved.eobCodeDescriptions,
+    },
+  });
+  return true;
+}
+
+export async function reconcileAllInvoicePaymentStatuses(): Promise<{
+  updated: number;
+}> {
+  const lines = await prisma.remittanceAdviceLine.findMany({
+    where: {
+      matchedInvoiceId: { not: null },
+      supersededAt: null,
+      remittanceAdvice: { status: "APPLIED" },
+    },
+    select: {
+      matchedInvoiceId: true,
+      section: true,
+      eobCodes: true,
+      eobCodeDescriptions: true,
+      remittanceAdvice: { select: { invoiceDate: true } },
+    },
+  });
+
+  const byInvoice = new Map<string, typeof lines>();
+  for (const line of lines) {
+    const invoiceId = line.matchedInvoiceId!;
+    const group = byInvoice.get(invoiceId) ?? [];
+    group.push(line);
+    byInvoice.set(invoiceId, group);
+  }
+
+  const invoiceIds = [...byInvoice.keys()];
+  const currents = await prisma.invoice.findMany({
+    where: { id: { in: invoiceIds } },
+    select: {
+      id: true,
+      paymentStatus: true,
+      lniPaidAt: true,
+      lniEobCodes: true,
+      lniEobCodeDescriptions: true,
+    },
+  });
+  const currentById = new Map(currents.map((invoice) => [invoice.id, invoice]));
+
+  let updated = 0;
+  for (const [invoiceId, invoiceLines] of byInvoice) {
+    const resolved = resolvePaymentFromRemittanceLines(
+      invoiceLines.map((line) => ({
+        section: line.section,
+        remittanceDate: line.remittanceAdvice.invoiceDate,
+        eobCodes: line.eobCodes,
+        eobCodeDescriptions: line.eobCodeDescriptions,
+      })),
+    );
+    if (!resolved) continue;
+
+    const current = currentById.get(invoiceId);
+    if (!current) continue;
+
+    const sameStatus = current.paymentStatus === resolved.paymentStatus;
+    const samePaidAt =
+      (current.lniPaidAt?.getTime() ?? null) === (resolved.lniPaidAt?.getTime() ?? null);
+    const sameEob =
+      JSON.stringify(current.lniEobCodes) === JSON.stringify(resolved.eobCodes) &&
+      JSON.stringify(current.lniEobCodeDescriptions) ===
+        JSON.stringify(resolved.eobCodeDescriptions);
+    if (sameStatus && samePaidAt && sameEob) continue;
+
+    await prisma.invoice.update({
+      where: { id: invoiceId },
+      data: {
+        paymentStatus: resolved.paymentStatus,
+        lniPaidAt: resolved.lniPaidAt,
+        lniEobCodes: resolved.eobCodes,
+        lniEobCodeDescriptions: resolved.eobCodeDescriptions,
+      },
+    });
+    updated += 1;
+  }
+
+  return { updated };
 }
 
 function lineToRemittanceBill(line: {
@@ -419,23 +556,16 @@ export async function applyRemittanceAdvice(remittanceAdviceId: string): Promise
 
   await prisma.$transaction(
     async (tx) => {
-      for (const line of activeLines) {
-        if (!line.matchedInvoiceId) continue;
+      const invoiceIds = [
+        ...new Set(
+          activeLines
+            .map((line) => line.matchedInvoiceId)
+            .filter((id): id is string => Boolean(id)),
+        ),
+      ];
 
-        const { paymentStatus, lniPaidAt } = paymentUpdateFromRemittance(
-          line.section,
-          remittance.invoiceDate,
-        );
-
-        await tx.invoice.update({
-          where: { id: line.matchedInvoiceId },
-          data: {
-            paymentStatus,
-            lniPaidAt,
-            lniEobCodes: line.eobCodes,
-            lniEobCodeDescriptions: parseLineEobDescriptions(line.eobCodeDescriptions),
-          },
-        });
+      for (const invoiceId of invoiceIds) {
+        await reconcileInvoicePaymentStatus(invoiceId, tx);
       }
 
       const payRun = await tx.therapistPayRun.create({

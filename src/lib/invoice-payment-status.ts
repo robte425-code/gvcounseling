@@ -16,6 +16,52 @@ export function remittanceSectionToPaymentStatus(section: RemittanceBillSection)
   }
 }
 
+/** Higher wins when one invoice matches multiple bills on the same remittance. */
+export function remittanceSectionPriority(section: RemittanceBillSection): number {
+  switch (section) {
+    case "PAID":
+      return 3;
+    case "IN_PROCESS":
+      return 2;
+    case "DENIED":
+      return 1;
+  }
+}
+
+export type RemittanceLinePaymentInput = {
+  section: RemittanceBillSection;
+  remittanceDate: Date;
+  eobCodes: string[];
+  eobCodeDescriptions: unknown;
+};
+
+/** Pick payment from the latest remittance date; PAID beats IN_PROCESS beats DENIED on that date. */
+export function resolvePaymentFromRemittanceLines(
+  lines: RemittanceLinePaymentInput[],
+): (InferredPayment & { eobCodes: string[]; eobCodeDescriptions: Record<string, string> }) | null {
+  if (lines.length === 0) return null;
+
+  const latestDate = lines.reduce(
+    (max, line) => (line.remittanceDate > max ? line.remittanceDate : max),
+    lines[0]!.remittanceDate,
+  );
+  const latestLines = lines.filter((line) => line.remittanceDate.getTime() === latestDate.getTime());
+
+  let best = latestLines[0]!;
+  for (const line of latestLines) {
+    if (remittanceSectionPriority(line.section) > remittanceSectionPriority(best.section)) {
+      best = line;
+    }
+  }
+
+  const payment = paymentUpdateFromRemittance(best.section, latestDate);
+  return {
+    ...payment,
+    eobCodes: best.eobCodes,
+    eobCodeDescriptions: parseInvoiceEobDescriptions(best.eobCodeDescriptions),
+  };
+}
+
 export function paymentStatusLabel(status: PaymentStatus): string {
   switch (status) {
     case "PAID":

@@ -372,6 +372,11 @@ export default async function PayRemittanceDetailPage({
                         → {paymentStatusLabel(lniPaymentStatus)} on apply
                       </span>
                     )}
+                    {paymentStatusMismatch && remittance.status === "APPLIED" && (
+                      <span className="text-muted">
+                        Invoice uses latest remittance (PAID over IN_PROCESS over DENIED)
+                      </span>
+                    )}
                   </div>
                 )}
                 {line.eobCodes.length > 0 && (
