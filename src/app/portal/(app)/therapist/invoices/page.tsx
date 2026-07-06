@@ -18,6 +18,7 @@ import {
   invoicePaymentWhere,
   isInvoicePaymentFilter,
   mergeInvoiceWhere,
+  buildTherapistInvoicesHref,
   type TherapistInvoiceFilterValues,
 } from "@/lib/invoice-list-filters";
 import { prisma } from "@/lib/prisma";
@@ -109,6 +110,8 @@ export default async function TherapistInvoicesPage({
     label: period.label ?? `Cutoff ${formatDate(period.cutoffDate)}`,
   }));
 
+  const invoicesReturnTo = buildTherapistInvoicesHref(filters);
+
   return (
     <div className="space-y-8">
       <div className="flex flex-wrap items-end justify-between gap-4">
@@ -128,6 +131,7 @@ export default async function TherapistInvoicesPage({
         <TherapistInvoicesTable
           invoices={invoiceRows}
           hasFilters={Boolean(filters.status || filters.payPeriodId || filters.paymentStatus)}
+          invoicesReturnTo={invoicesReturnTo}
         />
       </div>
     </div>

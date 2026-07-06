@@ -28,9 +28,14 @@ export type TherapistInvoiceRow = {
 type Props = {
   invoices: TherapistInvoiceRow[];
   hasFilters?: boolean;
+  invoicesReturnTo?: string;
 };
 
-export function TherapistInvoicesTable({ invoices, hasFilters = false }: Props) {
+export function TherapistInvoicesTable({
+  invoices,
+  hasFilters = false,
+  invoicesReturnTo = "/portal/therapist/invoices",
+}: Props) {
   const groups = groupInvoicesByPayPeriod(invoices);
 
   return (
@@ -66,6 +71,7 @@ export function TherapistInvoicesTable({ invoices, hasFilters = false }: Props) 
                   inv.status === "DRAFT" ? (
                     <form action={deleteInvoiceAction}>
                       <input type="hidden" name="invoiceId" value={inv.id} />
+                      <input type="hidden" name="returnTo" value={invoicesReturnTo} />
                       <ConfirmSubmitButton
                         confirmMessage={`Delete invoice #${inv.invoiceNumber}?`}
                         className={`${portalButtonSecondaryClass} border-red-200 px-3 py-1 text-xs text-red-700 hover:bg-red-50`}

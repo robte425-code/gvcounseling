@@ -53,6 +53,16 @@ export function buildTherapistInvoicesHref(values: TherapistInvoiceFilterValues)
   return query ? `/portal/therapist/invoices?${query}` : "/portal/therapist/invoices";
 }
 
+/** Safe redirect target after therapist invoice mutations (list filters preserved). */
+export function parseTherapistInvoicesReturnTo(value: string | undefined): string {
+  const fallback = "/portal/therapist/invoices";
+  const trimmed = value?.trim();
+  if (!trimmed) return fallback;
+  if (!trimmed.startsWith("/portal/therapist/invoices")) return fallback;
+  if (trimmed.includes("://")) return fallback;
+  return trimmed;
+}
+
 export function isInvoicePaymentFilter(value: string | undefined): value is InvoicePaymentFilter {
   return (
     value === "PAID" ||

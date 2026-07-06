@@ -24,6 +24,7 @@ import { fetchLniPayPeriods } from "@/lib/lni-pay-periods";
 import { createProcedureCodeFee, createTherapistProcedureCodeFee, updateTherapistProcedureCodeFee, applyTherapistFeeSchedule } from "@/lib/procedure-fees";
 import { prisma } from "@/lib/prisma";
 import { getNextInvoiceNumber } from "@/lib/invoice-numbers";
+import { parseTherapistInvoicesReturnTo } from "@/lib/invoice-list-filters";
 import { emailVrcsForPayPeriod, parseVrcEmailDestinationParam } from "@/lib/vrc-billing-emails";
 import { faxLniForPayPeriod, parseLniFaxDestinationParam } from "@/lib/lni-billing-faxes";
 import { applyRemittanceAdvice, deleteRemittancePreview, importRemittanceFromUpload } from "@/lib/remittance-advice";
@@ -707,7 +708,7 @@ export async function deleteInvoiceAction(formData: FormData) {
   await removeInvoiceDriveAttachments(invoice, session.user.id);
   await prisma.invoice.delete({ where: { id: invoiceId } });
   revalidatePath("/portal/therapist/invoices");
-  redirect("/portal/therapist/invoices");
+  redirect(parseTherapistInvoicesReturnTo(String(formData.get("returnTo") ?? "")));
 }
 
 export async function deleteAdminInvoiceAction(formData: FormData) {

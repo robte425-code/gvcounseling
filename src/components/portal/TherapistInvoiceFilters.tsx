@@ -31,11 +31,13 @@ type Props = {
 export function TherapistInvoiceFilters({ payPeriods, values, resultCount }: Props) {
   const formRef = useRef<HTMLFormElement>(null);
   const hasFilters = Boolean(values.status || values.payPeriodId || values.paymentStatus);
+  const formKey = `${values.status ?? ""}|${values.payPeriodId ?? ""}|${values.paymentStatus ?? ""}`;
 
   const applyFilters = () => formRef.current?.requestSubmit();
 
   return (
     <form
+      key={formKey}
       ref={formRef}
       method="get"
       action="/portal/therapist/invoices"
