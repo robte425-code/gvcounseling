@@ -3,6 +3,7 @@ import { requireAdmin } from "@/auth";
 import { RemittanceImportForm, DeleteRemittancePreviewForm } from "@/components/portal/RemittancePayPanel";
 import { portalCardClass, portalSectionHeadingClass } from "@/components/portal/ui";
 import { formatCurrency, formatDate } from "@/lib/constants";
+import { countUnresolvedRemittanceLines } from "@/lib/remittance-line-supersede";
 import { prisma } from "@/lib/prisma";
 
 export default async function PayPage({
@@ -17,7 +18,7 @@ export default async function PayPage({
     orderBy: { invoiceDate: "desc" },
     include: {
       _count: { select: { lines: true } },
-      lines: { select: { matchedInvoiceId: true } },
+      lines: { select: { matchedInvoiceId: true, supersededAt: true } },
       payRun: {
         include: {
           payouts: {
@@ -28,10 +29,10 @@ export default async function PayPage({
     },
   });
 
-  const previewUnmatched = remittances.filter(
+  const previewUnresolved = remittances.filter(
     (remittance) =>
       remittance.status === "PREVIEW" &&
-      remittance.lines.some((line) => !line.matchedInvoiceId),
+      countUnresolvedRemittanceLines(remittance.lines) > 0,
   );
 
   return (
@@ -59,15 +60,15 @@ export default async function PayPage({
         </p>
       )}
 
-      {previewUnmatched.length > 0 && (
+      {previewUnresolved.length > 0 && (
         <p className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-900" role="alert">
           <span className="font-semibold">
-            {previewUnmatched.length} preview remittance
-            {previewUnmatched.length === 1 ? "" : "s"} with unmatched bills
+            {previewUnresolved.length} preview remittance
+            {previewUnresolved.length === 1 ? "" : "s"} with unresolved bills
           </span>
           {" — "}
-          every bill must match an invoice before applying. Open each preview below to resolve
-          matching issues.
+          every bill must match an invoice or be superseded before applying. Open each preview below
+          to resolve matching issues.
         </p>
       )}
 
@@ -95,16 +96,14 @@ export default async function PayPage({
                 (sum, payout) => sum + Number(payout.therapistAmount),
                 0,
               );
-              const unmatchedCount = remittance.lines.filter(
-                (line) => !line.matchedInvoiceId,
-              ).length;
-              const hasUnmatchedPreview =
-                remittance.status === "PREVIEW" && unmatchedCount > 0;
+              const unresolvedCount = countUnresolvedRemittanceLines(remittance.lines);
+              const hasUnresolvedPreview =
+                remittance.status === "PREVIEW" && unresolvedCount > 0;
               return (
                 <li
                   key={remittance.id}
                   className={`rounded-xl border p-4 transition ${
-                    hasUnmatchedPreview
+                    hasUnresolvedPreview
                       ? "border-red-300 bg-red-50/40 hover:border-red-400"
                       : "border-border bg-primary/[0.02] hover:border-primary/20"
                   }`}
@@ -119,11 +118,11 @@ export default async function PayPage({
                           <p className="mt-1 text-xs text-muted">
                             Warrant {remittance.warrantRegister} · {remittance._count.lines} bills ·{" "}
                             {remittance.status === "APPLIED" ? "Applied" : "Preview"}
-                            {hasUnmatchedPreview && (
+                            {hasUnresolvedPreview && (
                               <>
                                 {" · "}
                                 <span className="font-medium text-red-800">
-                                  {unmatchedCount} unmatched
+                                  {unresolvedCount} unresolved
                                 </span>
                               </>
                             )}

@@ -300,6 +300,8 @@ model RemittanceAdviceLine {
   matchedInvoiceId   String?
   matchedInvoice     Invoice?              @relation(fields: [matchedInvoiceId], references: [id])
   matchNote          String?
+  supersededAt       DateTime?
+  supersedeNote      String?
 
   @@index([remittanceAdviceId])
   @@index([claimNumber])

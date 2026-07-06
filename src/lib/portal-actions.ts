@@ -27,6 +27,13 @@ import { getNextInvoiceNumber } from "@/lib/invoice-numbers";
 import { emailVrcsForPayPeriod, parseVrcEmailDestinationParam } from "@/lib/vrc-billing-emails";
 import { faxLniForPayPeriod, parseLniFaxDestinationParam } from "@/lib/lni-billing-faxes";
 import { applyRemittanceAdvice, deleteRemittancePreview, importRemittanceFromUpload } from "@/lib/remittance-advice";
+import {
+  createWrongYearRebillFromLine,
+  createWrongYearRebillsForRemittance,
+  supersedeRemittanceLine,
+  supersedeWrongYearStaleLines,
+  unsupersedeRemittanceLine,
+} from "@/lib/remittance-line-supersede";
 
 function parseDecimal(value: FormDataEntryValue | null): number {
   const n = parseFloat(String(value ?? "0"));
@@ -1577,4 +1584,123 @@ export async function applyRemittanceAdviceAction(
   revalidatePath(`/portal/admin/pay/${remittanceAdviceId}`);
   revalidatePath("/portal/admin/invoices");
   redirect(`/portal/admin/pay/${remittanceAdviceId}?applied=1`);
+}
+
+export type SupersedeRemittanceState = { error?: string };
+
+export async function supersedeWrongYearStaleLinesAction(
+  _prevState: SupersedeRemittanceState,
+  formData: FormData,
+): Promise<SupersedeRemittanceState> {
+  await requireAdmin();
+  const remittanceAdviceId = String(formData.get("remittanceAdviceId") ?? "").trim();
+  if (!remittanceAdviceId) return { error: "Remittance is required." };
+
+  try {
+    const count = await supersedeWrongYearStaleLines(remittanceAdviceId);
+    if (count === 0) return { error: "No stale wrong-year lines detected to supersede." };
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : "Could not supersede stale lines.",
+    };
+  }
+
+  revalidatePath("/portal/admin/pay");
+  revalidatePath(`/portal/admin/pay/${remittanceAdviceId}`);
+  redirect(`/portal/admin/pay/${remittanceAdviceId}?superseded=1`);
+}
+
+export async function supersedeRemittanceLineAction(
+  _prevState: SupersedeRemittanceState,
+  formData: FormData,
+): Promise<SupersedeRemittanceState> {
+  await requireAdmin();
+  const remittanceAdviceId = String(formData.get("remittanceAdviceId") ?? "").trim();
+  const lineId = String(formData.get("lineId") ?? "").trim();
+  const note = String(formData.get("note") ?? "").trim();
+  if (!remittanceAdviceId || !lineId) return { error: "Remittance line is required." };
+
+  try {
+    await supersedeRemittanceLine(lineId, note || undefined);
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : "Could not supersede line.",
+    };
+  }
+
+  revalidatePath("/portal/admin/pay");
+  revalidatePath(`/portal/admin/pay/${remittanceAdviceId}`);
+  redirect(`/portal/admin/pay/${remittanceAdviceId}?superseded=1`);
+}
+
+export async function unsupersedeRemittanceLineAction(
+  _prevState: SupersedeRemittanceState,
+  formData: FormData,
+): Promise<SupersedeRemittanceState> {
+  await requireAdmin();
+  const remittanceAdviceId = String(formData.get("remittanceAdviceId") ?? "").trim();
+  const lineId = String(formData.get("lineId") ?? "").trim();
+  if (!remittanceAdviceId || !lineId) return { error: "Remittance line is required." };
+
+  try {
+    await unsupersedeRemittanceLine(lineId);
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : "Could not undo supersede.",
+    };
+  }
+
+  revalidatePath("/portal/admin/pay");
+  revalidatePath(`/portal/admin/pay/${remittanceAdviceId}`);
+  redirect(`/portal/admin/pay/${remittanceAdviceId}`);
+}
+
+export type CreateWrongYearRebillState = { error?: string };
+
+export async function createWrongYearRebillAction(
+  _prevState: CreateWrongYearRebillState,
+  formData: FormData,
+): Promise<CreateWrongYearRebillState> {
+  await requireAdmin();
+  const remittanceAdviceId = String(formData.get("remittanceAdviceId") ?? "").trim();
+  const lineId = String(formData.get("lineId") ?? "").trim();
+  if (!remittanceAdviceId || !lineId) return { error: "Remittance line is required." };
+
+  try {
+    await createWrongYearRebillFromLine(lineId);
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : "Could not create rebill.",
+    };
+  }
+
+  revalidatePath("/portal/admin/pay");
+  revalidatePath(`/portal/admin/pay/${remittanceAdviceId}`);
+  revalidatePath("/portal/admin/invoices");
+  redirect(`/portal/admin/pay/${remittanceAdviceId}?rebilled=1`);
+}
+
+export async function createWrongYearRebillsAction(
+  _prevState: CreateWrongYearRebillState,
+  formData: FormData,
+): Promise<CreateWrongYearRebillState> {
+  await requireAdmin();
+  const remittanceAdviceId = String(formData.get("remittanceAdviceId") ?? "").trim();
+  if (!remittanceAdviceId) return { error: "Remittance is required." };
+
+  try {
+    const { created } = await createWrongYearRebillsForRemittance(remittanceAdviceId);
+    if (created === 0) {
+      return { error: "No new rebills created — unsubmitted rebills may already exist." };
+    }
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : "Could not create rebills.",
+    };
+  }
+
+  revalidatePath("/portal/admin/pay");
+  revalidatePath(`/portal/admin/pay/${remittanceAdviceId}`);
+  revalidatePath("/portal/admin/invoices");
+  redirect(`/portal/admin/pay/${remittanceAdviceId}?rebilled=1`);
 }

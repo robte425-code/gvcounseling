@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireAdmin } from "@/auth";
-import { ApplyRemittanceForm, DeleteRemittancePreviewForm } from "@/components/portal/RemittancePayPanel";
+import { ApplyRemittanceForm, CreateWrongYearRebillForm, CreateWrongYearRebillsForm, DeleteRemittancePreviewForm, SupersedeRemittanceLineForm, SupersedeWrongYearStaleLinesForm, UnsupersedeRemittanceLineForm } from "@/components/portal/RemittancePayPanel";
 import {
   portalCardClass,
   portalSectionHeadingClass,
@@ -13,6 +13,10 @@ import {
   remittanceSectionToPaymentStatus,
 } from "@/lib/invoice-payment-status";
 import { buildTherapistPayPreview } from "@/lib/remittance-advice";
+import {
+  countUnresolvedRemittanceLines,
+  listWrongYearSupersedeSuggestions,
+} from "@/lib/remittance-line-supersede";
 import type { RemittanceServiceLine } from "@/lib/parse-lni-remittance-pdf";
 import { prisma } from "@/lib/prisma";
 
@@ -58,7 +62,7 @@ export default async function PayRemittanceDetailPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ applied?: string }>;
+  searchParams: Promise<{ applied?: string; superseded?: string; rebilled?: string }>;
 }) {
   await requireAdmin();
   const { id } = await params;
@@ -106,7 +110,15 @@ export default async function PayRemittanceDetailPage({
   if (!remittance) notFound();
 
   const matchedCount = remittance.lines.filter((line) => line.matchedInvoiceId).length;
-  const unmatchedCount = remittance.lines.length - matchedCount;
+  const supersededCount = remittance.lines.filter((line) => line.supersededAt).length;
+  const unresolvedCount = countUnresolvedRemittanceLines(remittance.lines);
+  const wrongYearSuggestions =
+    remittance.status === "PREVIEW"
+      ? await listWrongYearSupersedeSuggestions(remittance.id)
+      : [];
+  const wrongYearSuggestionByLineId = new Map(
+    wrongYearSuggestions.map((suggestion) => [suggestion.lineId, suggestion]),
+  );
   const paymentStatusMismatchCount = remittance.lines.filter((line) => {
     if (!line.matchedInvoice) return false;
     const expected = remittanceSectionToPaymentStatus(line.section);
@@ -119,7 +131,9 @@ export default async function PayRemittanceDetailPage({
   if (remittance.status === "PREVIEW") {
     try {
       therapistPayPreview = await buildTherapistPayPreview(
-        remittance.lines.map((line) => ({
+        remittance.lines
+          .filter((line) => !line.supersededAt)
+          .map((line) => ({
           bill: {
             section: line.section,
             claimNumber: line.claimNumber,
@@ -195,22 +209,64 @@ export default async function PayRemittanceDetailPage({
         </p>
       )}
 
-      {remittance.status === "PREVIEW" && unmatchedCount > 0 && (
+      {query.superseded === "1" && (
+        <p className="rounded-xl bg-primary/10 px-4 py-3 text-sm text-primary-dark" role="status">
+          Stale line(s) superseded. They no longer block applying this remittance.
+        </p>
+      )}
+
+      {query.rebilled === "1" && (
+        <p className="rounded-xl bg-primary/10 px-4 py-3 text-sm text-primary-dark" role="status">
+          Rebill invoice(s) created. Submit them to L&I when ready.
+        </p>
+      )}
+
+      {remittance.status === "PREVIEW" && unresolvedCount > 0 && (
         <p className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-900" role="alert">
           <span className="font-semibold">
-            {unmatchedCount} unmatched bill{unmatchedCount === 1 ? "" : "s"}
+            {unresolvedCount} unresolved bill{unresolvedCount === 1 ? "" : "s"}
           </span>
           {" — "}
-          every bill must match an invoice before this remittance can be applied. Review each
-          unmatched bill below and fix missing invoices or matching issues.
+          every bill must match an invoice or be superseded before this remittance can be applied.
+          {wrongYearSuggestions.length > 0
+            ? " Use the wrong-year supersede action below for detected stale lines."
+            : " Review each unresolved bill below."}
         </p>
+      )}
+
+      {remittance.status === "PREVIEW" && wrongYearSuggestions.length > 0 && (
+        <div className="space-y-3">
+          <CreateWrongYearRebillsForm
+            remittanceAdviceId={remittance.id}
+            suggestions={wrongYearSuggestions.map((suggestion) => ({
+              lineId: suggestion.lineId,
+              claimNumber: suggestion.claimNumber,
+              raServiceDates: suggestion.raServiceDates,
+              correctedServiceDates: suggestion.correctedServiceDates,
+              invoiceNumber: suggestion.invoiceNumber,
+              note: suggestion.note,
+            }))}
+          />
+          <SupersedeWrongYearStaleLinesForm
+            remittanceAdviceId={remittance.id}
+            suggestions={wrongYearSuggestions.map((suggestion) => ({
+              lineId: suggestion.lineId,
+              claimNumber: suggestion.claimNumber,
+              raServiceDates: suggestion.raServiceDates,
+              correctedServiceDates: suggestion.correctedServiceDates,
+              invoiceNumber: suggestion.invoiceNumber,
+              note: suggestion.note,
+            }))}
+          />
+        </div>
       )}
 
       <div className="grid gap-6 lg:grid-cols-12">
         <section className={`${portalCardClass} lg:col-span-8`}>
           <p className={portalSectionHeadingClass}>Bills</p>
           <h2 className="mt-1 font-serif text-lg font-semibold text-primary-dark">
-            {matchedCount} matched · {unmatchedCount} unmatched
+            {matchedCount} matched · {unresolvedCount} unresolved
+            {supersededCount > 0 ? ` · ${supersededCount} superseded` : ""}
           </h2>
           <ul className="mt-4 space-y-2">
             {remittance.lines.map((line) => {
@@ -220,13 +276,18 @@ export default async function PayRemittanceDetailPage({
               const invoicePaymentStatus = line.matchedInvoice?.paymentStatus ?? null;
               const paymentStatusMismatch =
                 line.matchedInvoice != null && invoicePaymentStatus !== lniPaymentStatus;
+              const wrongYearSuggestion = wrongYearSuggestionByLineId.get(line.id);
+              const isSuperseded = Boolean(line.supersededAt);
+              const isUnresolved = !line.matchedInvoiceId && !isSuperseded;
               return (
               <li
                 key={line.id}
                 className={`rounded-lg border px-3 py-2 text-sm ${
-                  !line.matchedInvoiceId
-                    ? "border-red-300 bg-red-50/50"
-                    : "border-border"
+                  isSuperseded
+                    ? "border-slate-200 bg-slate-50/80"
+                    : isUnresolved
+                      ? "border-red-300 bg-red-50/50"
+                      : "border-border"
                 }`}
               >
                 <div className="flex flex-wrap items-center justify-between gap-2">
@@ -263,6 +324,37 @@ export default async function PayRemittanceDetailPage({
                 </div>
                 {line.matchNote && (
                   <p className="mt-1 text-xs text-amber-800">{line.matchNote}</p>
+                )}
+                {isSuperseded && (
+                  <p className="mt-1 text-xs text-slate-600">
+                    Superseded stale line
+                    {line.supersedeNote ? ` — ${line.supersedeNote}` : ""}
+                  </p>
+                )}
+                {wrongYearSuggestion && remittance.status === "PREVIEW" && !isSuperseded && (
+                  <p className="mt-1 text-xs text-slate-700">{wrongYearSuggestion.note}</p>
+                )}
+                {remittance.status === "PREVIEW" && isUnresolved && (
+                  <div className="mt-2 flex flex-wrap items-center gap-3">
+                    {wrongYearSuggestion && (
+                      <CreateWrongYearRebillForm
+                        remittanceAdviceId={remittance.id}
+                        lineId={line.id}
+                      />
+                    )}
+                    {wrongYearSuggestion ? (
+                      <SupersedeRemittanceLineForm
+                        remittanceAdviceId={remittance.id}
+                        lineId={line.id}
+                        defaultNote={wrongYearSuggestion.note}
+                      />
+                    ) : (
+                      <SupersedeRemittanceLineForm remittanceAdviceId={remittance.id} lineId={line.id} />
+                    )}
+                  </div>
+                )}
+                {remittance.status === "PREVIEW" && isSuperseded && (
+                  <UnsupersedeRemittanceLineForm remittanceAdviceId={remittance.id} lineId={line.id} />
                 )}
                 {line.matchedInvoice && (
                   <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs">
@@ -371,7 +463,7 @@ export default async function PayRemittanceDetailPage({
               <ApplyRemittanceForm
                 remittanceAdviceId={remittance.id}
                 matchedCount={matchedCount}
-                unmatchedCount={unmatchedCount}
+                unmatchedCount={unresolvedCount}
                 therapistTotal={therapistTotal}
               />
               <DeleteRemittancePreviewForm

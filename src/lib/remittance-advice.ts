@@ -2,6 +2,7 @@ import type { Prisma } from "@/generated/prisma/client";
 import { paymentUpdateFromRemittance, remittanceSectionToPaymentStatus } from "@/lib/invoice-payment-status";
 import { matchRemittanceBills } from "@/lib/match-remittance-to-invoices";
 import type { MatchedRemittanceBill } from "@/lib/match-remittance-to-invoices";
+import { countUnresolvedRemittanceLines } from "@/lib/remittance-line-supersede";
 import { parseLniRemittancePdf } from "@/lib/parse-lni-remittance-pdf";
 import type { ParsedRemittanceAdvice, RemittanceBill, RemittanceServiceLine } from "@/lib/parse-lni-remittance-pdf";
 import { resolveEobDescriptions } from "@/lib/parse-lni-remittance-pdf";
@@ -340,6 +341,8 @@ export async function rematchRemittanceAdvice(remittanceAdviceId: string): Promi
 
   for (let index = 0; index < remittance.lines.length; index++) {
     const line = remittance.lines[index]!;
+    if (line.supersededAt) continue;
+
     const match = matches[index];
     await prisma.remittanceAdviceLine.update({
       where: { id: line.id },
@@ -382,15 +385,17 @@ export async function applyRemittanceAdvice(remittanceAdviceId: string): Promise
   if (!remittance) throw new Error("Remittance advice not found.");
   if (remittance.status === "APPLIED") throw new Error("This remittance has already been applied.");
 
-  const unmatchedCount = remittance.lines.filter((line) => !line.matchedInvoiceId).length;
+  const unmatchedCount = countUnresolvedRemittanceLines(remittance.lines);
   if (unmatchedCount > 0) {
     throw new Error(
-      `Cannot apply remittance: ${unmatchedCount} bill(s) could not be matched to an invoice. Fix matching before applying.`,
+      `Cannot apply remittance: ${unmatchedCount} bill(s) could not be matched to an invoice. Fix matching or supersede stale lines before applying.`,
     );
   }
 
+  const activeLines = remittance.lines.filter((line) => !line.supersededAt);
+
   const therapistPayPreview = await buildTherapistPayPreview(
-    remittance.lines.map((line) => ({
+    activeLines.map((line) => ({
       bill: {
         section: line.section,
         claimNumber: line.claimNumber,
@@ -413,7 +418,7 @@ export async function applyRemittanceAdvice(remittanceAdviceId: string): Promise
   );
 
   await prisma.$transaction(async (tx) => {
-    for (const line of remittance.lines) {
+    for (const line of activeLines) {
       if (!line.matchedInvoiceId) continue;
 
       const { paymentStatus, lniPaidAt } = paymentUpdateFromRemittance(

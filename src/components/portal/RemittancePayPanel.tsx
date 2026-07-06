@@ -5,8 +5,15 @@ import { useRouter } from "next/navigation";
 import {
   applyRemittanceAdviceAction,
   deleteRemittancePreviewAction,
+  createWrongYearRebillAction,
+  createWrongYearRebillsAction,
+  supersedeRemittanceLineAction,
+  supersedeWrongYearStaleLinesAction,
+  unsupersedeRemittanceLineAction,
   type ApplyRemittanceState,
+  type CreateWrongYearRebillState,
   type DeleteRemittancePreviewState,
+  type SupersedeRemittanceState,
 } from "@/lib/portal-actions";
 import { ConfirmSubmitButton } from "@/components/portal/ConfirmSubmitButton";
 import {
@@ -322,6 +329,201 @@ export function ApplyRemittanceForm({
       >
         {pending ? "Applying…" : "Apply remittance & create pay run"}
       </ConfirmSubmitButton>
+    </form>
+  );
+}
+
+export type WrongYearSupersedeSuggestionView = {
+  lineId: string;
+  claimNumber: string;
+  raServiceDates: string[];
+  correctedServiceDates: string[];
+  invoiceNumber: number;
+  note: string;
+};
+
+const supersedeInitialState: SupersedeRemittanceState = {};
+const rebillInitialState: CreateWrongYearRebillState = {};
+
+export function CreateWrongYearRebillsForm({
+  remittanceAdviceId,
+  suggestions,
+}: {
+  remittanceAdviceId: string;
+  suggestions: WrongYearSupersedeSuggestionView[];
+}) {
+  const [state, formAction, pending] = useActionState(createWrongYearRebillsAction, rebillInitialState);
+
+  if (suggestions.length === 0) return null;
+
+  return (
+    <form action={formAction} className="rounded-xl border border-primary/20 bg-primary/[0.03] px-4 py-3">
+      <input type="hidden" name="remittanceAdviceId" value={remittanceAdviceId} />
+      <p className="text-sm font-medium text-primary-dark">Create rebills for wrong-year denials</p>
+      <p className="mt-1 text-xs text-muted">
+        Clones each source invoice with correct DOS as a new BILLED/UNPAID invoice (
+        <code className="text-[11px]">submittedAt</code> unset) ready for L&I resubmission. Skips
+        lines where an unsubmitted rebill already exists.
+      </p>
+      {state.error && (
+        <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800" role="alert">
+          {state.error}
+        </p>
+      )}
+      <ConfirmSubmitButton
+        confirmMessage={`Create rebill invoices for ${suggestions.length} wrong-year line${suggestions.length === 1 ? "" : "s"}?\n\nNew invoice numbers will be assigned. Source invoices are left unchanged.`}
+        className={`${portalButtonClass} mt-3`}
+        disabled={pending}
+      >
+        {pending ? "Creating…" : `Create ${suggestions.length} rebill${suggestions.length === 1 ? "" : "s"}`}
+      </ConfirmSubmitButton>
+    </form>
+  );
+}
+
+export function CreateWrongYearRebillForm({
+  remittanceAdviceId,
+  lineId,
+}: {
+  remittanceAdviceId: string;
+  lineId: string;
+}) {
+  const [state, formAction, pending] = useActionState(createWrongYearRebillAction, rebillInitialState);
+
+  return (
+    <form action={formAction}>
+      <input type="hidden" name="remittanceAdviceId" value={remittanceAdviceId} />
+      <input type="hidden" name="lineId" value={lineId} />
+      {state.error && (
+        <p className="mb-2 rounded-lg bg-red-50 px-2 py-1 text-xs text-red-800" role="alert">
+          {state.error}
+        </p>
+      )}
+      <ConfirmSubmitButton
+        confirmMessage="Create a rebill invoice with the correct DOS for L&I resubmission?"
+        className={`${portalButtonSecondaryClass} px-2 py-1 text-xs`}
+        disabled={pending}
+      >
+        {pending ? "…" : "Create rebill"}
+      </ConfirmSubmitButton>
+    </form>
+  );
+}
+
+export function SupersedeWrongYearStaleLinesForm({
+  remittanceAdviceId,
+  suggestions,
+}: {
+  remittanceAdviceId: string;
+  suggestions: WrongYearSupersedeSuggestionView[];
+}) {
+  const [state, formAction, pending] = useActionState(
+    supersedeWrongYearStaleLinesAction,
+    supersedeInitialState,
+  );
+
+  if (suggestions.length === 0) return null;
+
+  return (
+    <form action={formAction} className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+      <input type="hidden" name="remittanceAdviceId" value={remittanceAdviceId} />
+      <p className="text-sm font-medium text-primary-dark">
+        {suggestions.length} stale wrong-year line{suggestions.length === 1 ? "" : "s"} detected
+      </p>
+      <p className="mt-1 text-xs text-muted">
+        These L&I lines show the wrong service year but a resubmitted invoice exists with the
+        correct date. Superseding excludes them from matching and apply — invoice payment status is
+        unchanged.
+      </p>
+      <ul className="mt-3 space-y-2 text-xs text-muted">
+        {suggestions.map((suggestion) => (
+          <li key={suggestion.lineId}>
+            <span className="font-medium text-primary-dark">{suggestion.claimNumber}</span>
+            {" · "}
+            L&I {suggestion.raServiceDates.join(", ")} → invoice #{suggestion.invoiceNumber}{" "}
+            {suggestion.correctedServiceDates.join(", ")}
+          </li>
+        ))}
+      </ul>
+      {state.error && (
+        <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800" role="alert">
+          {state.error}
+        </p>
+      )}
+      <ConfirmSubmitButton
+        confirmMessage={`Supersede ${suggestions.length} stale wrong-year line${suggestions.length === 1 ? "" : "s"}?\n\nThese lines will no longer block applying this remittance.`}
+        className={`${portalButtonSecondaryClass} mt-3`}
+        disabled={pending}
+      >
+        {pending ? "Superseding…" : `Supersede ${suggestions.length} stale wrong-year line${suggestions.length === 1 ? "" : "s"}`}
+      </ConfirmSubmitButton>
+    </form>
+  );
+}
+
+export function SupersedeRemittanceLineForm({
+  remittanceAdviceId,
+  lineId,
+  defaultNote,
+}: {
+  remittanceAdviceId: string;
+  lineId: string;
+  defaultNote?: string;
+}) {
+  const [state, formAction, pending] = useActionState(
+    supersedeRemittanceLineAction,
+    supersedeInitialState,
+  );
+
+  return (
+    <form action={formAction} className="mt-2">
+      <input type="hidden" name="remittanceAdviceId" value={remittanceAdviceId} />
+      <input type="hidden" name="lineId" value={lineId} />
+      {defaultNote && <input type="hidden" name="note" value={defaultNote} />}
+      {state.error && (
+        <p className="mb-2 rounded-lg bg-red-50 px-2 py-1 text-xs text-red-800" role="alert">
+          {state.error}
+        </p>
+      )}
+      <ConfirmSubmitButton
+        confirmMessage="Supersede this stale line? It will no longer block applying this remittance."
+        className={`${portalButtonSecondaryClass} px-2 py-1 text-xs`}
+        disabled={pending}
+      >
+        {pending ? "…" : "Supersede stale line"}
+      </ConfirmSubmitButton>
+    </form>
+  );
+}
+
+export function UnsupersedeRemittanceLineForm({
+  remittanceAdviceId,
+  lineId,
+}: {
+  remittanceAdviceId: string;
+  lineId: string;
+}) {
+  const [state, formAction, pending] = useActionState(
+    unsupersedeRemittanceLineAction,
+    supersedeInitialState,
+  );
+
+  return (
+    <form action={formAction} className="mt-2">
+      <input type="hidden" name="remittanceAdviceId" value={remittanceAdviceId} />
+      <input type="hidden" name="lineId" value={lineId} />
+      {state.error && (
+        <p className="mb-2 rounded-lg bg-red-50 px-2 py-1 text-xs text-red-800" role="alert">
+          {state.error}
+        </p>
+      )}
+      <button
+        type="submit"
+        disabled={pending}
+        className="text-xs text-primary hover:underline disabled:opacity-50"
+      >
+        {pending ? "Undoing…" : "Undo supersede"}
+      </button>
     </form>
   );
 }
