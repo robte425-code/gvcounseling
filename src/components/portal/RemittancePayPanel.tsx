@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   applyRemittanceAdviceAction,
@@ -9,64 +9,271 @@ import {
   type DeleteRemittancePreviewState,
 } from "@/lib/portal-actions";
 import { ConfirmSubmitButton } from "@/components/portal/ConfirmSubmitButton";
-import { portalButtonClass, portalButtonSecondaryClass, portalLabelCompactClass } from "@/components/portal/ui";
+import {
+  portalButtonClass,
+  portalButtonSecondaryClass,
+  portalLabelCompactClass,
+} from "@/components/portal/ui";
+import { formatCalendarIso } from "@/lib/constants";
+
+type DriveRemittanceFile = {
+  id: string;
+  name: string;
+  webViewLink: string;
+  invoiceDate: string | null;
+  alreadyImported: boolean;
+  remittanceAdviceId: string | null;
+  remittanceNumber: string | null;
+  status: string | null;
+};
+
+type ImportResponse = {
+  remittanceAdviceId?: string;
+  lastRemittanceAdviceId?: string | null;
+  imported?: number;
+  failed?: number;
+  error?: string;
+  results?: Array<{
+    name: string;
+    status: "imported" | "failed";
+    remittanceAdviceId?: string;
+    error?: string;
+  }>;
+};
 
 export function RemittanceImportForm() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [driveFiles, setDriveFiles] = useState<DriveRemittanceFile[]>([]);
+  const [driveLoading, setDriveLoading] = useState(true);
+  const [driveError, setDriveError] = useState<string | null>(null);
+  const [selectedDriveIds, setSelectedDriveIds] = useState<Set<string>>(new Set());
+  const [localFiles, setLocalFiles] = useState<File[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadDriveFiles() {
+      setDriveLoading(true);
+      setDriveError(null);
+      try {
+        const response = await fetch("/api/portal/remittance/drive");
+        const body = (await response.json()) as { files?: DriveRemittanceFile[]; error?: string };
+        if (!response.ok) {
+          if (!cancelled) setDriveError(body.error ?? "Could not load LNI RAs folder.");
+          return;
+        }
+        if (!cancelled) setDriveFiles(body.files ?? []);
+      } catch {
+        if (!cancelled) setDriveError("Could not load LNI RAs folder.");
+      } finally {
+        if (!cancelled) setDriveLoading(false);
+      }
+    }
+
+    void loadDriveFiles();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const selectableDriveFiles = useMemo(
+    () => driveFiles.filter((file) => !file.alreadyImported),
+    [driveFiles],
+  );
+
+  function toggleDriveFile(fileId: string, checked: boolean) {
+    setSelectedDriveIds((prev) => {
+      const next = new Set(prev);
+      if (checked) next.add(fileId);
+      else next.delete(fileId);
+      return next;
+    });
+  }
+
+  function selectUnimportedDriveFiles() {
+    setSelectedDriveIds(new Set(selectableDriveFiles.map((file) => file.id)));
+  }
+
+  function clearDriveSelection() {
+    setSelectedDriveIds(new Set());
+  }
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
+
+    if (selectedDriveIds.size === 0 && localFiles.length === 0) {
+      setError("Select at least one remittance PDF from LNI RAs or upload files.");
+      return;
+    }
+
     setLoading(true);
 
-    const form = event.currentTarget;
-    const data = new FormData(form);
+    const data = new FormData();
+    data.set("driveFileIds", JSON.stringify([...selectedDriveIds]));
+    for (const file of localFiles) {
+      data.append("file", file);
+    }
 
     try {
       const response = await fetch("/api/portal/remittance/import", {
         method: "POST",
         body: data,
       });
-      const body = (await response.json()) as { remittanceAdviceId?: string; error?: string };
+      const body = (await response.json()) as ImportResponse;
 
-      if (!response.ok || !body.remittanceAdviceId) {
+      if (!response.ok) {
         setError(body.error ?? "Remittance import failed.");
         setLoading(false);
         return;
       }
 
-      router.push(`/portal/admin/pay/${body.remittanceAdviceId}`);
+      if ((body.imported ?? 0) === 1 && (body.failed ?? 0) === 0 && body.remittanceAdviceId) {
+        router.push(`/portal/admin/pay/${body.remittanceAdviceId}`);
+        return;
+      }
+
+      const params = new URLSearchParams();
+      if ((body.imported ?? 0) > 0) params.set("imported", String(body.imported));
+      if ((body.failed ?? 0) > 0) params.set("failed", String(body.failed));
+      router.push(`/portal/admin/pay?${params.toString()}`);
     } catch {
       setError("Remittance import failed. Check your connection and try again.");
       setLoading(false);
     }
   }
 
+  const selectionCount = selectedDriveIds.size + localFiles.length;
+
   return (
-    <form onSubmit={onSubmit} className="space-y-3">
+    <form onSubmit={onSubmit} className="space-y-4">
+      <div>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <label className={portalLabelCompactClass}>LNI RAs folder (Google Drive)</label>
+          <div className="flex flex-wrap gap-2 text-xs">
+            <button
+              type="button"
+              className="text-primary hover:underline"
+              onClick={selectUnimportedDriveFiles}
+              disabled={loading || driveLoading || selectableDriveFiles.length === 0}
+            >
+              Select unimported
+            </button>
+            <button
+              type="button"
+              className="text-muted hover:underline"
+              onClick={clearDriveSelection}
+              disabled={loading || selectedDriveIds.size === 0}
+            >
+              Clear
+            </button>
+          </div>
+        </div>
+        <p className="mt-1 text-xs text-muted">
+          Choose one or more remittance PDFs. Imports run oldest-to-newest by filename date.
+        </p>
+
+        {driveLoading && (
+          <p className="mt-3 text-sm text-muted">Loading LNI RAs folder…</p>
+        )}
+        {driveError && (
+          <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900" role="alert">
+            {driveError}
+          </p>
+        )}
+
+        {!driveLoading && !driveError && driveFiles.length === 0 && (
+          <p className="mt-3 text-sm text-muted">No remittance PDFs found in LNI RAs.</p>
+        )}
+
+        {!driveLoading && driveFiles.length > 0 && (
+          <ul className="mt-3 max-h-72 space-y-2 overflow-y-auto rounded-xl border border-border p-3">
+            {driveFiles.map((file) => {
+              const checked = selectedDriveIds.has(file.id);
+              const disabled = loading || file.alreadyImported;
+              return (
+                <li
+                  key={file.id}
+                  className={`rounded-lg border px-3 py-2 text-sm ${
+                    file.alreadyImported
+                      ? "border-border bg-primary/[0.02] opacity-70"
+                      : checked
+                        ? "border-primary/30 bg-primary/[0.04]"
+                        : "border-border"
+                  }`}
+                >
+                  <label className="flex cursor-pointer items-start gap-3">
+                    <input
+                      type="checkbox"
+                      className="mt-1"
+                      checked={checked}
+                      disabled={disabled}
+                      onChange={(event) => toggleDriveFile(file.id, event.target.checked)}
+                    />
+                    <span className="min-w-0 flex-1">
+                      <span className="font-medium text-primary-dark">
+                        {file.invoiceDate ? formatCalendarIso(file.invoiceDate) : "Unknown date"}
+                      </span>
+                      <span className="mt-0.5 block truncate text-xs text-muted">{file.name}</span>
+                      {file.alreadyImported && (
+                        <span className="mt-1 block text-xs text-muted">
+                          Already imported
+                          {file.remittanceNumber ? ` · RA ${file.remittanceNumber}` : ""}
+                        </span>
+                      )}
+                    </span>
+                    <a
+                      href={file.webViewLink}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="shrink-0 text-xs text-primary hover:underline"
+                      onClick={(event) => event.stopPropagation()}
+                    >
+                      Open
+                    </a>
+                  </label>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
+
       <div>
         <label htmlFor="remittance-pdf" className={portalLabelCompactClass}>
-          Remittance Advice (PDF)
+          Or upload PDFs
         </label>
         <input
           id="remittance-pdf"
           name="file"
           type="file"
           accept="application/pdf,.pdf"
-          required
+          multiple
           disabled={loading}
+          onChange={(event) => setLocalFiles(Array.from(event.target.files ?? []))}
           className="mt-1 block w-full text-sm text-foreground file:mr-3 file:rounded-full file:border-0 file:bg-primary/10 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-primary-dark"
         />
+        {localFiles.length > 0 && (
+          <p className="mt-1 text-xs text-muted">
+            {localFiles.length} local file{localFiles.length === 1 ? "" : "s"} selected
+          </p>
+        )}
       </div>
+
       {error && (
         <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800" role="alert">
           {error}
         </p>
       )}
-      <button type="submit" disabled={loading} className={portalButtonClass}>
-        {loading ? "Importing…" : "Import & preview"}
+
+      <button type="submit" disabled={loading || selectionCount === 0} className={portalButtonClass}>
+        {loading
+          ? "Importing…"
+          : selectionCount > 1
+            ? `Import ${selectionCount} remittances`
+            : "Import & preview"}
       </button>
     </form>
   );

@@ -8,7 +8,7 @@ import { prisma } from "@/lib/prisma";
 export default async function PayPage({
   searchParams,
 }: {
-  searchParams: Promise<{ deleted?: string }>;
+  searchParams: Promise<{ deleted?: string; imported?: string; failed?: string }>;
 }) {
   await requireAdmin();
   const query = await searchParams;
@@ -50,6 +50,15 @@ export default async function PayPage({
         </p>
       )}
 
+      {query.imported && (
+        <p className="rounded-xl bg-primary/10 px-4 py-3 text-sm text-primary-dark" role="status">
+          Imported {query.imported} remittance{query.imported === "1" ? "" : "s"} from LNI RAs
+          {query.failed && Number(query.failed) > 0
+            ? ` (${query.failed} failed — see history or retry after deleting previews)`
+            : "."}
+        </p>
+      )}
+
       {previewUnmatched.length > 0 && (
         <p className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-900" role="alert">
           <span className="font-semibold">
@@ -66,7 +75,8 @@ export default async function PayPage({
         <p className={portalSectionHeadingClass}>Import</p>
         <h2 className="mt-1 font-serif text-lg font-semibold text-primary-dark">New remittance</h2>
         <p className="mt-1 text-xs text-muted">
-          Upload a Remittance Advice (PDF) from L&I Provider Express Billing.
+          Select remittance PDFs from the LNI RAs Google Drive folder, or upload files directly.
+          Multiple files import oldest-to-newest by filename date.
         </p>
         <div className="mt-4">
           <RemittanceImportForm />
