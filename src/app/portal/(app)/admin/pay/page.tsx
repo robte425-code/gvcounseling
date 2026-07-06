@@ -1,10 +1,76 @@
 import Link from "next/link";
 import { requireAdmin } from "@/auth";
 import { RemittanceImportForm, DeleteRemittancePreviewForm } from "@/components/portal/RemittancePayPanel";
-import { portalCardClass, portalSectionHeadingClass } from "@/components/portal/ui";
+import { portalCardClass, portalSectionHeadingClass, StatusBadge } from "@/components/portal/ui";
 import { formatCurrency, formatDate } from "@/lib/constants";
-import { countUnresolvedRemittanceLines } from "@/lib/remittance-line-supersede";
+import {
+  countUnresolvedRemittanceLines,
+  summarizeRemittanceBillCounts,
+} from "@/lib/remittance-line-supersede";
 import { prisma } from "@/lib/prisma";
+
+function RemittanceBillCountSummary({
+  paid,
+  denied,
+  inProcess,
+  superseded,
+  unresolved,
+}: {
+  paid: number;
+  denied: number;
+  inProcess: number;
+  superseded: number;
+  unresolved: number;
+}) {
+  const items: Array<
+    | { key: string; kind: "status"; status: string; count: number }
+    | { key: string; kind: "label"; label: string; className: string; count: number }
+  > = [];
+  if (paid > 0) items.push({ key: "paid", kind: "status", status: "PAID", count: paid });
+  if (denied > 0) items.push({ key: "denied", kind: "status", status: "DENIED", count: denied });
+  if (inProcess > 0) {
+    items.push({ key: "in-process", kind: "status", status: "IN_PROCESS", count: inProcess });
+  }
+  if (superseded > 0) {
+    items.push({
+      key: "superseded",
+      kind: "label",
+      label: "Superseded",
+      className: "bg-slate-100 text-slate-700",
+      count: superseded,
+    });
+  }
+  if (unresolved > 0) {
+    items.push({
+      key: "unresolved",
+      kind: "label",
+      label: "Unresolved",
+      className: "bg-red-100 text-red-800",
+      count: unresolved,
+    });
+  }
+
+  if (items.length === 0) return null;
+
+  return (
+    <p className="mt-1.5 flex flex-wrap items-center gap-1.5">
+      {items.map((item) => (
+        <span key={item.key} className="inline-flex items-center gap-1">
+          {item.kind === "status" ? (
+            <StatusBadge status={item.status} />
+          ) : (
+            <span
+              className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold tracking-wide ${item.className}`}
+            >
+              {item.label}
+            </span>
+          )}
+          <span className="text-xs tabular-nums text-muted">{item.count}</span>
+        </span>
+      ))}
+    </p>
+  );
+}
 
 export default async function PayPage({
   searchParams,
@@ -18,7 +84,7 @@ export default async function PayPage({
     orderBy: { invoiceDate: "desc" },
     include: {
       _count: { select: { lines: true } },
-      lines: { select: { matchedInvoiceId: true, supersededAt: true } },
+      lines: { select: { matchedInvoiceId: true, supersededAt: true, section: true } },
       payRun: {
         include: {
           payouts: {
@@ -97,6 +163,7 @@ export default async function PayPage({
                 0,
               );
               const unresolvedCount = countUnresolvedRemittanceLines(remittance.lines);
+              const billSummary = summarizeRemittanceBillCounts(remittance.lines);
               const hasUnresolvedPreview =
                 remittance.status === "PREVIEW" && unresolvedCount > 0;
               return (
@@ -127,6 +194,7 @@ export default async function PayPage({
                               </>
                             )}
                           </p>
+                          <RemittanceBillCountSummary {...billSummary} />
                         </div>
                         <div className="text-sm">
                           <p className="font-semibold text-primary-dark">

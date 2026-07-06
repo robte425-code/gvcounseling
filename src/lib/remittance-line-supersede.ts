@@ -18,6 +18,51 @@ export function countUnresolvedRemittanceLines(lines: RemittanceLineResolution[]
   return lines.filter(isUnresolvedRemittanceLine).length;
 }
 
+export type RemittanceBillSummary = {
+  paid: number;
+  denied: number;
+  inProcess: number;
+  superseded: number;
+  unresolved: number;
+};
+
+type RemittanceLineForSummary = RemittanceLineResolution & {
+  section: "PAID" | "DENIED" | "IN_PROCESS";
+};
+
+export function summarizeRemittanceBillCounts(
+  lines: RemittanceLineForSummary[],
+): RemittanceBillSummary {
+  const summary: RemittanceBillSummary = {
+    paid: 0,
+    denied: 0,
+    inProcess: 0,
+    superseded: 0,
+    unresolved: 0,
+  };
+
+  for (const line of lines) {
+    if (line.supersededAt) {
+      summary.superseded += 1;
+      continue;
+    }
+    if (!line.matchedInvoiceId) summary.unresolved += 1;
+    switch (line.section) {
+      case "PAID":
+        summary.paid += 1;
+        break;
+      case "DENIED":
+        summary.denied += 1;
+        break;
+      case "IN_PROCESS":
+        summary.inProcess += 1;
+        break;
+    }
+  }
+
+  return summary;
+}
+
 export function getRemittanceLineServiceDates(serviceLines: unknown): string[] {
   if (!Array.isArray(serviceLines)) return [];
   return [
