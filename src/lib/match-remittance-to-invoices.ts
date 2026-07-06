@@ -71,18 +71,64 @@ function dateOverlapScore(billDates: string[], invoiceDates: string[]): number {
   return overlap / billDates.length;
 }
 
-function matchScore(bill: RemittanceBill, invoice: { lineItems: Array<{ procedureCode: string; serviceDate: Date }> }): number {
+const MAX_SERVICE_DATE_TOLERANCE_DAYS = 7;
+const MIN_NEAR_DATE_MATCH_SCORE = 1 - MAX_SERVICE_DATE_TOLERANCE_DAYS / 100;
+
+function calendarDayDistance(isoA: string, isoB: string): number {
+  const [yearA, monthA, dayA] = isoA.split("-").map(Number);
+  const [yearB, monthB, dayB] = isoB.split("-").map(Number);
+  const a = Date.UTC(yearA!, monthA! - 1, dayA!);
+  const b = Date.UTC(yearB!, monthB! - 1, dayB!);
+  return Math.abs(Math.round((a - b) / 86_400_000));
+}
+
+function nearestServiceDateDistance(billDates: string[], invoiceDates: string[]): number {
+  let nearest = Infinity;
+  for (const billDate of billDates) {
+    for (const invoiceDate of invoiceDates) {
+      nearest = Math.min(nearest, calendarDayDistance(billDate, invoiceDate));
+    }
+  }
+  return nearest;
+}
+
+function dateMatchScore(
+  billDates: string[],
+  invoiceDates: string[],
+): { score: number; note: string | null } {
+  if (dateOverlapScore(billDates, invoiceDates) >= 1) {
+    return { score: 1, note: null };
+  }
+
+  const nearestDays = nearestServiceDateDistance(billDates, invoiceDates);
+  if (nearestDays <= MAX_SERVICE_DATE_TOLERANCE_DAYS) {
+    return {
+      score: 1 - nearestDays / 100,
+      note: `Matched nearest service date (${nearestDays} day${nearestDays === 1 ? "" : "s"} off)`,
+    };
+  }
+
+  return { score: 0, note: null };
+}
+
+function matchScore(
+  bill: RemittanceBill,
+  invoice: { lineItems: Array<{ procedureCode: string; serviceDate: Date }> },
+): { score: number; note: string | null } {
   const billKeys = billLineKeys(bill);
   const invoiceKeys = invoiceLineKeys(invoice.lineItems);
   const procedureScore = lineOverlapScore(billKeys, invoiceKeys);
-  const dateScore = dateOverlapScore(billServiceDates(bill), invoiceServiceDates(invoice.lineItems));
+  const billDates = billServiceDates(bill);
+  const invoiceDates = invoiceServiceDates(invoice.lineItems);
+  const dateMatch = dateMatchScore(billDates, invoiceDates);
 
-  // Therapist invoices are usually one billed session per date; L&I may show different
-  // procedure codes than we submitted (e.g. 96156 vs 96158, 90834 vs 90837).
-  if (dateScore >= 1) {
-    return 1 + procedureScore * 0.01;
+  if (dateMatch.score >= 1) {
+    return { score: 1 + procedureScore * 0.01, note: null };
   }
-  return procedureScore;
+  if (dateMatch.score >= MIN_NEAR_DATE_MATCH_SCORE) {
+    return { score: dateMatch.score + procedureScore * 0.001, note: dateMatch.note };
+  }
+  return { score: procedureScore, note: null };
 }
 
 export async function matchRemittanceBills(
@@ -120,25 +166,27 @@ export async function matchRemittanceBills(
     const pickBest = (pool: typeof invoices) => {
       let best: (typeof invoices)[number] | null = null;
       let bestScore = 0;
+      let bestNote: string | null = null;
       for (const invoice of pool) {
-        const score = matchScore(bill, invoice);
+        const { score, note } = matchScore(bill, invoice);
         if (score > bestScore) {
           bestScore = score;
           best = invoice;
+          bestNote = note;
         }
       }
-      return { best, bestScore };
+      return { best, bestScore, bestNote };
     };
 
-    let { best, bestScore } = pickBest(
+    let { best, bestScore, bestNote } = pickBest(
       candidates.filter((invoice) => !usedInvoiceIds.has(invoice.id)),
     );
 
-    if (!best || bestScore < 1) {
-      ({ best, bestScore } = pickBest(candidates));
+    if (!best || bestScore < MIN_NEAR_DATE_MATCH_SCORE) {
+      ({ best, bestScore, bestNote } = pickBest(candidates));
     }
 
-    if (!best || bestScore < 1) {
+    if (!best || bestScore < MIN_NEAR_DATE_MATCH_SCORE) {
       return {
         bill,
         matchedInvoiceId: null,
@@ -156,7 +204,7 @@ export async function matchRemittanceBills(
     return {
       bill,
       matchedInvoiceId: best.id,
-      matchNote: null,
+      matchNote: bestNote,
       paymentStatus: remittanceSectionToPaymentStatus(bill.section),
     };
   });
