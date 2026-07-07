@@ -35,16 +35,10 @@ export default async function TherapistPaycheckDetailPage({
         </p>
       </div>
 
-      <div className={`${portalCardClass} grid gap-4 sm:grid-cols-3`}>
+      <div className={`${portalCardClass} grid gap-4 sm:grid-cols-2`}>
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-muted">Invoices</p>
           <p className="mt-1 text-2xl font-semibold text-primary-dark">{detail.invoices.length}</p>
-        </div>
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted">L&I paid</p>
-          <p className="mt-1 text-2xl font-semibold text-primary-dark">
-            {formatCurrency(detail.lniPaidAmount)}
-          </p>
         </div>
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-muted">Your pay</p>

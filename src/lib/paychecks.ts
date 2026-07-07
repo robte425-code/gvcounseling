@@ -108,6 +108,14 @@ export async function loadPaycheckSummaries(options?: {
   }
 
   return [...grouped.values()]
+    .sort((a, b) => {
+      const paymentA = a.payPeriod.paymentDate?.getTime() ?? 0;
+      const paymentB = b.payPeriod.paymentDate?.getTime() ?? 0;
+      if (paymentB !== paymentA) return paymentB - paymentA;
+      const cutoffCmp = b.payPeriod.cutoffDate.getTime() - a.payPeriod.cutoffDate.getTime();
+      if (cutoffCmp !== 0) return cutoffCmp;
+      return a.therapistName.localeCompare(b.therapistName);
+    })
     .map((row) => ({
       payPeriodId: row.payPeriod.id,
       payPeriodLabel: payPeriodLabel(row.payPeriod) ?? formatDate(row.payPeriod.cutoffDate),
@@ -119,12 +127,7 @@ export async function loadPaycheckSummaries(options?: {
       lniPaidAmount: row.lniPaidAmount,
       invoiceCount: row.invoiceCount,
       remittanceCount: row.remittanceIds.size,
-    }))
-    .sort((a, b) => {
-      const periodCmp = b.cutoffLabel.localeCompare(a.cutoffLabel);
-      if (periodCmp !== 0) return periodCmp;
-      return a.therapistName.localeCompare(b.therapistName);
-    });
+    }));
 }
 
 export async function loadPaycheckDetail(options: {
