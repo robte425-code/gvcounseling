@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireAdmin } from "@/auth";
 import { ApplyRemittanceForm, CreateWrongYearRebillForm, CreateWrongYearRebillsForm, DeleteRemittancePreviewForm, SupersedeRemittanceLineForm, SupersedeWrongYearStaleLinesForm, UnsupersedeRemittanceLineForm } from "@/components/portal/RemittancePayPanel";
+import { RemittanceBillRow, RemittanceBillRowActions } from "@/components/portal/RemittanceBillRow";
 import {
   portalCardClass,
   portalSectionHeadingClass,
@@ -279,17 +280,16 @@ export default async function PayRemittanceDetailPage({
               const wrongYearSuggestion = wrongYearSuggestionByLineId.get(line.id);
               const isSuperseded = Boolean(line.supersededAt);
               const isUnresolved = !line.matchedInvoiceId && !isSuperseded;
+              const invoiceHref = line.matchedInvoice
+                ? `/portal/admin/invoices/${line.matchedInvoice.id}`
+                : undefined;
+              const rowClassName = isSuperseded
+                ? "border-slate-200 bg-slate-50/80"
+                : isUnresolved
+                  ? "border-red-300 bg-red-50/50"
+                  : "border-border";
               return (
-              <li
-                key={line.id}
-                className={`rounded-lg border px-3 py-2 text-sm ${
-                  isSuperseded
-                    ? "border-slate-200 bg-slate-50/80"
-                    : isUnresolved
-                      ? "border-red-300 bg-red-50/50"
-                      : "border-border"
-                }`}
-              >
+              <RemittanceBillRow key={line.id} invoiceHref={invoiceHref} className={rowClassName}>
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
                     <span className="font-medium text-primary-dark">{line.claimNumber}</span>
@@ -335,26 +335,30 @@ export default async function PayRemittanceDetailPage({
                   <p className="mt-1 text-xs text-slate-700">{wrongYearSuggestion.note}</p>
                 )}
                 {remittance.status === "PREVIEW" && isUnresolved && (
-                  <div className="mt-2 flex flex-wrap items-center gap-3">
-                    {wrongYearSuggestion && (
-                      <CreateWrongYearRebillForm
-                        remittanceAdviceId={remittance.id}
-                        lineId={line.id}
-                      />
-                    )}
-                    {wrongYearSuggestion ? (
-                      <SupersedeRemittanceLineForm
-                        remittanceAdviceId={remittance.id}
-                        lineId={line.id}
-                        defaultNote={wrongYearSuggestion.note}
-                      />
-                    ) : (
-                      <SupersedeRemittanceLineForm remittanceAdviceId={remittance.id} lineId={line.id} />
-                    )}
-                  </div>
+                  <RemittanceBillRowActions>
+                    <div className="mt-2 flex flex-wrap items-center gap-3">
+                      {wrongYearSuggestion && (
+                        <CreateWrongYearRebillForm
+                          remittanceAdviceId={remittance.id}
+                          lineId={line.id}
+                        />
+                      )}
+                      {wrongYearSuggestion ? (
+                        <SupersedeRemittanceLineForm
+                          remittanceAdviceId={remittance.id}
+                          lineId={line.id}
+                          defaultNote={wrongYearSuggestion.note}
+                        />
+                      ) : (
+                        <SupersedeRemittanceLineForm remittanceAdviceId={remittance.id} lineId={line.id} />
+                      )}
+                    </div>
+                  </RemittanceBillRowActions>
                 )}
                 {remittance.status === "PREVIEW" && isSuperseded && (
-                  <UnsupersedeRemittanceLineForm remittanceAdviceId={remittance.id} lineId={line.id} />
+                  <RemittanceBillRowActions>
+                    <UnsupersedeRemittanceLineForm remittanceAdviceId={remittance.id} lineId={line.id} />
+                  </RemittanceBillRowActions>
                 )}
                 {line.matchedInvoice && (
                   <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs">
@@ -397,7 +401,7 @@ export default async function PayRemittanceDetailPage({
                     })}
                   </ul>
                 )}
-              </li>
+              </RemittanceBillRow>
               );
             })}
           </ul>
