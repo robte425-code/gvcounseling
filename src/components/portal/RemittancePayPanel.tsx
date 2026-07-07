@@ -22,6 +22,8 @@ import {
   portalLabelCompactClass,
 } from "@/components/portal/ui";
 import { formatCalendarIso } from "@/lib/constants";
+import type { PaidToDeniedWarning } from "@/lib/remittance-paid-to-denied-warnings";
+import { paidToDeniedWarningSummary } from "@/lib/remittance-paid-to-denied-warnings";
 
 type DriveRemittanceFile = {
   id: string;
@@ -291,6 +293,7 @@ type ApplyProps = {
   matchedCount: number;
   unmatchedCount: number;
   therapistTotal: number;
+  paidToDeniedWarnings?: PaidToDeniedWarning[];
 };
 
 const applyInitialState: ApplyRemittanceState = {};
@@ -300,13 +303,39 @@ export function ApplyRemittanceForm({
   matchedCount,
   unmatchedCount,
   therapistTotal,
+  paidToDeniedWarnings = [],
 }: ApplyProps) {
   const [state, formAction, pending] = useActionState(applyRemittanceAdviceAction, applyInitialState);
   const hasUnmatched = unmatchedCount > 0;
+  const flipDeniedWarnings = paidToDeniedWarnings.filter((warning) => !warning.willRemainPaid);
+  const remainPaidWarnings = paidToDeniedWarnings.filter((warning) => warning.willRemainPaid);
+  const warningSummary = paidToDeniedWarningSummary(paidToDeniedWarnings);
 
   return (
     <form action={formAction}>
       <input type="hidden" name="remittanceAdviceId" value={remittanceAdviceId} />
+      {paidToDeniedWarnings.length > 0 && (
+        <div className="mb-3 space-y-2 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-950" role="status">
+          <p className="font-semibold">Previously paid invoices on this remittance</p>
+          <ul className="space-y-2">
+            {paidToDeniedWarnings.map((warning) => (
+              <li key={warning.lineId}>
+                <span className="font-medium">
+                  Invoice #{warning.invoiceNumber} · {warning.claimNumber}
+                </span>
+                {warning.patientName ? ` · ${warning.patientName}` : ""}
+                {" — "}
+                {warning.willRemainPaid
+                  ? "EOB 309 duplicate denial; invoice will remain PAID (no clawback on this warrant)."
+                  : "Would change from PAID to DENIED on apply."}
+                {warning.eobNote ? (
+                  <p className="mt-0.5 text-xs text-amber-900">{warning.eobNote}</p>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       {hasUnmatched && (
         <p className="mb-3 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-900" role="alert">
           <span className="font-semibold">
@@ -323,7 +352,17 @@ export function ApplyRemittanceForm({
         </p>
       )}
       <ConfirmSubmitButton
-        confirmMessage={`Apply this remittance?\n\n${matchedCount} matched bill(s) will update invoice L&I status (paid, denied, or in-process).\n\nTherapist pay total: $${therapistTotal.toFixed(2)} (from fee schedule on paid invoices).`}
+        confirmMessage={`Apply this remittance?\n\n${matchedCount} matched bill(s) will update invoice L&I status (paid, denied, or in-process).\n\nTherapist pay total: $${therapistTotal.toFixed(2)} (from fee schedule on paid invoices).${
+          warningSummary ? `\n\n${warningSummary}` : ""
+        }${
+          flipDeniedWarnings.length
+            ? `\n\n${flipDeniedWarnings.length} invoice(s) will change from PAID to DENIED.`
+            : ""
+        }${
+          remainPaidWarnings.length
+            ? `\n\n${remainPaidWarnings.length} duplicate-paid denial(s) (EOB 309) will be recorded but those invoices will stay PAID.`
+            : ""
+        }`}
         className={portalButtonClass}
         disabled={pending || hasUnmatched}
       >

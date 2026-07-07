@@ -1,5 +1,6 @@
 import type { PaymentStatus } from "@/generated/prisma/client";
 import type { RemittanceBillSection } from "@/lib/parse-lni-remittance-pdf";
+import { normalizeEobCode } from "@/lib/parse-lni-remittance-pdf";
 
 export type InferredPayment = {
   paymentStatus: PaymentStatus;
@@ -35,6 +36,63 @@ export type RemittanceLinePaymentInput = {
   eobCodeDescriptions: unknown;
 };
 
+export type RemittanceLineResolutionInput = {
+  section: RemittanceBillSection;
+  remittanceDate: Date;
+  eobCodes: string[];
+  eobCodeDescriptions: unknown;
+  raEobCodeDescriptions?: unknown;
+};
+
+export function mapRemittanceLinesForResolution(
+  lines: RemittanceLineResolutionInput[],
+): RemittanceLinePaymentInput[] {
+  const hasEarlierPaid = lines.some((line) => line.section === "PAID");
+  const raCatalog = lines.reduce<Record<string, string>>((acc, line) => {
+    return { ...acc, ...parseInvoiceEobDescriptions(line.raEobCodeDescriptions) };
+  }, {});
+
+  return lines.map((line) => {
+    const catalog = {
+      ...raCatalog,
+      ...parseInvoiceEobDescriptions(line.eobCodeDescriptions),
+    };
+    const eobCodes = effectiveEobCodesForResolution(line, catalog, hasEarlierPaid);
+    return {
+      section: line.section,
+      remittanceDate: line.remittanceDate,
+      eobCodes,
+      eobCodeDescriptions: catalog,
+    };
+  });
+}
+
+/** When a denied line omits EOB codes in DB, infer 309 only if an earlier paid line exists. */
+export function effectiveEobCodesForResolution(
+  line: { section: RemittanceBillSection; eobCodes: string[] },
+  catalog: Record<string, string>,
+  hasEarlierPaid: boolean,
+): string[] {
+  if (line.eobCodes.length > 0) return line.eobCodes;
+  if (line.section === "DENIED" && hasEarlierPaid && catalog["309"]) return ["309"];
+  return line.eobCodes;
+}
+
+/** EOB 309 and similar codes mean L&I denied a duplicate rebill, not a clawback of prior payment. */
+export function isPreviouslyPaidDuplicateEob(
+  codes: string[],
+  descriptions: Record<string, string>,
+  catalog?: Record<string, string>,
+): boolean {
+  for (const code of codes) {
+    const normalized = normalizeEobCode(code);
+    if (normalized === "309") return true;
+    const text = descriptions[normalized] ?? descriptions[code] ?? catalog?.[normalized] ?? catalog?.[code] ?? "";
+    if (/previously paid/i.test(text)) return true;
+  }
+  return false;
+}
+
 /** Pick payment from the latest remittance date; PAID beats IN_PROCESS beats DENIED on that date. */
 export function resolvePaymentFromRemittanceLines(
   lines: RemittanceLinePaymentInput[],
@@ -54,11 +112,35 @@ export function resolvePaymentFromRemittanceLines(
     }
   }
 
+  const bestDescriptions = {
+    ...parseInvoiceEobDescriptions(best.eobCodeDescriptions),
+  };
+
+  if (
+    best.section === "DENIED" &&
+    isPreviouslyPaidDuplicateEob(best.eobCodes, bestDescriptions)
+  ) {
+    const earlierPaid = [...lines]
+      .filter((line) => line.section === "PAID")
+      .sort((a, b) => b.remittanceDate.getTime() - a.remittanceDate.getTime())[0];
+    if (earlierPaid) {
+      const paidUpdate = paymentUpdateFromRemittance("PAID", earlierPaid.remittanceDate);
+      return {
+        ...paidUpdate,
+        eobCodes: [...new Set([...earlierPaid.eobCodes, ...best.eobCodes])],
+        eobCodeDescriptions: {
+          ...parseInvoiceEobDescriptions(earlierPaid.eobCodeDescriptions),
+          ...bestDescriptions,
+        },
+      };
+    }
+  }
+
   const payment = paymentUpdateFromRemittance(best.section, latestDate);
   return {
     ...payment,
     eobCodes: best.eobCodes,
-    eobCodeDescriptions: parseInvoiceEobDescriptions(best.eobCodeDescriptions),
+    eobCodeDescriptions: bestDescriptions,
   };
 }
 

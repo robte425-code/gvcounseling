@@ -1,5 +1,5 @@
 import type { Prisma } from "@/generated/prisma/client";
-import { remittanceSectionToPaymentStatus, resolvePaymentFromRemittanceLines, parseInvoiceEobDescriptions } from "@/lib/invoice-payment-status";
+import { remittanceSectionToPaymentStatus, resolvePaymentFromRemittanceLines, parseInvoiceEobDescriptions, mapRemittanceLinesForResolution } from "@/lib/invoice-payment-status";
 import { matchRemittanceBills } from "@/lib/match-remittance-to-invoices";
 import type { MatchedRemittanceBill } from "@/lib/match-remittance-to-invoices";
 import { countUnresolvedRemittanceLines } from "@/lib/remittance-line-supersede";
@@ -309,17 +309,20 @@ export async function reconcileInvoicePaymentStatus(
       section: true,
       eobCodes: true,
       eobCodeDescriptions: true,
-      remittanceAdvice: { select: { invoiceDate: true } },
+      remittanceAdvice: { select: { invoiceDate: true, eobCodeDescriptions: true } },
     },
   });
 
   const resolved = resolvePaymentFromRemittanceLines(
-    lines.map((line) => ({
-      section: line.section,
-      remittanceDate: line.remittanceAdvice.invoiceDate,
-      eobCodes: line.eobCodes,
-      eobCodeDescriptions: line.eobCodeDescriptions,
-    })),
+    mapRemittanceLinesForResolution(
+      lines.map((line) => ({
+        section: line.section,
+        remittanceDate: line.remittanceAdvice.invoiceDate,
+        eobCodes: line.eobCodes,
+        eobCodeDescriptions: line.eobCodeDescriptions,
+        raEobCodeDescriptions: line.remittanceAdvice.eobCodeDescriptions,
+      })),
+    ),
   );
 
   if (!resolved) return false;
@@ -369,7 +372,7 @@ export async function reconcileAllInvoicePaymentStatuses(): Promise<{
       section: true,
       eobCodes: true,
       eobCodeDescriptions: true,
-      remittanceAdvice: { select: { invoiceDate: true } },
+      remittanceAdvice: { select: { invoiceDate: true, eobCodeDescriptions: true } },
     },
   });
 
@@ -397,12 +400,15 @@ export async function reconcileAllInvoicePaymentStatuses(): Promise<{
   let updated = 0;
   for (const [invoiceId, invoiceLines] of byInvoice) {
     const resolved = resolvePaymentFromRemittanceLines(
-      invoiceLines.map((line) => ({
-        section: line.section,
-        remittanceDate: line.remittanceAdvice.invoiceDate,
-        eobCodes: line.eobCodes,
-        eobCodeDescriptions: line.eobCodeDescriptions,
-      })),
+      mapRemittanceLinesForResolution(
+        invoiceLines.map((line) => ({
+          section: line.section,
+          remittanceDate: line.remittanceAdvice.invoiceDate,
+          eobCodes: line.eobCodes,
+          eobCodeDescriptions: line.eobCodeDescriptions,
+          raEobCodeDescriptions: line.remittanceAdvice.eobCodeDescriptions,
+        })),
+      ),
     );
     if (!resolved) continue;
 

@@ -18,6 +18,10 @@ import {
   countUnresolvedRemittanceLines,
   listWrongYearSupersedeSuggestions,
 } from "@/lib/remittance-line-supersede";
+import {
+  findPaidToDeniedRemittanceWarnings,
+  type PaidToDeniedWarning,
+} from "@/lib/remittance-paid-to-denied-warnings";
 import type { RemittanceServiceLine } from "@/lib/parse-lni-remittance-pdf";
 import { prisma } from "@/lib/prisma";
 
@@ -170,6 +174,66 @@ export default async function PayRemittanceDetailPage({
     ...new Set(remittance.lines.flatMap((line) => line.eobCodes)),
   ].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
 
+  const matchedInvoiceIds = [
+    ...new Set(
+      remittance.lines
+        .map((line) => line.matchedInvoiceId)
+        .filter((id): id is string => Boolean(id)),
+    ),
+  ];
+
+  const appliedLinesByInvoice = new Map<
+    string,
+    Array<{
+      section: "PAID" | "DENIED" | "IN_PROCESS";
+      remittanceDate: Date;
+      eobCodes: string[];
+      eobCodeDescriptions: unknown;
+    }>
+  >();
+
+  if (remittance.status === "PREVIEW" && matchedInvoiceIds.length > 0) {
+    const appliedLines = await prisma.remittanceAdviceLine.findMany({
+      where: {
+        matchedInvoiceId: { in: matchedInvoiceIds },
+        supersededAt: null,
+        remittanceAdvice: { status: "APPLIED" },
+      },
+      select: {
+        matchedInvoiceId: true,
+        section: true,
+        eobCodes: true,
+        eobCodeDescriptions: true,
+        remittanceAdvice: { select: { invoiceDate: true } },
+      },
+    });
+
+    for (const line of appliedLines) {
+      if (!line.matchedInvoiceId) continue;
+      const group = appliedLinesByInvoice.get(line.matchedInvoiceId) ?? [];
+      group.push({
+        section: line.section,
+        remittanceDate: line.remittanceAdvice.invoiceDate,
+        eobCodes: line.eobCodes,
+        eobCodeDescriptions: line.eobCodeDescriptions,
+      });
+      appliedLinesByInvoice.set(line.matchedInvoiceId, group);
+    }
+  }
+
+  const paidToDeniedWarnings: PaidToDeniedWarning[] =
+    remittance.status === "PREVIEW"
+      ? findPaidToDeniedRemittanceWarnings(remittance.lines, {
+          remittanceDate: remittance.invoiceDate,
+          raEobCatalog: eobCodeDescriptions,
+          appliedLinesByInvoice,
+        })
+      : [];
+
+  const paidToDeniedWarningByLineId = new Map(
+    paidToDeniedWarnings.map((warning) => [warning.lineId, warning]),
+  );
+
   return (
     <div className="space-y-8">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -196,6 +260,19 @@ export default async function PayRemittanceDetailPage({
       {query.applied === "1" && (
         <p className="rounded-xl bg-primary/10 px-4 py-3 text-sm text-primary-dark" role="status">
           Remittance applied. Invoice L&I statuses updated and therapist pay run created.
+        </p>
+      )}
+
+      {remittance.status === "PREVIEW" && paidToDeniedWarnings.length > 0 && (
+        <p className="rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-950" role="status">
+          <span className="font-semibold">
+            {paidToDeniedWarnings.length} denied bill
+            {paidToDeniedWarnings.length === 1 ? "" : "s"} match previously PAID invoice
+            {paidToDeniedWarnings.length === 1 ? "" : "s"}
+          </span>
+          {" — "}
+          review before applying. EOB 309 duplicate denials keep the invoice PAID; other denials
+          would overwrite PAID status.
         </p>
       )}
 
@@ -278,6 +355,7 @@ export default async function PayRemittanceDetailPage({
               const paymentStatusMismatch =
                 line.matchedInvoice != null && invoicePaymentStatus !== lniPaymentStatus;
               const wrongYearSuggestion = wrongYearSuggestionByLineId.get(line.id);
+              const paidToDeniedWarning = paidToDeniedWarningByLineId.get(line.id);
               const isSuperseded = Boolean(line.supersededAt);
               const isUnresolved = !line.matchedInvoiceId && !isSuperseded;
               const invoiceHref = line.matchedInvoice
@@ -322,6 +400,14 @@ export default async function PayRemittanceDetailPage({
                     {formatCurrency(Number(line.billTotalPayable))}
                   </span>
                 </div>
+                {paidToDeniedWarning && remittance.status === "PREVIEW" && (
+                  <p className="mt-1 text-xs text-amber-900">
+                    {paidToDeniedWarning.willRemainPaid
+                      ? "Previously paid — EOB 309 duplicate denial; invoice will remain PAID (no clawback on this warrant)."
+                      : "Previously paid — applying would change this invoice to DENIED."}
+                    {paidToDeniedWarning.eobNote ? ` ${paidToDeniedWarning.eobNote}` : ""}
+                  </p>
+                )}
                 {line.matchNote && (
                   <p className="mt-1 text-xs text-amber-800">{line.matchNote}</p>
                 )}
@@ -474,6 +560,7 @@ export default async function PayRemittanceDetailPage({
                 matchedCount={matchedCount}
                 unmatchedCount={unresolvedCount}
                 therapistTotal={therapistTotal}
+                paidToDeniedWarnings={paidToDeniedWarnings}
               />
               <DeleteRemittancePreviewForm
                 remittanceAdviceId={remittance.id}
