@@ -7,7 +7,10 @@ import {
   getGoogleOAuthConfig,
   getGoogleOAuthStateCookieName,
 } from "@/lib/google-oauth";
-import { googleDriveIntegrationsPath } from "@/lib/google-drive-oauth-redirect";
+import {
+  GOOGLE_DRIVE_ADMIN_PAGE,
+  googleDriveIntegrationsPath,
+} from "@/lib/google-drive-oauth-redirect";
 import { prisma } from "@/lib/prisma";
 
 function importRedirect(request: Request, role: "ADMIN" | "THERAPIST", params: Record<string, string>) {
@@ -22,7 +25,7 @@ export async function GET(request: Request) {
   const session = await auth();
   if (!session?.user?.id) {
     const login = new URL("/portal/login", request.url);
-    login.searchParams.set("callbackUrl", "/portal/admin/clients/import");
+    login.searchParams.set("callbackUrl", GOOGLE_DRIVE_ADMIN_PAGE);
     return NextResponse.redirect(login);
   }
 
@@ -35,7 +38,7 @@ export async function GET(request: Request) {
   const role = getRealRole(session);
   if (role !== "ADMIN" && role !== "THERAPIST") {
     const login = new URL("/portal/login", request.url);
-    login.searchParams.set("callbackUrl", "/portal/admin/clients/import");
+    login.searchParams.set("callbackUrl", GOOGLE_DRIVE_ADMIN_PAGE);
     return NextResponse.redirect(login);
   }
 

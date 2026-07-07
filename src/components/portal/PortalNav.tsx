@@ -13,6 +13,7 @@ const adminLinks = [
   { href: "/portal/admin/therapists", label: "Therapists" },
   { href: "/portal/admin/admins", label: "Admins" },
   { href: "/portal/admin/invoices", label: "Invoices" },
+  { href: "/portal/admin/integrations/google-drive", label: "Google Drive" },
 ];
 
 const therapistLinks = [

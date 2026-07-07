@@ -48,7 +48,11 @@ export default async function ClientImportPage({
         </Link>
         <h1 className="mt-4 font-serif text-3xl font-semibold text-primary-dark">Import clients</h1>
         <p className="mt-2 text-muted">
-          Connect Google Drive to bulk-import Referral Submission documents, or upload files manually.
+          Connect Google Drive to bulk-import Referral Submission documents, or upload files manually.{" "}
+          <Link href="/portal/admin/integrations/google-drive" className="text-primary hover:underline">
+            Manage Google Drive connection
+          </Link>
+          .
         </p>
       </div>
       <ClientImportForms
