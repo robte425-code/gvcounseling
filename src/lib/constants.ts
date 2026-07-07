@@ -1,7 +1,7 @@
 export const ORG = {
   name: "GRANDVIEW COUNSELING",
-  /** L&I provider number (0479998 without leading zero). Used in 837 ISA/GS and claim segments. */
-  lniProviderId: "479998",
+  /** L&I payee / provider account number (7 digits). Used in 837 ISA/GS and claim segments. */
+  lniProviderId: "0479998",
   /** National Provider Identifier. Used in 837 billing provider (NM1*85). */
   npi: "1568247872",
   /** Federal EIN / FEIN. Used in 837 REF*EI segment. */
@@ -31,6 +31,12 @@ export const ORG = {
     ffnwbAccountNumber: "396263",
   },
 } as const;
+
+/** L&I provider IDs are 7-digit numbers; EDI segments require the leading zero when present. */
+export function lniProviderIdForEdi(value: string): string {
+  const digits = value.replace(/\D/g, "");
+  return digits.padStart(7, "0");
+}
 
 export const PROCEDURE_CODES = [
   { code: "96156", description: "Hlth Behavioral Assmt/Reassessment (BHI)" },

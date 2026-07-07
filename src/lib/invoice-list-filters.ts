@@ -17,12 +17,14 @@ export type AdminInvoiceFilterValues = {
   therapistId?: string;
   payPeriodId?: string;
   paymentStatus?: InvoicePaymentFilter;
+  invoiceNumber?: number;
 };
 
 export type TherapistInvoiceFilterValues = {
   status?: InvoiceStatus;
   payPeriodId?: string;
   paymentStatus?: InvoicePaymentFilter;
+  invoiceNumber?: number;
 };
 
 export const INVOICE_PAYMENT_FILTER_OPTIONS = [
@@ -40,6 +42,7 @@ export function buildAdminInvoicesHref(values: AdminInvoiceFilterValues): string
   if (values.therapistId) params.set("therapistId", values.therapistId);
   if (values.payPeriodId) params.set("payPeriodId", values.payPeriodId);
   if (values.paymentStatus) params.set("paymentStatus", values.paymentStatus);
+  if (values.invoiceNumber) params.set("invoiceNumber", String(values.invoiceNumber));
   const query = params.toString();
   return query ? `/portal/admin/invoices?${query}` : "/portal/admin/invoices";
 }
@@ -49,6 +52,7 @@ export function buildTherapistInvoicesHref(values: TherapistInvoiceFilterValues)
   if (values.status) params.set("status", values.status);
   if (values.payPeriodId) params.set("payPeriodId", values.payPeriodId);
   if (values.paymentStatus) params.set("paymentStatus", values.paymentStatus);
+  if (values.invoiceNumber) params.set("invoiceNumber", String(values.invoiceNumber));
   const query = params.toString();
   return query ? `/portal/therapist/invoices?${query}` : "/portal/therapist/invoices";
 }
@@ -71,6 +75,19 @@ export function isInvoicePaymentFilter(value: string | undefined): value is Invo
     value === "UNPAID" ||
     value === "APPEAL_IN_PROGRESS"
   );
+}
+
+export function parseInvoiceNumberFilter(value: string | undefined): number | undefined {
+  if (!value?.trim()) return undefined;
+  const parsed = Number.parseInt(value.trim(), 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
+}
+
+export function invoiceNumberWhere(
+  invoiceNumber: number | undefined,
+): Prisma.InvoiceWhereInput | undefined {
+  if (!invoiceNumber) return undefined;
+  return { invoiceNumber };
 }
 
 export function invoicePaymentWhere(

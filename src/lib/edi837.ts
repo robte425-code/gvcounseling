@@ -1,5 +1,5 @@
 import { randomBytes } from "crypto";
-import { ORG } from "@/lib/constants";
+import { ORG, lniProviderIdForEdi } from "@/lib/constants";
 
 /** CMS place of service: 10 = telehealth provided in patient's home. */
 const PLACE_OF_SERVICE = "10";
@@ -124,7 +124,7 @@ function buildClaim(hlNumber: number, claim: Edi837Claim): string {
   out += seg("DMG", "D8", formatDate(demographicDate), client.gender);
   out += seg("NM1", "PR", "2", ORG.receiverName, "", "", "", "PI", ORG.receiverId);
   out += seg("N4", ORG.receiverCity, ORG.receiverState, ORG.receiverZip);
-  out += seg("REF", "G2", ORG.lniProviderId);
+  out += seg("REF", "G2", lniProviderIdForEdi(ORG.lniProviderId));
   out += seg(
     "CLM",
     claim.clmControlNumber,
@@ -152,7 +152,7 @@ function buildClaim(hlNumber: number, claim: Edi837Claim): string {
     "XX",
     therapist.npi,
   );
-  out += seg("REF", "G2", therapist.lniProviderId);
+  out += seg("REF", "G2", lniProviderIdForEdi(therapist.lniProviderId));
 
   lines.forEach((line, idx) => {
     out += seg("LX", String(idx + 1));
@@ -205,6 +205,7 @@ export function buildEdi837(
     throw new Error("No claims to include in 837 file");
   }
 
+  const orgProviderId = lniProviderIdForEdi(ORG.lniProviderId);
   const now = options?.now ?? new Date();
   const isaControl = generateNumericControl(9);
   const gsControl = padLeft(1, 8);
@@ -217,7 +218,7 @@ export function buildEdi837(
   let body = "";
   body += seg("ST", "837", stControl, "005010X222A1");
   body += seg("BHT", "0019", "00", "0001", date, time, "CH");
-  body += seg("NM1", "41", "2", ORG.name, "", "", "", "46", ORG.lniProviderId);
+  body += seg("NM1", "41", "2", ORG.name, "", "", "", "46", orgProviderId);
   body += seg(
     "PER",
     "IC",
@@ -242,7 +243,7 @@ export function buildEdi837(
   body += seg("SE", String(segmentCount), stControl);
 
   let gs = "";
-  gs += seg("GS", "HC", ORG.lniProviderId, ORG.receiverId, date, time, gsControl, "X", "005010X222A1");
+  gs += seg("GS", "HC", orgProviderId, ORG.receiverId, date, time, gsControl, "X", "005010X222A1");
   gs += body;
   gs += seg("GE", "1", gsControl);
 
@@ -254,7 +255,7 @@ export function buildEdi837(
     "00",
     padRight("", 10),
     "ZZ",
-    padRight(ORG.lniProviderId, 15),
+    padRight(orgProviderId, 15),
     "30",
     padRight(ORG.receiverId, 15),
     yyMMdd,

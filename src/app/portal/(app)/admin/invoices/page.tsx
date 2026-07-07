@@ -17,11 +17,13 @@ import {
 } from "@/lib/invoice-pay-period-grouping";
 import {
   buildAdminInvoicesHref,
+  invoiceNumberWhere,
   invoicePayPeriodWhere,
   invoicePaymentWhere,
   isInvoicePaymentFilter,
   mergeInvoiceWhere,
   type AdminInvoiceFilterValues,
+  parseInvoiceNumberFilter,
 } from "@/lib/invoice-list-filters";
 import { isTherapistPaidForInvoice } from "@/lib/invoice-therapist-payment";
 import { prisma } from "@/lib/prisma";
@@ -48,6 +50,7 @@ function parseInvoiceFilters(searchParams: {
   therapistId?: string;
   payPeriodId?: string;
   paymentStatus?: string;
+  invoiceNumber?: string;
   assigned?: string;
 }): AdminInvoiceFilterValues {
   return {
@@ -57,6 +60,7 @@ function parseInvoiceFilters(searchParams: {
     paymentStatus: isInvoicePaymentFilter(searchParams.paymentStatus)
       ? searchParams.paymentStatus
       : undefined,
+    invoiceNumber: parseInvoiceNumberFilter(searchParams.invoiceNumber),
   };
 }
 
@@ -72,8 +76,11 @@ function buildInvoiceWhere(filters: AdminInvoiceFilterValues): Prisma.InvoiceWhe
   }
 
   return mergeInvoiceWhere(
-    mergeInvoiceWhere(where, invoicePayPeriodWhere(filters.payPeriodId)),
-    invoicePaymentWhere(filters.paymentStatus),
+    mergeInvoiceWhere(
+      mergeInvoiceWhere(where, invoicePayPeriodWhere(filters.payPeriodId)),
+      invoicePaymentWhere(filters.paymentStatus),
+    ),
+    invoiceNumberWhere(filters.invoiceNumber),
   );
 }
 
@@ -87,7 +94,10 @@ function buildUnassignedInvoiceWhere(filters: AdminInvoiceFilterValues): Prisma.
     where.therapistId = filters.therapistId;
   }
 
-  return mergeInvoiceWhere(where, invoicePaymentWhere(filters.paymentStatus));
+  return mergeInvoiceWhere(
+    mergeInvoiceWhere(where, invoicePaymentWhere(filters.paymentStatus)),
+    invoiceNumberWhere(filters.invoiceNumber),
+  );
 }
 
 function toAdminInvoiceRow(inv: InvoiceWithRelations): AdminInvoiceRow {
@@ -130,6 +140,7 @@ export default async function AdminInvoicesPage({
     therapistId?: string;
     payPeriodId?: string;
     paymentStatus?: string;
+    invoiceNumber?: string;
     assigned?: string;
   }>;
 }) {

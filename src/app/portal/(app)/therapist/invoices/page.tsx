@@ -16,9 +16,11 @@ import {
 import {
   invoicePayPeriodWhere,
   invoicePaymentWhere,
+  invoiceNumberWhere,
   isInvoicePaymentFilter,
   mergeInvoiceWhere,
   buildTherapistInvoicesHref,
+  parseInvoiceNumberFilter,
   type TherapistInvoiceFilterValues,
 } from "@/lib/invoice-list-filters";
 import { isTherapistPaidForInvoice } from "@/lib/invoice-therapist-payment";
@@ -35,6 +37,7 @@ function parseInvoiceFilters(searchParams: {
   status?: string;
   payPeriodId?: string;
   paymentStatus?: string;
+  invoiceNumber?: string;
 }): TherapistInvoiceFilterValues {
   return {
     status: isInvoiceStatus(searchParams.status) ? searchParams.status : undefined,
@@ -42,6 +45,7 @@ function parseInvoiceFilters(searchParams: {
     paymentStatus: isInvoicePaymentFilter(searchParams.paymentStatus)
       ? searchParams.paymentStatus
       : undefined,
+    invoiceNumber: parseInvoiceNumberFilter(searchParams.invoiceNumber),
   };
 }
 
@@ -56,15 +60,23 @@ function buildInvoiceWhere(
   }
 
   return mergeInvoiceWhere(
-    mergeInvoiceWhere(where, invoicePayPeriodWhere(filters.payPeriodId)),
-    invoicePaymentWhere(filters.paymentStatus),
+    mergeInvoiceWhere(
+      mergeInvoiceWhere(where, invoicePayPeriodWhere(filters.payPeriodId)),
+      invoicePaymentWhere(filters.paymentStatus),
+    ),
+    invoiceNumberWhere(filters.invoiceNumber),
   );
 }
 
 export default async function TherapistInvoicesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; payPeriodId?: string; paymentStatus?: string }>;
+  searchParams: Promise<{
+    status?: string;
+    payPeriodId?: string;
+    paymentStatus?: string;
+    invoiceNumber?: string;
+  }>;
 }) {
   const session = await requireTherapist();
   const params = await searchParams;
@@ -133,7 +145,9 @@ export default async function TherapistInvoicesPage({
       <div className={portalCardClass}>
         <TherapistInvoicesTable
           invoices={invoiceRows}
-          hasFilters={Boolean(filters.status || filters.payPeriodId || filters.paymentStatus)}
+          hasFilters={Boolean(
+            filters.status || filters.payPeriodId || filters.paymentStatus || filters.invoiceNumber,
+          )}
           invoicesReturnTo={invoicesReturnTo}
         />
       </div>

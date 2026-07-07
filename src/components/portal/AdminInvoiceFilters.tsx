@@ -33,7 +33,11 @@ type Props = {
 export function AdminInvoiceFilters({ therapists, payPeriods, values, resultCount }: Props) {
   const formRef = useRef<HTMLFormElement>(null);
   const hasFilters = Boolean(
-    values.status || values.therapistId || values.payPeriodId || values.paymentStatus,
+    values.status ||
+      values.therapistId ||
+      values.payPeriodId ||
+      values.paymentStatus ||
+      values.invoiceNumber,
   );
 
   const applyFilters = () => formRef.current?.requestSubmit();
@@ -45,6 +49,30 @@ export function AdminInvoiceFilters({ therapists, payPeriods, values, resultCoun
       action="/portal/admin/invoices"
       className="flex flex-wrap items-end gap-3 rounded-xl border border-border bg-primary/5 p-4"
     >
+      <div className="min-w-[7rem]">
+        <label htmlFor="invoice-filter-number" className={portalLabelCompactClass}>
+          Invoice #
+        </label>
+        <input
+          id="invoice-filter-number"
+          name="invoiceNumber"
+          type="number"
+          min={1}
+          step={1}
+          inputMode="numeric"
+          placeholder="e.g. 956"
+          className={portalInputCompactClass}
+          defaultValue={values.invoiceNumber ?? ""}
+          onBlur={applyFilters}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              event.preventDefault();
+              applyFilters();
+            }
+          }}
+        />
+      </div>
+
       <div className="min-w-[10rem]">
         <label htmlFor="invoice-filter-status" className={portalLabelCompactClass}>
           Invoice status
