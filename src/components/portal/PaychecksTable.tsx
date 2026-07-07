@@ -32,14 +32,13 @@ export function PaychecksTable({ paychecks, detailBasePath, showTherapistColumn 
   return (
     <div className={portalCardClass}>
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[48rem] text-left text-sm">
+        <table className="w-full min-w-[40rem] text-left text-sm">
           <thead>
             <tr className="border-b border-border text-xs font-semibold uppercase tracking-wide text-muted">
               <th className="py-2 pr-4">Pay period</th>
               <th className="py-2 pr-4">L&I payment date</th>
               {showTherapistColumn && <th className="py-2 pr-4">Therapist</th>}
               <th className="py-2 pr-4 text-right">Invoices</th>
-              <th className="py-2 pr-4 text-right">L&I paid</th>
               <th className="py-2 text-right">Therapist pay</th>
             </tr>
           </thead>
@@ -60,7 +59,6 @@ export function PaychecksTable({ paychecks, detailBasePath, showTherapistColumn 
                   <td className="py-3 pr-4">{row.therapistName}</td>
                 )}
                 <td className="py-3 pr-4 text-right tabular-nums">{row.invoiceCount}</td>
-                <td className="py-3 pr-4 text-right tabular-nums">{formatCurrency(row.lniPaidAmount)}</td>
                 <td className="py-3 text-right font-medium tabular-nums text-primary-dark">
                   {formatCurrency(row.therapistAmount)}
                 </td>
