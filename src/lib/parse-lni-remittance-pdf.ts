@@ -496,7 +496,10 @@ function parseDetailBills(
   return bills;
 }
 
-export function parseLniRemittanceText(text: string): ParsedRemittanceAdvice {
+export function parseLniRemittanceText(
+  text: string,
+  options?: { preserveUncataloguedEob?: boolean },
+): ParsedRemittanceAdvice {
   const normalized = normalizeWhitespace(text);
 
   const remittanceNumber =
@@ -536,9 +539,11 @@ export function parseLniRemittanceText(text: string): ParsedRemittanceAdvice {
   const detailStart = normalized.search(/REMITTANCE ADVICE DETAIL/i);
   const detailText = detailStart >= 0 ? normalized.slice(detailStart) : normalized;
   const eobCodeDescriptions = extractEobDescriptions(normalized);
-  const bills = parseDetailBills(detailText, normalized, detailStart >= 0 ? detailStart : 0).map(
-    (bill) => sanitizeBillEobCodes(bill, eobCodeDescriptions),
-  );
+  const rawBills = parseDetailBills(detailText, normalized, detailStart >= 0 ? detailStart : 0);
+  const bills = rawBills.map((bill) => {
+    if (options?.preserveUncataloguedEob) return bill;
+    return sanitizeBillEobCodes(bill, eobCodeDescriptions);
+  });
 
   if (!bills.length) {
     throw new Error("No remittance bills found in PDF.");

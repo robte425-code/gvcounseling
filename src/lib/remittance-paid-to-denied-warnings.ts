@@ -14,7 +14,7 @@ export type PaidToDeniedWarning = {
   invoiceId: string;
   invoiceNumber: number;
   therapistName: string;
-  /** Invoice stays PAID after apply (EOB 309 / previously-paid duplicate denial). */
+  /** Invoice stays PAID after apply (EOB 309/101 duplicate denial). */
   willRemainPaid: boolean;
   eobCodes: string[];
   eobNote: string | null;
@@ -144,7 +144,7 @@ export function paidToDeniedWarningSummary(warnings: PaidToDeniedWarning[]): str
   }
   if (remainPaid.length) {
     parts.push(
-      `${remainPaid.length} duplicate-paid denial${remainPaid.length === 1 ? "" : "s"} (EOB 309) — invoice${remainPaid.length === 1 ? "" : "s"} will stay PAID`,
+      `${remainPaid.length} duplicate-paid denial${remainPaid.length === 1 ? "" : "s"} (EOB 309/101) — invoice${remainPaid.length === 1 ? "" : "s"} will stay PAID`,
     );
   }
   return parts.join("\n");

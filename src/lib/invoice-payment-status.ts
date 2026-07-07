@@ -67,18 +67,24 @@ export function mapRemittanceLinesForResolution(
   });
 }
 
-/** When a denied line omits EOB codes in DB, infer 309 only if an earlier paid line exists. */
+/** Duplicate-denial EOB codes: rebill rejected, not a clawback of prior payment. */
+export const DUPLICATE_DENIAL_EOB_CODES = ["309", "101"] as const;
+
+/** When a denied line omits EOB codes in DB, infer duplicate-denial codes if an earlier paid line exists. */
 export function effectiveEobCodesForResolution(
   line: { section: RemittanceBillSection; eobCodes: string[] },
   catalog: Record<string, string>,
   hasEarlierPaid: boolean,
 ): string[] {
   if (line.eobCodes.length > 0) return line.eobCodes;
-  if (line.section === "DENIED" && hasEarlierPaid && catalog["309"]) return ["309"];
+  if (line.section !== "DENIED" || !hasEarlierPaid) return line.eobCodes;
+  for (const code of DUPLICATE_DENIAL_EOB_CODES) {
+    if (catalog[code]) return [code];
+  }
   return line.eobCodes;
 }
 
-/** EOB 309 and similar codes mean L&I denied a duplicate rebill, not a clawback of prior payment. */
+/** EOB 309/101 and similar codes mean L&I denied a duplicate rebill, not a clawback. */
 export function isPreviouslyPaidDuplicateEob(
   codes: string[],
   descriptions: Record<string, string>,
@@ -86,9 +92,12 @@ export function isPreviouslyPaidDuplicateEob(
 ): boolean {
   for (const code of codes) {
     const normalized = normalizeEobCode(code);
-    if (normalized === "309") return true;
+    if (DUPLICATE_DENIAL_EOB_CODES.includes(normalized as (typeof DUPLICATE_DENIAL_EOB_CODES)[number])) {
+      return true;
+    }
     const text = descriptions[normalized] ?? descriptions[code] ?? catalog?.[normalized] ?? catalog?.[code] ?? "";
     if (/previously paid/i.test(text)) return true;
+    if (/denied as duplicate/i.test(text)) return true;
   }
   return false;
 }

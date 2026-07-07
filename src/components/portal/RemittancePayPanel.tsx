@@ -326,7 +326,7 @@ export function ApplyRemittanceForm({
                 {warning.patientName ? ` · ${warning.patientName}` : ""}
                 {" — "}
                 {warning.willRemainPaid
-                  ? "EOB 309 duplicate denial; invoice will remain PAID (no clawback on this warrant)."
+                  ? "Duplicate denial (EOB 309/101); invoice will remain PAID (no clawback on this warrant)."
                   : "Would change from PAID to DENIED on apply."}
                 {warning.eobNote ? (
                   <p className="mt-0.5 text-xs text-amber-900">{warning.eobNote}</p>
@@ -360,7 +360,7 @@ export function ApplyRemittanceForm({
             : ""
         }${
           remainPaidWarnings.length
-            ? `\n\n${remainPaidWarnings.length} duplicate-paid denial(s) (EOB 309) will be recorded but those invoices will stay PAID.`
+            ? `\n\n${remainPaidWarnings.length} duplicate-paid denial(s) (EOB 309/101) will be recorded but those invoices will stay PAID.`
             : ""
         }`}
         className={portalButtonClass}

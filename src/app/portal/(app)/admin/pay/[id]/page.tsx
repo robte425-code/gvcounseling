@@ -271,7 +271,7 @@ export default async function PayRemittanceDetailPage({
             {paidToDeniedWarnings.length === 1 ? "" : "s"}
           </span>
           {" — "}
-          review before applying. EOB 309 duplicate denials keep the invoice PAID; other denials
+          review before applying. EOB 309/101 duplicate denials keep the invoice PAID; other denials
           would overwrite PAID status.
         </p>
       )}
@@ -403,7 +403,7 @@ export default async function PayRemittanceDetailPage({
                 {paidToDeniedWarning && remittance.status === "PREVIEW" && (
                   <p className="mt-1 text-xs text-amber-900">
                     {paidToDeniedWarning.willRemainPaid
-                      ? "Previously paid — EOB 309 duplicate denial; invoice will remain PAID (no clawback on this warrant)."
+                      ? "Previously paid — duplicate denial (EOB 309/101); invoice will remain PAID (no clawback on this warrant)."
                       : "Previously paid — applying would change this invoice to DENIED."}
                     {paidToDeniedWarning.eobNote ? ` ${paidToDeniedWarning.eobNote}` : ""}
                   </p>
