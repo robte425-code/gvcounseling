@@ -35,9 +35,9 @@ export function PaychecksTable({ paychecks, detailBasePath, showTherapistColumn 
         <table className="w-full min-w-[40rem] text-left text-sm">
           <thead>
             <tr className="border-b border-border text-xs font-semibold uppercase tracking-wide text-muted">
+              {showTherapistColumn && <th className="py-2 pr-4">Paycheck for</th>}
               <th className="py-2 pr-4">Pay period</th>
               <th className="py-2 pr-4">L&I payment date</th>
-              {showTherapistColumn && <th className="py-2 pr-4">Therapist</th>}
               <th className="py-2 pr-4 text-right">Invoices</th>
               <th className="py-2 text-right">Therapist pay</th>
             </tr>
@@ -45,19 +45,35 @@ export function PaychecksTable({ paychecks, detailBasePath, showTherapistColumn 
           <tbody>
             {paychecks.map((row) => (
               <tr key={`${row.payPeriodId}:${row.therapistId}`} className="border-b border-border/70">
+                {showTherapistColumn && (
+                  <td className="py-3 pr-4">
+                    <Link
+                      href={paycheckHref(detailBasePath, row, showTherapistColumn)}
+                      className="font-medium text-primary-dark hover:underline"
+                    >
+                      {row.therapistName}
+                    </Link>
+                  </td>
+                )}
                 <td className="py-3 pr-4">
-                  <Link
-                    href={paycheckHref(detailBasePath, row, showTherapistColumn)}
-                    className="font-medium text-primary-dark hover:underline"
-                  >
-                    {row.payPeriodLabel}
-                  </Link>
-                  <p className="text-xs text-muted">Cutoff {row.cutoffLabel}</p>
+                  {showTherapistColumn ? (
+                    <>
+                      <span className="font-medium text-foreground">{row.payPeriodLabel}</span>
+                      <p className="text-xs text-muted">Cutoff {row.cutoffLabel}</p>
+                    </>
+                  ) : (
+                    <>
+                      <Link
+                        href={paycheckHref(detailBasePath, row, showTherapistColumn)}
+                        className="font-medium text-primary-dark hover:underline"
+                      >
+                        {row.payPeriodLabel}
+                      </Link>
+                      <p className="text-xs text-muted">Cutoff {row.cutoffLabel}</p>
+                    </>
+                  )}
                 </td>
                 <td className="py-3 pr-4 text-muted">{row.paymentDateLabel ?? "—"}</td>
-                {showTherapistColumn && (
-                  <td className="py-3 pr-4">{row.therapistName}</td>
-                )}
                 <td className="py-3 pr-4 text-right tabular-nums">{row.invoiceCount}</td>
                 <td className="py-3 text-right font-medium tabular-nums text-primary-dark">
                   {formatCurrency(row.therapistAmount)}
