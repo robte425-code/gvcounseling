@@ -220,7 +220,7 @@ function parseBillChunk(
   const billBody = beforeIcn.slice(claimStart);
   const claimLineMatch = billBody.match(
     new RegExp(
-      `^(${CLAIM_NUMBER.source})\\s+(.+?)\\s+(\\d{6})\\s+(\\d{6})\\s+([\\d.]+)\\s+(\\w+)\\s+([\\d.]+)\\s+([\\d.]+)\\s+([\\d.]+)\\s+([\\d.]+)${EOB_CODE_SUFFIX}?`,
+      `^(${CLAIM_NUMBER.source})\\s+(.+?)\\s+(\\d{6})\\s+(\\d{6})\\s+([\\d.]+)\\s+(\\w+)\\s+([\\d.]+)\\s+([\\d.]+)\\s+([\\d.]+)\\s+([\\d.]+)`,
     ),
   );
   if (!claimLineMatch) return null;
