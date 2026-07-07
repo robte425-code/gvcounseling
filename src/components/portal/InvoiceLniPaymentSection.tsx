@@ -22,7 +22,7 @@ export function InvoiceLniPaymentSection({
 
   return (
     <div className="mt-3 rounded-xl border border-border bg-primary/[0.03] px-4 py-3">
-      <p className="text-xs font-semibold uppercase tracking-wide text-muted">L&I payment</p>
+      <p className="text-xs font-semibold uppercase tracking-wide text-muted">L&I status</p>
       <div className="mt-2 flex flex-wrap items-center gap-2">
         <StatusBadge status={paymentStatus} />
         {paymentStatus === "PAID" && lniPaidAt && (

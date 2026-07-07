@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import type { AdminInvoiceRow, PayPeriodOption } from "@/components/portal/AdminInvoicesTable";
 import { InvoicePaymentStatusCell } from "@/components/portal/InvoicePaymentStatusCell";
+import { InvoiceTherapistPaymentCell } from "@/components/portal/InvoiceTherapistPaymentCell";
 import { InvoiceTableRow } from "@/components/portal/InvoiceTableRow";
 import {
   portalButtonClass,
@@ -134,7 +135,8 @@ export function AdminUnassignedInvoicesTile({
               <th className="py-2 pr-4">Therapist</th>
               <th className="py-2 pr-4">Client</th>
               <th className="py-2 pr-4">Service date</th>
-              <th className="py-2 pr-4">L&I payment</th>
+              <th className="py-2 pr-4">L&I status</th>
+              <th className="py-2 pr-4">Payment</th>
               <th className="py-2 pr-4">Total</th>
               <th className="py-2 pr-4">Submitted</th>
             </tr>
@@ -164,6 +166,9 @@ export function AdminUnassignedInvoicesTile({
                     lniEobCodes={inv.lniEobCodes}
                     lniEobCodeDescriptions={inv.lniEobCodeDescriptions}
                   />
+                </td>
+                <td className="py-3 pr-4">
+                  <InvoiceTherapistPaymentCell therapistPaid={inv.therapistPaid} />
                 </td>
                 <td className="py-3 pr-4">{formatCurrency(inv.totalAmount)}</td>
                 <td className="py-3 pr-4">

@@ -21,6 +21,7 @@ import {
   buildTherapistInvoicesHref,
   type TherapistInvoiceFilterValues,
 } from "@/lib/invoice-list-filters";
+import { isTherapistPaidForInvoice } from "@/lib/invoice-therapist-payment";
 import { prisma } from "@/lib/prisma";
 import type { InvoiceStatus, Prisma } from "@/generated/prisma/client";
 
@@ -76,6 +77,7 @@ export default async function TherapistInvoicesPage({
         client: true,
         lineItems: { select: { serviceDate: true }, orderBy: { sortOrder: "asc" } },
         payPeriod: { select: { label: true, cutoffDate: true } },
+        _count: { select: { payRunLines: true } },
       },
     }),
     prisma.payPeriod.findMany({
@@ -94,6 +96,7 @@ export default async function TherapistInvoicesPage({
       lniPaidAt: inv.lniPaidAt?.toISOString() ?? null,
       lniEobCodes: inv.lniEobCodes,
       lniEobCodeDescriptions: inv.lniEobCodeDescriptions,
+      therapistPaid: isTherapistPaidForInvoice(inv._count.payRunLines),
       clientLabel: `${inv.client.lastName}, ${inv.client.firstName}`,
       serviceDates: formatInvoiceServiceDates(inv.lineItems),
       totalAmount: Number(inv.totalAmount),

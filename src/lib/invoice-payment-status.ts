@@ -6,7 +6,7 @@ export type InferredPayment = {
   lniPaidAt: Date | null;
 };
 
-/** L&I remittance section → invoice `paymentStatus` (same enum values). */
+/** L&I remittance section → invoice `paymentStatus` (L&I status from RAs). */
 export function remittanceSectionToPaymentStatus(section: RemittanceBillSection): PaymentStatus {
   switch (section) {
     case "PAID":

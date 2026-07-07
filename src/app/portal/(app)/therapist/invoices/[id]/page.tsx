@@ -3,8 +3,10 @@ import { notFound } from "next/navigation";
 import { requireSession } from "@/auth";
 import { InvoiceDetailClient } from "@/components/portal/InvoiceDetailClient";
 import { InvoiceLniPaymentSection } from "@/components/portal/InvoiceLniPaymentSection";
+import { InvoiceTherapistPaymentSection } from "@/components/portal/InvoiceTherapistPaymentSection";
 import { StatusBadge, portalButtonClass } from "@/components/portal/ui";
 import { formatCurrency, formatDate, calendarIsoFromDate } from "@/lib/constants";
+import { isTherapistPaidForInvoice } from "@/lib/invoice-therapist-payment";
 import {
   deleteInvoiceAction,
   unsubmitInvoiceAction,
@@ -23,6 +25,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
       therapist: true,
       lineItems: { orderBy: { sortOrder: "asc" } },
       attachments: { orderBy: { createdAt: "desc" } },
+      _count: { select: { payRunLines: true } },
     },
   });
 
@@ -100,6 +103,9 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
           lniPaidAt={invoice.lniPaidAt}
           lniEobCodes={invoice.lniEobCodes}
           lniEobCodeDescriptions={invoice.lniEobCodeDescriptions}
+        />
+        <InvoiceTherapistPaymentSection
+          therapistPaid={isTherapistPaidForInvoice(invoice._count.payRunLines)}
         />
       </div>
 

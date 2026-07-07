@@ -107,7 +107,7 @@ export default async function PayPage({
         <h1 className="font-serif text-3xl font-semibold text-primary-dark">Pay</h1>
         <p className="mt-2 max-w-2xl text-sm text-muted">
           Import L&I Remittance Advice PDFs when payments arrive. Review matches, update invoice
-          payment status, and calculate therapist pay from fee schedules.
+          L&I status, and calculate therapist pay from fee schedules.
         </p>
       </div>
 

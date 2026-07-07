@@ -3,8 +3,10 @@ import { notFound } from "next/navigation";
 import { requireAdmin } from "@/auth";
 import { InvoiceDetailClient } from "@/components/portal/InvoiceDetailClient";
 import { InvoiceLniPaymentSection } from "@/components/portal/InvoiceLniPaymentSection";
+import { InvoiceTherapistPaymentSection } from "@/components/portal/InvoiceTherapistPaymentSection";
 import { StatusBadge } from "@/components/portal/ui";
 import { formatCurrency, formatDate, calendarIsoFromDate } from "@/lib/constants";
+import { isTherapistPaidForInvoice } from "@/lib/invoice-therapist-payment";
 import { prisma } from "@/lib/prisma";
 
 export default async function AdminInvoiceDetailPage({
@@ -23,6 +25,7 @@ export default async function AdminInvoiceDetailPage({
       lineItems: { orderBy: { sortOrder: "asc" } },
       attachments: { orderBy: { createdAt: "desc" } },
       payPeriod: true,
+      _count: { select: { payRunLines: true } },
     },
   });
 
@@ -72,6 +75,9 @@ export default async function AdminInvoiceDetailPage({
           lniPaidAt={invoice.lniPaidAt}
           lniEobCodes={invoice.lniEobCodes}
           lniEobCodeDescriptions={invoice.lniEobCodeDescriptions}
+        />
+        <InvoiceTherapistPaymentSection
+          therapistPaid={isTherapistPaidForInvoice(invoice._count.payRunLines)}
         />
         {invoice.status === "SUBMITTED" && invoice.payPeriod && (
           <p className="mt-2 text-sm text-muted">

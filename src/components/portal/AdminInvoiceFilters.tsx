@@ -47,7 +47,7 @@ export function AdminInvoiceFilters({ therapists, payPeriods, values, resultCoun
     >
       <div className="min-w-[10rem]">
         <label htmlFor="invoice-filter-status" className={portalLabelCompactClass}>
-          Status
+          Invoice status
         </label>
         <select
           id="invoice-filter-status"
@@ -106,11 +106,11 @@ export function AdminInvoiceFilters({ therapists, payPeriods, values, resultCoun
       </div>
 
       <div className="min-w-[10rem]">
-        <label htmlFor="invoice-filter-payment" className={portalLabelCompactClass}>
-          L&I payment
+        <label htmlFor="invoice-filter-lni-status" className={portalLabelCompactClass}>
+          L&I status
         </label>
         <select
-          id="invoice-filter-payment"
+          id="invoice-filter-lni-status"
           name="paymentStatus"
           className={portalInputCompactClass}
           defaultValue={values.paymentStatus ?? ""}

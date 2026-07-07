@@ -2,7 +2,8 @@ import { Fragment } from "react";
 import { ConfirmSubmitButton } from "@/components/portal/ConfirmSubmitButton";
 import { InvoiceTableRow } from "@/components/portal/InvoiceTableRow";
 import { InvoicePaymentStatusCell } from "@/components/portal/InvoicePaymentStatusCell";
-import { StatusBadge, portalButtonSecondaryClass } from "@/components/portal/ui";
+import { InvoiceTherapistPaymentCell } from "@/components/portal/InvoiceTherapistPaymentCell";
+import { portalButtonSecondaryClass } from "@/components/portal/ui";
 import { formatCurrency, formatDate } from "@/lib/constants";
 import { groupInvoicesByPayPeriod } from "@/lib/invoice-pay-period-grouping";
 import { deleteInvoiceAction } from "@/lib/portal-actions";
@@ -15,6 +16,7 @@ export type TherapistInvoiceRow = {
   lniPaidAt: string | null;
   lniEobCodes: string[];
   lniEobCodeDescriptions: unknown;
+  therapistPaid: boolean;
   clientLabel: string;
   serviceDates: string;
   totalAmount: number;
@@ -45,8 +47,8 @@ export function TherapistInvoicesTable({
           <th className="py-2 pr-4">#</th>
           <th className="py-2 pr-4">Client</th>
           <th className="py-2 pr-4">Service date</th>
-          <th className="py-2 pr-4">Status</th>
-          <th className="py-2 pr-4">L&I payment</th>
+          <th className="py-2 pr-4">L&I status</th>
+          <th className="py-2 pr-4">Payment</th>
           <th className="py-2 pr-4">Total</th>
           <th className="py-2 pr-4">Updated</th>
           <th className="py-2" />
@@ -86,15 +88,15 @@ export function TherapistInvoicesTable({
                 <td className="py-3 pr-4">{inv.clientLabel}</td>
                 <td className="py-3 pr-4">{inv.serviceDates}</td>
                 <td className="py-3 pr-4">
-                  <StatusBadge status={inv.status} />
-                </td>
-                <td className="py-3 pr-4">
                   <InvoicePaymentStatusCell
                     paymentStatus={inv.paymentStatus}
                     lniPaidAt={inv.lniPaidAt}
                     lniEobCodes={inv.lniEobCodes}
                     lniEobCodeDescriptions={inv.lniEobCodeDescriptions}
                   />
+                </td>
+                <td className="py-3 pr-4">
+                  <InvoiceTherapistPaymentCell therapistPaid={inv.therapistPaid} />
                 </td>
                 <td className="py-3 pr-4">{formatCurrency(inv.totalAmount)}</td>
                 <td className="py-3 pr-4">{formatDate(new Date(inv.updatedAt))}</td>

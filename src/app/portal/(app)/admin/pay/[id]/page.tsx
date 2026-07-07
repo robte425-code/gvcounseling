@@ -194,14 +194,14 @@ export default async function PayRemittanceDetailPage({
 
       {query.applied === "1" && (
         <p className="rounded-xl bg-primary/10 px-4 py-3 text-sm text-primary-dark" role="status">
-          Remittance applied. Invoice payment statuses updated and therapist pay run created.
+          Remittance applied. Invoice L&I statuses updated and therapist pay run created.
         </p>
       )}
 
       {remittance.status === "PREVIEW" && paymentStatusMismatchCount > 0 && (
         <p className="rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-900" role="status">
           <span className="font-semibold">
-            {paymentStatusMismatchCount} invoice payment status
+            {paymentStatusMismatchCount} invoice L&I status
             {paymentStatusMismatchCount === 1 ? "" : "es"} differ from L&I
           </span>
           {" — "}

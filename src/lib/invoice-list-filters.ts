@@ -26,7 +26,7 @@ export type TherapistInvoiceFilterValues = {
 };
 
 export const INVOICE_PAYMENT_FILTER_OPTIONS = [
-  { value: "", label: "All L&I payments" },
+  { value: "", label: "All L&I statuses" },
   { value: "PAID", label: "Paid" },
   { value: "DENIED", label: "Denied" },
   { value: "IN_PROCESS", label: "In process" },

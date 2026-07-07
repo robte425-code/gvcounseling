@@ -293,7 +293,7 @@ function parseLineEobDescriptions(value: unknown): Record<string, string> {
   return parseInvoiceEobDescriptions(value);
 }
 
-/** Recompute invoice L&I payment from all applied, non-superseded remittance matches. */
+/** Recompute invoice L&I status from all applied, non-superseded remittance matches. */
 export async function reconcileInvoicePaymentStatus(
   invoiceId: string,
   tx?: Pick<typeof prisma, "remittanceAdviceLine" | "invoice">,

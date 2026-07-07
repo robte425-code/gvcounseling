@@ -323,7 +323,7 @@ export function ApplyRemittanceForm({
         </p>
       )}
       <ConfirmSubmitButton
-        confirmMessage={`Apply this remittance?\n\n${matchedCount} matched bill(s) will update invoice payment status (paid, denied, or in-process).\n\nTherapist pay total: $${therapistTotal.toFixed(2)} (from fee schedule on paid invoices).`}
+        confirmMessage={`Apply this remittance?\n\n${matchedCount} matched bill(s) will update invoice L&I status (paid, denied, or in-process).\n\nTherapist pay total: $${therapistTotal.toFixed(2)} (from fee schedule on paid invoices).`}
         className={portalButtonClass}
         disabled={pending || hasUnmatched}
       >
