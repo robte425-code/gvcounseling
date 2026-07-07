@@ -9,6 +9,7 @@ const adminLinks = [
   { href: "/portal/admin/dashboard", label: "Dashboard" },
   { href: "/portal/admin/billing", label: "Billing" },
   { href: "/portal/admin/pay", label: "Pay" },
+  { href: "/portal/admin/paychecks", label: "Paychecks" },
   { href: "/portal/admin/clients", label: "Clients" },
   { href: "/portal/admin/therapists", label: "Therapists" },
   { href: "/portal/admin/admins", label: "Admins" },
@@ -20,6 +21,7 @@ const therapistLinks = [
   { href: "/portal/therapist/dashboard", label: "Dashboard" },
   { href: "/portal/therapist/clients", label: "Clients" },
   { href: "/portal/therapist/invoices", label: "Invoices" },
+  { href: "/portal/therapist/paychecks", label: "Paychecks" },
   { href: "/portal/therapist/fees", label: "Fees" },
 ];
 
