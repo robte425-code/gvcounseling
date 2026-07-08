@@ -16,24 +16,24 @@ export default async function TherapistDashboardPage() {
   const therapistId = session.user.id;
   const today = startOfUtcDay();
 
+  const nextPayPeriod = await prisma.payPeriod.findFirst({
+    where: { cutoffDate: { gte: today } },
+    orderBy: { cutoffDate: "asc" },
+    select: { id: true, cutoffDate: true, paymentDate: true, label: true },
+  });
+
   const [
     clientCount,
-    nextPayPeriod,
     draftCount,
     submittedCount,
     billedCount,
     submittedAggregate,
     pendingReferrals,
-    recent,
+    upcomingPayPeriodInvoices,
     paychecks,
   ] = await Promise.all([
     prisma.client.count({
       where: { therapistId, assignmentStatus: "ACTIVE" },
-    }),
-    prisma.payPeriod.findFirst({
-      where: { cutoffDate: { gte: today } },
-      orderBy: { cutoffDate: "asc" },
-      select: { cutoffDate: true, paymentDate: true, label: true },
     }),
     prisma.invoice.count({ where: { therapistId, status: "DRAFT" } }),
     prisma.invoice.count({ where: { therapistId, status: "SUBMITTED" } }),
@@ -47,12 +47,13 @@ export default async function TherapistDashboardPage() {
       orderBy: { updatedAt: "desc" },
       take: 5,
     }),
-    prisma.invoice.findMany({
-      where: { therapistId },
-      take: 5,
-      orderBy: { updatedAt: "desc" },
-      include: { client: true },
-    }),
+    nextPayPeriod
+      ? prisma.invoice.findMany({
+          where: { therapistId, payPeriodId: nextPayPeriod.id },
+          orderBy: { invoiceNumber: "asc" },
+          include: { client: true },
+        })
+      : Promise.resolve([]),
     loadPaycheckSummaries({ therapistId }),
   ]);
 
@@ -66,7 +67,7 @@ export default async function TherapistDashboardPage() {
         <p className="mt-2 text-sm text-muted">Welcome back, {session.user.firstName}.</p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-4 gap-4">
         <TherapistDashboardStatCard
           href="/portal/therapist/clients"
           label="Active clients"
@@ -163,14 +164,36 @@ export default async function TherapistDashboardPage() {
 
       <section className={portalCardClass}>
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="font-serif text-xl font-semibold text-primary-dark">Recent invoices</h2>
-          <Link href="/portal/therapist/invoices" className="text-sm font-medium text-primary hover:underline">
-            View all
-          </Link>
+          <div>
+            <h2 className="font-serif text-xl font-semibold text-primary-dark">
+              Upcoming pay period invoices
+            </h2>
+            {nextPayPeriod ? (
+              <p className="mt-1 text-sm text-muted">
+                Cutoff {formatDate(nextPayPeriod.cutoffDate)}
+                {nextPayPeriod.label ? ` · ${nextPayPeriod.label}` : ""}
+              </p>
+            ) : null}
+          </div>
+          {nextPayPeriod ? (
+            <Link
+              href={`/portal/therapist/invoices?payPeriodId=${nextPayPeriod.id}`}
+              className="text-sm font-medium text-primary hover:underline"
+            >
+              View all
+            </Link>
+          ) : (
+            <Link
+              href="/portal/therapist/invoices"
+              className="text-sm font-medium text-primary hover:underline"
+            >
+              View all invoices
+            </Link>
+          )}
         </div>
-        {recent.length > 0 ? (
+        {upcomingPayPeriodInvoices.length > 0 ? (
           <ul className="mt-4 divide-y divide-border">
-            {recent.map((inv) => (
+            {upcomingPayPeriodInvoices.map((inv) => (
               <li key={inv.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
                 <Link
                   href={`/portal/therapist/invoices/${inv.id}`}
@@ -188,7 +211,11 @@ export default async function TherapistDashboardPage() {
             ))}
           </ul>
         ) : (
-          <p className="mt-4 text-sm text-muted">No invoices yet.</p>
+          <p className="mt-4 text-sm text-muted">
+            {nextPayPeriod
+              ? "No invoices assigned to this pay period yet."
+              : "No upcoming pay period scheduled."}
+          </p>
         )}
       </section>
     </div>

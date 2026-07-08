@@ -12,11 +12,11 @@ export function TherapistDashboardStatCard({ href, label, value, hint }: Props) 
   return (
     <Link
       href={href}
-      className={`${portalCardClass} block transition hover:border-primary/30 hover:bg-primary/5`}
+      className={`${portalCardClass} block min-w-0 transition hover:border-primary/30 hover:bg-primary/5`}
     >
-      <p className="text-sm text-muted">{label}</p>
-      <p className="mt-2 text-3xl font-semibold text-primary-dark">{value}</p>
-      {hint ? <p className="mt-1 text-sm text-muted">{hint}</p> : null}
+      <p className="truncate text-sm text-muted">{label}</p>
+      <p className="mt-2 text-2xl font-semibold text-primary-dark sm:text-3xl">{value}</p>
+      {hint ? <p className="mt-1 truncate text-xs text-muted sm:text-sm">{hint}</p> : null}
     </Link>
   );
 }
