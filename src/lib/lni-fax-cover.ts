@@ -5,6 +5,7 @@ export async function generateLniFaxCoverPdf(options: {
   claimNumber: string;
   clientName: string;
   serviceDatesPhrase: string;
+  providerName: string;
 }): Promise<Uint8Array> {
   const doc = await PDFDocument.create();
   const page = doc.addPage([612, 792]); // US Letter
@@ -14,7 +15,7 @@ export async function generateLniFaxCoverPdf(options: {
   const fontBold = await doc.embedFont(StandardFonts.HelveticaBold);
 
   const margin = 54;
-  const { name, phone, email } = VRC_BILLING_EMAIL_SIGNATURE;
+  const { phone, email } = VRC_BILLING_EMAIL_SIGNATURE;
 
   // Claim # top-right (L&I requirement)
   const claimText = `Claim # ${options.claimNumber}`;
@@ -42,7 +43,7 @@ export async function generateLniFaxCoverPdf(options: {
     { label: "L&I claim #", value: options.claimNumber },
     { label: "Client", value: options.clientName },
     { label: "Service date(s)", value: options.serviceDatesPhrase },
-    { label: "Provider", value: name },
+    { label: "Provider", value: options.providerName },
     { label: "Practice", value: "Grandview Counseling" },
     { label: "Phone", value: phone },
     { label: "Email", value: email },

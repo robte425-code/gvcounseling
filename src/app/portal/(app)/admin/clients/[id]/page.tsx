@@ -2,9 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { getRealUserId, requireAdmin } from "@/auth";
-import { ClientAssignmentPanel } from "@/components/portal/ClientAssignmentPanel";
+import { AdminClientWorkflowPanel } from "@/components/portal/AdminClientWorkflowPanel";
 import { ClientDeleteButton } from "@/components/portal/ClientDeleteButton";
-import { ClientStatusActions } from "@/components/portal/ClientStatusActions";
 import { ClientNotesSection } from "@/components/portal/ClientNotesSection";
 import { ClientDetailView } from "@/components/portal/ClientDetailView";
 import { ClientDriveResyncButton } from "@/components/portal/ClientDriveResyncButton";
@@ -106,16 +105,10 @@ export default async function AdminClientDetailPage({
           <Link href="/portal/admin/clients" className={`${portalButtonSecondaryClass} text-xs`}>
             ← Back to clients
           </Link>
-          <h1 className="mt-3 font-serif text-2xl font-semibold text-primary-dark">
+          <h1 className="mt-3 font-serif text-2xl font-semibold text-primary-dark sm:text-3xl">
             {client.lastName}, {client.firstName}
           </h1>
           <p className="mt-1 font-mono text-sm text-muted">{client.lniClaimNumber}</p>
-          <p className="mt-1 text-sm text-muted">
-            Therapist:{" "}
-            {client.therapist
-              ? `${client.therapist.firstName} ${client.therapist.lastName}`
-              : "Unassigned"}
-          </p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <Link href={`/portal/admin/clients/${client.id}/edit`} className={portalButtonClass}>
@@ -130,24 +123,22 @@ export default async function AdminClientDetailPage({
         </div>
       </div>
 
-      <ClientStatusActions
+      <AdminClientWorkflowPanel
         clientId={client.id}
         clientLabel={`${client.lastName}, ${client.firstName}`}
         assignmentStatus={client.assignmentStatus}
         rejectionReason={client.rejectionReason}
-        role="admin"
-        returnTo={`/portal/admin/clients/${client.id}`}
-      />
-
-      <ClientAssignmentPanel
-        clientId={client.id}
-        assignmentStatus={client.assignmentStatus}
-        rejectionReason={client.rejectionReason}
+        therapistName={
+          client.therapist
+            ? `${client.therapist.firstName} ${client.therapist.lastName}`
+            : null
+        }
         therapists={therapists}
         vrcEmail={client.vrcEmail}
         vrcName={client.vrcName}
         vrcRoute={outboundEmailSettings.vrcRoute}
         adminEmails={outboundEmailSettings.adminEmails}
+        returnTo={`/portal/admin/clients/${client.id}`}
       />
 
       <ClientDetailView client={client} clientId={client.id} />

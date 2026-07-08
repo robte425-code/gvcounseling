@@ -109,6 +109,7 @@ async function buildFaxFiles(
   options: {
     claimNumber: string;
     clientName: string;
+    providerName: string;
     serviceDates: Date[];
     sessionAttachments: InvoiceAttachmentRecord[];
   },
@@ -116,6 +117,7 @@ async function buildFaxFiles(
   const coverPdf = await generateLniFaxCoverPdf({
     claimNumber: options.claimNumber,
     clientName: options.clientName,
+    providerName: options.providerName,
     serviceDatesPhrase: formatServiceDatesPhrase(options.serviceDates),
   });
 
@@ -158,7 +160,7 @@ export async function faxLniForPayPeriod(options: {
           employerFax: true,
         },
       },
-      therapist: { select: { id: true } },
+      therapist: { select: { id: true, firstName: true, lastName: true } },
       lineItems: { select: { serviceDate: true } },
       attachments: true,
     },
@@ -173,6 +175,7 @@ export async function faxLniForPayPeriod(options: {
     string,
     {
       client: (typeof invoices)[number]["client"];
+      therapist: (typeof invoices)[number]["therapist"];
       therapistId: string;
       lineItems: Date[];
       attachments: InvoiceAttachmentRecord[];
@@ -188,6 +191,7 @@ export async function faxLniForPayPeriod(options: {
     }
     byClient.set(invoice.clientId, {
       client: invoice.client,
+      therapist: invoice.therapist,
       therapistId: invoice.therapistId,
       lineItems: invoice.lineItems.map((line) => line.serviceDate),
       attachments: [...invoice.attachments],
@@ -196,9 +200,10 @@ export async function faxLniForPayPeriod(options: {
 
   const result: LniBillingFaxResult = { sent: 0, skipped: [], errors: [] };
 
-  for (const { client, therapistId, lineItems, attachments } of byClient.values()) {
+  for (const { client, therapist, therapistId, lineItems, attachments } of byClient.values()) {
     const label = `${client.lniClaimNumber} (${client.lastName}, ${client.firstName})`;
     const clientName = `${client.lastName}, ${client.firstName}`;
+    const providerName = `${therapist.firstName} ${therapist.lastName}`.trim() || "Provider";
 
     const sessionAttachments = collectSessionAttachments(attachments);
     if (sessionAttachments.length === 0) {
@@ -215,6 +220,7 @@ export async function faxLniForPayPeriod(options: {
       const faxFiles = await buildFaxFiles(accessToken, {
         claimNumber: client.lniClaimNumber,
         clientName,
+        providerName,
         serviceDates: lineItems,
         sessionAttachments,
       });

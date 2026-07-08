@@ -19,6 +19,7 @@ type Props = {
   vrcName: string | null;
   vrcRoute: OutboundEmailRoute;
   adminEmails: string[];
+  embedded?: boolean;
 };
 
 function RequestInfoDialog({
@@ -106,6 +107,7 @@ export function ClientVrcReferralActions({
   vrcName,
   vrcRoute,
   adminEmails,
+  embedded = false,
 }: Props) {
   const [requestInfoOpen, setRequestInfoOpen] = useState(false);
   const hasVrcEmail = Boolean(vrcEmail?.trim());
@@ -113,11 +115,20 @@ export function ClientVrcReferralActions({
   const canSend = adminMode || hasVrcEmail;
 
   return (
-    <div className="space-y-3 border-b border-border pb-6">
-      <h3 className="font-serif text-lg text-primary-dark">VRC referral</h3>
-      <p className="text-sm text-muted">
-        Notify the referring VRC that the referral was received, or request additional information.
-      </p>
+    <div className={embedded ? "space-y-3" : "space-y-3 border-b border-border pb-6"}>
+      {!embedded && (
+        <>
+          <h3 className="font-serif text-lg text-primary-dark">VRC referral</h3>
+          <p className="text-sm text-muted">
+            Notify the referring VRC that the referral was received, or request additional information.
+          </p>
+        </>
+      )}
+      {embedded && (
+        <p className="text-sm text-muted">
+          Notify the referring VRC that the referral was received, or request additional information.
+        </p>
+      )}
 
       {adminMode && (
         <p className="rounded-xl bg-primary/5 px-4 py-3 text-sm text-primary-dark">

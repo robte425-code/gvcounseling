@@ -9,6 +9,7 @@ async function main() {
   const cover = await generateLniFaxCoverPdf({
     claimNumber: "TEST123",
     clientName: "Test, Client",
+    providerName: "Test Therapist",
     serviceDatesPhrase: "Jul 5, 2026",
   });
 
