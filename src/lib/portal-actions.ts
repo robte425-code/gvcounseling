@@ -22,7 +22,7 @@ import { formatVrcAcceptanceNote } from "@/lib/client-notes";
 import { ensureTherapistDriveFolder, removeTherapistDriveFolder, deleteInvoiceDriveAttachments, trashClientDriveFolder } from "@/lib/google-drive";
 import { getDriveAccessTokenForClient } from "@/lib/google-drive-access";
 import { getSystemDriveAccessToken } from "@/lib/google-drive-system";
-import { sendAdminWelcomeEmail, sendTherapistAssignmentEmail, sendTherapistWelcomeEmail, sendVrcReferralAcceptanceEmail, sendVrcReferralInfoRequestEmail } from "@/lib/referral-emails";
+import { sendAdminWelcomeEmail, sendTherapistAssignmentEmail, sendTherapistLniFaxAcknowledgementEmail, sendTherapistWelcomeEmail, sendVrcReferralAcceptanceEmail, sendVrcReferralInfoRequestEmail } from "@/lib/referral-emails";
 import { generateOneTimePassword, hashPassword, verifyPassword } from "@/lib/password";
 import { fetchLniPayPeriods } from "@/lib/lni-pay-periods";
 import { createProcedureCodeFee, createTherapistProcedureCodeFee, updateTherapistProcedureCodeFee, applyTherapistFeeSchedule } from "@/lib/procedure-fees";
@@ -1207,6 +1207,24 @@ export async function faxClientDocumentsToLniAction(formData: FormData) {
     result.faxDestination === "lni"
       ? `L&I (${result.faxNumber})`
       : `test fax line (${result.faxNumber})`;
+
+  if (role === "THERAPIST") {
+    try {
+      await sendTherapistLniFaxAcknowledgementEmail({
+        therapistEmail: session.user.email,
+        therapistName: actorName,
+        clientId,
+        clientName: `${client.lastName}, ${client.firstName}`,
+        claimNumber: client.lniClaimNumber,
+        faxJobId: result.jobId,
+        destinationLabel,
+        filenames: result.uploadedFilenames,
+        driveFolderName: result.driveFolderName,
+      });
+    } catch (error) {
+      console.error("Therapist L&I fax acknowledgement email failed:", error);
+    }
+  }
 
   await prisma.clientNote.create({
     data: {

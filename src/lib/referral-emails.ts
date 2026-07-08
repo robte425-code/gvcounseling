@@ -211,6 +211,49 @@ export async function sendAdminLniFaxNotificationEmail(options: {
   });
 }
 
+export async function sendTherapistLniFaxAcknowledgementEmail(options: {
+  therapistEmail: string;
+  therapistName: string;
+  clientId: string;
+  clientName: string;
+  claimNumber: string;
+  faxJobId: string;
+  destinationLabel: string;
+  filenames: string[];
+  driveFolderName?: string;
+}) {
+  const intendedEmail = options.therapistEmail.trim();
+  if (!intendedEmail) return;
+
+  const { to, redirected } = await resolveTherapistOutboundEmail(intendedEmail);
+  const clientUrl = `${getSiteUrl()}/portal/therapist/clients/${options.clientId}`;
+  const lines = [
+    `Hello ${options.therapistName},`,
+    "",
+    `Your L&I fax for ${options.clientName} (Claim #${options.claimNumber}) has been queued.`,
+    "",
+    `Destination: ${options.destinationLabel}`,
+    `Fax job #: ${options.faxJobId}`,
+    options.driveFolderName ? `Saved to Drive: ${options.driveFolderName}` : null,
+    "",
+    "Files:",
+    ...options.filenames.map((name) => `- ${name}`),
+    "",
+    "View this client in the portal:",
+    clientUrl,
+    "",
+    "Grandview Counseling",
+  ];
+  if (redirected) {
+    lines.push(outboundEmailRedirectNote(options.therapistName, intendedEmail));
+  }
+
+  await sendEmailTo(to, {
+    subject: `L&I fax queued: ${options.clientName} (${options.claimNumber})`,
+    text: lines.filter((line): line is string => line != null).join("\n"),
+  });
+}
+
 export async function sendTherapistWelcomeEmail(options: {
   therapistEmail: string;
   therapistName: string;
