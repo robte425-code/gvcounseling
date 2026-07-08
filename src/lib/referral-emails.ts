@@ -6,28 +6,18 @@ import {
 } from "@/lib/portal-settings";
 import {
   VRC_BILLING_EMAIL_SIGNATURE,
-  getVrcEmailTestRecipient,
   vrcFirstName,
 } from "@/lib/vrc-billing-emails";
-
-function resolveVrcOutboundRecipient(vrcEmail: string): { to: string; testMode: boolean } {
-  const redirect = process.env.VRC_EMAIL_REDIRECT_TO?.trim();
-  if (redirect) {
-    return { to: redirect, testMode: true };
-  }
-  return { to: vrcEmail, testMode: false };
-}
 
 async function resolveVrcReferralRecipients(options: {
   destination: VrcReferralEmailDestination;
   vrcEmail: string;
-}): Promise<{ to: string; adminMode: boolean; envTestMode: boolean }> {
+}): Promise<{ to: string; adminMode: boolean }> {
   if (options.destination === "admin") {
     const adminEmails = await getAdminNotificationEmails();
-    return { to: adminEmails.join(", "), adminMode: true, envTestMode: false };
+    return { to: adminEmails.join(", "), adminMode: true };
   }
-  const { to, testMode } = resolveVrcOutboundRecipient(options.vrcEmail);
-  return { to, adminMode: false, envTestMode: testMode };
+  return { to: options.vrcEmail, adminMode: false };
 }
 
 function adminModeNote(intendedVrcEmail: string, vrcName: string): string {
@@ -50,12 +40,12 @@ export async function sendVrcReferralAcceptanceEmail(options: {
   destination?: VrcReferralEmailDestination;
 }) {
   const destination = options.destination ?? "vrc";
-  const { to, adminMode, envTestMode } = await resolveVrcReferralRecipients({
+  const { to, adminMode } = await resolveVrcReferralRecipients({
     destination,
     vrcEmail: options.vrcEmail,
   });
   const greetingName = adminMode ? "Admin team" : vrcFirstName(options.vrcName);
-  const subjectPrefix = adminMode || envTestMode ? `[TEST] ` : "";
+  const subjectPrefix = adminMode ? `[TEST] ` : "";
   await sendEmailTo(to, {
     subject: `${subjectPrefix}Referral received: ${options.clientName} (${options.claimNumber})`,
     text: [
@@ -84,15 +74,12 @@ export async function sendVrcReferralInfoRequestEmail(options: {
   destination?: VrcReferralEmailDestination;
 }) {
   const destination = options.destination ?? "vrc";
-  const { to, adminMode, envTestMode } = await resolveVrcReferralRecipients({
+  const { to, adminMode } = await resolveVrcReferralRecipients({
     destination,
     vrcEmail: options.vrcEmail,
   });
   const greetingName = adminMode ? "Admin team" : vrcFirstName(options.vrcName);
-  const subjectPrefix = adminMode || envTestMode ? `[TEST] ` : "";
-  const envTestNote = envTestMode && !adminMode
-    ? `\n\n[Test mode: intended recipient ${options.vrcEmail}, redirected to ${getVrcEmailTestRecipient()}]`
-    : "";
+  const subjectPrefix = adminMode ? `[TEST] ` : "";
   await sendEmailTo(to, {
     subject: `${subjectPrefix}More information needed: ${options.clientName} (${options.claimNumber})`,
     replyTo: options.replyToEmail,
@@ -109,7 +96,6 @@ export async function sendVrcReferralInfoRequestEmail(options: {
       "",
       vrcEmailSignatureBlock(),
       adminMode ? adminModeNote(options.vrcEmail, options.vrcName) : "",
-      envTestNote,
     ].join("\n"),
   });
   return { to, adminMode };
