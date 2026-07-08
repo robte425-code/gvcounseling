@@ -107,7 +107,8 @@ export default async function AdminClientDetailPage({
       )}
       {faxed === "1" && (
         <p className="rounded-lg bg-primary/10 px-3 py-2 text-sm text-primary-dark">
-          Documents uploaded to Drive and faxed to L&amp;I.
+          Documents have been queued for faxing to L&amp;I. They were saved to this client&apos;s
+          Google Drive folder and will appear in the file list below.
         </p>
       )}
       <div className="flex flex-wrap items-start justify-between gap-4">

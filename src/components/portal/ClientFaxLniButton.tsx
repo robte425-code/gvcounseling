@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { faxClientDocumentsToLniAction } from "@/lib/portal-actions";
 import {
   portalButtonClass,
@@ -23,6 +24,12 @@ type Props = {
   className?: string;
 };
 
+function isNextRedirectError(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const digest = "digest" in error ? String((error as { digest?: string }).digest ?? "") : "";
+  return digest.startsWith("NEXT_REDIRECT");
+}
+
 export function ClientFaxLniButton({
   clientId,
   clientLabel,
@@ -32,9 +39,11 @@ export function ClientFaxLniButton({
   lniFaxRoute,
   className = portalButtonSecondaryClass,
 }: Props) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [files, setFiles] = useState<FileList | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [queued, setQueued] = useState(false);
   const [pending, startTransition] = useTransition();
 
   useEffect(() => {
@@ -55,15 +64,21 @@ export function ClientFaxLniButton({
 
   function submit(formData: FormData) {
     setError(null);
+    setQueued(true);
+    setOpen(false);
+    setFiles(null);
+
     startTransition(async () => {
       try {
         await faxClientDocumentsToLniAction(formData);
+        router.refresh();
       } catch (e) {
-        // Next.js redirect throws; ignore redirect errors.
-        if (e && typeof e === "object" && "digest" in e) {
-          const digest = String((e as { digest?: string }).digest ?? "");
-          if (digest.startsWith("NEXT_REDIRECT")) return;
+        if (isNextRedirectError(e)) {
+          // Server action completed and redirects to `?faxed=1`.
+          throw e;
         }
+        setQueued(false);
+        setOpen(true);
         setError(e instanceof Error ? e.message : "Could not send fax.");
       }
     });
@@ -78,8 +93,11 @@ export function ClientFaxLniButton({
     <>
       <button
         type="button"
-        onClick={() => setOpen(true)}
-        disabled={!hasDriveFolder}
+        onClick={() => {
+          setQueued(false);
+          setOpen(true);
+        }}
+        disabled={!hasDriveFolder || pending}
         title={
           hasDriveFolder
             ? "Fax documents to L&I"
@@ -89,6 +107,13 @@ export function ClientFaxLniButton({
       >
         Fax L&amp;I
       </button>
+
+      {queued ? (
+        <p className="fixed bottom-4 left-1/2 z-40 w-[min(36rem,calc(100%-2rem))] -translate-x-1/2 rounded-xl border border-primary/20 bg-primary/10 px-4 py-3 text-sm text-primary-dark shadow-lg sm:bottom-6">
+          Documents have been queued for faxing to L&amp;I. Files are being saved to Google Drive
+          and sent with a cover sheet.
+        </p>
+      ) : null}
 
       {open ? (
         <div
@@ -161,7 +186,7 @@ export function ClientFaxLniButton({
                 Cancel
               </button>
               <button type="submit" className={portalButtonClass} disabled={pending}>
-                {pending ? "Sending fax…" : "Upload & fax"}
+                {pending ? "Queuing fax…" : "Upload & fax"}
               </button>
             </div>
           </form>
