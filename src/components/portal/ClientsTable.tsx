@@ -88,7 +88,9 @@ export function ClientsTable({
                   ) : (
                     <TherapistClientQuickActions
                       clientId={client.id}
+                      clientLabel={clientListLabel(client)}
                       assignmentStatus={client.assignmentStatus}
+                      returnTo={listReturnTo}
                     />
                   )}
                 </td>

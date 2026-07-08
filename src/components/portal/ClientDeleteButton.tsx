@@ -23,7 +23,7 @@ export function ClientDeleteButton({
       onSubmit={(event) => {
         if (
           !window.confirm(
-            `Delete ${clientLabel}? This cannot be undone.`,
+            `Delete ${clientLabel}? This permanently deletes the client record and trashes their Google Drive folder. This cannot be undone.`,
           )
         ) {
           event.preventDefault();

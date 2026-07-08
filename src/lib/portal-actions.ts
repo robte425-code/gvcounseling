@@ -15,10 +15,10 @@ import type { ImpersonationUpdate } from "@/types/next-auth";
 import type { ClientAssignmentStatus } from "@/generated/prisma/client";
 import { Gender } from "@/generated/prisma/client";
 import { parseClaimNumber } from "@/lib/constants";
-import { moveClientDriveFolderToClosedCases, moveClientDriveFolderToTherapist } from "@/lib/client-drive-move";
+import { moveClientDriveFolderToClosedCases, moveClientDriveFolderToNewReferrals, moveClientDriveFolderToTherapist } from "@/lib/client-drive-move";
 import { canAdminCloseClient, canTherapistCloseClient } from "@/lib/client-assignment-status";
 import { recordClientStatusChange, type ClientStatusChangeAction } from "@/lib/client-status-change";
-import { ensureTherapistDriveFolder, removeTherapistDriveFolder, deleteInvoiceDriveAttachments } from "@/lib/google-drive";
+import { ensureTherapistDriveFolder, removeTherapistDriveFolder, deleteInvoiceDriveAttachments, trashClientDriveFolder } from "@/lib/google-drive";
 import { getDriveAccessTokenForClient } from "@/lib/google-drive-access";
 import { getSystemDriveAccessToken } from "@/lib/google-drive-system";
 import { sendAdminWelcomeEmail, sendTherapistAssignmentEmail, sendTherapistWelcomeEmail, sendVrcReferralAcceptanceEmail, sendVrcReferralInfoRequestEmail } from "@/lib/referral-emails";
@@ -453,9 +453,20 @@ export async function deleteClientAction(formData: FormData) {
   const returnTo = String(formData.get("returnTo") ?? "").trim();
   if (!id) throw new Error("Client is required.");
 
+  const client = await prisma.client.findUnique({
+    where: { id },
+    select: { driveFolderId: true },
+  });
+  if (!client) throw new Error("Client not found.");
+
   const invoiceCount = await prisma.invoice.count({ where: { clientId: id } });
   if (invoiceCount > 0) {
     throw new Error("Cannot delete a client with invoices.");
+  }
+
+  if (client.driveFolderId) {
+    const { accessToken } = await getSystemDriveAccessToken();
+    await trashClientDriveFolder(accessToken, client.driveFolderId);
   }
 
   await prisma.client.delete({ where: { id } });
@@ -902,30 +913,25 @@ export async function adminRejectReferralAction(formData: FormData) {
     throw new Error("Only unassigned referrals can be rejected this way.");
   }
 
-  const invoiceCount = await prisma.invoice.count({ where: { clientId } });
-  if (invoiceCount > 0) {
-    await prisma.client.update({
-      where: { id: clientId },
-      data: {
-        assignmentStatus: "REJECTED_BY_ADMIN",
-        rejectionReason: reason,
-        rejectedAt: new Date(),
-        therapistId: null,
-      },
-    });
+  await moveClientDriveFolderToNewReferrals(client.driveFolderId);
 
-    await logClientStatusChange({
-      session,
-      role: "ADMIN",
-      client,
-      action: "rejected",
-      reason,
-    });
-  } else {
-    await prisma.client.delete({ where: { id: clientId } });
-    revalidatePath("/portal/admin/clients");
-    redirect("/portal/admin/clients?rejected=1");
-  }
+  await prisma.client.update({
+    where: { id: clientId },
+    data: {
+      assignmentStatus: "REJECTED_BY_ADMIN",
+      rejectionReason: reason,
+      rejectedAt: new Date(),
+      therapistId: null,
+    },
+  });
+
+  await logClientStatusChange({
+    session,
+    role: "ADMIN",
+    client,
+    action: "rejected",
+    reason,
+  });
 
   revalidatePath("/portal/admin/clients");
   revalidatePath(`/portal/admin/clients/${clientId}`);
@@ -1286,16 +1292,7 @@ export async function therapistRejectReferralAction(formData: FormData) {
   if (!client) throw new Error("Referral not found or not pending your acceptance.");
 
   if (client.driveFolderId) {
-    try {
-      const { accessToken } = await import("@/lib/google-drive-system").then((m) =>
-        m.getSystemDriveAccessToken(),
-      );
-      const { moveDriveFolder, resolveNewReferralsFolderId } = await import("@/lib/google-drive");
-      const newReferralsId = await resolveNewReferralsFolderId(accessToken);
-      await moveDriveFolder(accessToken, client.driveFolderId, newReferralsId);
-    } catch (e) {
-      console.error("Drive folder move on reject failed:", e);
-    }
+    await moveClientDriveFolderToNewReferrals(client.driveFolderId);
   }
 
   await prisma.client.update({

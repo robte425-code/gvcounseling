@@ -124,7 +124,7 @@ export function ClientStatusActions({
         description={
           canRejectPending
             ? `Decline ${clientLabel}? The referral will return to the unassigned queue for admin review.`
-            : `Reject ${clientLabel}? Clients without invoices are deleted; others are marked rejected.`
+            : `Reject ${clientLabel}? The referral will be marked rejected and their Drive folder moved to New Referrals.`
         }
         submitLabel={canRejectPending ? "Decline referral" : "Reject referral"}
         formAction={canRejectPending ? therapistRejectReferralAction : adminRejectReferralAction}

@@ -2,6 +2,7 @@ import {
   findDriveSubfolder,
   getDriveFolderParentIds,
   moveDriveFolder,
+  resolveNewReferralsFolderId,
   resolveTherapistFolderForUser,
 } from "@/lib/google-drive";
 import { getSystemDriveAccessToken } from "@/lib/google-drive-system";
@@ -62,4 +63,22 @@ export async function moveClientDriveFolderToClosedCases(
   if (parents.includes(closedFolder.id)) return;
 
   await moveDriveFolder(accessToken, driveFolderId, closedFolder.id);
+}
+
+/** Move a client folder back to the shared New Referrals intake folder. */
+export async function moveClientDriveFolderToNewReferrals(
+  driveFolderId: string | null | undefined,
+): Promise<void> {
+  if (!driveFolderId) return;
+
+  try {
+    const { accessToken } = await getSystemDriveAccessToken();
+    const newReferralsId = await resolveNewReferralsFolderId(accessToken);
+    const parents = await getDriveFolderParentIds(accessToken, driveFolderId);
+    if (parents.includes(newReferralsId)) return;
+
+    await moveDriveFolder(accessToken, driveFolderId, newReferralsId);
+  } catch (e) {
+    console.error("Drive folder move to New Referrals failed:", e);
+  }
 }

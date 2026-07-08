@@ -44,7 +44,7 @@ export function ClientListStatusActions({
 
   function confirmDelete(event: React.FormEvent<HTMLFormElement>) {
     stopRowNavigation(event as unknown as React.MouseEvent);
-    if (!window.confirm(`Delete ${clientLabel}? This cannot be undone.`)) {
+    if (!window.confirm(`Delete ${clientLabel}? This permanently deletes the client record and trashes their Google Drive folder. This cannot be undone.`)) {
       event.preventDefault();
     }
   }

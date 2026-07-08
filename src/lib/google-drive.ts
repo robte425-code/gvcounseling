@@ -463,6 +463,15 @@ async function trashDriveFile(accessToken: string, fileId: string): Promise<void
   });
 }
 
+/** Trash a client folder and its contents in Google Drive. */
+export async function trashClientDriveFolder(
+  accessToken: string,
+  folderId: string | null | undefined,
+): Promise<void> {
+  if (!folderId) return;
+  await trashDriveFile(accessToken, folderId);
+}
+
 const SERVICE_DATE_FOLDER_NAME = /^\d{2}-\d{2}-\d{4}$/;
 
 /** Extract a Google Drive file id from a view/share URL. */
