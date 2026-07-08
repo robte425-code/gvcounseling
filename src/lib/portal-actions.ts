@@ -436,14 +436,23 @@ export async function saveClientAction(formData: FormData) {
 
 export async function deleteClientAction(formData: FormData) {
   await requireAdmin();
-  const id = String(formData.get("id") ?? "");
+  const id = String(formData.get("id") ?? formData.get("clientId") ?? "").trim();
+  const returnTo = String(formData.get("returnTo") ?? "").trim();
+  if (!id) throw new Error("Client is required.");
+
   const invoiceCount = await prisma.invoice.count({ where: { clientId: id } });
   if (invoiceCount > 0) {
     throw new Error("Cannot delete a client with invoices.");
   }
+
   await prisma.client.delete({ where: { id } });
   revalidatePath("/portal/admin/clients");
-  redirect("/portal/admin/clients");
+  revalidatePath(`/portal/admin/clients/${id}`);
+  revalidatePath("/portal/therapist/clients");
+
+  const destination = returnTo || "/portal/admin/clients";
+  const separator = destination.includes("?") ? "&" : "?";
+  redirect(`${destination}${separator}deleted=1`);
 }
 
 function parseInvoiceLineItems(formData: FormData) {
@@ -988,9 +997,37 @@ export async function requestVrcInfoAction(formData: FormData) {
   redirect(`/portal/admin/clients/${clientId}?vrcInfoRequested=1`);
 }
 
+export async function closeClientAction(formData: FormData) {
+  await requireAdmin();
+  const clientId = String(formData.get("clientId") ?? "").trim();
+  const returnTo = String(formData.get("returnTo") ?? "").trim();
+  const client = await prisma.client.findUnique({ where: { id: clientId } });
+  if (!client) throw new Error("Client not found.");
+  if (client.assignmentStatus !== "ACTIVE") {
+    throw new Error("Only active clients can be closed.");
+  }
+
+  await prisma.client.update({
+    where: { id: clientId },
+    data: {
+      assignmentStatus: "CLOSED",
+      closedAt: new Date(),
+    },
+  });
+
+  revalidatePath("/portal/admin/clients");
+  revalidatePath(`/portal/admin/clients/${clientId}`);
+  revalidatePath("/portal/therapist/clients");
+
+  const destination = returnTo || `/portal/admin/clients/${clientId}`;
+  const separator = destination.includes("?") ? "&" : "?";
+  redirect(`${destination}${separator}closed=1`);
+}
+
 export async function reopenClientAction(formData: FormData) {
   await requireAdmin();
   const clientId = String(formData.get("clientId") ?? "").trim();
+  const returnTo = String(formData.get("returnTo") ?? "").trim();
   const client = await prisma.client.findUnique({ where: { id: clientId } });
   if (!client) throw new Error("Client not found.");
   if (client.assignmentStatus !== "CLOSED") {
@@ -1007,7 +1044,11 @@ export async function reopenClientAction(formData: FormData) {
 
   revalidatePath("/portal/admin/clients");
   revalidatePath(`/portal/admin/clients/${clientId}`);
-  redirect(`/portal/admin/clients/${clientId}?reopened=1`);
+  revalidatePath("/portal/therapist/clients");
+
+  const destination = returnTo || `/portal/admin/clients/${clientId}`;
+  const separator = destination.includes("?") ? "&" : "?";
+  redirect(`${destination}${separator}reactivated=1`);
 }
 
 export async function therapistAcceptReferralAction(formData: FormData) {

@@ -3,13 +3,13 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { getRealUserId, requireAdmin } from "@/auth";
 import { ClientAssignmentPanel } from "@/components/portal/ClientAssignmentPanel";
+import { ClientDeleteButton } from "@/components/portal/ClientDeleteButton";
 import { ClientNotesSection } from "@/components/portal/ClientNotesSection";
 import { ClientDetailView } from "@/components/portal/ClientDetailView";
 import { ClientDriveResyncButton } from "@/components/portal/ClientDriveResyncButton";
 import { ClientDriveFilesLoading } from "@/components/portal/ClientDriveFilesLoading";
 import { ClientDriveFilesSection } from "@/components/portal/ClientDriveFilesSection";
 import { portalButtonClass, portalButtonSecondaryClass } from "@/components/portal/ui";
-import { deleteClientAction } from "@/lib/portal-actions";
 import { prisma } from "@/lib/prisma";
 
 export default async function AdminClientDetailPage({
@@ -19,6 +19,7 @@ export default async function AdminClientDetailPage({
   params: Promise<{ id: string }>;
   searchParams: Promise<{
     reopened?: string;
+    reactivated?: string;
     saved?: string;
     noted?: string;
     vrcAccepted?: string;
@@ -28,8 +29,9 @@ export default async function AdminClientDetailPage({
 }) {
   const session = await requireAdmin();
   const { id } = await params;
-  const { reopened, saved, noted, vrcAccepted, vrcInfoRequested, assigned } = await searchParams;
-  const [client, therapists] = await Promise.all([
+  const { reopened, saved, noted, vrcAccepted, vrcInfoRequested, assigned, reactivated } =
+    await searchParams;
+  const [client, therapists, invoiceCount] = await Promise.all([
     prisma.client.findUnique({
       where: { id },
       include: { therapist: { select: { firstName: true, lastName: true } } },
@@ -39,16 +41,17 @@ export default async function AdminClientDetailPage({
       orderBy: { lastName: "asc" },
       select: { id: true, firstName: true, lastName: true },
     }),
+    prisma.invoice.count({ where: { clientId: id } }),
   ]);
   if (!client) notFound();
 
   return (
     <div className="space-y-4">
-      {reopened === "1" && (
+      {reopened === "1" || reactivated === "1" ? (
         <p className="rounded-lg bg-primary/10 px-3 py-2 text-sm text-primary-dark">
-          Client reopened successfully.
+          Client reactivated.
         </p>
-      )}
+      ) : null}
       {saved === "1" && (
         <p className="rounded-lg bg-primary/10 px-3 py-2 text-sm text-primary-dark">
           Client saved successfully.
@@ -94,14 +97,12 @@ export default async function AdminClientDetailPage({
           <Link href={`/portal/admin/clients/${client.id}/edit`} className={portalButtonClass}>
             Edit client
           </Link>
-          {client.assignmentStatus === "ACTIVE" && (
-            <form action={deleteClientAction}>
-              <input type="hidden" name="id" value={client.id} />
-              <button type="submit" className="text-sm text-red-700 hover:underline">
-                Delete client
-              </button>
-            </form>
-          )}
+          <ClientDeleteButton
+            clientId={client.id}
+            clientLabel={`${client.lastName}, ${client.firstName}`}
+            returnTo="/portal/admin/clients"
+            disabled={invoiceCount > 0}
+          />
         </div>
       </div>
 

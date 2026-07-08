@@ -61,7 +61,7 @@ export function ClientAssignmentPanel({
         <form action={reopenClientAction}>
           <input type="hidden" name="clientId" value={clientId} />
           <button type="submit" className={portalButtonClass}>
-            Reopen client
+            Reactivate client
           </button>
         </form>
       </div>

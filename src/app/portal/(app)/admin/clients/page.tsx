@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requireAdmin } from "@/auth";
 import { ClientListSearchForm } from "@/components/portal/ClientListSearchForm";
+import { ClientListStatusActions } from "@/components/portal/ClientListStatusActions";
 import { ClientTableRow } from "@/components/portal/ClientTableRow";
 import { StatusBadge, portalButtonClass, portalCardClass } from "@/components/portal/ui";
 import {
@@ -28,10 +29,16 @@ function isClientStatus(value: string | undefined): value is NonNullable<ClientS
 export default async function AdminClientsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; q?: string }>;
+  searchParams: Promise<{
+    status?: string;
+    q?: string;
+    closed?: string;
+    reactivated?: string;
+    deleted?: string;
+  }>;
 }) {
   await requireAdmin();
-  const { status, q } = await searchParams;
+  const { status, q, closed, reactivated, deleted } = await searchParams;
   const statusFilter = isClientStatus(status) ? status : undefined;
   const query = normalizeClientSearchQuery(q);
   const searchWhere = clientListSearchWhere(query);
@@ -42,11 +49,34 @@ export default async function AdminClientsPage({
       ...(searchWhere ?? {}),
     },
     orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
-    include: { therapist: { select: { firstName: true, lastName: true } } },
+    include: {
+      therapist: { select: { firstName: true, lastName: true } },
+      _count: { select: { invoices: true } },
+    },
+  });
+
+  const listReturnTo = buildClientListHref("/portal/admin/clients", {
+    status: statusFilter,
+    q: query || undefined,
   });
 
   return (
     <div className="space-y-8">
+      {closed === "1" && (
+        <p className="rounded-lg bg-primary/10 px-3 py-2 text-sm text-primary-dark">
+          Client closed.
+        </p>
+      )}
+      {reactivated === "1" && (
+        <p className="rounded-lg bg-primary/10 px-3 py-2 text-sm text-primary-dark">
+          Client reactivated.
+        </p>
+      )}
+      {deleted === "1" && (
+        <p className="rounded-lg bg-primary/10 px-3 py-2 text-sm text-primary-dark">
+          Client deleted.
+        </p>
+      )}
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="font-serif text-3xl font-semibold text-primary-dark">Clients</h1>
@@ -98,6 +128,7 @@ export default async function AdminClientsPage({
               <th className="py-2 pr-4">Name</th>
               <th className="py-2 pr-4">Therapist</th>
               <th className="py-2 pr-4">Status</th>
+              <th className="py-2 pr-4">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -118,6 +149,15 @@ export default async function AdminClientsPage({
                     ) : (
                       <StatusBadge status={c.assignmentStatus} />
                     )}
+                  </td>
+                  <td className="py-3 pr-4">
+                    <ClientListStatusActions
+                      clientId={c.id}
+                      clientLabel={`${c.lastName}, ${c.firstName}`}
+                      assignmentStatus={c.assignmentStatus}
+                      invoiceCount={c._count.invoices}
+                      returnTo={listReturnTo}
+                    />
                   </td>
                 </ClientTableRow>
             ))}
