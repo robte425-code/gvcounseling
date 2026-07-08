@@ -40,6 +40,7 @@ import {
 import { getNextInvoiceNumber } from "@/lib/invoice-numbers";
 import { parseTherapistInvoicesReturnTo } from "@/lib/invoice-list-filters";
 import { emailVrcsForPayPeriod } from "@/lib/vrc-billing-emails";
+import { faxClientDocumentsToLni } from "@/lib/client-lni-fax";
 import { faxLniForPayPeriod } from "@/lib/lni-billing-faxes";
 import { applyRemittanceAdvice, deleteRemittancePreview, importRemittanceFromUpload } from "@/lib/remittance-advice";
 import {
@@ -1157,6 +1158,82 @@ export async function requestVrcInfoAction(formData: FormData) {
   revalidatePath("/portal/admin/clients");
   revalidatePath(`/portal/admin/clients/${clientId}`);
   redirect(`/portal/admin/clients/${clientId}?vrcInfoRequested=1`);
+}
+
+export async function faxClientDocumentsToLniAction(formData: FormData) {
+  const clientId = String(formData.get("clientId") ?? "").trim();
+  const returnTo = String(formData.get("returnTo") ?? "").trim();
+  if (!clientId) throw new Error("Client is required.");
+
+  const { client, session, role } = await requireClientManager(clientId);
+  const files = formData
+    .getAll("files")
+    .filter((entry): entry is File => entry instanceof File && entry.size > 0);
+
+  if (files.length === 0) {
+    throw new Error("Add at least one file to fax to L&I.");
+  }
+
+  const maxFiles = 10;
+  if (files.length > maxFiles) {
+    throw new Error(`You can fax up to ${maxFiles} files at a time.`);
+  }
+
+  const providerName =
+    role === "THERAPIST"
+      ? `${session.user.firstName} ${session.user.lastName}`.trim()
+      : client.therapist
+        ? `${client.therapist.firstName} ${client.therapist.lastName}`.trim()
+        : `${session.user.firstName} ${session.user.lastName}`.trim() || "Grandview Counseling";
+
+  const faxFiles = await Promise.all(
+    files.map(async (file) => ({
+      filename: file.name,
+      buffer: Buffer.from(await file.arrayBuffer()),
+      mimeType: file.type || undefined,
+    })),
+  );
+
+  const result = await faxClientDocumentsToLni({
+    clientId,
+    initiatorUserId: getRealUserId(session),
+    providerName,
+    files: faxFiles,
+  });
+
+  const actorName = `${session.user.firstName} ${session.user.lastName}`.trim() || "User";
+  const destinationLabel =
+    result.faxDestination === "lni"
+      ? `L&I (${result.faxNumber})`
+      : `test fax line (${result.faxNumber})`;
+
+  await prisma.clientNote.create({
+    data: {
+      clientId,
+      authorId: getRealUserId(session),
+      body: [
+        `Faxed documents to L&I by ${actorName} (${role === "ADMIN" ? "admin" : "therapist"}).`,
+        "",
+        `Destination: ${destinationLabel}`,
+        `Fax job #: ${result.jobId}`,
+        `Saved to Drive: ${result.driveFolderName}`,
+        "",
+        "Files:",
+        ...result.uploadedFilenames.map((name) => `- ${name}`),
+      ].join("\n"),
+    },
+  });
+
+  revalidatePath(`/portal/admin/clients/${clientId}`);
+  revalidatePath(`/portal/therapist/clients/${clientId}`);
+  revalidateClientNotePaths(clientId, returnTo || `/portal/admin/clients/${clientId}`);
+
+  const destination =
+    returnTo ||
+    (role === "ADMIN"
+      ? `/portal/admin/clients/${clientId}`
+      : `/portal/therapist/clients/${clientId}`);
+  redirectWithQuery(destination, { faxed: "1" });
 }
 
 export async function closeClientAction(formData: FormData) {

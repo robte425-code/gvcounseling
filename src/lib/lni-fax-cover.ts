@@ -6,6 +6,7 @@ export async function generateLniFaxCoverPdf(options: {
   clientName: string;
   serviceDatesPhrase: string;
   providerName: string;
+  coverNote?: string;
 }): Promise<Uint8Array> {
   const doc = await PDFDocument.create();
   const page = doc.addPage([612, 792]); // US Letter
@@ -69,7 +70,8 @@ export async function generateLniFaxCoverPdf(options: {
 
   y -= 12;
   page.drawText(
-    "Attached: BHI session documentation for the above claim. Invoice submitted separately via L&I billing portal.",
+    options.coverNote ??
+      "Attached: BHI session documentation for the above claim. Invoice submitted separately via L&I billing portal.",
     {
       x: margin,
       y,

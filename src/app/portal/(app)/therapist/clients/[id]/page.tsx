@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { requireTherapist } from "@/auth";
 import { ClientCloseButton } from "@/components/portal/ClientCloseButton";
+import { ClientFaxLniButton } from "@/components/portal/ClientFaxLniButton";
 import { ClientNotesSection } from "@/components/portal/ClientNotesSection";
 import { ClientDetailView } from "@/components/portal/ClientDetailView";
 import { ClientDriveFilesLoading } from "@/components/portal/ClientDriveFilesLoading";
@@ -10,6 +11,7 @@ import { ClientDriveFilesSection } from "@/components/portal/ClientDriveFilesSec
 import { ClientStatusActions } from "@/components/portal/ClientStatusActions";
 import { portalButtonClass, portalButtonSecondaryClass } from "@/components/portal/ui";
 import { canTherapistCloseClient } from "@/lib/client-assignment-status";
+import { getLniOutboundFaxRoute } from "@/lib/portal-settings";
 import { prisma } from "@/lib/prisma";
 
 export default async function TherapistClientDetailPage({
@@ -23,15 +25,19 @@ export default async function TherapistClientDetailPage({
     closed?: string;
     reactivated?: string;
     rejected?: string;
+    faxed?: string;
   }>;
 }) {
   const session = await requireTherapist();
   const { id } = await params;
-  const { saved, noted, closed, reactivated, rejected } = await searchParams;
+  const { saved, noted, closed, reactivated, rejected, faxed } = await searchParams;
 
-  const client = await prisma.client.findFirst({
-    where: { id, therapistId: session.user.id },
-  });
+  const [client, lniFaxRoute] = await Promise.all([
+    prisma.client.findFirst({
+      where: { id, therapistId: session.user.id },
+    }),
+    getLniOutboundFaxRoute(),
+  ]);
   if (!client) notFound();
 
   const clientDetailPath = `/portal/therapist/clients/${client.id}`;
@@ -63,6 +69,11 @@ export default async function TherapistClientDetailPage({
           Referral declined.
         </p>
       )}
+      {faxed === "1" && (
+        <p className="rounded-lg bg-primary/10 px-3 py-2 text-sm text-primary-dark">
+          Documents uploaded to Drive and faxed to L&amp;I.
+        </p>
+      )}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <Link href="/portal/therapist/clients" className={`${portalButtonSecondaryClass} text-xs`}>
@@ -77,6 +88,14 @@ export default async function TherapistClientDetailPage({
           <Link href={`/portal/therapist/clients/${client.id}/edit`} className={portalButtonClass}>
             Edit client
           </Link>
+          <ClientFaxLniButton
+            clientId={client.id}
+            clientLabel={`${client.lastName}, ${client.firstName}`}
+            claimNumber={client.lniClaimNumber}
+            returnTo={clientDetailPath}
+            hasDriveFolder={Boolean(client.driveFolderId)}
+            lniFaxRoute={lniFaxRoute}
+          />
           {canTherapistCloseClient(client.assignmentStatus) && (
             <ClientCloseButton
               clientId={client.id}

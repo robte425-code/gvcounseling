@@ -5,6 +5,7 @@ import { getRealUserId, requireAdmin } from "@/auth";
 import { AdminClientWorkflowPanel } from "@/components/portal/AdminClientWorkflowPanel";
 import { ClientCloseButton } from "@/components/portal/ClientCloseButton";
 import { ClientDeleteButton } from "@/components/portal/ClientDeleteButton";
+import { ClientFaxLniButton } from "@/components/portal/ClientFaxLniButton";
 import { ClientNotesSection } from "@/components/portal/ClientNotesSection";
 import { ClientDetailView } from "@/components/portal/ClientDetailView";
 import { ClientDriveResyncButton } from "@/components/portal/ClientDriveResyncButton";
@@ -30,6 +31,7 @@ export default async function AdminClientDetailPage({
     assigned?: string;
     closed?: string;
     rejected?: string;
+    faxed?: string;
   }>;
 }) {
   const session = await requireAdmin();
@@ -44,6 +46,7 @@ export default async function AdminClientDetailPage({
     reactivated,
     closed,
     rejected,
+    faxed,
   } = await searchParams;
   const [client, therapists, invoiceCount, outboundEmailSettings] = await Promise.all([
     prisma.client.findUnique({
@@ -102,6 +105,11 @@ export default async function AdminClientDetailPage({
           Referral rejected.
         </p>
       )}
+      {faxed === "1" && (
+        <p className="rounded-lg bg-primary/10 px-3 py-2 text-sm text-primary-dark">
+          Documents uploaded to Drive and faxed to L&amp;I.
+        </p>
+      )}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <Link href="/portal/admin/clients" className={`${portalButtonSecondaryClass} text-xs`}>
@@ -116,6 +124,14 @@ export default async function AdminClientDetailPage({
           <Link href={`/portal/admin/clients/${client.id}/edit`} className={portalButtonClass}>
             Edit client
           </Link>
+          <ClientFaxLniButton
+            clientId={client.id}
+            clientLabel={`${client.lastName}, ${client.firstName}`}
+            claimNumber={client.lniClaimNumber}
+            returnTo={`/portal/admin/clients/${client.id}`}
+            hasDriveFolder={Boolean(client.driveFolderId)}
+            lniFaxRoute={outboundEmailSettings.lniFaxRoute}
+          />
           {canAdminCloseClient(client.assignmentStatus) && (
             <ClientCloseButton
               clientId={client.id}
