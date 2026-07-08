@@ -9,6 +9,8 @@ import {
   portalButtonSecondaryClass,
   portalInputCompactClass,
   portalLabelCompactClass,
+  portalTableNarrowClass,
+  portalTableScrollClass,
 } from "@/components/portal/ui";
 
 type Props = {
@@ -30,7 +32,8 @@ export function TherapistCurrentFeesEditor({ therapistId, fees }: Props) {
 
   return (
     <div className="space-y-3">
-      <table className="w-full text-left text-xs sm:text-sm">
+      <div className={portalTableScrollClass}>
+        <table className={`${portalTableNarrowClass} text-xs sm:text-sm`}>
         <thead>
           <tr className="border-b border-border text-muted">
             <th className="py-1.5 pr-3">Procedure</th>
@@ -143,6 +146,7 @@ export function TherapistCurrentFeesEditor({ therapistId, fees }: Props) {
           ))}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }

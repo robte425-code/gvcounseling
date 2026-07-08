@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { requireAdmin } from "@/auth";
 import { AdminForm } from "@/components/portal/AdminForm";
-import { portalCardClass } from "@/components/portal/ui";
+import { portalCardClass, portalTableNarrowClass, portalTableScrollClass } from "@/components/portal/ui";
 import { prisma } from "@/lib/prisma";
 
 export default async function AdminAdminsPage({
@@ -21,7 +21,7 @@ export default async function AdminAdminsPage({
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="font-serif text-3xl font-semibold text-primary-dark">Admins</h1>
+        <h1 className="font-serif text-2xl font-semibold text-primary-dark sm:text-3xl">Admins</h1>
         <p className="mt-2 text-muted">Manage billing portal administrator accounts.</p>
       </div>
 
@@ -42,7 +42,8 @@ export default async function AdminAdminsPage({
       <section className="space-y-4">
         <h2 className="font-serif text-xl font-semibold text-primary-dark">Current admins</h2>
         <div className={portalCardClass}>
-          <table className="w-full text-left text-sm">
+          <div className={portalTableScrollClass}>
+            <table className={portalTableNarrowClass}>
             <thead>
               <tr className="border-b border-border text-muted">
                 <th className="py-2 pr-4">Name</th>
@@ -65,6 +66,7 @@ export default async function AdminAdminsPage({
               ))}
             </tbody>
           </table>
+          </div>
           {admins.length === 0 && (
             <p className="py-8 text-center text-sm text-muted">No admins yet.</p>
           )}

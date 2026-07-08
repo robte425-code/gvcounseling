@@ -63,11 +63,11 @@ export default async function TherapistDashboardPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="font-serif text-3xl font-semibold text-primary-dark">Dashboard</h1>
+        <h1 className="font-serif text-2xl font-semibold text-primary-dark sm:text-3xl">Dashboard</h1>
         <p className="mt-2 text-sm text-muted">Welcome back, {session.user.firstName}.</p>
       </div>
 
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         <TherapistDashboardStatCard
           href="/portal/therapist/clients"
           label="Active clients"
@@ -143,7 +143,7 @@ export default async function TherapistDashboardPage() {
           </p>
           <ul className="mt-4 divide-y divide-border">
             {pendingReferrals.map((client) => (
-              <li key={client.id} className="flex items-center justify-between gap-4 py-3">
+              <li key={client.id} className="flex flex-col gap-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
                 <div>
                   <p className="font-medium text-primary-dark">
                     {client.lastName}, {client.firstName}

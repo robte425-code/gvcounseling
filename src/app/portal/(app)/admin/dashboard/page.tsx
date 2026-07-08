@@ -34,11 +34,11 @@ export default async function AdminDashboardPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="font-serif text-3xl font-semibold text-primary-dark">Admin dashboard</h1>
+        <h1 className="font-serif text-2xl font-semibold text-primary-dark sm:text-3xl">Admin dashboard</h1>
         <p className="mt-2 text-muted">Manage billing, clients, and L&I invoices.</p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-3 sm:gap-4">
         <div className={portalCardClass}>
           <p className="text-sm text-muted">Submitted invoices</p>
           <p className="mt-2 text-3xl font-semibold text-primary-dark">{submittedCount}</p>

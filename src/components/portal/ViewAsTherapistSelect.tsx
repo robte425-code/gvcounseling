@@ -16,7 +16,7 @@ export function ViewAsTherapistSelect({ therapists }: { therapists: TherapistOpt
   if (!therapists.length) return null;
 
   return (
-    <form ref={formRef} action={startImpersonationAction} className="inline-flex items-center">
+    <form ref={formRef} action={startImpersonationAction} className="flex w-full items-center lg:inline-flex lg:w-auto">
       <label htmlFor="view-as-therapist" className="sr-only">
         View as therapist
       </label>
@@ -24,7 +24,7 @@ export function ViewAsTherapistSelect({ therapists }: { therapists: TherapistOpt
         id="view-as-therapist"
         name="email"
         defaultValue=""
-        className={`${portalNavSelectClass} w-auto min-w-[10rem]`}
+        className={`${portalNavSelectClass} min-h-11 w-full min-w-0 lg:w-auto lg:min-w-[10rem]`}
         onChange={(e) => {
           if (e.target.value) formRef.current?.requestSubmit();
         }}

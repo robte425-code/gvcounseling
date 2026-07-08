@@ -27,6 +27,11 @@
   --font-family-serif: var(--font-source-serif), ui-serif, Georgia, serif;
 }
 
+html,
+body {
+  overflow-x: clip;
+}
+
 body {
   background: var(--background);
   color: var(--foreground);

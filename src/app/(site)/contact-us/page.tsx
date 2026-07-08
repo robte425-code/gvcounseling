@@ -36,7 +36,7 @@ export default function ContactPage() {
             </p>
           </div>
 
-          <div className="rounded-2xl border border-border bg-surface p-8 shadow-sm">
+          <div className="rounded-2xl border border-border bg-surface p-4 shadow-sm sm:p-8">
             <h2 className="font-serif text-xl font-semibold text-primary-dark">
               Or send us a message below:
             </h2>

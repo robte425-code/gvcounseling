@@ -10,6 +10,9 @@ import {
   portalButtonSecondaryClass,
   portalInputCompactClass,
   portalLabelCompactClass,
+  portalTableClass,
+  portalTableScrollClass,
+  portalTableWideClass,
 } from "@/components/portal/ui";
 import { formatCurrency, formatDate } from "@/lib/constants";
 import { groupInvoicesByPayPeriod } from "@/lib/invoice-pay-period-grouping";
@@ -85,7 +88,7 @@ export function AdminInvoicesTable({ invoices, payPeriods, returnTo }: Props) {
     <div className="space-y-4">
       <form
         action={assignInvoicesToPayPeriodAction}
-        className="flex flex-wrap items-end gap-3 rounded-xl border border-border bg-primary/5 p-4"
+        className="flex flex-col gap-3 rounded-xl border border-border bg-primary/5 p-4 sm:flex-row sm:flex-wrap sm:items-end"
       >
         <input type="hidden" name="returnTo" value={returnTo} />
         {[...selected].map((id) => (
@@ -129,7 +132,8 @@ export function AdminInvoicesTable({ invoices, payPeriods, returnTo }: Props) {
         )}
       </form>
 
-      <table className="w-full text-left text-sm">
+      <div className={portalTableScrollClass}>
+        <table className={portalTableWideClass}>
         <thead>
           <tr className="border-b border-border text-muted">
             <th className="py-2 pr-2">
@@ -213,6 +217,7 @@ export function AdminInvoicesTable({ invoices, payPeriods, returnTo }: Props) {
           ))}
         </tbody>
       </table>
+      </div>
       {invoices.length === 0 && (
         <p className="py-6 text-center text-sm text-muted">No invoices match this filter.</p>
       )}

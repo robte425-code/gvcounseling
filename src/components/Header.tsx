@@ -51,7 +51,7 @@ export function Header() {
 
         <button
           type="button"
-          className="inline-flex items-center justify-center rounded-lg p-2 text-primary-dark md:hidden"
+          className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg p-2 text-primary-dark md:hidden"
           aria-expanded={open}
           aria-controls="mobile-nav"
           aria-label={open ? "Close menu" : "Open menu"}
@@ -80,7 +80,7 @@ export function Header() {
                 <li key={href}>
                   <Link
                     href={href}
-                    className={`block rounded-lg px-3 py-2.5 text-sm font-medium ${
+                    className={`block min-h-11 rounded-lg px-3 py-2.5 text-sm font-medium ${
                       active ? "bg-primary/10 text-primary" : "text-muted hover:bg-primary/5"
                     }`}
                     onClick={() => setOpen(false)}

@@ -41,9 +41,9 @@ export function ClientListFilters({
         </div>
       </div>
 
-      <form method="get" className="flex flex-wrap items-end gap-3">
+      <form method="get" className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
         {status ? <input type="hidden" name="status" value={status} /> : null}
-        <div className="min-w-[220px] flex-1">
+        <div className="w-full flex-1 sm:min-w-[220px]">
           <label htmlFor="client-search" className={portalLabelCompactClass}>
             Search
           </label>
@@ -84,7 +84,7 @@ export function ClientListFilters({
             <Link
               key={`${option.label}-${option.value ?? "all"}`}
               href={href}
-              className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm font-medium transition ${pillClass}`}
+              className={`inline-flex min-h-11 items-center gap-2 rounded-full border px-3 py-1.5 text-sm font-medium transition ${pillClass}`}
             >
               <span>{option.label}</span>
               {option.count !== undefined ? (

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { portalCardClass } from "@/components/portal/ui";
+import { portalCardClass, portalTableClass, portalTableScrollClass } from "@/components/portal/ui";
 import { formatCurrency } from "@/lib/constants";
 import type { PaycheckSummaryRow } from "@/lib/paychecks";
 
@@ -32,7 +32,7 @@ export function PaychecksTable({ paychecks, detailBasePath, showTherapistColumn 
   return (
     <div className={portalCardClass}>
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[40rem] text-left text-sm">
+        <table className={portalTableClass}>
           <thead>
             <tr className="border-b border-border text-xs font-semibold uppercase tracking-wide text-muted">
               {showTherapistColumn && <th className="py-2 pr-4">Paycheck for</th>}

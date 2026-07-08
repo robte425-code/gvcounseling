@@ -16,9 +16,9 @@ export function ClientListSearchForm({ basePath, query, status }: Props) {
   const clearHref = buildClientListHref(basePath, { status });
 
   return (
-    <form method="get" className="flex flex-wrap items-end gap-3">
+    <form method="get" className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
       {status ? <input type="hidden" name="status" value={status} /> : null}
-      <div className="min-w-[240px] flex-1">
+      <div className="w-full flex-1 sm:min-w-[240px]">
         <label htmlFor="client-search" className={portalLabelCompactClass}>
           Search
         </label>

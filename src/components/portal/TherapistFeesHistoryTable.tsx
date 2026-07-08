@@ -1,3 +1,4 @@
+import { portalTableNarrowClass, portalTableScrollClass } from "@/components/portal/ui";
 import { formatCurrency, formatDate, formatProcedureCodeLabel } from "@/lib/constants";
 
 export type TherapistFeeHistoryRow = {
@@ -22,7 +23,8 @@ export function TherapistFeesHistoryTable({
   }
 
   return (
-    <table className="w-full text-left text-sm">
+    <div className={portalTableScrollClass}>
+      <table className={portalTableNarrowClass}>
       <thead>
         <tr className="border-b border-border text-muted">
           <th className="py-2 pr-4">Code</th>
@@ -44,5 +46,6 @@ export function TherapistFeesHistoryTable({
         ))}
       </tbody>
     </table>
+    </div>
   );
 }

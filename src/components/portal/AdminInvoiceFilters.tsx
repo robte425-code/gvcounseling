@@ -47,9 +47,9 @@ export function AdminInvoiceFilters({ therapists, payPeriods, values, resultCoun
       ref={formRef}
       method="get"
       action="/portal/admin/invoices"
-      className="flex flex-wrap items-end gap-3 rounded-xl border border-border bg-primary/5 p-4"
+      className="flex flex-col gap-3 rounded-xl border border-border bg-primary/5 p-4 sm:flex-row sm:flex-wrap sm:items-end"
     >
-      <div className="min-w-[7rem]">
+      <div className="w-full sm:min-w-[7rem] sm:w-auto">
         <label htmlFor="invoice-filter-number" className={portalLabelCompactClass}>
           Invoice #
         </label>
@@ -73,7 +73,7 @@ export function AdminInvoiceFilters({ therapists, payPeriods, values, resultCoun
         />
       </div>
 
-      <div className="min-w-[10rem]">
+      <div className="w-full sm:min-w-[10rem] sm:w-auto">
         <label htmlFor="invoice-filter-status" className={portalLabelCompactClass}>
           Invoice status
         </label>
@@ -92,7 +92,7 @@ export function AdminInvoiceFilters({ therapists, payPeriods, values, resultCoun
         </select>
       </div>
 
-      <div className="min-w-[12rem] flex-1">
+      <div className="w-full flex-1 sm:min-w-[12rem]">
         <label htmlFor="invoice-filter-therapist" className={portalLabelCompactClass}>
           Therapist
         </label>
@@ -112,7 +112,7 @@ export function AdminInvoiceFilters({ therapists, payPeriods, values, resultCoun
         </select>
       </div>
 
-      <div className="min-w-[12rem] flex-1">
+      <div className="w-full flex-1 sm:min-w-[12rem]">
         <label htmlFor="invoice-filter-pay-period" className={portalLabelCompactClass}>
           Pay period
         </label>
@@ -133,7 +133,7 @@ export function AdminInvoiceFilters({ therapists, payPeriods, values, resultCoun
         </select>
       </div>
 
-      <div className="min-w-[10rem]">
+      <div className="w-full sm:min-w-[10rem] sm:w-auto">
         <label htmlFor="invoice-filter-lni-status" className={portalLabelCompactClass}>
           L&I status
         </label>

@@ -7,22 +7,32 @@ export const portalInputClass =
 export const portalLabelClass = "mb-1.5 block text-sm font-medium text-foreground";
 
 export const portalButtonClass =
-  "rounded-full bg-primary px-6 py-2.5 text-sm font-semibold text-white shadow-md transition hover:bg-primary-dark disabled:opacity-60";
+  "inline-flex min-h-11 items-center justify-center rounded-full bg-primary px-6 py-2.5 text-sm font-semibold text-white shadow-md transition hover:bg-primary-dark disabled:opacity-60";
 
 export const portalButtonSecondaryClass =
-  "rounded-full border border-border bg-surface px-6 py-2.5 text-sm font-semibold text-foreground transition hover:bg-primary/5 disabled:opacity-60";
+  "inline-flex min-h-11 items-center justify-center rounded-full border border-border bg-surface px-6 py-2.5 text-sm font-semibold text-foreground transition hover:bg-primary/5 disabled:opacity-60";
 
 export const portalNavLinkClass =
-  "inline-flex items-center rounded-full px-3 py-1.5 text-sm font-normal text-muted transition hover:bg-primary/10 hover:text-primary-dark";
+  "inline-flex min-h-11 items-center rounded-full px-3 py-1.5 text-sm font-normal text-muted transition hover:bg-primary/10 hover:text-primary-dark lg:min-h-0";
+
+export const portalPageTitleClass = "font-serif text-2xl font-semibold text-primary-dark sm:text-3xl";
+
+export const portalTableScrollClass = "overflow-x-auto";
+
+export const portalTableClass = "w-full min-w-[44rem] text-left text-sm";
+
+export const portalTableWideClass = "w-full min-w-[52rem] text-left text-sm";
+
+export const portalTableNarrowClass = "w-full min-w-[32rem] text-left text-sm";
 
 export const portalNavButtonClass = `${portalNavLinkClass} border-0 bg-transparent cursor-pointer`;
 
 export const portalNavSelectClass =
   "rounded-full border border-border bg-surface px-3 py-1.5 text-sm font-normal text-muted outline-none transition hover:bg-primary/5 focus:border-primary focus:ring-2 focus:ring-primary/20";
 
-export const portalCardClass = "rounded-2xl border border-border bg-surface p-6 shadow-sm";
+export const portalCardClass = "rounded-2xl border border-border bg-surface p-4 shadow-sm sm:p-6";
 
-export const portalCardCompactClass = "rounded-xl border border-border bg-surface p-4 shadow-sm";
+export const portalCardCompactClass = "rounded-xl border border-border bg-surface p-3 shadow-sm sm:p-4";
 
 export const portalInputCompactClass =
   "w-full rounded-lg border border-border bg-surface px-3 py-1.5 text-sm text-foreground outline-none transition-shadow focus:border-primary focus:ring-2 focus:ring-primary/20";

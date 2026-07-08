@@ -14,6 +14,8 @@ import {
   portalButtonSecondaryClass,
   portalInputClass,
   portalLabelClass,
+  portalTableNarrowClass,
+  portalTableScrollClass,
 } from "@/components/portal/ui";
 
 type LineItem = {
@@ -167,7 +169,8 @@ export function InvoiceEditor({
   if (readOnly) {
     return (
       <div className="space-y-4">
-        <table className="w-full text-left text-sm">
+        <div className={portalTableScrollClass}>
+          <table className={portalTableNarrowClass}>
           <thead>
             <tr className="border-b border-border text-muted">
               <th className="py-2 pr-4">Service date</th>
@@ -193,6 +196,7 @@ export function InvoiceEditor({
             </tr>
           </tfoot>
         </table>
+        </div>
         {actions}
       </div>
     );

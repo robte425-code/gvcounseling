@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { requireAdmin } from "@/auth";
-import { portalButtonClass, portalCardClass, portalInputCompactClass, portalLabelCompactClass, StatusBadge } from "@/components/portal/ui";
+import { portalButtonClass, portalCardClass, portalInputCompactClass, portalLabelCompactClass, portalTableClass, portalTableScrollClass, StatusBadge } from "@/components/portal/ui";
 import { prisma } from "@/lib/prisma";
 
 export default async function AdminTherapistsPage({
@@ -43,7 +43,7 @@ export default async function AdminTherapistsPage({
     <div className="space-y-8">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="font-serif text-3xl font-semibold text-primary-dark">Therapists</h1>
+          <h1 className="font-serif text-2xl font-semibold text-primary-dark sm:text-3xl">Therapists</h1>
           <p className="mt-2 text-muted">Manage therapist accounts for the billing portal.</p>
         </div>
         <Link href="/portal/admin/therapists/new" className={portalButtonClass}>
@@ -106,8 +106,8 @@ export default async function AdminTherapistsPage({
         </p>
       )}
 
-      <form method="get" className="flex flex-wrap items-end gap-3">
-        <div className="min-w-[240px] flex-1">
+      <form method="get" className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
+        <div className="w-full flex-1 sm:min-w-[240px]">
           <label htmlFor="therapist-search" className={portalLabelCompactClass}>
             Search
           </label>
@@ -131,7 +131,8 @@ export default async function AdminTherapistsPage({
       </form>
 
       <div className={portalCardClass}>
-        <table className="w-full text-left text-sm">
+        <div className={portalTableScrollClass}>
+          <table className={portalTableClass}>
           <thead>
             <tr className="border-b border-border text-muted">
               <th className="py-2 pr-4">Name</th>
@@ -174,6 +175,7 @@ export default async function AdminTherapistsPage({
             ))}
           </tbody>
         </table>
+        </div>
         {therapists.length === 0 && (
           <p className="py-8 text-center text-sm text-muted">
             {query

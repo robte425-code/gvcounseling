@@ -1,7 +1,7 @@
 import { ClientListStatusActions } from "@/components/portal/ClientListStatusActions";
 import { ClientTableRow } from "@/components/portal/ClientTableRow";
 import { TherapistClientQuickActions } from "@/components/portal/TherapistClientQuickActions";
-import { StatusBadge, portalCardClass } from "@/components/portal/ui";
+import { StatusBadge, portalCardClass, portalTableClass, portalTableScrollClass } from "@/components/portal/ui";
 import { clientListLabel, type ClientListRow } from "@/lib/client-list-ui";
 
 type Props = {
@@ -38,8 +38,8 @@ export function ClientsTable({
 
   return (
     <div className={`${portalCardClass} overflow-hidden p-0`}>
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[44rem] text-left text-sm">
+      <div className={portalTableScrollClass}>
+        <table className={portalTableClass}>
           <thead className="border-b border-border bg-muted/10 text-xs uppercase tracking-wide text-muted">
             <tr>
               <th className="px-5 py-3 font-semibold">Client</th>

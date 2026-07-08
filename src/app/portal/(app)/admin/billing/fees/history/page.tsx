@@ -6,7 +6,7 @@ import {
   formatProcedureCodeLabel,
 } from "@/lib/constants";
 import { loadAllProcedureCodeFees } from "@/lib/procedure-fees";
-import { portalButtonSecondaryClass, portalCardClass } from "@/components/portal/ui";
+import { portalButtonSecondaryClass, portalCardClass, portalTableNarrowClass, portalTableScrollClass } from "@/components/portal/ui";
 
 export default async function LniFeeHistoryPage() {
   await requireAdmin();
@@ -18,7 +18,7 @@ export default async function LniFeeHistoryPage() {
         <Link href="/portal/admin/billing" className={`${portalButtonSecondaryClass} text-xs`}>
           ← Back to billing
         </Link>
-        <h1 className="mt-3 font-serif text-3xl font-semibold text-primary-dark">L&I fee history</h1>
+        <h1 className="mt-3 font-serif text-2xl font-semibold text-primary-dark sm:text-3xl">L&I fee history</h1>
         <p className="mt-2 text-muted">
           L&I procedure rates by effective date. Used when generating 837 files to bill L&I. Therapist
           invoices use each therapist&apos;s own fee schedule.
@@ -29,7 +29,8 @@ export default async function LniFeeHistoryPage() {
         {fees.length === 0 ? (
           <p className="text-sm text-muted">No fees on file yet.</p>
         ) : (
-          <table className="w-full text-left text-sm">
+          <div className={portalTableScrollClass}>
+            <table className={portalTableNarrowClass}>
             <thead>
               <tr className="border-b border-border text-muted">
                 <th className="py-2 pr-4">Code</th>
@@ -51,6 +52,7 @@ export default async function LniFeeHistoryPage() {
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </div>
     </div>

@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { auth, getRealRole, isImpersonating, signOut } from "@/auth";
+import { PortalNavMenu } from "@/components/portal/PortalNavMenu";
 import { stopImpersonationAction } from "@/lib/portal-actions";
 import { ViewAsTherapistSelect } from "@/components/portal/ViewAsTherapistSelect";
-import { portalNavButtonClass, portalNavLinkClass } from "@/components/portal/ui";
+import { portalNavButtonClass } from "@/components/portal/ui";
 import { prisma } from "@/lib/prisma";
 
 const adminLinks = [
@@ -58,23 +59,11 @@ export async function PortalNav() {
           </form>
         </div>
       )}
-      <header className="border-b border-border bg-surface">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-4 py-4">
-          <div>
-            <Link href="/" className="font-serif text-lg font-semibold text-primary-dark">
-              Grandview Counseling
-            </Link>
-            <p className="text-xs text-muted">
-              Billing portal · {session.user.firstName}
-              {admin && !impersonating ? " (admin)" : ""}
-            </p>
-          </div>
-          <nav className="flex flex-wrap items-center gap-1">
-            {links.map((link) => (
-              <Link key={link.href} href={link.href} className={portalNavLinkClass}>
-                {link.label}
-              </Link>
-            ))}
+      <PortalNavMenu
+        links={links}
+        siteLabel={`Billing portal · ${session.user.firstName}${admin && !impersonating ? " (admin)" : ""}`}
+        trailing={
+          <>
             {therapists.length > 0 && <ViewAsTherapistSelect therapists={therapists} />}
             <form
               action={async () => {
@@ -82,13 +71,13 @@ export async function PortalNav() {
                 await signOut({ redirectTo: "/portal/login" });
               }}
             >
-              <button type="submit" className={portalNavButtonClass}>
+              <button type="submit" className={`${portalNavButtonClass} min-h-11 lg:min-h-0`}>
                 Sign out
               </button>
             </form>
-          </nav>
-        </div>
-      </header>
+          </>
+        }
+      />
     </>
   );
 }

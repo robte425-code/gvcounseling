@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { portalCardClass } from "@/components/portal/ui";
+import { portalCardClass, portalTableWideClass, portalTableScrollClass } from "@/components/portal/ui";
 import { formatCurrency } from "@/lib/constants";
 import type { PaycheckInvoiceRow } from "@/lib/paychecks";
 
@@ -20,7 +20,7 @@ export function PaycheckDetailTable({ invoices, paycheckPayPeriodId }: Props) {
   return (
     <div className={portalCardClass}>
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[48rem] text-left text-sm">
+        <table className={portalTableWideClass}>
           <thead>
             <tr className="border-b border-border text-xs font-semibold uppercase tracking-wide text-muted">
               <th className="py-2 pr-4">Invoice #</th>

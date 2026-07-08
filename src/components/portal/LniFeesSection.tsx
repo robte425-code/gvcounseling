@@ -8,6 +8,8 @@ import {
   portalInputCompactClass,
   portalLabelCompactClass,
   portalSectionHeadingClass,
+  portalTableNarrowClass,
+  portalTableScrollClass,
 } from "@/components/portal/ui";
 
 export async function LniFeesSection() {
@@ -37,7 +39,8 @@ export async function LniFeesSection() {
       </p>
 
       <div className="mt-4 overflow-hidden rounded-xl border border-border">
-        <table className="w-full text-left text-sm">
+        <div className={portalTableScrollClass}>
+          <table className={portalTableNarrowClass}>
           <thead>
             <tr className="border-b border-border bg-primary/[0.03] text-muted">
               <th className="px-4 py-2.5 font-medium">Procedure</th>
@@ -62,6 +65,7 @@ export async function LniFeesSection() {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
 
       <form

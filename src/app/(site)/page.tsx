@@ -23,7 +23,7 @@ export default function HomePage() {
           {services.map((service) => (
             <article
               key={service.title}
-              className="rounded-2xl border border-border bg-surface p-8 shadow-sm transition-shadow hover:shadow-md"
+              className="rounded-2xl border border-border bg-surface p-6 shadow-sm transition-shadow hover:shadow-md sm:p-8"
             >
               <div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
                 <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
@@ -36,7 +36,7 @@ export default function HomePage() {
           ))}
         </div>
 
-        <div className="mt-16 rounded-2xl bg-gradient-to-r from-primary/5 to-accent/10 px-8 py-10 text-center">
+        <div className="mt-16 rounded-2xl bg-gradient-to-r from-primary/5 to-accent/10 px-4 py-8 text-center sm:px-8 sm:py-10">
           <p className="font-serif text-xl leading-relaxed text-primary-dark sm:text-2xl">
             At Grandview Counseling, we&apos;re committed to helping injured workers reclaim their health
             and well-being, every step of the way.

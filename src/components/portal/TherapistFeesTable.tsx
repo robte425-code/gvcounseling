@@ -1,3 +1,4 @@
+import { portalTableNarrowClass, portalTableScrollClass } from "@/components/portal/ui";
 import { formatCurrency, formatDate, PROCEDURE_CODES } from "@/lib/constants";
 import { getCurrentProcedureFeeFromSchedule, type FeeScheduleRow } from "@/lib/procedure-fee-schedule";
 
@@ -13,7 +14,8 @@ export function TherapistFeesTable({ fees }: Props) {
   }));
 
   return (
-    <table className="w-full text-left text-sm">
+    <div className={portalTableScrollClass}>
+      <table className={portalTableNarrowClass}>
       <thead>
         <tr className="border-b border-border text-muted">
           <th className="py-2 pr-4">Procedure</th>
@@ -38,5 +40,6 @@ export function TherapistFeesTable({ fees }: Props) {
         ))}
       </tbody>
     </table>
+    </div>
   );
 }

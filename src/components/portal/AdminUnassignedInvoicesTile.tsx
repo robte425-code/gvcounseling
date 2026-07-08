@@ -12,6 +12,8 @@ import {
   portalInputCompactClass,
   portalLabelCompactClass,
   portalSectionHeadingClass,
+  portalTableScrollClass,
+  portalTableWideClass,
 } from "@/components/portal/ui";
 import { formatCurrency, formatDate } from "@/lib/constants";
 import { assignInvoicesToPayPeriodAction } from "@/lib/portal-actions";
@@ -67,13 +69,13 @@ export function AdminUnassignedInvoicesTile({
 
       <form
         action={assignInvoicesToPayPeriodAction}
-        className="mt-4 flex flex-wrap items-end gap-3 rounded-xl border border-border bg-white/80 p-4"
+        className="mt-4 flex flex-col gap-3 rounded-xl border border-border bg-white/80 p-4 sm:flex-row sm:flex-wrap sm:items-end"
       >
         <input type="hidden" name="returnTo" value={returnTo} />
         {[...selected].map((id) => (
           <input key={id} type="hidden" name="invoiceIds" value={id} />
         ))}
-        <div className="min-w-[12rem] flex-1">
+        <div className="w-full flex-1 sm:min-w-[12rem]">
           <label htmlFor="unassigned-payPeriodId" className={portalLabelCompactClass}>
             Pay period
           </label>
@@ -117,8 +119,8 @@ export function AdminUnassignedInvoicesTile({
         )}
       </form>
 
-      <div className="mt-4 overflow-x-auto">
-        <table className="w-full text-left text-sm">
+      <div className={`mt-4 ${portalTableScrollClass}`}>
+        <table className={portalTableWideClass}>
           <thead>
             <tr className="border-b border-border text-muted">
               <th className="py-2 pr-2">

@@ -3,7 +3,7 @@ import { ConfirmSubmitButton } from "@/components/portal/ConfirmSubmitButton";
 import { InvoiceTableRow } from "@/components/portal/InvoiceTableRow";
 import { InvoicePaymentStatusCell } from "@/components/portal/InvoicePaymentStatusCell";
 import { InvoiceTherapistPaymentCell } from "@/components/portal/InvoiceTherapistPaymentCell";
-import { portalButtonSecondaryClass } from "@/components/portal/ui";
+import { portalButtonSecondaryClass, portalTableClass, portalTableScrollClass } from "@/components/portal/ui";
 import { formatCurrency, formatDate } from "@/lib/constants";
 import { groupInvoicesByPayPeriod } from "@/lib/invoice-pay-period-grouping";
 import { deleteInvoiceAction } from "@/lib/portal-actions";
@@ -41,7 +41,8 @@ export function TherapistInvoicesTable({
   const groups = groupInvoicesByPayPeriod(invoices);
 
   return (
-    <table className="w-full text-left text-sm">
+    <div className={portalTableScrollClass}>
+      <table className={portalTableClass}>
       <thead>
         <tr className="border-b border-border text-muted">
           <th className="py-2 pr-4">#</th>
@@ -113,5 +114,6 @@ export function TherapistInvoicesTable({
         )}
       </tbody>
     </table>
+    </div>
   );
 }
