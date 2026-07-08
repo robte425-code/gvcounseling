@@ -6,7 +6,7 @@ import { closeClientAction, reopenClientAction } from "@/lib/portal-actions";
 import { ClientStatusReasonDialog } from "@/components/portal/ClientStatusReasonDialog";
 import { canTherapistCloseClient } from "@/lib/client-assignment-status";
 import type { ClientAssignmentStatus } from "@/generated/prisma/client";
-import { portalButtonSecondaryClass } from "@/components/portal/ui";
+import { portalButtonClass, portalButtonSecondaryClass } from "@/components/portal/ui";
 
 type DialogKind = "close" | "reopen" | null;
 
@@ -21,10 +21,6 @@ function stopRowNavigation(event: React.MouseEvent | React.KeyboardEvent) {
   event.stopPropagation();
 }
 
-function actionButtonClassName(): string {
-  return "rounded-lg border border-border bg-surface px-2.5 py-1 text-xs font-medium text-foreground transition hover:border-primary/40 hover:bg-primary/5";
-}
-
 export function TherapistClientQuickActions({
   clientId,
   clientLabel,
@@ -35,17 +31,20 @@ export function TherapistClientQuickActions({
   const canClose = canTherapistCloseClient(assignmentStatus);
   const canReopen = assignmentStatus === "CLOSED";
 
+  const compactPrimary = `${portalButtonClass} px-4 py-1.5 text-xs shadow-sm`;
+  const compactSecondary = `${portalButtonSecondaryClass} px-4 py-1.5 text-xs`;
+
   return (
     <>
       <div
-        className="inline-flex flex-wrap items-center gap-1.5 rounded-xl border border-border/80 bg-muted/5 p-1.5"
+        className="flex flex-wrap items-center gap-2"
         onClick={stopRowNavigation}
         onKeyDown={stopRowNavigation}
       >
         {assignmentStatus === "ACTIVE" && (
           <Link
             href={`/portal/therapist/invoices/new?clientId=${clientId}`}
-            className={`${portalButtonSecondaryClass} px-2.5 py-1 text-xs`}
+            className={compactPrimary}
             onClick={stopRowNavigation}
           >
             New invoice
@@ -55,17 +54,17 @@ export function TherapistClientQuickActions({
         {assignmentStatus === "PENDING_THERAPIST" && (
           <Link
             href={`/portal/therapist/referrals/${clientId}`}
-            className={`${portalButtonSecondaryClass} px-2.5 py-1 text-xs`}
+            className={compactPrimary}
             onClick={stopRowNavigation}
           >
-            Review referral
+            Review
           </Link>
         )}
 
         {canClose && (
           <button
             type="button"
-            className={actionButtonClassName()}
+            className={compactSecondary}
             onClick={(event) => {
               stopRowNavigation(event);
               setDialog("close");
@@ -78,7 +77,7 @@ export function TherapistClientQuickActions({
         {canReopen && (
           <button
             type="button"
-            className={actionButtonClassName()}
+            className={compactPrimary}
             onClick={(event) => {
               stopRowNavigation(event);
               setDialog("reopen");

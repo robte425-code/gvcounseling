@@ -1,22 +1,23 @@
 import Link from "next/link";
 import { requireTherapist } from "@/auth";
-import { ClientListFilters } from "@/components/portal/ClientListFilters";
-import { ClientListHeader } from "@/components/portal/ClientListHeader";
-import { ClientsTable } from "@/components/portal/ClientsTable";
-import { portalButtonClass } from "@/components/portal/ui";
+import { TherapistClientList } from "@/components/portal/TherapistClientList";
+import { TherapistClientsOverview } from "@/components/portal/TherapistClientsOverview";
+import { TherapistClientsSearchBar } from "@/components/portal/TherapistClientsSearchBar";
+import { TherapistPendingReferralsBanner } from "@/components/portal/TherapistPendingReferralsBanner";
+import { portalButtonClass, portalPageTitleClass } from "@/components/portal/ui";
 import {
   buildClientListHref,
   clientListSearchWhere,
   normalizeClientSearchQuery,
 } from "@/lib/client-list-search";
-import type { ClientListRow, ClientStatusFilterOption } from "@/lib/client-list-ui";
+import type { ClientListRow } from "@/lib/client-list-ui";
 import { ClientAssignmentStatus } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 
 const STATUS_FILTERS = [
   { label: "Active", value: undefined as string | undefined, statusKey: "ACTIVE" as const },
   { label: "All", value: "all", statusKey: null },
-  { label: "Pending review", value: "PENDING_THERAPIST", statusKey: "PENDING_THERAPIST" as const },
+  { label: "Pending", value: "PENDING_THERAPIST", statusKey: "PENDING_THERAPIST" as const },
   { label: "Closed", value: "CLOSED", statusKey: "CLOSED" as const },
 ] as const;
 
@@ -68,9 +69,11 @@ export default async function TherapistClientsPage({
   ]);
 
   const counts = statusCountMap(statusCounts);
+  const activeCount = counts.get("ACTIVE") ?? 0;
   const pendingCount = counts.get("PENDING_THERAPIST") ?? 0;
+  const closedCount = counts.get("CLOSED") ?? 0;
 
-  const statusOptions: ClientStatusFilterOption[] = STATUS_FILTERS.map((filter) => {
+  const overviewCards = STATUS_FILTERS.map((filter) => {
     const active =
       filter.value === "all"
         ? status === "all"
@@ -80,13 +83,19 @@ export default async function TherapistClientsPage({
 
     return {
       label: filter.label,
-      value: filter.value,
       count:
         filter.statusKey === null
           ? totalCount
           : counts.get(filter.statusKey) ?? 0,
-      highlight: filter.statusKey === "PENDING_THERAPIST" && pendingCount > 0,
+      status: filter.value,
       active,
+      highlight: filter.statusKey === "PENDING_THERAPIST" && pendingCount > 0,
+      hint:
+        filter.statusKey === "PENDING_THERAPIST" && pendingCount > 0
+          ? "Needs review"
+          : filter.statusKey === "ACTIVE"
+            ? "Ready for billing"
+            : undefined,
     };
   });
 
@@ -104,37 +113,61 @@ export default async function TherapistClientsPage({
   }));
 
   const emptyMessage = query
-    ? `No clients match “${query}”.`
-    : statusFilter
-      ? "No clients match this status filter."
-      : "No clients assigned to you yet.";
+    ? `No clients match “${query}”. Try another name or claim number.`
+    : statusFilter === "PENDING_THERAPIST"
+      ? "No referrals are waiting for your review."
+      : statusFilter === "CLOSED"
+        ? "You have no closed clients."
+        : statusFilter === "ACTIVE"
+          ? "No active clients right now. Check pending referrals or view all clients."
+          : "No clients assigned to you yet.";
+
+  const showPendingBanner =
+    pendingCount > 0 &&
+    (statusFilter === "ACTIVE" || status === "all" || status === undefined);
 
   return (
     <div className="space-y-6">
-      <ClientListHeader
-        title="My clients"
-        description="Review assigned clients, respond to referrals, and start invoices from one place."
-        actions={
-          <Link href="/portal/therapist/invoices/new" className={portalButtonClass}>
-            New invoice
-          </Link>
-        }
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="max-w-2xl">
+          <h1 className={portalPageTitleClass}>My clients</h1>
+          <p className="mt-2 text-sm text-muted">
+            {activeCount} active · {pendingCount} pending · {closedCount} closed
+          </p>
+        </div>
+        <Link href="/portal/therapist/invoices/new" className={portalButtonClass}>
+          New invoice
+        </Link>
+      </div>
+
+      <TherapistClientsOverview
+        basePath="/portal/therapist/clients"
+        query={query}
+        cards={overviewCards}
       />
 
-      <ClientListFilters
+      {showPendingBanner ? (
+        <TherapistPendingReferralsBanner
+          basePath="/portal/therapist/clients"
+          pendingCount={pendingCount}
+          query={query}
+        />
+      ) : null}
+
+      <TherapistClientsSearchBar
         basePath="/portal/therapist/clients"
         query={query}
         status={status === "all" ? "all" : statusFilter === "ACTIVE" && status === undefined ? undefined : statusFilter}
-        statusOptions={statusOptions}
         resultCount={clients.length}
       />
 
-      <ClientsTable
+      <TherapistClientList
         clients={rows}
         basePath="/portal/therapist/clients"
         listReturnTo={listReturnTo}
-        variant="therapist"
         emptyMessage={emptyMessage}
+        pendingCount={pendingCount}
+        query={query}
       />
     </div>
   );
