@@ -344,3 +344,9 @@ model TherapistPayRunLine {
 
   @@unique([payoutId, invoiceId])
 }
+
+model PortalSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+}

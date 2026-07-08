@@ -16,7 +16,7 @@ export default async function LniFeeHistoryPage() {
     <div className="space-y-8">
       <div>
         <Link href="/portal/admin/billing" className={`${portalButtonSecondaryClass} text-xs`}>
-          ← Back to billing
+          ← Bill L&I
         </Link>
         <h1 className="mt-3 font-serif text-2xl font-semibold text-primary-dark sm:text-3xl">L&I fee history</h1>
         <p className="mt-2 text-muted">

@@ -239,7 +239,7 @@ export default async function PayRemittanceDetailPage({
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <Link href="/portal/admin/pay" className="text-sm text-primary hover:underline">
-            ← Pay
+            ← Process RA
           </Link>
           <h1 className="mt-2 font-serif text-3xl font-semibold text-primary-dark">
             RA {remittance.remittanceNumber}

@@ -1,14 +1,17 @@
 import Link from "next/link";
 import { requireAdmin } from "@/auth";
 import { AdminUnassignedClientsTile } from "@/components/portal/AdminUnassignedClientsTile";
+import { VrcReferralEmailDestinationToggle } from "@/components/portal/VrcReferralEmailDestinationToggle";
 import { portalButtonClass, portalCardClass } from "@/components/portal/ui";
 import { formatCurrency } from "@/lib/constants";
+import { getAdminNotificationEmails, getVrcReferralEmailDestination } from "@/lib/portal-settings";
 import { prisma } from "@/lib/prisma";
 
 export default async function AdminDashboardPage() {
   await requireAdmin();
 
-  const [submittedCount, draftCount, billedCount, unassignedClients] = await Promise.all([
+  const [submittedCount, draftCount, billedCount, unassignedClients, vrcReferralEmailDestination, adminEmails] =
+    await Promise.all([
     prisma.invoice.count({ where: { status: "SUBMITTED" } }),
     prisma.invoice.count({ where: { status: "DRAFT" } }),
     prisma.invoice.count({ where: { status: "BILLED" } }),
@@ -24,6 +27,8 @@ export default async function AdminDashboardPage() {
         createdAt: true,
       },
     }),
+    getVrcReferralEmailDestination(),
+    getAdminNotificationEmails(),
   ]);
 
   const submittedTotal = await prisma.invoice.aggregate({
@@ -56,14 +61,19 @@ export default async function AdminDashboardPage() {
         </div>
       </div>
 
+      <VrcReferralEmailDestinationToggle
+        destination={vrcReferralEmailDestination}
+        adminEmails={adminEmails}
+      />
+
       <AdminUnassignedClientsTile clients={unassignedClients} />
 
       <div className="flex flex-wrap gap-3">
         <Link href="/portal/admin/billing" className={portalButtonClass}>
-          Billing
+          Bill L&I
         </Link>
         <Link href="/portal/admin/pay" className={portalButtonClass}>
-          Pay
+          Process RA
         </Link>
         <Link href="/portal/admin/clients/import" className={portalButtonClass}>
           Import clients

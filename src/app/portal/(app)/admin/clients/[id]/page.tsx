@@ -11,6 +11,7 @@ import { ClientDriveResyncButton } from "@/components/portal/ClientDriveResyncBu
 import { ClientDriveFilesLoading } from "@/components/portal/ClientDriveFilesLoading";
 import { ClientDriveFilesSection } from "@/components/portal/ClientDriveFilesSection";
 import { portalButtonClass, portalButtonSecondaryClass } from "@/components/portal/ui";
+import { getAdminNotificationEmails, getVrcReferralEmailDestination } from "@/lib/portal-settings";
 import { prisma } from "@/lib/prisma";
 
 export default async function AdminClientDetailPage({
@@ -41,7 +42,7 @@ export default async function AdminClientDetailPage({
     reactivated,
     closed,
   } = await searchParams;
-  const [client, therapists, invoiceCount] = await Promise.all([
+  const [client, therapists, invoiceCount, vrcReferralEmailDestination, adminEmails] = await Promise.all([
     prisma.client.findUnique({
       where: { id },
       include: { therapist: { select: { firstName: true, lastName: true } } },
@@ -52,6 +53,8 @@ export default async function AdminClientDetailPage({
       select: { id: true, firstName: true, lastName: true },
     }),
     prisma.invoice.count({ where: { clientId: id } }),
+    getVrcReferralEmailDestination(),
+    getAdminNotificationEmails(),
   ]);
   if (!client) notFound();
 
@@ -74,12 +77,12 @@ export default async function AdminClientDetailPage({
       )}
       {vrcAccepted === "1" && (
         <p className="rounded-lg bg-primary/10 px-3 py-2 text-sm text-primary-dark">
-          Acceptance email sent to the referring VRC.
+          Referral acceptance email sent.
         </p>
       )}
       {vrcInfoRequested === "1" && (
         <p className="rounded-lg bg-primary/10 px-3 py-2 text-sm text-primary-dark">
-          Information request email sent to the referring VRC.
+          Information request email sent.
         </p>
       )}
       {assigned === "1" && (
@@ -135,6 +138,8 @@ export default async function AdminClientDetailPage({
         therapists={therapists}
         vrcEmail={client.vrcEmail}
         vrcName={client.vrcName}
+        emailDestination={vrcReferralEmailDestination}
+        adminEmails={adminEmails}
       />
 
       <ClientDetailView client={client} clientId={client.id} />

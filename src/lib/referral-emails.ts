@@ -1,6 +1,10 @@
 import { sendEmailTo } from "@/lib/email";
 import { getSiteUrl } from "@/lib/site-url";
 import {
+  getAdminNotificationEmails,
+  type VrcReferralEmailDestination,
+} from "@/lib/portal-settings";
+import {
   VRC_BILLING_EMAIL_SIGNATURE,
   getVrcEmailTestRecipient,
   vrcFirstName,
@@ -14,6 +18,25 @@ function resolveVrcOutboundRecipient(vrcEmail: string): { to: string; testMode: 
   return { to: vrcEmail, testMode: false };
 }
 
+async function resolveVrcReferralRecipients(options: {
+  destination: VrcReferralEmailDestination;
+  vrcEmail: string;
+}): Promise<{ to: string; adminMode: boolean; envTestMode: boolean }> {
+  if (options.destination === "admin") {
+    const adminEmails = await getAdminNotificationEmails();
+    return { to: adminEmails.join(", "), adminMode: true, envTestMode: false };
+  }
+  const { to, testMode } = resolveVrcOutboundRecipient(options.vrcEmail);
+  return { to, adminMode: false, envTestMode: testMode };
+}
+
+function adminModeNote(intendedVrcEmail: string, vrcName: string): string {
+  return [
+    "",
+    `[Admin preview mode: this email would have gone to ${vrcName} <${intendedVrcEmail}>.]`,
+  ].join("\n");
+}
+
 function vrcEmailSignatureBlock(): string {
   const { name, phone, email } = VRC_BILLING_EMAIL_SIGNATURE;
   return [name, `M: ${phone}`, `E: ${email}`].join("\n");
@@ -24,10 +47,15 @@ export async function sendVrcReferralAcceptanceEmail(options: {
   vrcName: string;
   clientName: string;
   claimNumber: string;
+  destination?: VrcReferralEmailDestination;
 }) {
-  const { to, testMode } = resolveVrcOutboundRecipient(options.vrcEmail);
-  const greetingName = vrcFirstName(options.vrcName);
-  const subjectPrefix = testMode ? `[TEST] ` : "";
+  const destination = options.destination ?? "vrc";
+  const { to, adminMode, envTestMode } = await resolveVrcReferralRecipients({
+    destination,
+    vrcEmail: options.vrcEmail,
+  });
+  const greetingName = adminMode ? "Admin team" : vrcFirstName(options.vrcName);
+  const subjectPrefix = adminMode || envTestMode ? `[TEST] ` : "";
   await sendEmailTo(to, {
     subject: `${subjectPrefix}Referral received: ${options.clientName} (${options.claimNumber})`,
     text: [
@@ -40,8 +68,10 @@ export async function sendVrcReferralAcceptanceEmail(options: {
       "Thank you again for the referral.",
       "",
       vrcEmailSignatureBlock(),
+      adminMode ? adminModeNote(options.vrcEmail, options.vrcName) : "",
     ].join("\n"),
   });
+  return { to, adminMode };
 }
 
 export async function sendVrcReferralInfoRequestEmail(options: {
@@ -51,11 +81,16 @@ export async function sendVrcReferralInfoRequestEmail(options: {
   claimNumber: string;
   message: string;
   replyToEmail: string;
+  destination?: VrcReferralEmailDestination;
 }) {
-  const { to, testMode } = resolveVrcOutboundRecipient(options.vrcEmail);
-  const greetingName = vrcFirstName(options.vrcName);
-  const subjectPrefix = testMode ? `[TEST] ` : "";
-  const testNote = testMode
+  const destination = options.destination ?? "vrc";
+  const { to, adminMode, envTestMode } = await resolveVrcReferralRecipients({
+    destination,
+    vrcEmail: options.vrcEmail,
+  });
+  const greetingName = adminMode ? "Admin team" : vrcFirstName(options.vrcName);
+  const subjectPrefix = adminMode || envTestMode ? `[TEST] ` : "";
+  const envTestNote = envTestMode && !adminMode
     ? `\n\n[Test mode: intended recipient ${options.vrcEmail}, redirected to ${getVrcEmailTestRecipient()}]`
     : "";
   await sendEmailTo(to, {
@@ -68,12 +103,16 @@ export async function sendVrcReferralInfoRequestEmail(options: {
       "",
       options.message,
       "",
-      "Please reply to this email with any additional information.",
+      adminMode
+        ? "This is an admin preview of a VRC information request."
+        : "Please reply to this email with any additional information.",
       "",
       vrcEmailSignatureBlock(),
-      testNote,
+      adminMode ? adminModeNote(options.vrcEmail, options.vrcName) : "",
+      envTestNote,
     ].join("\n"),
   });
+  return { to, adminMode };
 }
 
 export async function sendTherapistAssignmentEmail(options: {

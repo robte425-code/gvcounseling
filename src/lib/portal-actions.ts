@@ -23,6 +23,12 @@ import { generateOneTimePassword, hashPassword, verifyPassword } from "@/lib/pas
 import { fetchLniPayPeriods } from "@/lib/lni-pay-periods";
 import { createProcedureCodeFee, createTherapistProcedureCodeFee, updateTherapistProcedureCodeFee, applyTherapistFeeSchedule } from "@/lib/procedure-fees";
 import { prisma } from "@/lib/prisma";
+import {
+  getVrcReferralEmailDestination,
+  parseVrcReferralEmailDestination,
+  setVrcReferralEmailDestination,
+  type VrcReferralEmailDestination,
+} from "@/lib/portal-settings";
 import { getNextInvoiceNumber } from "@/lib/invoice-numbers";
 import { parseTherapistInvoicesReturnTo } from "@/lib/invoice-list-filters";
 import { emailVrcsForPayPeriod, parseVrcEmailDestinationParam } from "@/lib/vrc-billing-emails";
@@ -919,6 +925,17 @@ function clientDisplayName(client: { firstName: string; lastName: string }): str
   return `${client.firstName} ${client.lastName}`.trim();
 }
 
+export async function updateVrcReferralEmailDestinationAction(
+  destination: VrcReferralEmailDestination,
+) {
+  await requireAdmin();
+  const parsed = parseVrcReferralEmailDestination(destination);
+  if (!parsed) throw new Error("Invalid VRC referral email destination.");
+  await setVrcReferralEmailDestination(parsed);
+  revalidatePath("/portal/admin/dashboard");
+  revalidatePath("/portal/admin/clients");
+}
+
 export async function acceptUnassignedClientAction(formData: FormData) {
   const session = await requireAdmin();
   const clientId = String(formData.get("clientId") ?? "").trim();
@@ -930,23 +947,28 @@ export async function acceptUnassignedClientAction(formData: FormData) {
     throw new Error("Only unassigned referrals can be accepted this way.");
   }
 
+  const destination = await getVrcReferralEmailDestination();
   const vrcEmail = client.vrcEmail?.trim();
-  if (!vrcEmail) {
+  if (destination === "vrc" && !vrcEmail) {
     throw new Error("No VRC email on file. Add one on the Edit client page first.");
   }
 
-  await sendVrcReferralAcceptanceEmail({
-    vrcEmail,
+  const intendedVrcEmail = vrcEmail || "unknown@vrc.example";
+  const { to, adminMode } = await sendVrcReferralAcceptanceEmail({
+    vrcEmail: intendedVrcEmail,
     vrcName: client.vrcName?.trim() || "VRC",
     clientName: clientDisplayName(client),
     claimNumber: client.lniClaimNumber,
+    destination,
   });
 
   await prisma.clientNote.create({
     data: {
       clientId,
       authorId: getRealUserId(session),
-      body: `Sent referral acceptance email to VRC (${vrcEmail}).`,
+      body: adminMode
+        ? `Sent referral acceptance email preview to admins (${to}); intended VRC ${intendedVrcEmail}.`
+        : `Sent referral acceptance email to VRC (${to}).`,
     },
   });
 
@@ -969,25 +991,30 @@ export async function requestVrcInfoAction(formData: FormData) {
     throw new Error("Only unassigned referrals can receive VRC information requests.");
   }
 
+  const destination = await getVrcReferralEmailDestination();
   const vrcEmail = client.vrcEmail?.trim();
-  if (!vrcEmail) {
+  if (destination === "vrc" && !vrcEmail) {
     throw new Error("No VRC email on file. Add one on the Edit client page first.");
   }
 
-  await sendVrcReferralInfoRequestEmail({
-    vrcEmail,
+  const intendedVrcEmail = vrcEmail || "unknown@vrc.example";
+  const { to, adminMode } = await sendVrcReferralInfoRequestEmail({
+    vrcEmail: intendedVrcEmail,
     vrcName: client.vrcName?.trim() || "VRC",
     clientName: clientDisplayName(client),
     claimNumber: client.lniClaimNumber,
     message,
     replyToEmail: session.user.email,
+    destination,
   });
 
   await prisma.clientNote.create({
     data: {
       clientId,
       authorId: getRealUserId(session),
-      body: `Requested more information from VRC (${vrcEmail}):\n\n${message}`,
+      body: adminMode
+        ? `Requested more information (admin preview to ${to}); intended VRC ${intendedVrcEmail}:\n\n${message}`
+        : `Requested more information from VRC (${to}):\n\n${message}`,
     },
   });
 

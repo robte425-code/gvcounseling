@@ -116,7 +116,7 @@ export default async function BillingPage({
     <div className="space-y-8">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="font-serif text-3xl font-semibold text-primary-dark">Billing</h1>
+          <h1 className="font-serif text-3xl font-semibold text-primary-dark">Bill L&I</h1>
           <p className="mt-2 max-w-2xl text-sm text-muted">
             Sync pay periods, generate 837 files for L&I upload, email VRCs session documentation,
             and fax session documentation to L&I (excluding invoice PDFs). Generated files download
