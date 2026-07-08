@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { requireTherapist } from "@/auth";
+import { ClientCloseButton } from "@/components/portal/ClientCloseButton";
 import { ClientNotesSection } from "@/components/portal/ClientNotesSection";
 import { ClientDetailView } from "@/components/portal/ClientDetailView";
 import { ClientDriveFilesLoading } from "@/components/portal/ClientDriveFilesLoading";
@@ -75,6 +76,13 @@ export default async function TherapistClientDetailPage({
           <Link href={`/portal/therapist/clients/${client.id}/edit`} className={portalButtonClass}>
             Edit client
           </Link>
+          {client.assignmentStatus === "ACTIVE" && (
+            <ClientCloseButton
+              clientId={client.id}
+              clientLabel={`${client.lastName}, ${client.firstName}`}
+              returnTo={clientDetailPath}
+            />
+          )}
           {client.assignmentStatus === "PENDING_THERAPIST" && (
             <Link href={`/portal/therapist/referrals/${client.id}`} className={portalButtonSecondaryClass}>
               Review referral

@@ -3,7 +3,6 @@
 import { useState } from "react";
 import {
   adminRejectReferralAction,
-  closeClientAction,
   reopenClientAction,
   therapistRejectReferralAction,
 } from "@/lib/portal-actions";
@@ -17,7 +16,7 @@ import {
 } from "@/components/portal/ui";
 import type { ClientAssignmentStatus } from "@/generated/prisma/client";
 
-type DialogKind = "close" | "reopen" | "reject" | null;
+type DialogKind = "reopen" | "reject" | null;
 
 type Props = {
   clientId: string;
@@ -38,14 +37,13 @@ export function ClientStatusActions({
 }: Props) {
   const [dialog, setDialog] = useState<DialogKind>(null);
 
-  const canClose = assignmentStatus === "ACTIVE";
   const canReopen =
     assignmentStatus === "CLOSED" ||
     (assignmentStatus === "REJECTED_BY_ADMIN" && role === "admin");
   const canRejectUnassigned = role === "admin" && assignmentStatus === "UNASSIGNED";
   const canRejectPending = role === "therapist" && assignmentStatus === "PENDING_THERAPIST";
 
-  const hasActions = canClose || canReopen || canRejectUnassigned || canRejectPending;
+  const hasActions = canReopen || canRejectUnassigned || canRejectPending;
   if (!hasActions && assignmentStatus !== "REJECTED_BY_ADMIN") {
     return null;
   }
@@ -79,16 +77,6 @@ export function ClientStatusActions({
         )}
 
         <div className="mt-4 flex flex-wrap gap-3">
-          {canClose && (
-            <button
-              type="button"
-              onClick={() => setDialog("close")}
-              className={portalButtonSecondaryClass}
-            >
-              Close client
-            </button>
-          )}
-
           {canReopen && (
             <button type="button" onClick={() => setDialog("reopen")} className={portalButtonClass}>
               {reopenLabel}
@@ -116,18 +104,6 @@ export function ClientStatusActions({
           )}
         </div>
       </section>
-
-      <ClientStatusReasonDialog
-        open={dialog === "close"}
-        onClose={() => setDialog(null)}
-        title="Close client"
-        description={`Close ${clientLabel}? Their Google Drive folder will be moved to the therapist's closed cases folder.`}
-        submitLabel="Close client"
-        formAction={closeClientAction}
-        clientId={clientId}
-        returnTo={returnTo}
-        titleId="close-client-reason"
-      />
 
       <ClientStatusReasonDialog
         open={dialog === "reopen"}

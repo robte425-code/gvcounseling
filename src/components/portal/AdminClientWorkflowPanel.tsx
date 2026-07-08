@@ -2,16 +2,13 @@
 
 import { useState } from "react";
 import {
-  adminRejectReferralAction,
   assignClientTherapistAction,
-  closeClientAction,
   reopenClientAction,
 } from "@/lib/portal-actions";
 import { ClientStatusReasonDialog } from "@/components/portal/ClientStatusReasonDialog";
 import { ClientVrcReferralActions } from "@/components/portal/ClientVrcReferralActions";
 import {
   portalButtonClass,
-  portalButtonSecondaryClass,
   portalCardClass,
   portalInputClass,
   portalLabelClass,
@@ -21,7 +18,7 @@ import {
 import type { OutboundEmailRoute } from "@/lib/portal-settings";
 import type { ClientAssignmentStatus } from "@/generated/prisma/client";
 
-type DialogKind = "close" | "reopen" | "reject" | null;
+type DialogKind = "reopen" | null;
 
 type TherapistOption = { id: string; firstName: string; lastName: string };
 
@@ -74,16 +71,14 @@ export function AdminClientWorkflowPanel({
 }: Props) {
   const [dialog, setDialog] = useState<DialogKind>(null);
 
-  const canClose = assignmentStatus === "ACTIVE";
   const canReopen =
     assignmentStatus === "CLOSED" || assignmentStatus === "REJECTED_BY_ADMIN";
-  const canReject = assignmentStatus === "UNASSIGNED";
   const showVrcAndAssign = assignmentStatus === "UNASSIGNED";
   const message = statusMessage(assignmentStatus, rejectionReason);
   const reopenLabel =
     assignmentStatus === "REJECTED_BY_ADMIN" ? "Reopen referral" : "Reactivate client";
 
-  const hasHeaderActions = canClose || canReopen || canReject;
+  const hasHeaderActions = canReopen;
 
   return (
     <>
@@ -119,15 +114,6 @@ export function AdminClientWorkflowPanel({
 
           {hasHeaderActions && (
             <div className="flex flex-wrap gap-2 lg:shrink-0 lg:justify-end">
-              {canClose && (
-                <button
-                  type="button"
-                  onClick={() => setDialog("close")}
-                  className={portalButtonSecondaryClass}
-                >
-                  Close client
-                </button>
-              )}
               {canReopen && (
                 <button
                   type="button"
@@ -135,15 +121,6 @@ export function AdminClientWorkflowPanel({
                   className={portalButtonClass}
                 >
                   {reopenLabel}
-                </button>
-              )}
-              {canReject && (
-                <button
-                  type="button"
-                  onClick={() => setDialog("reject")}
-                  className={portalButtonSecondaryClass}
-                >
-                  Reject referral
                 </button>
               )}
             </div>
@@ -194,18 +171,6 @@ export function AdminClientWorkflowPanel({
       </section>
 
       <ClientStatusReasonDialog
-        open={dialog === "close"}
-        onClose={() => setDialog(null)}
-        title="Close client"
-        description={`Close ${clientLabel}? Their Google Drive folder will be moved to the therapist's closed cases folder.`}
-        submitLabel="Close client"
-        formAction={closeClientAction}
-        clientId={clientId}
-        returnTo={returnTo}
-        titleId="admin-close-client-reason"
-      />
-
-      <ClientStatusReasonDialog
         open={dialog === "reopen"}
         onClose={() => setDialog(null)}
         title={reopenLabel}
@@ -215,18 +180,6 @@ export function AdminClientWorkflowPanel({
         clientId={clientId}
         returnTo={returnTo}
         titleId="admin-reopen-client-reason"
-      />
-
-      <ClientStatusReasonDialog
-        open={dialog === "reject"}
-        onClose={() => setDialog(null)}
-        title="Reject referral"
-        description={`Reject ${clientLabel}? Clients without invoices are deleted; others are marked rejected.`}
-        submitLabel="Reject referral"
-        formAction={adminRejectReferralAction}
-        clientId={clientId}
-        returnTo={returnTo}
-        titleId="admin-reject-client-reason"
       />
     </>
   );

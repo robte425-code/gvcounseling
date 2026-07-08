@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { getRealUserId, requireAdmin } from "@/auth";
 import { AdminClientWorkflowPanel } from "@/components/portal/AdminClientWorkflowPanel";
+import { ClientCloseButton } from "@/components/portal/ClientCloseButton";
 import { ClientDeleteButton } from "@/components/portal/ClientDeleteButton";
 import { ClientNotesSection } from "@/components/portal/ClientNotesSection";
 import { ClientDetailView } from "@/components/portal/ClientDetailView";
@@ -114,6 +115,13 @@ export default async function AdminClientDetailPage({
           <Link href={`/portal/admin/clients/${client.id}/edit`} className={portalButtonClass}>
             Edit client
           </Link>
+          {client.assignmentStatus === "ACTIVE" && (
+            <ClientCloseButton
+              clientId={client.id}
+              clientLabel={`${client.lastName}, ${client.firstName}`}
+              returnTo={`/portal/admin/clients/${client.id}`}
+            />
+          )}
           <ClientDeleteButton
             clientId={client.id}
             clientLabel={`${client.lastName}, ${client.firstName}`}
