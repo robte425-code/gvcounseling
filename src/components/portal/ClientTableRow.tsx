@@ -24,7 +24,7 @@ export function ClientTableRow({ clientId, basePath = "/portal/admin/clients", c
           router.push(href);
         }
       }}
-      className="cursor-pointer border-b border-border/60 transition hover:bg-primary/5"
+      className="cursor-pointer border-b border-border/60 transition last:border-b-0 hover:bg-primary/5"
     >
       {children}
     </tr>

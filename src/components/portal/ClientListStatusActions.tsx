@@ -21,8 +21,12 @@ function stopRowNavigation(event: React.MouseEvent | React.KeyboardEvent) {
 }
 
 function actionButtonClassName(variant: "default" | "danger" = "default"): string {
-  const base = `${portalButtonSecondaryClass} px-3 py-1 text-xs`;
-  return variant === "danger" ? `${base} text-red-700 hover:bg-red-50` : base;
+  const base =
+    "rounded-lg border px-2.5 py-1 text-xs font-medium transition disabled:cursor-not-allowed disabled:opacity-50";
+  if (variant === "danger") {
+    return `${base} border-red-200 bg-red-50 text-red-700 hover:bg-red-100`;
+  }
+  return `${base} border-border bg-surface text-foreground hover:border-primary/40 hover:bg-primary/5`;
 }
 
 export function ClientListStatusActions({
@@ -43,7 +47,7 @@ export function ClientListStatusActions({
 
   return (
     <div
-      className="flex flex-wrap items-center gap-2"
+      className="inline-flex flex-wrap items-center gap-1.5 rounded-xl border border-border/80 bg-muted/5 p-1.5"
       onClick={stopRowNavigation}
       onKeyDown={stopRowNavigation}
     >

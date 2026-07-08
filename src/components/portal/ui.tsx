@@ -55,6 +55,7 @@ export const statusBadge: Record<string, string> = {
 const statusLabels: Record<string, string> = {
   UNASSIGNED: "Unassigned",
   PENDING_THERAPIST: "Pending therapist",
+  ACTIVE: "Active",
   REJECTED_BY_ADMIN: "Rejected",
   CLOSED: "Closed",
   INACTIVE: "Inactive",

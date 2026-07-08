@@ -1,14 +1,17 @@
 import Link from "next/link";
 import { requireAdmin } from "@/auth";
-import { ClientListSearchForm } from "@/components/portal/ClientListSearchForm";
-import { ClientListStatusActions } from "@/components/portal/ClientListStatusActions";
-import { ClientTableRow } from "@/components/portal/ClientTableRow";
-import { StatusBadge, portalButtonClass, portalCardClass } from "@/components/portal/ui";
+import { ClientListFilters } from "@/components/portal/ClientListFilters";
+import { ClientListFlashBanners } from "@/components/portal/ClientListFlashBanners";
+import { ClientListHeader } from "@/components/portal/ClientListHeader";
+import { ClientsTable } from "@/components/portal/ClientsTable";
+import { portalButtonClass, portalButtonSecondaryClass } from "@/components/portal/ui";
 import {
   buildClientListHref,
   clientListSearchWhere,
   normalizeClientSearchQuery,
 } from "@/lib/client-list-search";
+import type { ClientListRow, ClientStatusFilterOption } from "@/lib/client-list-ui";
+import { ClientAssignmentStatus } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 
 const STATUS_FILTERS = [
@@ -24,6 +27,12 @@ type ClientStatus = (typeof STATUS_FILTERS)[number]["value"];
 
 function isClientStatus(value: string | undefined): value is NonNullable<ClientStatus> {
   return STATUS_FILTERS.some((f) => f.value === value);
+}
+
+function statusCountMap(
+  rows: { assignmentStatus: ClientAssignmentStatus; _count: { _all: number } }[],
+): Map<ClientAssignmentStatus, number> {
+  return new Map(rows.map((row) => [row.assignmentStatus, row._count._all]));
 }
 
 export default async function AdminClientsPage({
@@ -43,136 +52,102 @@ export default async function AdminClientsPage({
   const query = normalizeClientSearchQuery(q);
   const searchWhere = clientListSearchWhere(query);
 
-  const clients = await prisma.client.findMany({
-    where: {
-      ...(statusFilter ? { assignmentStatus: statusFilter } : {}),
-      ...(searchWhere ?? {}),
-    },
-    orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
-    include: {
-      therapist: { select: { firstName: true, lastName: true } },
-      _count: { select: { invoices: true } },
-    },
-  });
+  const [clients, statusCounts, totalCount] = await Promise.all([
+    prisma.client.findMany({
+      where: {
+        ...(statusFilter ? { assignmentStatus: statusFilter } : {}),
+        ...(searchWhere ?? {}),
+      },
+      orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
+      include: {
+        therapist: { select: { firstName: true, lastName: true } },
+        _count: { select: { invoices: true } },
+      },
+    }),
+    prisma.client.groupBy({
+      by: ["assignmentStatus"],
+      _count: { _all: true },
+    }),
+    prisma.client.count({
+      where: searchWhere ?? {},
+    }),
+  ]);
+
+  const counts = statusCountMap(statusCounts);
+  const statusOptions: ClientStatusFilterOption[] = STATUS_FILTERS.map((filter) => ({
+    label: filter.label,
+    value: filter.value,
+    count:
+      filter.value === undefined
+        ? totalCount
+        : counts.get(filter.value as ClientAssignmentStatus) ?? 0,
+    highlight: filter.value === "UNASSIGNED" && (counts.get("UNASSIGNED") ?? 0) > 0,
+    active: filter.value === undefined ? !statusFilter : statusFilter === filter.value,
+  }));
 
   const listReturnTo = buildClientListHref("/portal/admin/clients", {
     status: statusFilter,
     q: query || undefined,
   });
 
-  return (
-    <div className="space-y-8">
-      {closed === "1" && (
-        <p className="rounded-lg bg-primary/10 px-3 py-2 text-sm text-primary-dark">
-          Client closed.
-        </p>
-      )}
-      {reactivated === "1" && (
-        <p className="rounded-lg bg-primary/10 px-3 py-2 text-sm text-primary-dark">
-          Client reactivated.
-        </p>
-      )}
-      {deleted === "1" && (
-        <p className="rounded-lg bg-primary/10 px-3 py-2 text-sm text-primary-dark">
-          Client deleted.
-        </p>
-      )}
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="font-serif text-3xl font-semibold text-primary-dark">Clients</h1>
-          <p className="mt-2 text-muted">Client registry for 837 billing.</p>
-          <div className="mt-4 flex flex-wrap gap-2">
-            {STATUS_FILTERS.map((f) => {
-              const href = buildClientListHref("/portal/admin/clients", {
-                status: f.value,
-                q: query || undefined,
-              });
-              const active = statusFilter === f.value || (!statusFilter && !f.value);
-              return (
-                <Link
-                  key={href}
-                  href={href}
-                  className={`rounded-full border px-3 py-1 text-sm ${
-                    active
-                      ? "border-primary bg-primary/10 text-primary-dark"
-                      : "border-border hover:bg-primary/10"
-                  }`}
-                >
-                  {f.label}
-                </Link>
-              );
-            })}
-          </div>
-        </div>
-        <div className="flex gap-3">
-          <Link href="/portal/admin/clients/import" className={portalButtonClass}>
-            Import
-          </Link>
-          <Link href="/portal/admin/clients/new" className={portalButtonClass}>
-            Add client
-          </Link>
-        </div>
-      </div>
+  const rows: ClientListRow[] = clients.map((client) => ({
+    id: client.id,
+    firstName: client.firstName,
+    lastName: client.lastName,
+    lniClaimNumber: client.lniClaimNumber,
+    assignmentStatus: client.assignmentStatus,
+    therapistName: client.therapist
+      ? `${client.therapist.firstName} ${client.therapist.lastName}`
+      : null,
+    invoiceCount: client._count.invoices,
+  }));
 
-      <ClientListSearchForm
+  const emptyMessage = query
+    ? `No clients match “${query}”.`
+    : statusFilter
+      ? "No clients match this status filter."
+      : "No clients yet. Import or add one to get started.";
+
+  return (
+    <div className="space-y-6">
+      <ClientListFlashBanners
+        messages={[
+          ...(closed === "1" ? [{ key: "closed", message: "Client closed." }] : []),
+          ...(reactivated === "1" ? [{ key: "reactivated", message: "Client reactivated." }] : []),
+          ...(deleted === "1" ? [{ key: "deleted", message: "Client deleted." }] : []),
+        ]}
+      />
+
+      <ClientListHeader
+        title="Clients"
+        description="Manage the client registry, therapist assignments, and referral workflow for L&I billing."
+        actions={
+          <>
+            <Link href="/portal/admin/clients/import" className={portalButtonSecondaryClass}>
+              Import
+            </Link>
+            <Link href="/portal/admin/clients/new" className={portalButtonClass}>
+              Add client
+            </Link>
+          </>
+        }
+      />
+
+      <ClientListFilters
         basePath="/portal/admin/clients"
         query={query}
         status={statusFilter}
+        statusOptions={statusOptions}
+        resultCount={clients.length}
       />
 
-      <div className={portalCardClass}>
-        <table className="w-full text-left text-sm">
-          <thead>
-            <tr className="border-b border-border text-muted">
-              <th className="py-2 pr-4">Claim #</th>
-              <th className="py-2 pr-4">Name</th>
-              <th className="py-2 pr-4">Therapist</th>
-              <th className="py-2 pr-4">Status</th>
-              <th className="py-2 pr-4">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {clients.map((c) => (
-                <ClientTableRow key={c.id} clientId={c.id}>
-                  <td className="py-3 pr-4 font-mono text-xs">{c.lniClaimNumber}</td>
-                  <td className="py-3 pr-4">
-                    {c.lastName}, {c.firstName}
-                  </td>
-                  <td className="py-3 pr-4">
-                    {c.therapist
-                      ? `${c.therapist.firstName} ${c.therapist.lastName}`
-                      : "—"}
-                  </td>
-                  <td className="py-3 pr-4">
-                    {c.assignmentStatus === "ACTIVE" ? (
-                      <span className="text-xs text-muted">Active</span>
-                    ) : (
-                      <StatusBadge status={c.assignmentStatus} />
-                    )}
-                  </td>
-                  <td className="py-3 pr-4">
-                    <ClientListStatusActions
-                      clientId={c.id}
-                      clientLabel={`${c.lastName}, ${c.firstName}`}
-                      assignmentStatus={c.assignmentStatus}
-                      invoiceCount={c._count.invoices}
-                      returnTo={listReturnTo}
-                    />
-                  </td>
-                </ClientTableRow>
-            ))}
-          </tbody>
-        </table>
-        {clients.length === 0 && (
-          <p className="py-8 text-center text-sm text-muted">
-            {query
-              ? `No clients match “${query}”.`
-              : statusFilter
-                ? "No clients match this status filter."
-                : "No clients yet. Import or add one to get started."}
-          </p>
-        )}
-      </div>
+      <ClientsTable
+        clients={rows}
+        basePath="/portal/admin/clients"
+        listReturnTo={listReturnTo}
+        variant="admin"
+        emptyMessage={emptyMessage}
+      />
     </div>
   );
 }
