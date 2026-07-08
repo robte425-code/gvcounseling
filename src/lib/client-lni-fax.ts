@@ -9,6 +9,7 @@ import { generateLniFaxCoverPdf } from "@/lib/lni-fax-cover";
 import { LNI_FAX_PRODUCTION, LNI_FAX_TEST, type LniFaxDestination } from "@/lib/lni-fax-constants";
 import { getLniOutboundFaxRoute } from "@/lib/portal-settings";
 import { prisma } from "@/lib/prisma";
+import { sendAdminLniFaxNotificationEmail } from "@/lib/referral-emails";
 
 export type ClientLniFaxFile = {
   filename: string;
@@ -49,6 +50,7 @@ export async function faxClientDocumentsToLni(options: {
   clientId: string;
   initiatorUserId: string;
   providerName: string;
+  sentByName?: string;
   files: ClientLniFaxFile[];
 }): Promise<ClientLniFaxResult> {
   if (options.files.length === 0) {
@@ -139,11 +141,31 @@ export async function faxClientDocumentsToLni(options: {
     fileDataBase64: faxDataBase64,
   });
 
+  const destinationLabel = redirected
+    ? `test fax line (${faxno})`
+    : `L&I (${faxno})`;
+  const driveFolderName = `L&I Faxes/${batchFolderName}`;
+
+  try {
+    await sendAdminLniFaxNotificationEmail({
+      clientId: client.id,
+      clientName,
+      claimNumber: client.lniClaimNumber,
+      sentBy: options.sentByName?.trim() || options.providerName.trim() || "Portal user",
+      faxJobId: sendResult.jobId,
+      destinationLabel,
+      filenames: uploadedFilenames,
+      driveFolderName,
+    });
+  } catch (error) {
+    console.error("Admin L&I fax notification email failed:", error);
+  }
+
   return {
     jobId: sendResult.jobId,
     faxDestination: destination,
     faxNumber: faxno,
     uploadedFilenames,
-    driveFolderName: `L&I Faxes/${batchFolderName}`,
+    driveFolderName,
   };
 }

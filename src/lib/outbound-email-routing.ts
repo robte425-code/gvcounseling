@@ -44,3 +44,16 @@ export async function resolveTherapistOutboundEmail(
 export function outboundEmailRedirectNote(label: string, intendedEmail: string): string {
   return `\n\n[Email testing mode: this message would have gone to ${label} <${intendedEmail}>.]`;
 }
+
+/** Admin addresses to Cc on VRC emails (skips addresses already in To when redirected). */
+export async function resolveAdminCcForVrcEmail(to: string): Promise<string | undefined> {
+  const adminEmails = await getAdminNotificationEmails();
+  const toSet = new Set(
+    to
+      .split(",")
+      .map((email) => email.trim().toLowerCase())
+      .filter(Boolean),
+  );
+  const cc = adminEmails.filter((email) => !toSet.has(email.toLowerCase()));
+  return cc.length > 0 ? cc.join(", ") : undefined;
+}

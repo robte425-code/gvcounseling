@@ -1198,6 +1198,7 @@ export async function faxClientDocumentsToLniAction(formData: FormData) {
     clientId,
     initiatorUserId: getRealUserId(session),
     providerName,
+    sentByName: `${session.user.firstName} ${session.user.lastName}`.trim() || "User",
     files: faxFiles,
   });
 

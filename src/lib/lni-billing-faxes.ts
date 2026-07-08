@@ -14,6 +14,7 @@ import {
 } from "@/lib/lni-fax-constants";
 import { getLniOutboundFaxRoute } from "@/lib/portal-settings";
 import { prisma } from "@/lib/prisma";
+import { sendAdminLniFaxNotificationEmail } from "@/lib/referral-emails";
 
 export {
   defaultLniFaxDestination,
@@ -236,13 +237,29 @@ export async function faxLniForPayPeriod(options: {
         ? `[TEST] L&I — ${client.lniClaimNumber}`
         : "Washington State L&I";
 
-      await sendFax({
+      const lniSend = await sendFax({
         faxno: lniFaxno,
         recipname: lniRecipname,
         filenames,
         fileDataBase64,
       });
       result.sent += 1;
+
+      try {
+        await sendAdminLniFaxNotificationEmail({
+          clientId: client.id,
+          clientName,
+          claimNumber: client.lniClaimNumber,
+          sentBy: "Pay period L&I fax",
+          faxJobId: lniSend.jobId,
+          destinationLabel: lniRedirected
+            ? `test fax line (${lniFaxno})`
+            : `L&I (${lniFaxno})`,
+          filenames,
+        });
+      } catch (error) {
+        console.error("Admin L&I fax notification email failed:", error);
+      }
 
       if (client.selfInsured) {
         const employerFax = client.employerFax?.trim();

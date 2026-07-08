@@ -2,9 +2,11 @@ import { sendEmailTo } from "@/lib/email";
 import { getSiteUrl } from "@/lib/site-url";
 import {
   outboundEmailRedirectNote,
+  resolveAdminCcForVrcEmail,
   resolveTherapistOutboundEmail,
   resolveVrcOutboundEmail,
 } from "@/lib/outbound-email-routing";
+import { getAdminNotificationEmails } from "@/lib/portal-settings";
 import {
   VRC_BILLING_EMAIL_SIGNATURE,
   vrcFirstName,
@@ -28,10 +30,12 @@ export async function sendVrcReferralAcceptanceEmail(options: {
   const intendedVrcEmail = options.vrcEmail.trim();
   const { to, redirected } = await resolveVrcOutboundEmail(intendedVrcEmail);
   const greetingName = vrcFirstName(options.vrcName);
+  const cc = await resolveAdminCcForVrcEmail(to);
   await sendEmailTo(to, {
     subject: referralEmailSubject(
       `Referral received: ${options.clientName} (${options.claimNumber})`,
     ),
+    cc,
     text: [
       `Dear ${greetingName},`,
       "",
@@ -61,11 +65,13 @@ export async function sendVrcReferralInfoRequestEmail(options: {
   const intendedVrcEmail = options.vrcEmail.trim();
   const { to, redirected } = await resolveVrcOutboundEmail(intendedVrcEmail);
   const greetingName = vrcFirstName(options.vrcName);
+  const cc = await resolveAdminCcForVrcEmail(to);
   await sendEmailTo(to, {
     subject: referralEmailSubject(
       `More information needed: ${options.clientName} (${options.claimNumber})`,
     ),
     replyTo: options.replyToEmail,
+    cc,
     text: [
       `Dear ${greetingName},`,
       "",
@@ -165,6 +171,43 @@ export async function sendAdminTherapistClientStatusEmail(options: {
       "",
       "Grandview Counseling",
     ].join("\n"),
+  });
+}
+
+export async function sendAdminLniFaxNotificationEmail(options: {
+  clientId: string;
+  clientName: string;
+  claimNumber: string;
+  sentBy: string;
+  faxJobId: string;
+  destinationLabel: string;
+  filenames: string[];
+  driveFolderName?: string;
+}) {
+  const adminEmails = await getAdminNotificationEmails();
+  if (adminEmails.length === 0) return;
+
+  const clientUrl = `${getSiteUrl()}/portal/admin/clients/${options.clientId}`;
+  await sendEmailTo(adminEmails.join(", "), {
+    subject: `L&I fax sent: ${options.clientName} (${options.claimNumber})`,
+    text: [
+      `An L&I fax was sent for ${options.clientName} (Claim #${options.claimNumber}).`,
+      "",
+      `Sent by: ${options.sentBy}`,
+      `Destination: ${options.destinationLabel}`,
+      `Fax job #: ${options.faxJobId}`,
+      options.driveFolderName ? `Saved to Drive: ${options.driveFolderName}` : null,
+      "",
+      "Files:",
+      ...options.filenames.map((name) => `- ${name}`),
+      "",
+      "View client in the portal:",
+      clientUrl,
+      "",
+      "Grandview Counseling",
+    ]
+      .filter((line): line is string => line != null)
+      .join("\n"),
   });
 }
 

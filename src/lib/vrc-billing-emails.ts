@@ -8,6 +8,7 @@ import {
 import { getDriveAccessTokenForClient } from "@/lib/google-drive-access";
 import {
   outboundEmailRedirectNote,
+  resolveAdminCcForVrcEmail,
   resolveVrcOutboundEmail,
 } from "@/lib/outbound-email-routing";
 import { prisma } from "@/lib/prisma";
@@ -225,10 +226,12 @@ export async function emailVrcsForPayPeriod(options: {
             `Attachments: ${vrcAttachments.map((a) => a.filename).join(", ")}`,
           ].join("\n")
         : body;
+      const cc = await resolveAdminCcForVrcEmail(to);
 
       await sendEmailTo(to, {
         subject,
         text,
+        cc,
         attachments: emailAttachments,
       });
 

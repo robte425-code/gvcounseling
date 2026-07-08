@@ -8,6 +8,7 @@ type SendEmailOptions = {
   subject: string;
   text: string;
   replyTo?: string;
+  cc?: string;
   attachments?: Attachment[];
 };
 
@@ -69,6 +70,7 @@ async function postmarkSend(to: string, options: SendEmailOptions) {
     body: JSON.stringify({
       From: from,
       To: to,
+      Cc: options.cc || undefined,
       Subject: subject,
       TextBody: options.text,
       ReplyTo: options.replyTo || undefined,
@@ -89,9 +91,9 @@ async function postmarkSend(to: string, options: SendEmailOptions) {
   }
 }
 
-export async function sendEmail({ subject, text, replyTo, attachments = [] }: SendEmailOptions) {
+export async function sendEmail({ subject, text, replyTo, cc, attachments = [] }: SendEmailOptions) {
   const to = envOrDefault("CONTACT_EMAIL", DEFAULT_CONTACT_EMAIL);
-  await postmarkSend(to, { subject, text, replyTo, attachments });
+  await postmarkSend(to, { subject, text, replyTo, cc, attachments });
 }
 
 export async function sendEmailTo(to: string, options: SendEmailOptions) {
