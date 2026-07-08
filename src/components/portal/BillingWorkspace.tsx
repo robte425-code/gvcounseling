@@ -4,16 +4,16 @@ import { useState, type ReactNode } from "react";
 import { BillingPayPeriodsTable, type BillingPayPeriodRow } from "@/components/portal/BillingPayPeriodsTable";
 import { portalCardClass, portalSectionHeadingClass } from "@/components/portal/ui";
 import type { IsaUsageIndicator } from "@/lib/edi837";
-import type { VrcEmailDestination } from "@/lib/vrc-billing-emails";
+import type { OutboundEmailRoute } from "@/lib/portal-settings";
 import type { LniFaxDestination } from "@/lib/lni-fax-constants";
 import { LNI_FAX_TEST_FORMATTED } from "@/lib/lni-fax-constants";
 
 type Props = {
   rows: BillingPayPeriodRow[];
   defaultUsageIndicator: IsaUsageIndicator;
-  defaultVrcEmailDestination: VrcEmailDestination;
   defaultLniFaxDestination: LniFaxDestination;
-  vrcEmailTestRecipient: string;
+  vrcRoute: OutboundEmailRoute;
+  adminEmails: string[];
   setup: ReactNode;
   addPayPeriod: ReactNode;
 };
@@ -27,43 +27,27 @@ type BillingEnvironment = "test" | "production";
 
 function deriveBillingEnvironment(
   usageIndicator: IsaUsageIndicator,
-  vrcEmailDestination: VrcEmailDestination,
   lniFaxDestination: LniFaxDestination,
 ): BillingEnvironment | null {
-  const allTest =
-    usageIndicator === "T" && vrcEmailDestination === "test" && lniFaxDestination === "test";
-  const allProduction =
-    usageIndicator === "P" && vrcEmailDestination === "vrc" && lniFaxDestination === "lni";
-
-  if (allTest) return "test";
-  if (allProduction) return "production";
+  if (usageIndicator === "T" && lniFaxDestination === "test") return "test";
+  if (usageIndicator === "P" && lniFaxDestination === "lni") return "production";
   return null;
 }
 
 function BillingModeToggles({
   usageIndicator,
   onUsageIndicatorChange,
-  vrcEmailDestination,
-  onVrcEmailDestinationChange,
   lniFaxDestination,
   onLniFaxDestinationChange,
   onBillingEnvironmentChange,
-  vrcEmailTestRecipient,
 }: {
   usageIndicator: IsaUsageIndicator;
   onUsageIndicatorChange: (value: IsaUsageIndicator) => void;
-  vrcEmailDestination: VrcEmailDestination;
-  onVrcEmailDestinationChange: (value: VrcEmailDestination) => void;
   lniFaxDestination: LniFaxDestination;
   onLniFaxDestinationChange: (value: LniFaxDestination) => void;
   onBillingEnvironmentChange: (value: BillingEnvironment) => void;
-  vrcEmailTestRecipient: string;
 }) {
-  const billingEnvironment = deriveBillingEnvironment(
-    usageIndicator,
-    vrcEmailDestination,
-    lniFaxDestination,
-  );
+  const billingEnvironment = deriveBillingEnvironment(usageIndicator, lniFaxDestination);
 
   return (
     <div className="mt-6 space-y-3 border-t border-border pt-6">
@@ -74,9 +58,9 @@ function BillingModeToggles({
           <p className="text-sm font-medium text-primary-dark">Environment</p>
           <p className="mt-0.5 text-xs text-muted">
             {billingEnvironment === "test"
-              ? "Test — 837 (T), VRC test inbox, test fax"
+              ? "Test — 837 (T) and test fax"
               : billingEnvironment === "production"
-                ? "Production — 837 (P), VRC addresses, L&I fax"
+                ? "Production — 837 (P) and L&I fax"
                 : "Mixed — individual modes differ below"}
           </p>
         </div>
@@ -135,39 +119,6 @@ function BillingModeToggles({
 
       <div className="space-y-2 rounded-xl border border-border bg-primary/[0.03] p-3">
         <div>
-          <p className="text-sm font-medium text-primary-dark">VRC emails</p>
-          <p className="mt-0.5 text-xs text-muted">
-            {vrcEmailDestination === "test"
-              ? `Test inbox — ${vrcEmailTestRecipient}`
-              : "Send to each VRC address"}
-          </p>
-        </div>
-        <div
-          className="inline-flex w-full rounded-full border border-border bg-surface p-1 shadow-sm"
-          role="group"
-          aria-label="VRC email destination"
-        >
-          <button
-            type="button"
-            className={`${segmentClass(vrcEmailDestination === "test")} flex-1`}
-            aria-pressed={vrcEmailDestination === "test"}
-            onClick={() => onVrcEmailDestinationChange("test")}
-          >
-            Test inbox
-          </button>
-          <button
-            type="button"
-            className={`${segmentClass(vrcEmailDestination === "vrc")} flex-1`}
-            aria-pressed={vrcEmailDestination === "vrc"}
-            onClick={() => onVrcEmailDestinationChange("vrc")}
-          >
-            VRCs
-          </button>
-        </div>
-      </div>
-
-      <div className="space-y-2 rounded-xl border border-border bg-primary/[0.03] p-3">
-        <div>
           <p className="text-sm font-medium text-primary-dark">Fax L&I</p>
           <p className="mt-0.5 text-xs text-muted">
             {lniFaxDestination === "test"
@@ -205,28 +156,24 @@ function BillingModeToggles({
 export function BillingWorkspace({
   rows,
   defaultUsageIndicator,
-  defaultVrcEmailDestination,
   defaultLniFaxDestination,
-  vrcEmailTestRecipient,
+  vrcRoute,
+  adminEmails,
   setup,
   addPayPeriod,
 }: Props) {
   const [usageIndicator, setUsageIndicator] = useState<IsaUsageIndicator>(defaultUsageIndicator);
-  const [vrcEmailDestination, setVrcEmailDestination] =
-    useState<VrcEmailDestination>(defaultVrcEmailDestination);
   const [lniFaxDestination, setLniFaxDestination] =
     useState<LniFaxDestination>(defaultLniFaxDestination);
 
   function setBillingEnvironment(environment: BillingEnvironment) {
     if (environment === "test") {
       setUsageIndicator("T");
-      setVrcEmailDestination("test");
       setLniFaxDestination("test");
       return;
     }
 
     setUsageIndicator("P");
-    setVrcEmailDestination("vrc");
     setLniFaxDestination("lni");
   }
 
@@ -237,12 +184,9 @@ export function BillingWorkspace({
         <BillingModeToggles
           usageIndicator={usageIndicator}
           onUsageIndicatorChange={setUsageIndicator}
-          vrcEmailDestination={vrcEmailDestination}
-          onVrcEmailDestinationChange={setVrcEmailDestination}
           lniFaxDestination={lniFaxDestination}
           onLniFaxDestinationChange={setLniFaxDestination}
           onBillingEnvironmentChange={setBillingEnvironment}
-          vrcEmailTestRecipient={vrcEmailTestRecipient}
         />
         {addPayPeriod}
       </section>
@@ -253,17 +197,17 @@ export function BillingWorkspace({
           Generate & notify
         </h2>
         <p className="mt-1 text-xs text-muted">
-          Only pay periods with assigned invoices appear here. Use Environment in the setup panel
-          to switch all modes at once, or adjust 837, VRC, and L&I fax individually.
+          Only pay periods with assigned invoices appear here. VRC email routing is configured on
+          the Admin page.
         </p>
 
         <div className="mt-5">
           <BillingPayPeriodsTable
             rows={rows}
             usageIndicator={usageIndicator}
-            vrcEmailDestination={vrcEmailDestination}
             lniFaxDestination={lniFaxDestination}
-            vrcEmailTestRecipient={vrcEmailTestRecipient}
+            vrcRoute={vrcRoute}
+            adminEmails={adminEmails}
           />
         </div>
       </section>

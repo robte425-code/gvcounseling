@@ -5,7 +5,7 @@ import {
 } from "@/lib/portal-actions";
 import { ClientVrcReferralActions } from "@/components/portal/ClientVrcReferralActions";
 import { portalButtonClass, portalButtonSecondaryClass, portalCardClass, portalInputClass, portalLabelClass, StatusBadge } from "@/components/portal/ui";
-import type { VrcReferralEmailDestination } from "@/lib/portal-settings";
+import type { OutboundEmailRoute } from "@/lib/portal-settings";
 import type { ClientAssignmentStatus } from "@/generated/prisma/client";
 
 type TherapistOption = { id: string; firstName: string; lastName: string };
@@ -17,7 +17,7 @@ type ClientAssignmentPanelProps = {
   therapists: TherapistOption[];
   vrcEmail: string | null;
   vrcName: string | null;
-  emailDestination: VrcReferralEmailDestination;
+  vrcRoute: OutboundEmailRoute;
   adminEmails: string[];
 };
 
@@ -28,7 +28,7 @@ export function ClientAssignmentPanel({
   therapists,
   vrcEmail,
   vrcName,
-  emailDestination,
+  vrcRoute,
   adminEmails,
 }: ClientAssignmentPanelProps) {
   if (assignmentStatus === "PENDING_THERAPIST") {
@@ -80,7 +80,7 @@ export function ClientAssignmentPanel({
         clientId={clientId}
         vrcEmail={vrcEmail}
         vrcName={vrcName}
-        emailDestination={emailDestination}
+        vrcRoute={vrcRoute}
         adminEmails={adminEmails}
       />
 

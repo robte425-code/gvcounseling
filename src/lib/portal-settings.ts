@@ -1,38 +1,76 @@
 import { prisma } from "@/lib/prisma";
 import { connection } from "next/server";
 
+export const OUTBOUND_VRC_EMAIL_KEY = "outbound_vrc_email_destination";
+export const OUTBOUND_THERAPIST_EMAIL_KEY = "outbound_therapist_email_destination";
+/** @deprecated Legacy key — read as fallback for VRC routing only. */
 export const VRC_REFERRAL_EMAIL_DESTINATION_KEY = "vrc_referral_email_destination";
 
-export type VrcReferralEmailDestination = "vrc" | "admin";
+export type OutboundEmailRoute = "intended" | "admin";
 
-export function parseVrcReferralEmailDestination(
+export function parseOutboundEmailRoute(
   value: string | null | undefined,
-): VrcReferralEmailDestination | undefined {
+): OutboundEmailRoute | undefined {
   const normalized = value?.trim().toLowerCase();
-  return normalized === "vrc" || normalized === "admin" ? normalized : undefined;
+  if (normalized === "intended" || normalized === "vrc") return "intended";
+  if (normalized === "admin") return "admin";
+  return undefined;
 }
 
-export function defaultVrcReferralEmailDestination(): VrcReferralEmailDestination {
-  return "vrc";
+export function defaultOutboundEmailRoute(): OutboundEmailRoute {
+  return "intended";
 }
 
-export async function getVrcReferralEmailDestination(): Promise<VrcReferralEmailDestination> {
+async function readPortalSetting(key: string): Promise<string | null> {
   await connection();
   const row = await prisma.portalSetting.findUnique({
-    where: { key: VRC_REFERRAL_EMAIL_DESTINATION_KEY },
+    where: { key },
     select: { value: true },
   });
-  return parseVrcReferralEmailDestination(row?.value) ?? defaultVrcReferralEmailDestination();
+  return row?.value ?? null;
 }
 
-export async function setVrcReferralEmailDestination(
-  destination: VrcReferralEmailDestination,
-): Promise<void> {
+export async function getVrcOutboundEmailRoute(): Promise<OutboundEmailRoute> {
+  const current = await readPortalSetting(OUTBOUND_VRC_EMAIL_KEY);
+  const parsed = parseOutboundEmailRoute(current);
+  if (parsed) return parsed;
+
+  const legacy = await readPortalSetting(VRC_REFERRAL_EMAIL_DESTINATION_KEY);
+  return parseOutboundEmailRoute(legacy) ?? defaultOutboundEmailRoute();
+}
+
+export async function getTherapistOutboundEmailRoute(): Promise<OutboundEmailRoute> {
+  const current = await readPortalSetting(OUTBOUND_THERAPIST_EMAIL_KEY);
+  return parseOutboundEmailRoute(current) ?? defaultOutboundEmailRoute();
+}
+
+export async function setVrcOutboundEmailRoute(route: OutboundEmailRoute): Promise<void> {
   await prisma.portalSetting.upsert({
-    where: { key: VRC_REFERRAL_EMAIL_DESTINATION_KEY },
-    create: { key: VRC_REFERRAL_EMAIL_DESTINATION_KEY, value: destination },
-    update: { value: destination },
+    where: { key: OUTBOUND_VRC_EMAIL_KEY },
+    create: { key: OUTBOUND_VRC_EMAIL_KEY, value: route },
+    update: { value: route },
   });
+}
+
+export async function setTherapistOutboundEmailRoute(route: OutboundEmailRoute): Promise<void> {
+  await prisma.portalSetting.upsert({
+    where: { key: OUTBOUND_THERAPIST_EMAIL_KEY },
+    create: { key: OUTBOUND_THERAPIST_EMAIL_KEY, value: route },
+    update: { value: route },
+  });
+}
+
+export async function getOutboundEmailTestingSettings(): Promise<{
+  vrcRoute: OutboundEmailRoute;
+  therapistRoute: OutboundEmailRoute;
+  adminEmails: string[];
+}> {
+  const [vrcRoute, therapistRoute, adminEmails] = await Promise.all([
+    getVrcOutboundEmailRoute(),
+    getTherapistOutboundEmailRoute(),
+    getAdminNotificationEmails(),
+  ]);
+  return { vrcRoute, therapistRoute, adminEmails };
 }
 
 export async function getAdminNotificationEmails(): Promise<string[]> {

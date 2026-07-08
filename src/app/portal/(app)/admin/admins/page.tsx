@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { requireAdmin } from "@/auth";
 import { AdminForm } from "@/components/portal/AdminForm";
-import { VrcReferralEmailDestinationToggle } from "@/components/portal/VrcReferralEmailDestinationToggle";
+import { OutboundEmailTestingToggles } from "@/components/portal/OutboundEmailTestingToggles";
 import { portalCardClass, portalTableNarrowClass, portalTableScrollClass } from "@/components/portal/ui";
-import { getAdminNotificationEmails, getVrcReferralEmailDestination } from "@/lib/portal-settings";
+import { getOutboundEmailTestingSettings } from "@/lib/portal-settings";
 import { prisma } from "@/lib/prisma";
 
 export default async function AdminAdminsPage({
@@ -14,14 +14,13 @@ export default async function AdminAdminsPage({
   await requireAdmin();
   const { created, deleted, emailWarning } = await searchParams;
 
-  const [admins, vrcReferralEmailDestination, adminEmails] = await Promise.all([
+  const [admins, outboundEmailSettings] = await Promise.all([
     prisma.user.findMany({
       where: { role: "ADMIN" },
       orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
       select: { id: true, firstName: true, lastName: true, email: true },
     }),
-    getVrcReferralEmailDestination(),
-    getAdminNotificationEmails(),
+    getOutboundEmailTestingSettings(),
   ]);
 
   return (
@@ -45,9 +44,10 @@ export default async function AdminAdminsPage({
         </p>
       )}
 
-      <VrcReferralEmailDestinationToggle
-        destination={vrcReferralEmailDestination}
-        adminEmails={adminEmails}
+      <OutboundEmailTestingToggles
+        vrcRoute={outboundEmailSettings.vrcRoute}
+        therapistRoute={outboundEmailSettings.therapistRoute}
+        adminEmails={outboundEmailSettings.adminEmails}
       />
 
       <section className="space-y-4">

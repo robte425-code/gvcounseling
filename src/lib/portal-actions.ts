@@ -24,14 +24,15 @@ import { fetchLniPayPeriods } from "@/lib/lni-pay-periods";
 import { createProcedureCodeFee, createTherapistProcedureCodeFee, updateTherapistProcedureCodeFee, applyTherapistFeeSchedule } from "@/lib/procedure-fees";
 import { prisma } from "@/lib/prisma";
 import {
-  getVrcReferralEmailDestination,
-  parseVrcReferralEmailDestination,
-  setVrcReferralEmailDestination,
-  type VrcReferralEmailDestination,
+  getVrcOutboundEmailRoute,
+  parseOutboundEmailRoute,
+  setTherapistOutboundEmailRoute,
+  setVrcOutboundEmailRoute,
+  type OutboundEmailRoute,
 } from "@/lib/portal-settings";
 import { getNextInvoiceNumber } from "@/lib/invoice-numbers";
 import { parseTherapistInvoicesReturnTo } from "@/lib/invoice-list-filters";
-import { emailVrcsForPayPeriod, parseVrcEmailDestinationParam } from "@/lib/vrc-billing-emails";
+import { emailVrcsForPayPeriod } from "@/lib/vrc-billing-emails";
 import { faxLniForPayPeriod, parseLniFaxDestinationParam } from "@/lib/lni-billing-faxes";
 import { applyRemittanceAdvice, deleteRemittancePreview, importRemittanceFromUpload } from "@/lib/remittance-advice";
 import {
@@ -796,13 +797,9 @@ export async function emailVrcsForPayPeriodAction(formData: FormData) {
   const payPeriodId = String(formData.get("payPeriodId") ?? "").trim();
   if (!payPeriodId) throw new Error("Pay period is required.");
 
-  const vrcEmailDestination =
-    parseVrcEmailDestinationParam(String(formData.get("vrcEmailDestination") ?? "")) ?? "vrc";
-
   const result = await emailVrcsForPayPeriod({
     payPeriodId,
     initiatorUserId: session.user.id,
-    vrcEmailDestination,
   });
 
   revalidatePath("/portal/admin/billing");
@@ -925,15 +922,20 @@ function clientDisplayName(client: { firstName: string; lastName: string }): str
   return `${client.firstName} ${client.lastName}`.trim();
 }
 
-export async function updateVrcReferralEmailDestinationAction(
-  destination: VrcReferralEmailDestination,
-) {
+export async function updateOutboundVrcEmailRouteAction(route: OutboundEmailRoute) {
   await requireAdmin();
-  const parsed = parseVrcReferralEmailDestination(destination);
-  if (!parsed) throw new Error("Invalid VRC referral email destination.");
-  await setVrcReferralEmailDestination(parsed);
+  const parsed = parseOutboundEmailRoute(route);
+  if (!parsed) throw new Error("Invalid VRC email route.");
+  await setVrcOutboundEmailRoute(parsed);
   revalidatePath("/portal/admin", "layout");
-  revalidatePath("/portal/admin/clients");
+}
+
+export async function updateOutboundTherapistEmailRouteAction(route: OutboundEmailRoute) {
+  await requireAdmin();
+  const parsed = parseOutboundEmailRoute(route);
+  if (!parsed) throw new Error("Invalid therapist email route.");
+  await setTherapistOutboundEmailRoute(parsed);
+  revalidatePath("/portal/admin", "layout");
 }
 
 export async function acceptUnassignedClientAction(formData: FormData) {
@@ -947,26 +949,25 @@ export async function acceptUnassignedClientAction(formData: FormData) {
     throw new Error("Only unassigned referrals can be accepted this way.");
   }
 
-  const destination = await getVrcReferralEmailDestination();
+  const vrcEmailRoute = await getVrcOutboundEmailRoute();
   const vrcEmail = client.vrcEmail?.trim();
-  if (destination === "vrc" && !vrcEmail) {
+  if (vrcEmailRoute === "intended" && !vrcEmail) {
     throw new Error("No VRC email on file. Add one on the Edit client page first.");
   }
 
   const intendedVrcEmail = vrcEmail || "unknown@vrc.example";
-  const { to, adminMode } = await sendVrcReferralAcceptanceEmail({
+  const { to, redirected } = await sendVrcReferralAcceptanceEmail({
     vrcEmail: intendedVrcEmail,
     vrcName: client.vrcName?.trim() || "VRC",
     clientName: clientDisplayName(client),
     claimNumber: client.lniClaimNumber,
-    destination,
   });
 
   await prisma.clientNote.create({
     data: {
       clientId,
       authorId: getRealUserId(session),
-      body: adminMode
+      body: redirected
         ? `Sent referral acceptance email preview to admins (${to}); intended VRC ${intendedVrcEmail}.`
         : `Sent referral acceptance email to VRC (${to}).`,
     },
@@ -991,28 +992,27 @@ export async function requestVrcInfoAction(formData: FormData) {
     throw new Error("Only unassigned referrals can receive VRC information requests.");
   }
 
-  const destination = await getVrcReferralEmailDestination();
+  const vrcEmailRoute = await getVrcOutboundEmailRoute();
   const vrcEmail = client.vrcEmail?.trim();
-  if (destination === "vrc" && !vrcEmail) {
+  if (vrcEmailRoute === "intended" && !vrcEmail) {
     throw new Error("No VRC email on file. Add one on the Edit client page first.");
   }
 
   const intendedVrcEmail = vrcEmail || "unknown@vrc.example";
-  const { to, adminMode } = await sendVrcReferralInfoRequestEmail({
+  const { to, redirected } = await sendVrcReferralInfoRequestEmail({
     vrcEmail: intendedVrcEmail,
     vrcName: client.vrcName?.trim() || "VRC",
     clientName: clientDisplayName(client),
     claimNumber: client.lniClaimNumber,
     message,
     replyToEmail: session.user.email,
-    destination,
   });
 
   await prisma.clientNote.create({
     data: {
       clientId,
       authorId: getRealUserId(session),
-      body: adminMode
+      body: redirected
         ? `Requested more information (admin preview to ${to}); intended VRC ${intendedVrcEmail}:\n\n${message}`
         : `Requested more information from VRC (${to}):\n\n${message}`,
     },

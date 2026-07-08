@@ -11,7 +11,7 @@ import { ClientDriveResyncButton } from "@/components/portal/ClientDriveResyncBu
 import { ClientDriveFilesLoading } from "@/components/portal/ClientDriveFilesLoading";
 import { ClientDriveFilesSection } from "@/components/portal/ClientDriveFilesSection";
 import { portalButtonClass, portalButtonSecondaryClass } from "@/components/portal/ui";
-import { getAdminNotificationEmails, getVrcReferralEmailDestination } from "@/lib/portal-settings";
+import { getOutboundEmailTestingSettings } from "@/lib/portal-settings";
 import { prisma } from "@/lib/prisma";
 
 export default async function AdminClientDetailPage({
@@ -42,7 +42,7 @@ export default async function AdminClientDetailPage({
     reactivated,
     closed,
   } = await searchParams;
-  const [client, therapists, invoiceCount, vrcReferralEmailDestination, adminEmails] = await Promise.all([
+  const [client, therapists, invoiceCount, outboundEmailSettings] = await Promise.all([
     prisma.client.findUnique({
       where: { id },
       include: { therapist: { select: { firstName: true, lastName: true } } },
@@ -53,8 +53,7 @@ export default async function AdminClientDetailPage({
       select: { id: true, firstName: true, lastName: true },
     }),
     prisma.invoice.count({ where: { clientId: id } }),
-    getVrcReferralEmailDestination(),
-    getAdminNotificationEmails(),
+    getOutboundEmailTestingSettings(),
   ]);
   if (!client) notFound();
 
@@ -138,8 +137,8 @@ export default async function AdminClientDetailPage({
         therapists={therapists}
         vrcEmail={client.vrcEmail}
         vrcName={client.vrcName}
-        emailDestination={vrcReferralEmailDestination}
-        adminEmails={adminEmails}
+        vrcRoute={outboundEmailSettings.vrcRoute}
+        adminEmails={outboundEmailSettings.adminEmails}
       />
 
       <ClientDetailView client={client} clientId={client.id} />

@@ -7,11 +7,8 @@ import {
 } from "@/lib/portal-actions";
 import { LNI_PAYMENT_STATUS_URL } from "@/lib/lni-pay-periods";
 import { getIsaUsageIndicator } from "@/lib/edi837";
-import {
-  defaultVrcEmailDestination,
-  getVrcEmailTestRecipient,
-} from "@/lib/vrc-billing-emails";
 import { defaultLniFaxDestination } from "@/lib/lni-fax-constants";
+import { getOutboundEmailTestingSettings } from "@/lib/portal-settings";
 import {
   portalButtonClass,
   portalButtonSecondaryClass,
@@ -44,17 +41,20 @@ export default async function BillingPage({
 }) {
   await requireAdmin();
   const params = await searchParams;
-  const periods = await prisma.payPeriod.findMany({
-    where: { invoices: { some: {} } },
-    orderBy: { cutoffDate: "desc" },
-    include: {
-      _count: {
-        select: {
-          invoices: true,
+  const [periods, outboundEmailSettings] = await Promise.all([
+    prisma.payPeriod.findMany({
+      where: { invoices: { some: {} } },
+      orderBy: { cutoffDate: "desc" },
+      include: {
+        _count: {
+          select: {
+            invoices: true,
+          },
         },
       },
-    },
-  });
+    }),
+    getOutboundEmailTestingSettings(),
+  ]);
 
   const billedByPeriod = await prisma.invoice.groupBy({
     by: ["payPeriodId"],
@@ -182,9 +182,9 @@ export default async function BillingPage({
       <BillingWorkspace
         rows={periodRows}
         defaultUsageIndicator={getIsaUsageIndicator()}
-        defaultVrcEmailDestination={defaultVrcEmailDestination()}
         defaultLniFaxDestination={defaultLniFaxDestination()}
-        vrcEmailTestRecipient={getVrcEmailTestRecipient()}
+        vrcRoute={outboundEmailSettings.vrcRoute}
+        adminEmails={outboundEmailSettings.adminEmails}
         setup={
           <>
             <p className={portalSectionHeadingClass}>Setup</p>

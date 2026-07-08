@@ -6,6 +6,10 @@ import {
   parseDriveFileIdFromUrl,
 } from "@/lib/google-drive";
 import { getDriveAccessTokenForClient } from "@/lib/google-drive-access";
+import {
+  outboundEmailRedirectNote,
+  resolveVrcOutboundEmail,
+} from "@/lib/outbound-email-routing";
 import { prisma } from "@/lib/prisma";
 
 export const VRC_BILLING_EMAIL_SIGNATURE = {
@@ -13,40 +17,6 @@ export const VRC_BILLING_EMAIL_SIGNATURE = {
   phone: "206-335-6585",
   email: "ghim@gvcounseling.com",
 } as const;
-
-export const VRC_EMAIL_TEST_RECIPIENT = VRC_BILLING_EMAIL_SIGNATURE.email;
-
-export type VrcEmailDestination = "vrc" | "test";
-
-/** Optional override for the test inbox (defaults to ghim@gvcounseling.com). */
-export function getVrcEmailTestRecipient(): string {
-  const value = process.env.VRC_EMAIL_REDIRECT_TO?.trim();
-  return value || VRC_EMAIL_TEST_RECIPIENT;
-}
-
-export function defaultVrcEmailDestination(): VrcEmailDestination {
-  return "test";
-}
-
-export function parseVrcEmailDestinationParam(
-  value: string | null | undefined,
-): VrcEmailDestination | undefined {
-  const normalized = value?.trim().toLowerCase();
-  return normalized === "vrc" || normalized === "test" ? normalized : undefined;
-}
-
-function resolveVrcRecipient(
-  intendedEmail: string,
-  destination: VrcEmailDestination,
-): {
-  to: string;
-  redirected: boolean;
-} {
-  if (destination === "vrc") {
-    return { to: intendedEmail, redirected: false };
-  }
-  return { to: getVrcEmailTestRecipient(), redirected: true };
-}
 
 type EmailAttachment = {
   filename: string;
@@ -157,9 +127,7 @@ function collectVrcAttachments(
 export async function emailVrcsForPayPeriod(options: {
   payPeriodId: string;
   initiatorUserId: string;
-  vrcEmailDestination?: VrcEmailDestination;
 }): Promise<VrcBillingEmailResult> {
-  const vrcEmailDestination = options.vrcEmailDestination ?? "vrc";
   const payPeriod = await prisma.payPeriod.findUnique({ where: { id: options.payPeriodId } });
   if (!payPeriod) throw new Error("Pay period not found.");
 
@@ -244,20 +212,17 @@ export async function emailVrcsForPayPeriod(options: {
 
       const vrcName = client.vrcName?.trim() || "VRC";
       const intendedEmail = client.vrcEmail.trim();
-      const { to, redirected } = resolveVrcRecipient(intendedEmail, vrcEmailDestination);
-      const subject = redirected
-        ? `[TEST] BHI session notification — ${client.lniClaimNumber} (for ${vrcFirstName(vrcName)})`
-        : `BHI session notification — ${client.lniClaimNumber}`;
-      const body = buildVrcEmailBody(vrcName, lineItems, true);
+      const { to, redirected } = await resolveVrcOutboundEmail(intendedEmail);
+      const greetingName = redirected ? "Admin team" : vrcFirstName(vrcName);
+      const subject = `BHI session notification — ${client.lniClaimNumber}`;
+      const body = buildVrcEmailBody(greetingName, lineItems, true);
       const text = redirected
         ? [
-            "[TEST MODE — VRC billing emails are redirected]",
-            `Intended recipient: ${intendedEmail}`,
-            `VRC: ${vrcName}`,
+            body,
+            outboundEmailRedirectNote(vrcName, intendedEmail),
+            "",
             `Client: ${label}`,
             `Attachments: ${vrcAttachments.map((a) => a.filename).join(", ")}`,
-            "",
-            body,
           ].join("\n")
         : body;
 

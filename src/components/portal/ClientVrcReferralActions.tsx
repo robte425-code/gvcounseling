@@ -11,13 +11,13 @@ import {
   portalInputClass,
   portalLabelClass,
 } from "@/components/portal/ui";
-import type { VrcReferralEmailDestination } from "@/lib/portal-settings";
+import type { OutboundEmailRoute } from "@/lib/portal-settings";
 
 type Props = {
   clientId: string;
   vrcEmail: string | null;
   vrcName: string | null;
-  emailDestination: VrcReferralEmailDestination;
+  vrcRoute: OutboundEmailRoute;
   adminEmails: string[];
 };
 
@@ -25,12 +25,14 @@ function RequestInfoDialog({
   open,
   onClose,
   clientId,
-  emailDestination,
+  vrcRoute,
+  adminEmails,
 }: {
   open: boolean;
   onClose: () => void;
   clientId: string;
-  emailDestination: VrcReferralEmailDestination;
+  vrcRoute: OutboundEmailRoute;
+  adminEmails: string[];
 }) {
   useEffect(() => {
     if (!open) return;
@@ -68,8 +70,8 @@ function RequestInfoDialog({
           Request more information
         </h2>
         <p className="mt-2 text-sm text-muted">
-          {emailDestination === "admin"
-            ? "Admin preview mode is on — this email goes to admins instead of the VRC."
+          {vrcRoute === "admin"
+            ? `VRC email testing is on — this goes to admins (${adminEmails.join(", ")}) instead of the VRC.`
             : "This email goes to the referring VRC. They can reply directly to your admin email."}
         </p>
         <div className="mt-4">
@@ -102,12 +104,12 @@ export function ClientVrcReferralActions({
   clientId,
   vrcEmail,
   vrcName,
-  emailDestination,
+  vrcRoute,
   adminEmails,
 }: Props) {
   const [requestInfoOpen, setRequestInfoOpen] = useState(false);
   const hasVrcEmail = Boolean(vrcEmail?.trim());
-  const adminMode = emailDestination === "admin";
+  const adminMode = vrcRoute === "admin";
   const canSend = adminMode || hasVrcEmail;
 
   return (
@@ -117,18 +119,9 @@ export function ClientVrcReferralActions({
         Notify the referring VRC that the referral was received, or request additional information.
       </p>
 
-      <p className="rounded-xl border border-border bg-surface px-4 py-3 text-sm">
-        Email routing:{" "}
-        <span className="font-medium text-primary-dark">
-          {adminMode ? "Admin preview (admins)" : "VRCs"}
-        </span>
-        . Change this on the Admin page before sending.
-      </p>
-
       {adminMode && (
         <p className="rounded-xl bg-primary/5 px-4 py-3 text-sm text-primary-dark">
-          Referral emails are routed to admins ({adminEmails.join(", ")}) until you switch back to
-          VRCs on the Admin page.
+          VRC emails are routed to admins ({adminEmails.join(", ")}). Change this on the Admin page.
         </p>
       )}
 
@@ -166,7 +159,8 @@ export function ClientVrcReferralActions({
         open={requestInfoOpen}
         onClose={() => setRequestInfoOpen(false)}
         clientId={clientId}
-        emailDestination={emailDestination}
+        vrcRoute={vrcRoute}
+        adminEmails={adminEmails}
       />
     </div>
   );

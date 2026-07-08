@@ -5,7 +5,7 @@ import { ConfirmSubmitButton } from "@/components/portal/ConfirmSubmitButton";
 import { Generate837Form } from "@/components/portal/Generate837Form";
 import { portalButtonSecondaryClass } from "@/components/portal/ui";
 import type { IsaUsageIndicator } from "@/lib/edi837";
-import type { VrcEmailDestination } from "@/lib/vrc-billing-emails";
+import type { OutboundEmailRoute } from "@/lib/portal-settings";
 import type { LniFaxDestination } from "@/lib/lni-fax-constants";
 import { LNI_FAX_TEST_FORMATTED } from "@/lib/lni-fax-constants";
 import { emailVrcsForPayPeriodAction, faxLniForPayPeriodAction } from "@/lib/portal-actions";
@@ -23,17 +23,17 @@ export type BillingPayPeriodRow = {
 type Props = {
   rows: BillingPayPeriodRow[];
   usageIndicator: IsaUsageIndicator;
-  vrcEmailDestination: VrcEmailDestination;
+  vrcRoute: OutboundEmailRoute;
+  adminEmails: string[];
   lniFaxDestination: LniFaxDestination;
-  vrcEmailTestRecipient: string;
 };
 
 export function BillingPayPeriodsTable({
   rows,
   usageIndicator,
-  vrcEmailDestination,
+  vrcRoute,
+  adminEmails,
   lniFaxDestination,
-  vrcEmailTestRecipient,
 }: Props) {
   if (rows.length === 0) {
     return (
@@ -45,6 +45,8 @@ export function BillingPayPeriodsTable({
       </div>
     );
   }
+
+  const adminList = adminEmails.join(", ");
 
   return (
     <ul className="space-y-3">
@@ -88,11 +90,10 @@ export function BillingPayPeriodsTable({
                 />
                 <form action={emailVrcsForPayPeriodAction}>
                   <input type="hidden" name="payPeriodId" value={row.id} />
-                  <input type="hidden" name="vrcEmailDestination" value={vrcEmailDestination} />
                   <ConfirmSubmitButton
                     confirmMessage={
-                      vrcEmailDestination === "test"
-                        ? `Send test VRC emails for all billed clients in ${row.periodLabel}? Messages will go to ${vrcEmailTestRecipient} instead of each VRC.`
+                      vrcRoute === "admin"
+                        ? `Send VRC emails for all billed clients in ${row.periodLabel}? Messages will go to admins (${adminList}) instead of each VRC.`
                         : `Email VRCs for all billed clients in ${row.periodLabel}? Each VRC will receive session documentation (excluding invoice PDFs) at their address on file.`
                     }
                     className={`${portalButtonSecondaryClass} px-4 py-1.5 text-xs`}

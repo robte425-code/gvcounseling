@@ -1,31 +1,14 @@
 import { sendEmailTo } from "@/lib/email";
 import { getSiteUrl } from "@/lib/site-url";
 import {
-  getAdminNotificationEmails,
-  type VrcReferralEmailDestination,
-} from "@/lib/portal-settings";
+  outboundEmailRedirectNote,
+  resolveTherapistOutboundEmail,
+  resolveVrcOutboundEmail,
+} from "@/lib/outbound-email-routing";
 import {
   VRC_BILLING_EMAIL_SIGNATURE,
   vrcFirstName,
 } from "@/lib/vrc-billing-emails";
-
-async function resolveVrcReferralRecipients(options: {
-  destination: VrcReferralEmailDestination;
-  vrcEmail: string;
-}): Promise<{ to: string; adminMode: boolean }> {
-  if (options.destination === "admin") {
-    const adminEmails = await getAdminNotificationEmails();
-    return { to: adminEmails.join(", "), adminMode: true };
-  }
-  return { to: options.vrcEmail, adminMode: false };
-}
-
-function adminModeNote(intendedVrcEmail: string, vrcName: string): string {
-  return [
-    "",
-    `[Admin preview mode: this email would have gone to ${vrcName} <${intendedVrcEmail}>.]`,
-  ].join("\n");
-}
 
 function referralEmailSubject(subject: string): string {
   return subject.replace(/^\[TEST\]\s*/i, "");
@@ -41,14 +24,10 @@ export async function sendVrcReferralAcceptanceEmail(options: {
   vrcName: string;
   clientName: string;
   claimNumber: string;
-  destination?: VrcReferralEmailDestination;
 }) {
-  const destination = options.destination ?? "vrc";
-  const { to, adminMode } = await resolveVrcReferralRecipients({
-    destination,
-    vrcEmail: options.vrcEmail,
-  });
-  const greetingName = adminMode ? "Admin team" : vrcFirstName(options.vrcName);
+  const intendedVrcEmail = options.vrcEmail.trim();
+  const { to, redirected } = await resolveVrcOutboundEmail(intendedVrcEmail);
+  const greetingName = redirected ? "Admin team" : vrcFirstName(options.vrcName);
   await sendEmailTo(to, {
     subject: referralEmailSubject(
       `Referral received: ${options.clientName} (${options.claimNumber})`,
@@ -63,10 +42,12 @@ export async function sendVrcReferralAcceptanceEmail(options: {
       "Thank you again for the referral.",
       "",
       vrcEmailSignatureBlock(),
-      adminMode ? adminModeNote(options.vrcEmail, options.vrcName) : "",
+      redirected
+        ? outboundEmailRedirectNote(options.vrcName || "VRC", intendedVrcEmail)
+        : "",
     ].join("\n"),
   });
-  return { to, adminMode };
+  return { to, redirected };
 }
 
 export async function sendVrcReferralInfoRequestEmail(options: {
@@ -76,14 +57,10 @@ export async function sendVrcReferralInfoRequestEmail(options: {
   claimNumber: string;
   message: string;
   replyToEmail: string;
-  destination?: VrcReferralEmailDestination;
 }) {
-  const destination = options.destination ?? "vrc";
-  const { to, adminMode } = await resolveVrcReferralRecipients({
-    destination,
-    vrcEmail: options.vrcEmail,
-  });
-  const greetingName = adminMode ? "Admin team" : vrcFirstName(options.vrcName);
+  const intendedVrcEmail = options.vrcEmail.trim();
+  const { to, redirected } = await resolveVrcOutboundEmail(intendedVrcEmail);
+  const greetingName = redirected ? "Admin team" : vrcFirstName(options.vrcName);
   await sendEmailTo(to, {
     subject: referralEmailSubject(
       `More information needed: ${options.clientName} (${options.claimNumber})`,
@@ -96,15 +73,17 @@ export async function sendVrcReferralInfoRequestEmail(options: {
       "",
       options.message,
       "",
-      adminMode
+      redirected
         ? "This is an admin preview of a VRC information request."
         : "Please reply to this email with any additional information.",
       "",
       vrcEmailSignatureBlock(),
-      adminMode ? adminModeNote(options.vrcEmail, options.vrcName) : "",
+      redirected
+        ? outboundEmailRedirectNote(options.vrcName || "VRC", intendedVrcEmail)
+        : "",
     ].join("\n"),
   });
-  return { to, adminMode };
+  return { to, redirected };
 }
 
 export async function sendTherapistAssignmentEmail(options: {
@@ -114,12 +93,14 @@ export async function sendTherapistAssignmentEmail(options: {
   claimNumber: string;
   clientId: string;
 }) {
+  const intendedEmail = options.therapistEmail.trim();
+  const { to, redirected } = await resolveTherapistOutboundEmail(intendedEmail);
   const siteUrl = getSiteUrl();
   const acceptUrl = `${siteUrl}/portal/therapist/referrals/${options.clientId}`;
-  await sendEmailTo(options.therapistEmail, {
+  await sendEmailTo(to, {
     subject: `New client referral: ${options.claimNumber}`,
     text: [
-      `Hello ${options.therapistName},`,
+      `Hello ${redirected ? "Admin team" : options.therapistName},`,
       "",
       `You have been assigned a new client referral at Grandview Counseling.`,
       "",
@@ -131,6 +112,7 @@ export async function sendTherapistAssignmentEmail(options: {
       `You can also sign in at ${siteUrl}/portal — pending referrals appear on your dashboard.`,
       "",
       "Grandview Counseling",
+      redirected ? outboundEmailRedirectNote(options.therapistName, intendedEmail) : "",
     ].join("\n"),
   });
 }
@@ -166,11 +148,13 @@ export async function sendTherapistWelcomeEmail(options: {
   password: string;
   mustChangePassword: boolean;
 }) {
+  const intendedEmail = options.therapistEmail.trim();
+  const { to, redirected } = await resolveTherapistOutboundEmail(intendedEmail);
   const siteUrl = getSiteUrl();
   const loginUrl = `${siteUrl}/portal/login`;
   const passwordLabel = options.mustChangePassword ? "Temporary password" : "Password";
   const lines = [
-    `Hello ${options.therapistName},`,
+    `Hello ${redirected ? "Admin team" : options.therapistName},`,
     "",
     "An account has been created for you on the Grandview Counseling billing portal.",
     "",
@@ -191,7 +175,10 @@ export async function sendTherapistWelcomeEmail(options: {
     "",
     "Grandview Counseling",
   );
-  await sendEmailTo(options.therapistEmail, {
+  if (redirected) {
+    lines.push(outboundEmailRedirectNote(options.therapistName, intendedEmail));
+  }
+  await sendEmailTo(to, {
     subject: "Your Grandview Counseling billing portal account",
     text: lines.join("\n"),
   });
