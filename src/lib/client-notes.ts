@@ -109,3 +109,18 @@ export function formatClientNoteTimestamp(createdAt: Date): string {
 export function wasClientNoteEdited(createdAt: Date, updatedAt: Date): boolean {
   return updatedAt.getTime() - createdAt.getTime() > 1000;
 }
+
+export function formatVrcAcceptanceNote(options: {
+  acceptedAt: Date;
+  adminName: string;
+  to: string;
+  redirected: boolean;
+  intendedVrcEmail: string;
+}): string {
+  const when = formatClientNoteTimestamp(options.acceptedAt);
+  const emailLine = options.redirected
+    ? `VRC acceptance email sent to admins (${options.to}) for preview; intended VRC: ${options.intendedVrcEmail}.`
+    : `VRC acceptance email sent to ${options.to}.`;
+
+  return `Referral accepted by ${options.adminName} (admin) on ${when}.\n\n${emailLine}`;
+}

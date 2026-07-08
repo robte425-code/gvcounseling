@@ -18,6 +18,7 @@ import { parseClaimNumber } from "@/lib/constants";
 import { moveClientDriveFolderToClosedCases, moveClientDriveFolderToNewReferrals, moveClientDriveFolderToTherapist } from "@/lib/client-drive-move";
 import { canAdminCloseClient, canTherapistCloseClient } from "@/lib/client-assignment-status";
 import { recordClientStatusChange, type ClientStatusChangeAction } from "@/lib/client-status-change";
+import { formatVrcAcceptanceNote } from "@/lib/client-notes";
 import { ensureTherapistDriveFolder, removeTherapistDriveFolder, deleteInvoiceDriveAttachments, trashClientDriveFolder } from "@/lib/google-drive";
 import { getDriveAccessTokenForClient } from "@/lib/google-drive-access";
 import { getSystemDriveAccessToken } from "@/lib/google-drive-system";
@@ -1087,15 +1088,25 @@ export async function acceptUnassignedClientAction(formData: FormData) {
     claimNumber: client.lniClaimNumber,
   });
 
+  const acceptedAt = new Date();
+  const adminName = `${session.user.firstName} ${session.user.lastName}`.trim() || "Admin";
+
   await prisma.clientNote.create({
     data: {
       clientId,
       authorId: getRealUserId(session),
-      body: redirected
-        ? `Sent referral acceptance email preview to admins (${to}); intended VRC ${intendedVrcEmail}.`
-        : `Sent referral acceptance email to VRC (${to}).`,
+      body: formatVrcAcceptanceNote({
+        acceptedAt,
+        adminName,
+        to,
+        redirected,
+        intendedVrcEmail,
+      }),
+      createdAt: acceptedAt,
     },
   });
+
+  revalidateClientNotePaths(clientId, `/portal/admin/clients/${clientId}`);
 
   revalidatePath("/portal/admin/dashboard");
   revalidatePath("/portal/admin/clients");
