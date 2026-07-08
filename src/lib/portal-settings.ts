@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { connection } from "next/server";
 
 export const VRC_REFERRAL_EMAIL_DESTINATION_KEY = "vrc_referral_email_destination";
 
@@ -16,6 +17,7 @@ export function defaultVrcReferralEmailDestination(): VrcReferralEmailDestinatio
 }
 
 export async function getVrcReferralEmailDestination(): Promise<VrcReferralEmailDestination> {
+  await connection();
   const row = await prisma.portalSetting.findUnique({
     where: { key: VRC_REFERRAL_EMAIL_DESTINATION_KEY },
     select: { value: true },

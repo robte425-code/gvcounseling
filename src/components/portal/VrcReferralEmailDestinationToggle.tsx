@@ -1,6 +1,7 @@
 "use client";
 
-import { useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { updateVrcReferralEmailDestinationAction } from "@/lib/portal-actions";
 import { portalCardClass, portalSectionHeadingClass } from "@/components/portal/ui";
 import type { VrcReferralEmailDestination } from "@/lib/portal-settings";
@@ -16,12 +17,20 @@ const segmentClass = (active: boolean) =>
   }`;
 
 export function VrcReferralEmailDestinationToggle({ destination, adminEmails }: Props) {
+  const router = useRouter();
   const [pending, startTransition] = useTransition();
+  const [selected, setSelected] = useState(destination);
+
+  useEffect(() => {
+    setSelected(destination);
+  }, [destination]);
 
   function setDestination(next: VrcReferralEmailDestination) {
-    if (next === destination || pending) return;
+    if (next === selected || pending) return;
+    setSelected(next);
     startTransition(async () => {
       await updateVrcReferralEmailDestinationAction(next);
+      router.refresh();
     });
   }
 
@@ -39,8 +48,8 @@ export function VrcReferralEmailDestinationToggle({ destination, adminEmails }: 
         <button
           type="button"
           disabled={pending}
-          className={`${segmentClass(destination === "vrc")} flex-1`}
-          aria-pressed={destination === "vrc"}
+          className={`${segmentClass(selected === "vrc")} flex-1`}
+          aria-pressed={selected === "vrc"}
           onClick={() => setDestination("vrc")}
         >
           VRCs
@@ -48,15 +57,15 @@ export function VrcReferralEmailDestinationToggle({ destination, adminEmails }: 
         <button
           type="button"
           disabled={pending}
-          className={`${segmentClass(destination === "admin")} flex-1`}
-          aria-pressed={destination === "admin"}
+          className={`${segmentClass(selected === "admin")} flex-1`}
+          aria-pressed={selected === "admin"}
           onClick={() => setDestination("admin")}
         >
           Admins
         </button>
       </div>
       <p className="mt-3 text-xs text-muted">
-        {destination === "vrc"
+        {selected === "vrc"
           ? "Emails go to the referring VRC on the client record."
           : `Emails go to admins (${adminEmails.join(", ")}) instead of the VRC.`}
       </p>

@@ -27,6 +27,10 @@ function adminModeNote(intendedVrcEmail: string, vrcName: string): string {
   ].join("\n");
 }
 
+function referralEmailSubject(subject: string): string {
+  return subject.replace(/^\[TEST\]\s*/i, "");
+}
+
 function vrcEmailSignatureBlock(): string {
   const { name, phone, email } = VRC_BILLING_EMAIL_SIGNATURE;
   return [name, `M: ${phone}`, `E: ${email}`].join("\n");
@@ -46,7 +50,9 @@ export async function sendVrcReferralAcceptanceEmail(options: {
   });
   const greetingName = adminMode ? "Admin team" : vrcFirstName(options.vrcName);
   await sendEmailTo(to, {
-    subject: `Referral received: ${options.clientName} (${options.claimNumber})`,
+    subject: referralEmailSubject(
+      `Referral received: ${options.clientName} (${options.claimNumber})`,
+    ),
     text: [
       `Dear ${greetingName},`,
       "",
@@ -79,7 +85,9 @@ export async function sendVrcReferralInfoRequestEmail(options: {
   });
   const greetingName = adminMode ? "Admin team" : vrcFirstName(options.vrcName);
   await sendEmailTo(to, {
-    subject: `More information needed: ${options.clientName} (${options.claimNumber})`,
+    subject: referralEmailSubject(
+      `More information needed: ${options.clientName} (${options.claimNumber})`,
+    ),
     replyTo: options.replyToEmail,
     text: [
       `Dear ${greetingName},`,

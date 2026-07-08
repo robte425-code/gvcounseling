@@ -932,7 +932,7 @@ export async function updateVrcReferralEmailDestinationAction(
   const parsed = parseVrcReferralEmailDestination(destination);
   if (!parsed) throw new Error("Invalid VRC referral email destination.");
   await setVrcReferralEmailDestination(parsed);
-  revalidatePath("/portal/admin/admins");
+  revalidatePath("/portal/admin", "layout");
   revalidatePath("/portal/admin/clients");
 }
 
@@ -947,7 +947,9 @@ export async function acceptUnassignedClientAction(formData: FormData) {
     throw new Error("Only unassigned referrals can be accepted this way.");
   }
 
-  const destination = await getVrcReferralEmailDestination();
+  const destination =
+    parseVrcReferralEmailDestination(String(formData.get("emailDestination") ?? "")) ??
+    (await getVrcReferralEmailDestination());
   const vrcEmail = client.vrcEmail?.trim();
   if (destination === "vrc" && !vrcEmail) {
     throw new Error("No VRC email on file. Add one on the Edit client page first.");
@@ -991,7 +993,9 @@ export async function requestVrcInfoAction(formData: FormData) {
     throw new Error("Only unassigned referrals can receive VRC information requests.");
   }
 
-  const destination = await getVrcReferralEmailDestination();
+  const destination =
+    parseVrcReferralEmailDestination(String(formData.get("emailDestination") ?? "")) ??
+    (await getVrcReferralEmailDestination());
   const vrcEmail = client.vrcEmail?.trim();
   if (destination === "vrc" && !vrcEmail) {
     throw new Error("No VRC email on file. Add one on the Edit client page first.");

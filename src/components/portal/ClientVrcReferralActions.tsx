@@ -61,6 +61,7 @@ function RequestInfoDialog({
         className="relative w-full max-w-lg rounded-2xl border border-border bg-surface p-6 shadow-xl"
       >
         <input type="hidden" name="clientId" value={clientId} />
+        <input type="hidden" name="emailDestination" value={emailDestination} />
         <h2
           id="request-vrc-info-title"
           className="font-serif text-xl font-semibold text-primary-dark"
@@ -133,6 +134,7 @@ export function ClientVrcReferralActions({
       <div className="flex flex-wrap gap-3">
         <form action={acceptUnassignedClientAction}>
           <input type="hidden" name="clientId" value={clientId} />
+          <input type="hidden" name="emailDestination" value={emailDestination} />
           <button type="submit" disabled={!canSend} className={portalButtonClass}>
             Accept client
           </button>
