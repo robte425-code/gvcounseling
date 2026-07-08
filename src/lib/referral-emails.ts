@@ -1,5 +1,80 @@
 import { sendEmailTo } from "@/lib/email";
 import { getSiteUrl } from "@/lib/site-url";
+import {
+  VRC_BILLING_EMAIL_SIGNATURE,
+  getVrcEmailTestRecipient,
+  vrcFirstName,
+} from "@/lib/vrc-billing-emails";
+
+function resolveVrcOutboundRecipient(vrcEmail: string): { to: string; testMode: boolean } {
+  const redirect = process.env.VRC_EMAIL_REDIRECT_TO?.trim();
+  if (redirect) {
+    return { to: redirect, testMode: true };
+  }
+  return { to: vrcEmail, testMode: false };
+}
+
+function vrcEmailSignatureBlock(): string {
+  const { name, phone, email } = VRC_BILLING_EMAIL_SIGNATURE;
+  return [name, `M: ${phone}`, `E: ${email}`].join("\n");
+}
+
+export async function sendVrcReferralAcceptanceEmail(options: {
+  vrcEmail: string;
+  vrcName: string;
+  clientName: string;
+  claimNumber: string;
+}) {
+  const { to, testMode } = resolveVrcOutboundRecipient(options.vrcEmail);
+  const greetingName = vrcFirstName(options.vrcName);
+  const subjectPrefix = testMode ? `[TEST] ` : "";
+  await sendEmailTo(to, {
+    subject: `${subjectPrefix}Referral received: ${options.clientName} (${options.claimNumber})`,
+    text: [
+      `Dear ${greetingName},`,
+      "",
+      `Thank you for referring ${options.clientName} (Claim #${options.claimNumber}) to Grandview Counseling.`,
+      "",
+      "We have received this new client referral and will contact the client to schedule a BHI session as soon as possible.",
+      "",
+      "Thank you again for the referral.",
+      "",
+      vrcEmailSignatureBlock(),
+    ].join("\n"),
+  });
+}
+
+export async function sendVrcReferralInfoRequestEmail(options: {
+  vrcEmail: string;
+  vrcName: string;
+  clientName: string;
+  claimNumber: string;
+  message: string;
+  replyToEmail: string;
+}) {
+  const { to, testMode } = resolveVrcOutboundRecipient(options.vrcEmail);
+  const greetingName = vrcFirstName(options.vrcName);
+  const subjectPrefix = testMode ? `[TEST] ` : "";
+  const testNote = testMode
+    ? `\n\n[Test mode: intended recipient ${options.vrcEmail}, redirected to ${getVrcEmailTestRecipient()}]`
+    : "";
+  await sendEmailTo(to, {
+    subject: `${subjectPrefix}More information needed: ${options.clientName} (${options.claimNumber})`,
+    replyTo: options.replyToEmail,
+    text: [
+      `Dear ${greetingName},`,
+      "",
+      `Regarding your referral for ${options.clientName} (Claim #${options.claimNumber}):`,
+      "",
+      options.message,
+      "",
+      "Please reply to this email with any additional information.",
+      "",
+      vrcEmailSignatureBlock(),
+      testNote,
+    ].join("\n"),
+  });
+}
 
 export async function sendTherapistAssignmentEmail(options: {
   therapistEmail: string;

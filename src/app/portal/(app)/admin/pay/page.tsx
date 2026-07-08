@@ -7,6 +7,7 @@ import {
   countUnresolvedRemittanceLines,
   summarizeRemittanceBillCounts,
 } from "@/lib/remittance-line-supersede";
+import { excludeSyntheticSpreadsheetRemittancesWhere } from "@/lib/remittance-advice";
 import { prisma } from "@/lib/prisma";
 
 function RemittanceBillCountSummary({
@@ -81,6 +82,7 @@ export default async function PayPage({
   const query = await searchParams;
 
   const remittances = await prisma.remittanceAdvice.findMany({
+    where: excludeSyntheticSpreadsheetRemittancesWhere,
     orderBy: { invoiceDate: "desc" },
     include: {
       _count: { select: { lines: true } },

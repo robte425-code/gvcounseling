@@ -1,5 +1,6 @@
 import { calendarIsoFromDate, formatDate } from "@/lib/constants";
 import { payPeriodLabel } from "@/lib/invoice-pay-period-grouping";
+import { excludeSyntheticSpreadsheetRemittancesWhere } from "@/lib/remittance-advice";
 import { prisma } from "@/lib/prisma";
 
 export type PaycheckSummaryRow = {
@@ -49,7 +50,10 @@ export async function loadPaycheckSummaries(options?: {
       select: { id: true, label: true, cutoffDate: true, paymentDate: true },
     }),
     prisma.therapistPayRunPayout.findMany({
-      where: options?.therapistId ? { therapistId: options.therapistId } : undefined,
+      where: {
+        ...(options?.therapistId ? { therapistId: options.therapistId } : {}),
+        payRun: { remittanceAdvice: excludeSyntheticSpreadsheetRemittancesWhere },
+      },
       include: {
         therapist: { select: { id: true, firstName: true, lastName: true } },
         payRun: {
@@ -149,7 +153,10 @@ export async function loadPaycheckDetail(options: {
   if (!payPeriod?.paymentDate) return null;
 
   const payouts = await prisma.therapistPayRunPayout.findMany({
-    where: { therapistId: options.therapistId },
+    where: {
+      therapistId: options.therapistId,
+      payRun: { remittanceAdvice: excludeSyntheticSpreadsheetRemittancesWhere },
+    },
     include: {
       therapist: { select: { firstName: true, lastName: true } },
       lines: {

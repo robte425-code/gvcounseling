@@ -18,7 +18,7 @@ import { moveClientDriveFolderToTherapist } from "@/lib/client-drive-move";
 import { ensureTherapistDriveFolder, removeTherapistDriveFolder, deleteInvoiceDriveAttachments } from "@/lib/google-drive";
 import { getDriveAccessTokenForClient } from "@/lib/google-drive-access";
 import { getSystemDriveAccessToken } from "@/lib/google-drive-system";
-import { sendAdminWelcomeEmail, sendTherapistAssignmentEmail, sendTherapistWelcomeEmail } from "@/lib/referral-emails";
+import { sendAdminWelcomeEmail, sendTherapistAssignmentEmail, sendTherapistWelcomeEmail, sendVrcReferralAcceptanceEmail, sendVrcReferralInfoRequestEmail } from "@/lib/referral-emails";
 import { generateOneTimePassword, hashPassword, verifyPassword } from "@/lib/password";
 import { fetchLniPayPeriods } from "@/lib/lni-pay-periods";
 import { createProcedureCodeFee, createTherapistProcedureCodeFee, updateTherapistProcedureCodeFee, applyTherapistFeeSchedule } from "@/lib/procedure-fees";
@@ -904,6 +904,88 @@ export async function adminRejectReferralAction(formData: FormData) {
 
   revalidatePath("/portal/admin/clients");
   redirect("/portal/admin/clients?rejected=1");
+}
+
+function clientDisplayName(client: { firstName: string; lastName: string }): string {
+  return `${client.firstName} ${client.lastName}`.trim();
+}
+
+export async function acceptUnassignedClientAction(formData: FormData) {
+  const session = await requireAdmin();
+  const clientId = String(formData.get("clientId") ?? "").trim();
+  if (!clientId) throw new Error("Client is required.");
+
+  const client = await prisma.client.findUnique({ where: { id: clientId } });
+  if (!client) throw new Error("Client not found.");
+  if (client.assignmentStatus !== "UNASSIGNED") {
+    throw new Error("Only unassigned referrals can be accepted this way.");
+  }
+
+  const vrcEmail = client.vrcEmail?.trim();
+  if (!vrcEmail) {
+    throw new Error("No VRC email on file. Add one on the Edit client page first.");
+  }
+
+  await sendVrcReferralAcceptanceEmail({
+    vrcEmail,
+    vrcName: client.vrcName?.trim() || "VRC",
+    clientName: clientDisplayName(client),
+    claimNumber: client.lniClaimNumber,
+  });
+
+  await prisma.clientNote.create({
+    data: {
+      clientId,
+      authorId: getRealUserId(session),
+      body: `Sent referral acceptance email to VRC (${vrcEmail}).`,
+    },
+  });
+
+  revalidatePath("/portal/admin/dashboard");
+  revalidatePath("/portal/admin/clients");
+  revalidatePath(`/portal/admin/clients/${clientId}`);
+  redirect(`/portal/admin/clients/${clientId}?vrcAccepted=1`);
+}
+
+export async function requestVrcInfoAction(formData: FormData) {
+  const session = await requireAdmin();
+  const clientId = String(formData.get("clientId") ?? "").trim();
+  const message = String(formData.get("message") ?? "").trim();
+  if (!clientId) throw new Error("Client is required.");
+  if (!message) throw new Error("Message is required.");
+
+  const client = await prisma.client.findUnique({ where: { id: clientId } });
+  if (!client) throw new Error("Client not found.");
+  if (client.assignmentStatus !== "UNASSIGNED") {
+    throw new Error("Only unassigned referrals can receive VRC information requests.");
+  }
+
+  const vrcEmail = client.vrcEmail?.trim();
+  if (!vrcEmail) {
+    throw new Error("No VRC email on file. Add one on the Edit client page first.");
+  }
+
+  await sendVrcReferralInfoRequestEmail({
+    vrcEmail,
+    vrcName: client.vrcName?.trim() || "VRC",
+    clientName: clientDisplayName(client),
+    claimNumber: client.lniClaimNumber,
+    message,
+    replyToEmail: session.user.email,
+  });
+
+  await prisma.clientNote.create({
+    data: {
+      clientId,
+      authorId: getRealUserId(session),
+      body: `Requested more information from VRC (${vrcEmail}):\n\n${message}`,
+    },
+  });
+
+  revalidatePath("/portal/admin/dashboard");
+  revalidatePath("/portal/admin/clients");
+  revalidatePath(`/portal/admin/clients/${clientId}`);
+  redirect(`/portal/admin/clients/${clientId}?vrcInfoRequested=1`);
 }
 
 export async function reopenClientAction(formData: FormData) {

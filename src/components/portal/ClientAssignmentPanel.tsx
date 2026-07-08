@@ -3,6 +3,7 @@ import {
   assignClientTherapistAction,
   reopenClientAction,
 } from "@/lib/portal-actions";
+import { ClientVrcReferralActions } from "@/components/portal/ClientVrcReferralActions";
 import { portalButtonClass, portalButtonSecondaryClass, portalCardClass, portalInputClass, portalLabelClass, StatusBadge } from "@/components/portal/ui";
 import type { ClientAssignmentStatus } from "@/generated/prisma/client";
 
@@ -13,6 +14,8 @@ type ClientAssignmentPanelProps = {
   assignmentStatus: ClientAssignmentStatus;
   rejectionReason: string | null;
   therapists: TherapistOption[];
+  vrcEmail: string | null;
+  vrcName: string | null;
 };
 
 export function ClientAssignmentPanel({
@@ -20,6 +23,8 @@ export function ClientAssignmentPanel({
   assignmentStatus,
   rejectionReason,
   therapists,
+  vrcEmail,
+  vrcName,
 }: ClientAssignmentPanelProps) {
   if (assignmentStatus === "PENDING_THERAPIST") {
     return (
@@ -65,6 +70,12 @@ export function ClientAssignmentPanel({
 
   return (
     <div className={`${portalCardClass} space-y-6 border-primary/20`}>
+      <ClientVrcReferralActions
+        clientId={clientId}
+        vrcEmail={vrcEmail}
+        vrcName={vrcName}
+      />
+
       <div>
         <StatusBadge status="UNASSIGNED" />
         <h2 className="mt-3 font-serif text-xl text-primary-dark">Assign therapist</h2>

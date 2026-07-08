@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { requireAdmin } from "@/auth";
+import { AdminUnassignedClientsTile } from "@/components/portal/AdminUnassignedClientsTile";
 import { portalButtonClass, portalCardClass } from "@/components/portal/ui";
 import { formatCurrency } from "@/lib/constants";
 import { prisma } from "@/lib/prisma";
@@ -7,10 +8,22 @@ import { prisma } from "@/lib/prisma";
 export default async function AdminDashboardPage() {
   await requireAdmin();
 
-  const [submittedCount, draftCount, billedCount] = await Promise.all([
+  const [submittedCount, draftCount, billedCount, unassignedClients] = await Promise.all([
     prisma.invoice.count({ where: { status: "SUBMITTED" } }),
     prisma.invoice.count({ where: { status: "DRAFT" } }),
     prisma.invoice.count({ where: { status: "BILLED" } }),
+    prisma.client.findMany({
+      where: { assignmentStatus: "UNASSIGNED" },
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        lniClaimNumber: true,
+        vrcName: true,
+        createdAt: true,
+      },
+    }),
   ]);
 
   const submittedTotal = await prisma.invoice.aggregate({
@@ -42,6 +55,8 @@ export default async function AdminDashboardPage() {
           <p className="mt-2 text-3xl font-semibold text-primary-dark">{billedCount}</p>
         </div>
       </div>
+
+      <AdminUnassignedClientsTile clients={unassignedClients} />
 
       <div className="flex flex-wrap gap-3">
         <Link href="/portal/admin/billing" className={portalButtonClass}>

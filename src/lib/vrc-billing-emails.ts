@@ -81,7 +81,7 @@ function formatServiceDatesPhrase(dates: Date[]): string {
   return `${formatted.slice(0, -1).join(", ")}, and ${formatted[formatted.length - 1]}`;
 }
 
-function vrcFirstName(vrcName: string): string {
+export function vrcFirstName(vrcName: string): string {
   const trimmed = vrcName.trim();
   if (!trimmed) return "VRC";
 

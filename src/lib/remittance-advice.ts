@@ -9,6 +9,15 @@ import { resolveEobDescriptions } from "@/lib/parse-lni-remittance-pdf";
 import { resolveFeeAmount } from "@/lib/procedure-fee-schedule";
 import { prisma } from "@/lib/prisma";
 
+/** Synthetic remittances created by spreadsheet migration scripts (no real L&I RA PDF). */
+export function isSyntheticSpreadsheetRemittance(remittanceNumber: string): boolean {
+  return remittanceNumber.endsWith("-SPREADSHEET");
+}
+
+export const excludeSyntheticSpreadsheetRemittancesWhere = {
+  NOT: { remittanceNumber: { endsWith: "-SPREADSHEET" } },
+} satisfies Prisma.RemittanceAdviceWhereInput;
+
 function parseRaDate(value: string): Date {
   const [month, day, year] = value.split("/").map((part) => Number.parseInt(part, 10));
   return new Date(Date.UTC(year!, month! - 1, day!));
@@ -287,6 +296,32 @@ export async function revertAppliedRemittance(remittanceAdviceId: string): Promi
 
     await tx.remittanceAdvice.delete({ where: { id: remittanceAdviceId } });
   });
+}
+
+/** Delete a synthetic spreadsheet remittance and its pay run (no L&I RA lines to revert). */
+export async function deleteSyntheticSpreadsheetRemittance(remittanceAdviceId: string): Promise<void> {
+  const remittance = await prisma.remittanceAdvice.findUnique({
+    where: { id: remittanceAdviceId },
+    select: {
+      id: true,
+      remittanceNumber: true,
+      _count: { select: { lines: true } },
+    },
+  });
+
+  if (!remittance) throw new Error("Remittance advice not found.");
+  if (!isSyntheticSpreadsheetRemittance(remittance.remittanceNumber)) {
+    throw new Error(
+      `Remittance ${remittance.remittanceNumber} is not a synthetic spreadsheet remittance.`,
+    );
+  }
+  if (remittance._count.lines > 0) {
+    throw new Error(
+      `Synthetic spreadsheet remittance ${remittance.remittanceNumber} has remittance lines; cannot delete safely.`,
+    );
+  }
+
+  await prisma.remittanceAdvice.delete({ where: { id: remittanceAdviceId } });
 }
 
 function parseLineEobDescriptions(value: unknown): Record<string, string> {
@@ -570,6 +605,14 @@ export async function applyRemittanceAdvice(remittanceAdviceId: string): Promise
         ),
       ];
 
+      await tx.remittanceAdvice.update({
+        where: { id: remittance.id },
+        data: {
+          status: "APPLIED",
+          appliedAt: new Date(),
+        },
+      });
+
       for (const invoiceId of invoiceIds) {
         await reconcileInvoicePaymentStatus(invoiceId, tx);
       }
@@ -593,14 +636,6 @@ export async function applyRemittanceAdvice(remittanceAdviceId: string): Promise
               },
             })),
           },
-        },
-      });
-
-      await tx.remittanceAdvice.update({
-        where: { id: remittance.id },
-        data: {
-          status: "APPLIED",
-          appliedAt: new Date(),
         },
       });
 

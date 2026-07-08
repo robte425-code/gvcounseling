@@ -17,11 +17,18 @@ export default async function AdminClientDetailPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ reopened?: string; saved?: string; noted?: string }>;
+  searchParams: Promise<{
+    reopened?: string;
+    saved?: string;
+    noted?: string;
+    vrcAccepted?: string;
+    vrcInfoRequested?: string;
+    assigned?: string;
+  }>;
 }) {
   const session = await requireAdmin();
   const { id } = await params;
-  const { reopened, saved, noted } = await searchParams;
+  const { reopened, saved, noted, vrcAccepted, vrcInfoRequested, assigned } = await searchParams;
   const [client, therapists] = await Promise.all([
     prisma.client.findUnique({
       where: { id },
@@ -50,6 +57,21 @@ export default async function AdminClientDetailPage({
       {noted === "1" && (
         <p className="rounded-lg bg-primary/10 px-3 py-2 text-sm text-primary-dark">
           Note saved.
+        </p>
+      )}
+      {vrcAccepted === "1" && (
+        <p className="rounded-lg bg-primary/10 px-3 py-2 text-sm text-primary-dark">
+          Acceptance email sent to the referring VRC.
+        </p>
+      )}
+      {vrcInfoRequested === "1" && (
+        <p className="rounded-lg bg-primary/10 px-3 py-2 text-sm text-primary-dark">
+          Information request email sent to the referring VRC.
+        </p>
+      )}
+      {assigned === "1" && (
+        <p className="rounded-lg bg-primary/10 px-3 py-2 text-sm text-primary-dark">
+          Therapist assigned and notified.
         </p>
       )}
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -88,6 +110,8 @@ export default async function AdminClientDetailPage({
         assignmentStatus={client.assignmentStatus}
         rejectionReason={client.rejectionReason}
         therapists={therapists}
+        vrcEmail={client.vrcEmail}
+        vrcName={client.vrcName}
       />
 
       <ClientDetailView client={client} clientId={client.id} />
