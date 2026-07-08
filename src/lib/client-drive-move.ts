@@ -1,9 +1,11 @@
 import {
+  findDriveSubfolder,
   getDriveFolderParentIds,
   moveDriveFolder,
   resolveTherapistFolderForUser,
 } from "@/lib/google-drive";
 import { getSystemDriveAccessToken } from "@/lib/google-drive-system";
+import { getTherapistDriveSourceForUser } from "@/lib/therapist-drive";
 
 type TherapistFolderTarget = {
   email: string;
@@ -28,4 +30,36 @@ export async function moveClientDriveFolderToTherapist(
   } catch (e) {
     console.error("Drive folder move to therapist failed:", e);
   }
+}
+
+/** Move a client folder into the therapist's closed-cases subfolder. */
+export async function moveClientDriveFolderToClosedCases(
+  driveFolderId: string | null | undefined,
+  therapistId: string,
+  therapist: TherapistFolderTarget,
+): Promise<void> {
+  if (!driveFolderId) return;
+
+  const source = await getTherapistDriveSourceForUser(therapistId);
+  if (!source) {
+    throw new Error("Therapist Drive folder is not configured.");
+  }
+
+  const { accessToken } = await getSystemDriveAccessToken();
+  const therapistFolderId = await resolveTherapistFolderForUser(accessToken, therapist);
+  const closedFolder = await findDriveSubfolder(
+    accessToken,
+    therapistFolderId,
+    source.closedSubfolderName,
+  );
+  if (!closedFolder) {
+    throw new Error(
+      `Could not find "${source.closedSubfolderName}" folder under ${source.folderName}.`,
+    );
+  }
+
+  const parents = await getDriveFolderParentIds(accessToken, driveFolderId);
+  if (parents.includes(closedFolder.id)) return;
+
+  await moveDriveFolder(accessToken, driveFolderId, closedFolder.id);
 }

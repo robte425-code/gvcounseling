@@ -54,12 +54,13 @@ export function ClientAssignmentPanel({
         <div>
           <StatusBadge status="CLOSED" />
           <p className="mt-3 text-sm text-muted">
-            This client was closed because their Drive folder was removed. Reopen to resume billing
-            and assignments.
+            This client is closed. Reactivate to resume billing and move their Drive folder back to
+            the therapist&apos;s active client folder.
           </p>
         </div>
         <form action={reopenClientAction}>
           <input type="hidden" name="clientId" value={clientId} />
+          <input type="hidden" name="returnTo" value={`/portal/admin/clients/${clientId}`} />
           <button type="submit" className={portalButtonClass}>
             Reactivate client
           </button>

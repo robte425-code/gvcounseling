@@ -14,7 +14,7 @@ import {
 import type { ImpersonationUpdate } from "@/types/next-auth";
 import { Gender } from "@/generated/prisma/client";
 import { parseClaimNumber } from "@/lib/constants";
-import { moveClientDriveFolderToTherapist } from "@/lib/client-drive-move";
+import { moveClientDriveFolderToClosedCases, moveClientDriveFolderToTherapist } from "@/lib/client-drive-move";
 import { ensureTherapistDriveFolder, removeTherapistDriveFolder, deleteInvoiceDriveAttachments } from "@/lib/google-drive";
 import { getDriveAccessTokenForClient } from "@/lib/google-drive-access";
 import { getSystemDriveAccessToken } from "@/lib/google-drive-system";
@@ -1001,10 +1001,23 @@ export async function closeClientAction(formData: FormData) {
   await requireAdmin();
   const clientId = String(formData.get("clientId") ?? "").trim();
   const returnTo = String(formData.get("returnTo") ?? "").trim();
-  const client = await prisma.client.findUnique({ where: { id: clientId } });
+  const client = await prisma.client.findUnique({
+    where: { id: clientId },
+    include: {
+      therapist: { select: { id: true, email: true, firstName: true, lastName: true } },
+    },
+  });
   if (!client) throw new Error("Client not found.");
   if (client.assignmentStatus !== "ACTIVE") {
     throw new Error("Only active clients can be closed.");
+  }
+
+  if (client.driveFolderId && client.therapist) {
+    await moveClientDriveFolderToClosedCases(
+      client.driveFolderId,
+      client.therapist.id,
+      client.therapist,
+    );
   }
 
   await prisma.client.update({
@@ -1028,10 +1041,19 @@ export async function reopenClientAction(formData: FormData) {
   await requireAdmin();
   const clientId = String(formData.get("clientId") ?? "").trim();
   const returnTo = String(formData.get("returnTo") ?? "").trim();
-  const client = await prisma.client.findUnique({ where: { id: clientId } });
+  const client = await prisma.client.findUnique({
+    where: { id: clientId },
+    include: {
+      therapist: { select: { email: true, firstName: true, lastName: true } },
+    },
+  });
   if (!client) throw new Error("Client not found.");
   if (client.assignmentStatus !== "CLOSED") {
     throw new Error("Only closed clients can be reopened.");
+  }
+
+  if (client.driveFolderId && client.therapist) {
+    await moveClientDriveFolderToTherapist(client.driveFolderId, client.therapist);
   }
 
   await prisma.client.update({

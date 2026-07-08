@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { getRealUserId, requireAdmin } from "@/auth";
 import { ClientAssignmentPanel } from "@/components/portal/ClientAssignmentPanel";
+import { ClientCloseButton } from "@/components/portal/ClientCloseButton";
 import { ClientDeleteButton } from "@/components/portal/ClientDeleteButton";
 import { ClientNotesSection } from "@/components/portal/ClientNotesSection";
 import { ClientDetailView } from "@/components/portal/ClientDetailView";
@@ -25,12 +26,21 @@ export default async function AdminClientDetailPage({
     vrcAccepted?: string;
     vrcInfoRequested?: string;
     assigned?: string;
+    closed?: string;
   }>;
 }) {
   const session = await requireAdmin();
   const { id } = await params;
-  const { reopened, saved, noted, vrcAccepted, vrcInfoRequested, assigned, reactivated } =
-    await searchParams;
+  const {
+    reopened,
+    saved,
+    noted,
+    vrcAccepted,
+    vrcInfoRequested,
+    assigned,
+    reactivated,
+    closed,
+  } = await searchParams;
   const [client, therapists, invoiceCount] = await Promise.all([
     prisma.client.findUnique({
       where: { id },
@@ -77,6 +87,11 @@ export default async function AdminClientDetailPage({
           Therapist assigned and notified.
         </p>
       )}
+      {closed === "1" && (
+        <p className="rounded-lg bg-primary/10 px-3 py-2 text-sm text-primary-dark">
+          Client closed. Their Drive folder was moved to the therapist&apos;s closed cases folder.
+        </p>
+      )}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <Link href="/portal/admin/clients" className={`${portalButtonSecondaryClass} text-xs`}>
@@ -97,6 +112,13 @@ export default async function AdminClientDetailPage({
           <Link href={`/portal/admin/clients/${client.id}/edit`} className={portalButtonClass}>
             Edit client
           </Link>
+          {client.assignmentStatus === "ACTIVE" && (
+            <ClientCloseButton
+              clientId={client.id}
+              clientLabel={`${client.lastName}, ${client.firstName}`}
+              returnTo={`/portal/admin/clients/${client.id}`}
+            />
+          )}
           <ClientDeleteButton
             clientId={client.id}
             clientLabel={`${client.lastName}, ${client.firstName}`}
