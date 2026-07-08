@@ -61,7 +61,7 @@ export function VrcReferralEmailDestinationToggle({ destination, adminEmails }: 
           aria-pressed={selected === "admin"}
           onClick={() => setDestination("admin")}
         >
-          Admins
+          Admins (preview)
         </button>
       </div>
       <p className="mt-3 text-xs text-muted">

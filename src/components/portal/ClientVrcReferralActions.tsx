@@ -61,7 +61,6 @@ function RequestInfoDialog({
         className="relative w-full max-w-lg rounded-2xl border border-border bg-surface p-6 shadow-xl"
       >
         <input type="hidden" name="clientId" value={clientId} />
-        <input type="hidden" name="emailDestination" value={emailDestination} />
         <h2
           id="request-vrc-info-title"
           className="font-serif text-xl font-semibold text-primary-dark"
@@ -118,6 +117,14 @@ export function ClientVrcReferralActions({
         Notify the referring VRC that the referral was received, or request additional information.
       </p>
 
+      <p className="rounded-xl border border-border bg-surface px-4 py-3 text-sm">
+        Email routing:{" "}
+        <span className="font-medium text-primary-dark">
+          {adminMode ? "Admin preview (admins)" : "VRCs"}
+        </span>
+        . Change this on the Admin page before sending.
+      </p>
+
       {adminMode && (
         <p className="rounded-xl bg-primary/5 px-4 py-3 text-sm text-primary-dark">
           Referral emails are routed to admins ({adminEmails.join(", ")}) until you switch back to
@@ -134,7 +141,6 @@ export function ClientVrcReferralActions({
       <div className="flex flex-wrap gap-3">
         <form action={acceptUnassignedClientAction}>
           <input type="hidden" name="clientId" value={clientId} />
-          <input type="hidden" name="emailDestination" value={emailDestination} />
           <button type="submit" disabled={!canSend} className={portalButtonClass}>
             Accept client
           </button>

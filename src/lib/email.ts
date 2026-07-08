@@ -51,6 +51,7 @@ function contentTypeFor(filename: string): string {
 async function postmarkSend(to: string, options: SendEmailOptions) {
   const serverToken = process.env.POSTMARK_SERVER_TOKEN?.trim();
   const from = envOrDefault("EMAIL_FROM", DEFAULT_EMAIL_FROM);
+  const subject = options.subject.replace(/^\[TEST\]\s*/i, "");
 
   if (!serverToken) {
     throw new Error(
@@ -68,7 +69,7 @@ async function postmarkSend(to: string, options: SendEmailOptions) {
     body: JSON.stringify({
       From: from,
       To: to,
-      Subject: options.subject,
+      Subject: subject,
       TextBody: options.text,
       ReplyTo: options.replyTo || undefined,
       MessageStream: "outbound",
