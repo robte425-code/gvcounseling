@@ -27,7 +27,7 @@ export async function sendVrcReferralAcceptanceEmail(options: {
 }) {
   const intendedVrcEmail = options.vrcEmail.trim();
   const { to, redirected } = await resolveVrcOutboundEmail(intendedVrcEmail);
-  const greetingName = redirected ? "Admin team" : vrcFirstName(options.vrcName);
+  const greetingName = vrcFirstName(options.vrcName);
   await sendEmailTo(to, {
     subject: referralEmailSubject(
       `Referral received: ${options.clientName} (${options.claimNumber})`,
@@ -60,7 +60,7 @@ export async function sendVrcReferralInfoRequestEmail(options: {
 }) {
   const intendedVrcEmail = options.vrcEmail.trim();
   const { to, redirected } = await resolveVrcOutboundEmail(intendedVrcEmail);
-  const greetingName = redirected ? "Admin team" : vrcFirstName(options.vrcName);
+  const greetingName = vrcFirstName(options.vrcName);
   await sendEmailTo(to, {
     subject: referralEmailSubject(
       `More information needed: ${options.clientName} (${options.claimNumber})`,
@@ -73,9 +73,7 @@ export async function sendVrcReferralInfoRequestEmail(options: {
       "",
       options.message,
       "",
-      redirected
-        ? "This is an admin preview of a VRC information request."
-        : "Please reply to this email with any additional information.",
+      "Please reply to this email with any additional information.",
       "",
       vrcEmailSignatureBlock(),
       redirected
@@ -100,7 +98,7 @@ export async function sendTherapistAssignmentEmail(options: {
   await sendEmailTo(to, {
     subject: `New client referral: ${options.claimNumber}`,
     text: [
-      `Hello ${redirected ? "Admin team" : options.therapistName},`,
+      `Hello ${options.therapistName},`,
       "",
       `You have been assigned a new client referral at Grandview Counseling.`,
       "",
@@ -182,7 +180,7 @@ export async function sendTherapistWelcomeEmail(options: {
   const loginUrl = `${siteUrl}/portal/login`;
   const passwordLabel = options.mustChangePassword ? "Temporary password" : "Password";
   const lines = [
-    `Hello ${redirected ? "Admin team" : options.therapistName},`,
+    `Hello ${options.therapistName},`,
     "",
     "An account has been created for you on the Grandview Counseling billing portal.",
     "",

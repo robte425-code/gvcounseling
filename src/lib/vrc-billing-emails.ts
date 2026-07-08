@@ -213,7 +213,7 @@ export async function emailVrcsForPayPeriod(options: {
       const vrcName = client.vrcName?.trim() || "VRC";
       const intendedEmail = client.vrcEmail.trim();
       const { to, redirected } = await resolveVrcOutboundEmail(intendedEmail);
-      const greetingName = redirected ? "Admin team" : vrcFirstName(vrcName);
+      const greetingName = vrcFirstName(vrcName);
       const subject = `BHI session notification — ${client.lniClaimNumber}`;
       const body = buildVrcEmailBody(greetingName, lineItems, true);
       const text = redirected
