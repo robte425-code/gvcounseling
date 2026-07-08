@@ -50,7 +50,7 @@ export default async function EditAdminPage({
 
       <div>
         <Link href="/portal/admin/admins" className={`${portalButtonSecondaryClass} text-xs`}>
-          ← Back to admins
+          ← Admin
         </Link>
         <h1 className="mt-3 font-serif text-2xl font-semibold text-primary-dark">
           {admin.lastName}, {admin.firstName}

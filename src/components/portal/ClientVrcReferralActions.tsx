@@ -120,7 +120,7 @@ export function ClientVrcReferralActions({
       {adminMode && (
         <p className="rounded-xl bg-primary/5 px-4 py-3 text-sm text-primary-dark">
           Referral emails are routed to admins ({adminEmails.join(", ")}) until you switch back to
-          VRCs on the admin dashboard.
+          VRCs on the Admin page.
         </p>
       )}
 

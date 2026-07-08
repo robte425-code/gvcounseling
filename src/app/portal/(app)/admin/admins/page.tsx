@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { requireAdmin } from "@/auth";
 import { AdminForm } from "@/components/portal/AdminForm";
+import { VrcReferralEmailDestinationToggle } from "@/components/portal/VrcReferralEmailDestinationToggle";
 import { portalCardClass, portalTableNarrowClass, portalTableScrollClass } from "@/components/portal/ui";
+import { getAdminNotificationEmails, getVrcReferralEmailDestination } from "@/lib/portal-settings";
 import { prisma } from "@/lib/prisma";
 
 export default async function AdminAdminsPage({
@@ -12,16 +14,20 @@ export default async function AdminAdminsPage({
   await requireAdmin();
   const { created, deleted, emailWarning } = await searchParams;
 
-  const admins = await prisma.user.findMany({
-    where: { role: "ADMIN" },
-    orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
-    select: { id: true, firstName: true, lastName: true, email: true },
-  });
+  const [admins, vrcReferralEmailDestination, adminEmails] = await Promise.all([
+    prisma.user.findMany({
+      where: { role: "ADMIN" },
+      orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
+      select: { id: true, firstName: true, lastName: true, email: true },
+    }),
+    getVrcReferralEmailDestination(),
+    getAdminNotificationEmails(),
+  ]);
 
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="font-serif text-2xl font-semibold text-primary-dark sm:text-3xl">Admins</h1>
+        <h1 className="font-serif text-2xl font-semibold text-primary-dark sm:text-3xl">Admin</h1>
         <p className="mt-2 text-muted">Manage billing portal administrator accounts.</p>
       </div>
 
@@ -38,6 +44,11 @@ export default async function AdminAdminsPage({
           Admin deleted.
         </p>
       )}
+
+      <VrcReferralEmailDestinationToggle
+        destination={vrcReferralEmailDestination}
+        adminEmails={adminEmails}
+      />
 
       <section className="space-y-4">
         <h2 className="font-serif text-xl font-semibold text-primary-dark">Current admins</h2>

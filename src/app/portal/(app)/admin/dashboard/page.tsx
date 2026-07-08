@@ -1,17 +1,14 @@
 import Link from "next/link";
 import { requireAdmin } from "@/auth";
 import { AdminUnassignedClientsTile } from "@/components/portal/AdminUnassignedClientsTile";
-import { VrcReferralEmailDestinationToggle } from "@/components/portal/VrcReferralEmailDestinationToggle";
 import { portalButtonClass, portalCardClass } from "@/components/portal/ui";
 import { formatCurrency } from "@/lib/constants";
-import { getAdminNotificationEmails, getVrcReferralEmailDestination } from "@/lib/portal-settings";
 import { prisma } from "@/lib/prisma";
 
 export default async function AdminDashboardPage() {
   await requireAdmin();
 
-  const [submittedCount, draftCount, billedCount, unassignedClients, vrcReferralEmailDestination, adminEmails] =
-    await Promise.all([
+  const [submittedCount, draftCount, billedCount, unassignedClients] = await Promise.all([
     prisma.invoice.count({ where: { status: "SUBMITTED" } }),
     prisma.invoice.count({ where: { status: "DRAFT" } }),
     prisma.invoice.count({ where: { status: "BILLED" } }),
@@ -27,8 +24,6 @@ export default async function AdminDashboardPage() {
         createdAt: true,
       },
     }),
-    getVrcReferralEmailDestination(),
-    getAdminNotificationEmails(),
   ]);
 
   const submittedTotal = await prisma.invoice.aggregate({
@@ -60,11 +55,6 @@ export default async function AdminDashboardPage() {
           <p className="mt-2 text-3xl font-semibold text-primary-dark">{billedCount}</p>
         </div>
       </div>
-
-      <VrcReferralEmailDestinationToggle
-        destination={vrcReferralEmailDestination}
-        adminEmails={adminEmails}
-      />
 
       <AdminUnassignedClientsTile clients={unassignedClients} />
 

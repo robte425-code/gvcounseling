@@ -13,7 +13,7 @@ const adminLinks = [
   { href: "/portal/admin/paychecks", label: "Paychecks" },
   { href: "/portal/admin/clients", label: "Clients" },
   { href: "/portal/admin/therapists", label: "Therapists" },
-  { href: "/portal/admin/admins", label: "Admins" },
+  { href: "/portal/admin/admins", label: "Admin" },
   { href: "/portal/admin/invoices", label: "Invoices" },
   { href: "/portal/admin/integrations/google-drive", label: "Google Drive" },
 ];

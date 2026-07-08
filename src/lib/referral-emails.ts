@@ -45,9 +45,8 @@ export async function sendVrcReferralAcceptanceEmail(options: {
     vrcEmail: options.vrcEmail,
   });
   const greetingName = adminMode ? "Admin team" : vrcFirstName(options.vrcName);
-  const subjectPrefix = adminMode ? `[TEST] ` : "";
   await sendEmailTo(to, {
-    subject: `${subjectPrefix}Referral received: ${options.clientName} (${options.claimNumber})`,
+    subject: `Referral received: ${options.clientName} (${options.claimNumber})`,
     text: [
       `Dear ${greetingName},`,
       "",
@@ -79,9 +78,8 @@ export async function sendVrcReferralInfoRequestEmail(options: {
     vrcEmail: options.vrcEmail,
   });
   const greetingName = adminMode ? "Admin team" : vrcFirstName(options.vrcName);
-  const subjectPrefix = adminMode ? `[TEST] ` : "";
   await sendEmailTo(to, {
-    subject: `${subjectPrefix}More information needed: ${options.clientName} (${options.claimNumber})`,
+    subject: `More information needed: ${options.clientName} (${options.claimNumber})`,
     replyTo: options.replyToEmail,
     text: [
       `Dear ${greetingName},`,

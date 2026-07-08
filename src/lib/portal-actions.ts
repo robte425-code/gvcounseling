@@ -932,7 +932,7 @@ export async function updateVrcReferralEmailDestinationAction(
   const parsed = parseVrcReferralEmailDestination(destination);
   if (!parsed) throw new Error("Invalid VRC referral email destination.");
   await setVrcReferralEmailDestination(parsed);
-  revalidatePath("/portal/admin/dashboard");
+  revalidatePath("/portal/admin/admins");
   revalidatePath("/portal/admin/clients");
 }
 
