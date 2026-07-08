@@ -15,6 +15,7 @@ import type { ImpersonationUpdate } from "@/types/next-auth";
 import { Gender } from "@/generated/prisma/client";
 import { parseClaimNumber } from "@/lib/constants";
 import { moveClientDriveFolderToClosedCases, moveClientDriveFolderToTherapist } from "@/lib/client-drive-move";
+import { recordClientStatusChange, type ClientStatusChangeAction } from "@/lib/client-status-change";
 import { ensureTherapistDriveFolder, removeTherapistDriveFolder, deleteInvoiceDriveAttachments } from "@/lib/google-drive";
 import { getDriveAccessTokenForClient } from "@/lib/google-drive-access";
 import { getSystemDriveAccessToken } from "@/lib/google-drive-system";
@@ -26,14 +27,17 @@ import { prisma } from "@/lib/prisma";
 import {
   getVrcOutboundEmailRoute,
   parseOutboundEmailRoute,
+  parseOutboundLniFaxRoute,
+  setLniOutboundFaxRoute,
   setTherapistOutboundEmailRoute,
   setVrcOutboundEmailRoute,
   type OutboundEmailRoute,
+  type OutboundLniFaxRoute,
 } from "@/lib/portal-settings";
 import { getNextInvoiceNumber } from "@/lib/invoice-numbers";
 import { parseTherapistInvoicesReturnTo } from "@/lib/invoice-list-filters";
 import { emailVrcsForPayPeriod } from "@/lib/vrc-billing-emails";
-import { faxLniForPayPeriod, parseLniFaxDestinationParam } from "@/lib/lni-billing-faxes";
+import { faxLniForPayPeriod } from "@/lib/lni-billing-faxes";
 import { applyRemittanceAdvice, deleteRemittancePreview, importRemittanceFromUpload } from "@/lib/remittance-advice";
 import {
   createWrongYearRebillFromLine,
@@ -822,13 +826,9 @@ export async function faxLniForPayPeriodAction(formData: FormData) {
   const payPeriodId = String(formData.get("payPeriodId") ?? "").trim();
   if (!payPeriodId) throw new Error("Pay period is required.");
 
-  const lniFaxDestination =
-    parseLniFaxDestinationParam(String(formData.get("lniFaxDestination") ?? "")) ?? "test";
-
   const result = await faxLniForPayPeriod({
     payPeriodId,
     initiatorUserId: session.user.id,
-    lniFaxDestination,
   });
 
   revalidatePath("/portal/admin/billing");
@@ -890,9 +890,10 @@ export async function assignClientTherapistAction(formData: FormData) {
 }
 
 export async function adminRejectReferralAction(formData: FormData) {
-  await requireAdmin();
+  const session = await requireAdmin();
   const clientId = String(formData.get("clientId") ?? "").trim();
-  const reason = String(formData.get("reason") ?? "").trim();
+  const reason = requireStatusChangeReason(formData);
+  const returnTo = String(formData.get("returnTo") ?? "").trim();
   const client = await prisma.client.findUnique({ where: { id: clientId } });
   if (!client) throw new Error("Client not found.");
   if (client.assignmentStatus !== "UNASSIGNED") {
@@ -905,21 +906,128 @@ export async function adminRejectReferralAction(formData: FormData) {
       where: { id: clientId },
       data: {
         assignmentStatus: "REJECTED_BY_ADMIN",
-        rejectionReason: reason || "Rejected by admin",
+        rejectionReason: reason,
         rejectedAt: new Date(),
         therapistId: null,
       },
     });
+
+    await logClientStatusChange({
+      session,
+      role: "ADMIN",
+      client,
+      action: "rejected",
+      reason,
+    });
   } else {
     await prisma.client.delete({ where: { id: clientId } });
+    revalidatePath("/portal/admin/clients");
+    redirect("/portal/admin/clients?rejected=1");
   }
 
   revalidatePath("/portal/admin/clients");
+  revalidatePath(`/portal/admin/clients/${clientId}`);
+  if (returnTo) {
+    revalidateClientNotePaths(clientId, returnTo);
+  }
+
+  if (returnTo) {
+    redirectWithQuery(returnTo, { rejected: "1" });
+  }
   redirect("/portal/admin/clients?rejected=1");
 }
 
 function clientDisplayName(client: { firstName: string; lastName: string }): string {
   return `${client.firstName} ${client.lastName}`.trim();
+}
+
+function requireStatusChangeReason(formData: FormData): string {
+  const reason = String(formData.get("reason") ?? "").trim();
+  if (!reason) throw new Error("Please provide a reason.");
+  return reason;
+}
+
+function actorDisplayName(session: Awaited<ReturnType<typeof requireSession>>): string {
+  const user = session.user;
+  const first = user.firstName?.trim();
+  const last = user.lastName?.trim();
+  if (first || last) return `${first ?? ""} ${last ?? ""}`.trim();
+  return user.name?.trim() || user.email || "Portal user";
+}
+
+async function logClientStatusChange(options: {
+  session: Awaited<ReturnType<typeof requireSession>>;
+  role: "ADMIN" | "THERAPIST";
+  client: { id: string; firstName: string; lastName: string; lniClaimNumber: string };
+  action: ClientStatusChangeAction;
+  reason: string;
+}): Promise<void> {
+  await recordClientStatusChange({
+    clientId: options.client.id,
+    authorId: getRealUserId(options.session),
+    action: options.action,
+    actorName: actorDisplayName(options.session),
+    actorRole: options.role,
+    reason: options.reason,
+    clientName: clientDisplayName(options.client),
+    claimNumber: options.client.lniClaimNumber,
+    notifyAdmins: options.role === "THERAPIST",
+  });
+}
+
+type ClientManagerContext = {
+  session: Awaited<ReturnType<typeof requireSession>>;
+  client: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    lniClaimNumber: string;
+    assignmentStatus: string;
+    driveFolderId: string | null;
+    therapistId: string | null;
+    therapist: {
+      id: string;
+      email: string;
+      firstName: string;
+      lastName: string;
+    } | null;
+  };
+  role: "ADMIN" | "THERAPIST";
+};
+
+async function requireClientManager(clientId: string): Promise<ClientManagerContext> {
+  const session = await requireSession();
+  const therapistInclude = {
+    therapist: { select: { id: true, email: true, firstName: true, lastName: true } },
+  } as const;
+
+  if (getRealRole(session) === "ADMIN" && !isImpersonating(session)) {
+    const client = await prisma.client.findUnique({
+      where: { id: clientId },
+      include: therapistInclude,
+    });
+    if (!client) throw new Error("Client not found.");
+    return { session, client, role: "ADMIN" };
+  }
+
+  if (session.user.role === "THERAPIST") {
+    const client = await prisma.client.findFirst({
+      where: { id: clientId, therapistId: session.user.id },
+      include: therapistInclude,
+    });
+    if (!client) throw new Error("Client not found.");
+    return { session, client, role: "THERAPIST" };
+  }
+
+  throw new Error("You do not have permission to manage this client.");
+}
+
+function redirectWithQuery(destination: string, query: Record<string, string>): never {
+  const url = new URL(destination, "http://local");
+  for (const [key, value] of Object.entries(query)) {
+    url.searchParams.set(key, value);
+  }
+  redirect(`${url.pathname}${url.search}`);
 }
 
 export async function updateOutboundVrcEmailRouteAction(route: OutboundEmailRoute) {
@@ -935,6 +1043,14 @@ export async function updateOutboundTherapistEmailRouteAction(route: OutboundEma
   const parsed = parseOutboundEmailRoute(route);
   if (!parsed) throw new Error("Invalid therapist email route.");
   await setTherapistOutboundEmailRoute(parsed);
+  revalidatePath("/portal/admin", "layout");
+}
+
+export async function updateOutboundLniFaxRouteAction(route: OutboundLniFaxRoute) {
+  await requireAdmin();
+  const parsed = parseOutboundLniFaxRoute(route);
+  if (!parsed) throw new Error("Invalid L&I fax route.");
+  await setLniOutboundFaxRoute(parsed);
   revalidatePath("/portal/admin", "layout");
 }
 
@@ -1025,16 +1141,10 @@ export async function requestVrcInfoAction(formData: FormData) {
 }
 
 export async function closeClientAction(formData: FormData) {
-  await requireAdmin();
   const clientId = String(formData.get("clientId") ?? "").trim();
   const returnTo = String(formData.get("returnTo") ?? "").trim();
-  const client = await prisma.client.findUnique({
-    where: { id: clientId },
-    include: {
-      therapist: { select: { id: true, email: true, firstName: true, lastName: true } },
-    },
-  });
-  if (!client) throw new Error("Client not found.");
+  const reason = requireStatusChangeReason(formData);
+  const { client, session, role } = await requireClientManager(clientId);
   if (client.assignmentStatus !== "ACTIVE") {
     throw new Error("Only active clients can be closed.");
   }
@@ -1055,49 +1165,76 @@ export async function closeClientAction(formData: FormData) {
     },
   });
 
+  await logClientStatusChange({
+    session,
+    role,
+    client,
+    action: "closed",
+    reason,
+  });
+
   revalidatePath("/portal/admin/clients");
   revalidatePath(`/portal/admin/clients/${clientId}`);
   revalidatePath("/portal/therapist/clients");
+  revalidatePath(`/portal/therapist/clients/${clientId}`);
 
   const destination = returnTo || `/portal/admin/clients/${clientId}`;
-  const separator = destination.includes("?") ? "&" : "?";
-  redirect(`${destination}${separator}closed=1`);
+  revalidateClientNotePaths(clientId, destination);
+  redirectWithQuery(destination, { closed: "1" });
 }
 
 export async function reopenClientAction(formData: FormData) {
-  await requireAdmin();
   const clientId = String(formData.get("clientId") ?? "").trim();
   const returnTo = String(formData.get("returnTo") ?? "").trim();
-  const client = await prisma.client.findUnique({
-    where: { id: clientId },
-    include: {
-      therapist: { select: { email: true, firstName: true, lastName: true } },
-    },
-  });
-  if (!client) throw new Error("Client not found.");
-  if (client.assignmentStatus !== "CLOSED") {
-    throw new Error("Only closed clients can be reopened.");
+  const reason = requireStatusChangeReason(formData);
+  const { client, session, role } = await requireClientManager(clientId);
+
+  if (client.assignmentStatus === "CLOSED") {
+    if (client.driveFolderId && client.therapist) {
+      await moveClientDriveFolderToTherapist(client.driveFolderId, client.therapist);
+    }
+
+    await prisma.client.update({
+      where: { id: clientId },
+      data: {
+        assignmentStatus: client.therapistId ? "ACTIVE" : "UNASSIGNED",
+        closedAt: null,
+      },
+    });
+  } else if (client.assignmentStatus === "REJECTED_BY_ADMIN") {
+    if (role !== "ADMIN") {
+      throw new Error("Only admins can reopen rejected referrals.");
+    }
+
+    await prisma.client.update({
+      where: { id: clientId },
+      data: {
+        assignmentStatus: "UNASSIGNED",
+        rejectionReason: null,
+        rejectedAt: null,
+        therapistId: null,
+      },
+    });
+  } else {
+    throw new Error("Only closed or rejected clients can be reopened.");
   }
 
-  if (client.driveFolderId && client.therapist) {
-    await moveClientDriveFolderToTherapist(client.driveFolderId, client.therapist);
-  }
-
-  await prisma.client.update({
-    where: { id: clientId },
-    data: {
-      assignmentStatus: client.therapistId ? "ACTIVE" : "UNASSIGNED",
-      closedAt: null,
-    },
+  await logClientStatusChange({
+    session,
+    role,
+    client,
+    action: "reopened",
+    reason,
   });
 
   revalidatePath("/portal/admin/clients");
   revalidatePath(`/portal/admin/clients/${clientId}`);
   revalidatePath("/portal/therapist/clients");
+  revalidatePath(`/portal/therapist/clients/${clientId}`);
 
   const destination = returnTo || `/portal/admin/clients/${clientId}`;
-  const separator = destination.includes("?") ? "&" : "?";
-  redirect(`${destination}${separator}reactivated=1`);
+  revalidateClientNotePaths(clientId, destination);
+  redirectWithQuery(destination, { reactivated: "1" });
 }
 
 export async function therapistAcceptReferralAction(formData: FormData) {
@@ -1130,8 +1267,8 @@ export async function therapistAcceptReferralAction(formData: FormData) {
 export async function therapistRejectReferralAction(formData: FormData) {
   const session = await requireTherapist();
   const clientId = String(formData.get("clientId") ?? "").trim();
-  const reason = String(formData.get("reason") ?? "").trim();
-  if (!reason) throw new Error("Please provide a reason for declining this referral.");
+  const reason = requireStatusChangeReason(formData);
+  const returnTo = String(formData.get("returnTo") ?? "").trim();
 
   const client = await prisma.client.findFirst({
     where: {
@@ -1139,7 +1276,6 @@ export async function therapistRejectReferralAction(formData: FormData) {
       therapistId: session.user.id,
       assignmentStatus: "PENDING_THERAPIST",
     },
-    include: { therapist: { select: { firstName: true, lastName: true } } },
   });
   if (!client) throw new Error("Referral not found or not pending your acceptance.");
 
@@ -1166,19 +1302,22 @@ export async function therapistRejectReferralAction(formData: FormData) {
     },
   });
 
-  const adminEmail = process.env.CONTACT_EMAIL?.trim() || "ghim@gvcounseling.com";
-  const { sendAdminTherapistRejectionEmail } = await import("@/lib/referral-emails");
-  await sendAdminTherapistRejectionEmail({
-    adminEmail,
-    therapistName: `${client.therapist!.firstName} ${client.therapist!.lastName}`,
-    clientName: `${client.firstName} ${client.lastName}`,
-    claimNumber: client.lniClaimNumber,
+  await logClientStatusChange({
+    session,
+    role: "THERAPIST",
+    client,
+    action: "rejected",
     reason,
-    clientId: client.id,
   });
 
   revalidatePath("/portal/admin/clients");
   revalidatePath(`/portal/admin/clients/${clientId}`);
+  revalidatePath(`/portal/therapist/clients/${clientId}`);
+
+  if (returnTo) {
+    revalidateClientNotePaths(clientId, returnTo);
+    redirectWithQuery(returnTo, { rejected: "1" });
+  }
   redirect("/portal/therapist/dashboard?referralDeclined=1");
 }
 

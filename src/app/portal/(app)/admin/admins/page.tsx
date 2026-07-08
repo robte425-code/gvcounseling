@@ -3,7 +3,7 @@ import { requireAdmin } from "@/auth";
 import { AdminForm } from "@/components/portal/AdminForm";
 import { OutboundEmailTestingToggles } from "@/components/portal/OutboundEmailTestingToggles";
 import { portalCardClass, portalTableNarrowClass, portalTableScrollClass } from "@/components/portal/ui";
-import { getOutboundEmailTestingSettings } from "@/lib/portal-settings";
+import { getOutboundTestingSettings } from "@/lib/portal-settings";
 import { prisma } from "@/lib/prisma";
 
 export default async function AdminAdminsPage({
@@ -20,7 +20,7 @@ export default async function AdminAdminsPage({
       orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
       select: { id: true, firstName: true, lastName: true, email: true },
     }),
-    getOutboundEmailTestingSettings(),
+    getOutboundTestingSettings(),
   ]);
 
   return (
@@ -47,6 +47,7 @@ export default async function AdminAdminsPage({
       <OutboundEmailTestingToggles
         vrcRoute={outboundEmailSettings.vrcRoute}
         therapistRoute={outboundEmailSettings.therapistRoute}
+        lniFaxRoute={outboundEmailSettings.lniFaxRoute}
         adminEmails={outboundEmailSettings.adminEmails}
       />
 

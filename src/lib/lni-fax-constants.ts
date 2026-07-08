@@ -1,6 +1,7 @@
 export const LNI_FAX_PRODUCTION = "3609024567";
+export const LNI_FAX_PRODUCTION_FORMATTED = "360-902-4567";
 export const LNI_FAX_TEST = "2064790710";
-export const LNI_FAX_TEST_FORMATTED = "(206) 479-0710";
+export const LNI_FAX_TEST_FORMATTED = "1 (206) 479-0710";
 
 export type LniFaxDestination = "lni" | "test";
 

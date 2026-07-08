@@ -1,12 +1,15 @@
 "use client";
 
+import { useState } from "react";
 import {
   closeClientAction,
   deleteClientAction,
   reopenClientAction,
 } from "@/lib/portal-actions";
-import { portalButtonSecondaryClass } from "@/components/portal/ui";
+import { ClientStatusReasonDialog } from "@/components/portal/ClientStatusReasonDialog";
 import type { ClientAssignmentStatus } from "@/generated/prisma/client";
+
+type DialogKind = "close" | "reopen" | null;
 
 type Props = {
   clientId: string;
@@ -36,6 +39,7 @@ export function ClientListStatusActions({
   invoiceCount,
   returnTo,
 }: Props) {
+  const [dialog, setDialog] = useState<DialogKind>(null);
   const canDelete = invoiceCount === 0;
 
   function confirmDelete(event: React.FormEvent<HTMLFormElement>) {
@@ -46,48 +50,78 @@ export function ClientListStatusActions({
   }
 
   return (
-    <div
-      className="inline-flex flex-wrap items-center gap-1.5 rounded-xl border border-border/80 bg-muted/5 p-1.5"
-      onClick={stopRowNavigation}
-      onKeyDown={stopRowNavigation}
-    >
-      {assignmentStatus === "ACTIVE" && (
-        <form action={closeClientAction} className="inline">
-          <input type="hidden" name="clientId" value={clientId} />
-          <input type="hidden" name="returnTo" value={returnTo} />
-          <button type="submit" className={actionButtonClassName()} onClick={stopRowNavigation}>
+    <>
+      <div
+        className="inline-flex flex-wrap items-center gap-1.5 rounded-xl border border-border/80 bg-muted/5 p-1.5"
+        onClick={stopRowNavigation}
+        onKeyDown={stopRowNavigation}
+      >
+        {assignmentStatus === "ACTIVE" && (
+          <button
+            type="button"
+            className={actionButtonClassName()}
+            onClick={(event) => {
+              stopRowNavigation(event);
+              setDialog("close");
+            }}
+          >
             Close
           </button>
-        </form>
-      )}
+        )}
 
-      {assignmentStatus === "CLOSED" && (
-        <form action={reopenClientAction} className="inline">
-          <input type="hidden" name="clientId" value={clientId} />
-          <input type="hidden" name="returnTo" value={returnTo} />
-          <button type="submit" className={actionButtonClassName()} onClick={stopRowNavigation}>
+        {assignmentStatus === "CLOSED" && (
+          <button
+            type="button"
+            className={actionButtonClassName()}
+            onClick={(event) => {
+              stopRowNavigation(event);
+              setDialog("reopen");
+            }}
+          >
             Reactivate
           </button>
-        </form>
-      )}
+        )}
 
-      <form action={deleteClientAction} className="inline" onSubmit={confirmDelete}>
-        <input type="hidden" name="clientId" value={clientId} />
-        <input type="hidden" name="returnTo" value={returnTo} />
-        <button
-          type="submit"
-          disabled={!canDelete}
-          title={
-            canDelete
-              ? "Delete client"
-              : "Cannot delete a client with invoices"
-          }
-          className={actionButtonClassName("danger")}
-          onClick={stopRowNavigation}
-        >
-          Delete
-        </button>
-      </form>
-    </div>
+        <form action={deleteClientAction} className="inline" onSubmit={confirmDelete}>
+          <input type="hidden" name="clientId" value={clientId} />
+          <input type="hidden" name="returnTo" value={returnTo} />
+          <button
+            type="submit"
+            disabled={!canDelete}
+            title={
+              canDelete ? "Delete client" : "Cannot delete a client with invoices"
+            }
+            className={actionButtonClassName("danger")}
+            onClick={stopRowNavigation}
+          >
+            Delete
+          </button>
+        </form>
+      </div>
+
+      <ClientStatusReasonDialog
+        open={dialog === "close"}
+        onClose={() => setDialog(null)}
+        title="Close client"
+        description={`Close ${clientLabel}? Their Google Drive folder will be moved to the therapist's closed cases folder.`}
+        submitLabel="Close client"
+        formAction={closeClientAction}
+        clientId={clientId}
+        returnTo={returnTo}
+        titleId={`list-close-${clientId}`}
+      />
+
+      <ClientStatusReasonDialog
+        open={dialog === "reopen"}
+        onClose={() => setDialog(null)}
+        title="Reactivate client"
+        description={`Reactivate ${clientLabel}?`}
+        submitLabel="Reactivate client"
+        formAction={reopenClientAction}
+        clientId={clientId}
+        returnTo={returnTo}
+        titleId={`list-reopen-${clientId}`}
+      />
+    </>
   );
 }

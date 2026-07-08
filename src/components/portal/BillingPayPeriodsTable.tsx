@@ -5,9 +5,11 @@ import { ConfirmSubmitButton } from "@/components/portal/ConfirmSubmitButton";
 import { Generate837Form } from "@/components/portal/Generate837Form";
 import { portalButtonSecondaryClass } from "@/components/portal/ui";
 import type { IsaUsageIndicator } from "@/lib/edi837";
-import type { OutboundEmailRoute } from "@/lib/portal-settings";
-import type { LniFaxDestination } from "@/lib/lni-fax-constants";
-import { LNI_FAX_TEST_FORMATTED } from "@/lib/lni-fax-constants";
+import {
+  LNI_FAX_PRODUCTION_FORMATTED,
+  LNI_FAX_TEST_FORMATTED,
+} from "@/lib/lni-fax-constants";
+import type { OutboundEmailRoute, OutboundLniFaxRoute } from "@/lib/portal-settings";
 import { emailVrcsForPayPeriodAction, faxLniForPayPeriodAction } from "@/lib/portal-actions";
 
 export type BillingPayPeriodRow = {
@@ -24,16 +26,16 @@ type Props = {
   rows: BillingPayPeriodRow[];
   usageIndicator: IsaUsageIndicator;
   vrcRoute: OutboundEmailRoute;
+  lniFaxRoute: OutboundLniFaxRoute;
   adminEmails: string[];
-  lniFaxDestination: LniFaxDestination;
 };
 
 export function BillingPayPeriodsTable({
   rows,
   usageIndicator,
   vrcRoute,
+  lniFaxRoute,
   adminEmails,
-  lniFaxDestination,
 }: Props) {
   if (rows.length === 0) {
     return (
@@ -104,12 +106,11 @@ export function BillingPayPeriodsTable({
                 </form>
                 <form action={faxLniForPayPeriodAction}>
                   <input type="hidden" name="payPeriodId" value={row.id} />
-                  <input type="hidden" name="lniFaxDestination" value={lniFaxDestination} />
                   <ConfirmSubmitButton
                     confirmMessage={
-                      lniFaxDestination === "test"
-                        ? `Send test L&I faxes for all billed clients in ${row.periodLabel}? All faxes (including self-insured employer copies) will go to ${LNI_FAX_TEST_FORMATTED}.`
-                        : `Fax L&I for all billed clients in ${row.periodLabel}? Each client gets a cover page plus session documentation (excluding invoice PDFs) faxed to 360-902-4567. Self-insured clients also fax a copy to their employer.`
+                      lniFaxRoute === "test"
+                        ? `Send test L&I faxes for all billed clients in ${row.periodLabel}? All faxes (including self-insured employer copies) will go to our fax line (${LNI_FAX_TEST_FORMATTED}).`
+                        : `Fax L&I for all billed clients in ${row.periodLabel}? Each client gets a cover page plus session documentation (excluding invoice PDFs) faxed to ${LNI_FAX_PRODUCTION_FORMATTED}. Self-insured clients also fax a copy to their employer.`
                     }
                     className={`${portalButtonSecondaryClass} px-4 py-1.5 text-xs`}
                     disabled={row.billedInvoices === 0}

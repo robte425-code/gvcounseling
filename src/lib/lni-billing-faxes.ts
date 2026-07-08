@@ -12,6 +12,7 @@ import {
   LNI_FAX_TEST,
   type LniFaxDestination,
 } from "@/lib/lni-fax-constants";
+import { getLniOutboundFaxRoute } from "@/lib/portal-settings";
 import { prisma } from "@/lib/prisma";
 
 export {
@@ -135,9 +136,8 @@ async function buildFaxFiles(
 export async function faxLniForPayPeriod(options: {
   payPeriodId: string;
   initiatorUserId: string;
-  lniFaxDestination?: LniFaxDestination;
 }): Promise<LniBillingFaxResult> {
-  const lniFaxDestination = options.lniFaxDestination ?? "lni";
+  const lniFaxDestination = await getLniOutboundFaxRoute();
   const payPeriod = await prisma.payPeriod.findUnique({ where: { id: options.payPeriodId } });
   if (!payPeriod) throw new Error("Pay period not found.");
 

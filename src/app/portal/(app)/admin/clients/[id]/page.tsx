@@ -3,15 +3,15 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { getRealUserId, requireAdmin } from "@/auth";
 import { ClientAssignmentPanel } from "@/components/portal/ClientAssignmentPanel";
-import { ClientCloseButton } from "@/components/portal/ClientCloseButton";
 import { ClientDeleteButton } from "@/components/portal/ClientDeleteButton";
+import { ClientStatusActions } from "@/components/portal/ClientStatusActions";
 import { ClientNotesSection } from "@/components/portal/ClientNotesSection";
 import { ClientDetailView } from "@/components/portal/ClientDetailView";
 import { ClientDriveResyncButton } from "@/components/portal/ClientDriveResyncButton";
 import { ClientDriveFilesLoading } from "@/components/portal/ClientDriveFilesLoading";
 import { ClientDriveFilesSection } from "@/components/portal/ClientDriveFilesSection";
 import { portalButtonClass, portalButtonSecondaryClass } from "@/components/portal/ui";
-import { getOutboundEmailTestingSettings } from "@/lib/portal-settings";
+import { getOutboundTestingSettings } from "@/lib/portal-settings";
 import { prisma } from "@/lib/prisma";
 
 export default async function AdminClientDetailPage({
@@ -28,6 +28,7 @@ export default async function AdminClientDetailPage({
     vrcInfoRequested?: string;
     assigned?: string;
     closed?: string;
+    rejected?: string;
   }>;
 }) {
   const session = await requireAdmin();
@@ -41,6 +42,7 @@ export default async function AdminClientDetailPage({
     assigned,
     reactivated,
     closed,
+    rejected,
   } = await searchParams;
   const [client, therapists, invoiceCount, outboundEmailSettings] = await Promise.all([
     prisma.client.findUnique({
@@ -53,7 +55,7 @@ export default async function AdminClientDetailPage({
       select: { id: true, firstName: true, lastName: true },
     }),
     prisma.invoice.count({ where: { clientId: id } }),
-    getOutboundEmailTestingSettings(),
+    getOutboundTestingSettings(),
   ]);
   if (!client) notFound();
 
@@ -94,6 +96,11 @@ export default async function AdminClientDetailPage({
           Client closed. Their Drive folder was moved to the therapist&apos;s closed cases folder.
         </p>
       )}
+      {rejected === "1" && (
+        <p className="rounded-lg bg-primary/10 px-3 py-2 text-sm text-primary-dark">
+          Referral rejected.
+        </p>
+      )}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <Link href="/portal/admin/clients" className={`${portalButtonSecondaryClass} text-xs`}>
@@ -114,13 +121,6 @@ export default async function AdminClientDetailPage({
           <Link href={`/portal/admin/clients/${client.id}/edit`} className={portalButtonClass}>
             Edit client
           </Link>
-          {client.assignmentStatus === "ACTIVE" && (
-            <ClientCloseButton
-              clientId={client.id}
-              clientLabel={`${client.lastName}, ${client.firstName}`}
-              returnTo={`/portal/admin/clients/${client.id}`}
-            />
-          )}
           <ClientDeleteButton
             clientId={client.id}
             clientLabel={`${client.lastName}, ${client.firstName}`}
@@ -129,6 +129,15 @@ export default async function AdminClientDetailPage({
           />
         </div>
       </div>
+
+      <ClientStatusActions
+        clientId={client.id}
+        clientLabel={`${client.lastName}, ${client.firstName}`}
+        assignmentStatus={client.assignmentStatus}
+        rejectionReason={client.rejectionReason}
+        role="admin"
+        returnTo={`/portal/admin/clients/${client.id}`}
+      />
 
       <ClientAssignmentPanel
         clientId={client.id}

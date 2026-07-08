@@ -5,17 +5,8 @@ import { requireTherapist } from "@/auth";
 import { ClientDetailView } from "@/components/portal/ClientDetailView";
 import { ClientDriveFilesLoading } from "@/components/portal/ClientDriveFilesLoading";
 import { ClientDriveFilesSection } from "@/components/portal/ClientDriveFilesSection";
-import {
-  portalButtonClass,
-  portalButtonSecondaryClass,
-  portalCardClass,
-  portalInputClass,
-  portalLabelClass,
-} from "@/components/portal/ui";
-import {
-  therapistAcceptReferralAction,
-  therapistRejectReferralAction,
-} from "@/lib/portal-actions";
+import { TherapistReferralReviewActions } from "@/components/portal/TherapistReferralReviewActions";
+import { portalButtonSecondaryClass } from "@/components/portal/ui";
 import { prisma } from "@/lib/prisma";
 
 export default async function TherapistReferralReviewPage({
@@ -60,32 +51,7 @@ export default async function TherapistReferralReviewPage({
         />
       </Suspense>
 
-      <div className={`${portalCardClass} space-y-4`}>
-        <form action={therapistAcceptReferralAction}>
-          <input type="hidden" name="clientId" value={client.id} />
-          <button type="submit" className={portalButtonClass}>
-            Accept client
-          </button>
-        </form>
-
-        <form action={therapistRejectReferralAction} className="space-y-3 border-t border-border pt-4">
-          <input type="hidden" name="clientId" value={client.id} />
-          <label htmlFor="reason" className={portalLabelClass}>
-            Decline reason <span className="text-primary">*</span>
-          </label>
-          <textarea
-            id="reason"
-            name="reason"
-            required
-            rows={3}
-            className={portalInputClass}
-            placeholder="Please explain why you are declining this referral…"
-          />
-          <button type="submit" className={portalButtonSecondaryClass}>
-            Decline referral
-          </button>
-        </form>
-      </div>
+      <TherapistReferralReviewActions clientId={client.id} />
     </div>
   );
 }

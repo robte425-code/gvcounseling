@@ -7,8 +7,7 @@ import {
 } from "@/lib/portal-actions";
 import { LNI_PAYMENT_STATUS_URL } from "@/lib/lni-pay-periods";
 import { getIsaUsageIndicator } from "@/lib/edi837";
-import { defaultLniFaxDestination } from "@/lib/lni-fax-constants";
-import { getOutboundEmailTestingSettings } from "@/lib/portal-settings";
+import { getOutboundTestingSettings } from "@/lib/portal-settings";
 import {
   portalButtonClass,
   portalButtonSecondaryClass,
@@ -53,7 +52,7 @@ export default async function BillingPage({
         },
       },
     }),
-    getOutboundEmailTestingSettings(),
+    getOutboundTestingSettings(),
   ]);
 
   const billedByPeriod = await prisma.invoice.groupBy({
@@ -182,8 +181,8 @@ export default async function BillingPage({
       <BillingWorkspace
         rows={periodRows}
         defaultUsageIndicator={getIsaUsageIndicator()}
-        defaultLniFaxDestination={defaultLniFaxDestination()}
         vrcRoute={outboundEmailSettings.vrcRoute}
+        lniFaxRoute={outboundEmailSettings.lniFaxRoute}
         adminEmails={outboundEmailSettings.adminEmails}
         setup={
           <>

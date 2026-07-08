@@ -3,10 +3,12 @@ import { connection } from "next/server";
 
 export const OUTBOUND_VRC_EMAIL_KEY = "outbound_vrc_email_destination";
 export const OUTBOUND_THERAPIST_EMAIL_KEY = "outbound_therapist_email_destination";
+export const OUTBOUND_LNI_FAX_KEY = "outbound_lni_fax_destination";
 /** @deprecated Legacy key — read as fallback for VRC routing only. */
 export const VRC_REFERRAL_EMAIL_DESTINATION_KEY = "vrc_referral_email_destination";
 
 export type OutboundEmailRoute = "intended" | "admin";
+export type OutboundLniFaxRoute = "lni" | "test";
 
 export function parseOutboundEmailRoute(
   value: string | null | undefined,
@@ -19,6 +21,17 @@ export function parseOutboundEmailRoute(
 
 export function defaultOutboundEmailRoute(): OutboundEmailRoute {
   return "intended";
+}
+
+export function parseOutboundLniFaxRoute(
+  value: string | null | undefined,
+): OutboundLniFaxRoute | undefined {
+  const normalized = value?.trim().toLowerCase();
+  return normalized === "lni" || normalized === "test" ? normalized : undefined;
+}
+
+export function defaultOutboundLniFaxRoute(): OutboundLniFaxRoute {
+  return "test";
 }
 
 async function readPortalSetting(key: string): Promise<string | null> {
@@ -60,17 +73,46 @@ export async function setTherapistOutboundEmailRoute(route: OutboundEmailRoute):
   });
 }
 
+export async function getLniOutboundFaxRoute(): Promise<OutboundLniFaxRoute> {
+  const current = await readPortalSetting(OUTBOUND_LNI_FAX_KEY);
+  return parseOutboundLniFaxRoute(current) ?? defaultOutboundLniFaxRoute();
+}
+
+export async function setLniOutboundFaxRoute(route: OutboundLniFaxRoute): Promise<void> {
+  await prisma.portalSetting.upsert({
+    where: { key: OUTBOUND_LNI_FAX_KEY },
+    create: { key: OUTBOUND_LNI_FAX_KEY, value: route },
+    update: { value: route },
+  });
+}
+
+export async function getOutboundTestingSettings(): Promise<{
+  vrcRoute: OutboundEmailRoute;
+  therapistRoute: OutboundEmailRoute;
+  lniFaxRoute: OutboundLniFaxRoute;
+  adminEmails: string[];
+}> {
+  const [vrcRoute, therapistRoute, lniFaxRoute, adminEmails] = await Promise.all([
+    getVrcOutboundEmailRoute(),
+    getTherapistOutboundEmailRoute(),
+    getLniOutboundFaxRoute(),
+    getAdminNotificationEmails(),
+  ]);
+  return { vrcRoute, therapistRoute, lniFaxRoute, adminEmails };
+}
+
+/** @deprecated Use getOutboundTestingSettings */
 export async function getOutboundEmailTestingSettings(): Promise<{
   vrcRoute: OutboundEmailRoute;
   therapistRoute: OutboundEmailRoute;
   adminEmails: string[];
 }> {
-  const [vrcRoute, therapistRoute, adminEmails] = await Promise.all([
-    getVrcOutboundEmailRoute(),
-    getTherapistOutboundEmailRoute(),
-    getAdminNotificationEmails(),
-  ]);
-  return { vrcRoute, therapistRoute, adminEmails };
+  const settings = await getOutboundTestingSettings();
+  return {
+    vrcRoute: settings.vrcRoute,
+    therapistRoute: settings.therapistRoute,
+    adminEmails: settings.adminEmails,
+  };
 }
 
 export async function getAdminNotificationEmails(): Promise<string[]> {

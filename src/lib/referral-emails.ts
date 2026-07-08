@@ -125,16 +125,44 @@ export async function sendAdminTherapistRejectionEmail(options: {
   reason: string;
   clientId: string;
 }) {
+  await sendAdminTherapistClientStatusEmail({
+    adminEmails: [options.adminEmail],
+    therapistName: options.therapistName,
+    action: "rejected",
+    clientName: options.clientName,
+    claimNumber: options.claimNumber,
+    reason: options.reason,
+    clientId: options.clientId,
+  });
+}
+
+export async function sendAdminTherapistClientStatusEmail(options: {
+  adminEmails: string[];
+  therapistName: string;
+  action: "closed" | "reopened" | "rejected";
+  clientName: string;
+  claimNumber: string;
+  reason: string;
+  clientId: string;
+}) {
+  const recipients = options.adminEmails.map((email) => email.trim()).filter(Boolean);
+  if (recipients.length === 0) return;
+
+  const actionLabels: Record<typeof options.action, string> = {
+    closed: "closed",
+    reopened: "reopened",
+    rejected: "declined/rejected",
+  };
   const clientUrl = `${getSiteUrl()}/portal/admin/clients/${options.clientId}`;
-  await sendEmailTo(options.adminEmail, {
-    subject: `Therapist declined referral: ${options.clientName} (${options.claimNumber})`,
+  await sendEmailTo(recipients.join(", "), {
+    subject: `Therapist ${actionLabels[options.action]} client: ${options.clientName} (${options.claimNumber})`,
     text: [
-      `${options.therapistName} declined the referral for ${options.clientName} (${options.claimNumber}).`,
+      `${options.therapistName} ${actionLabels[options.action]} the client ${options.clientName} (${options.claimNumber}).`,
       "",
-      `Reason:`,
+      "Reason:",
       options.reason,
       "",
-      `The client is unassigned again. Review and reassign:`,
+      "View client in the portal:",
       clientUrl,
       "",
       "Grandview Counseling",
