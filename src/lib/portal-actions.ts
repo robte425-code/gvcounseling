@@ -12,9 +12,11 @@ import {
   unstable_update,
 } from "@/auth";
 import type { ImpersonationUpdate } from "@/types/next-auth";
+import type { ClientAssignmentStatus } from "@/generated/prisma/client";
 import { Gender } from "@/generated/prisma/client";
 import { parseClaimNumber } from "@/lib/constants";
 import { moveClientDriveFolderToClosedCases, moveClientDriveFolderToTherapist } from "@/lib/client-drive-move";
+import { canAdminCloseClient, canTherapistCloseClient } from "@/lib/client-assignment-status";
 import { recordClientStatusChange, type ClientStatusChangeAction } from "@/lib/client-status-change";
 import { ensureTherapistDriveFolder, removeTherapistDriveFolder, deleteInvoiceDriveAttachments } from "@/lib/google-drive";
 import { getDriveAccessTokenForClient } from "@/lib/google-drive-access";
@@ -1145,8 +1147,12 @@ export async function closeClientAction(formData: FormData) {
   const returnTo = String(formData.get("returnTo") ?? "").trim();
   const reason = requireStatusChangeReason(formData);
   const { client, session, role } = await requireClientManager(clientId);
-  if (client.assignmentStatus !== "ACTIVE") {
-    throw new Error("Only active clients can be closed.");
+  const canClose =
+    role === "ADMIN"
+      ? canAdminCloseClient(client.assignmentStatus as ClientAssignmentStatus)
+      : canTherapistCloseClient(client.assignmentStatus as ClientAssignmentStatus);
+  if (!canClose) {
+    throw new Error("This client cannot be closed.");
   }
 
   if (client.driveFolderId && client.therapist) {

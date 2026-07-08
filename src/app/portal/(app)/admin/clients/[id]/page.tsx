@@ -12,6 +12,7 @@ import { ClientDriveFilesLoading } from "@/components/portal/ClientDriveFilesLoa
 import { ClientDriveFilesSection } from "@/components/portal/ClientDriveFilesSection";
 import { portalButtonClass, portalButtonSecondaryClass } from "@/components/portal/ui";
 import { getOutboundTestingSettings } from "@/lib/portal-settings";
+import { canAdminCloseClient } from "@/lib/client-assignment-status";
 import { prisma } from "@/lib/prisma";
 
 export default async function AdminClientDetailPage({
@@ -115,7 +116,7 @@ export default async function AdminClientDetailPage({
           <Link href={`/portal/admin/clients/${client.id}/edit`} className={portalButtonClass}>
             Edit client
           </Link>
-          {client.assignmentStatus === "ACTIVE" && (
+          {canAdminCloseClient(client.assignmentStatus) && (
             <ClientCloseButton
               clientId={client.id}
               clientLabel={`${client.lastName}, ${client.firstName}`}

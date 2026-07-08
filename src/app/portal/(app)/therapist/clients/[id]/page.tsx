@@ -9,6 +9,7 @@ import { ClientDriveFilesLoading } from "@/components/portal/ClientDriveFilesLoa
 import { ClientDriveFilesSection } from "@/components/portal/ClientDriveFilesSection";
 import { ClientStatusActions } from "@/components/portal/ClientStatusActions";
 import { portalButtonClass, portalButtonSecondaryClass } from "@/components/portal/ui";
+import { canTherapistCloseClient } from "@/lib/client-assignment-status";
 import { prisma } from "@/lib/prisma";
 
 export default async function TherapistClientDetailPage({
@@ -76,7 +77,7 @@ export default async function TherapistClientDetailPage({
           <Link href={`/portal/therapist/clients/${client.id}/edit`} className={portalButtonClass}>
             Edit client
           </Link>
-          {client.assignmentStatus === "ACTIVE" && (
+          {canTherapistCloseClient(client.assignmentStatus) && (
             <ClientCloseButton
               clientId={client.id}
               clientLabel={`${client.lastName}, ${client.firstName}`}

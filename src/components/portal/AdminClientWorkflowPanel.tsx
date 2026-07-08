@@ -6,7 +6,9 @@ import {
   reopenClientAction,
 } from "@/lib/portal-actions";
 import { ClientStatusReasonDialog } from "@/components/portal/ClientStatusReasonDialog";
+import { ClientCloseButton } from "@/components/portal/ClientCloseButton";
 import { ClientVrcReferralActions } from "@/components/portal/ClientVrcReferralActions";
+import { canAdminCloseClient } from "@/lib/client-assignment-status";
 import {
   portalButtonClass,
   portalCardClass,
@@ -71,6 +73,7 @@ export function AdminClientWorkflowPanel({
 }: Props) {
   const [dialog, setDialog] = useState<DialogKind>(null);
 
+  const canClose = canAdminCloseClient(assignmentStatus);
   const canReopen =
     assignmentStatus === "CLOSED" || assignmentStatus === "REJECTED_BY_ADMIN";
   const showVrcAndAssign = assignmentStatus === "UNASSIGNED";
@@ -78,7 +81,7 @@ export function AdminClientWorkflowPanel({
   const reopenLabel =
     assignmentStatus === "REJECTED_BY_ADMIN" ? "Reopen referral" : "Reactivate client";
 
-  const hasHeaderActions = canReopen;
+  const hasHeaderActions = canClose || canReopen;
 
   return (
     <>
@@ -114,6 +117,13 @@ export function AdminClientWorkflowPanel({
 
           {hasHeaderActions && (
             <div className="flex flex-wrap gap-2 lg:shrink-0 lg:justify-end">
+              {canClose && (
+                <ClientCloseButton
+                  clientId={clientId}
+                  clientLabel={clientLabel}
+                  returnTo={returnTo}
+                />
+              )}
               {canReopen && (
                 <button
                   type="button"
@@ -126,6 +136,13 @@ export function AdminClientWorkflowPanel({
             </div>
           )}
         </div>
+
+        {assignmentStatus === "ACTIVE" && (
+          <p className="mt-4 text-sm text-muted">
+            This client is active. Close when billing is complete and the case should move to closed
+            cases in Drive.
+          </p>
+        )}
 
         {showVrcAndAssign && (
           <div className="mt-6 grid gap-6 border-t border-border pt-6 lg:grid-cols-2">
