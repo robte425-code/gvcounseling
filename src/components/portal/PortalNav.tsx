@@ -1,39 +1,18 @@
-import Link from "next/link";
 import { auth, getRealRole, isImpersonating, signOut } from "@/auth";
-import { PortalNavMenu } from "@/components/portal/PortalNavMenu";
+import { PortalSidebar } from "@/components/portal/PortalSidebar";
+import { adminNavGroups, therapistNavGroups } from "@/components/portal/portal-nav-config";
 import { stopImpersonationAction } from "@/lib/portal-actions";
 import { ViewAsTherapistSelect } from "@/components/portal/ViewAsTherapistSelect";
 import { portalNavButtonClass } from "@/components/portal/ui";
 import { prisma } from "@/lib/prisma";
 
-const adminLinks = [
-  { href: "/portal/admin/dashboard", label: "Dashboard" },
-  { href: "/portal/admin/billing", label: "Bill L&I" },
-  { href: "/portal/admin/pay", label: "Process RA" },
-  { href: "/portal/admin/paychecks", label: "Paychecks" },
-  { href: "/portal/admin/clients", label: "Clients" },
-  { href: "/portal/admin/therapists", label: "Therapists" },
-  { href: "/portal/admin/admins", label: "Admin" },
-  { href: "/portal/admin/invoices", label: "Invoices" },
-  { href: "/portal/admin/integrations/google-drive", label: "Google Drive" },
-];
-
-const therapistLinks = [
-  { href: "/portal/therapist/dashboard", label: "Dashboard" },
-  { href: "/portal/therapist/clients", label: "Clients" },
-  { href: "/portal/therapist/invoices", label: "Invoices" },
-  { href: "/portal/therapist/paychecks", label: "Paychecks" },
-  { href: "/portal/therapist/fees", label: "Fees" },
-  { href: "/portal/therapist/account", label: "Account" },
-];
-
-export async function PortalNav() {
+export async function PortalNav({ children }: { children: React.ReactNode }) {
   const session = await auth();
   if (!session?.user) return null;
 
   const impersonating = isImpersonating(session);
   const admin = getRealRole(session) === "ADMIN";
-  const links = impersonating || session.user.role === "THERAPIST" ? therapistLinks : adminLinks;
+  const groups = impersonating || session.user.role === "THERAPIST" ? therapistNavGroups : adminNavGroups;
 
   const therapists =
     admin && !impersonating
@@ -43,6 +22,24 @@ export async function PortalNav() {
           select: { email: true, firstName: true, lastName: true },
         })
       : [];
+
+  const siteLabel = `Billing portal · ${session.user.firstName}${admin && !impersonating ? " (admin)" : ""}`;
+
+  const footer = (
+    <>
+      {therapists.length > 0 && <ViewAsTherapistSelect therapists={therapists} />}
+      <form
+        action={async () => {
+          "use server";
+          await signOut({ redirectTo: "/portal/login" });
+        }}
+      >
+        <button type="submit" className={`${portalNavButtonClass} w-full justify-start px-3`}>
+          Sign out
+        </button>
+      </form>
+    </>
+  );
 
   return (
     <>
@@ -60,25 +57,9 @@ export async function PortalNav() {
           </form>
         </div>
       )}
-      <PortalNavMenu
-        links={links}
-        siteLabel={`Billing portal · ${session.user.firstName}${admin && !impersonating ? " (admin)" : ""}`}
-        trailing={
-          <>
-            {therapists.length > 0 && <ViewAsTherapistSelect therapists={therapists} />}
-            <form
-              action={async () => {
-                "use server";
-                await signOut({ redirectTo: "/portal/login" });
-              }}
-            >
-              <button type="submit" className={`${portalNavButtonClass} min-h-11 lg:min-h-0`}>
-                Sign out
-              </button>
-            </form>
-          </>
-        }
-      />
+      <PortalSidebar groups={groups} siteLabel={siteLabel} footer={footer}>
+        {children}
+      </PortalSidebar>
     </>
   );
 }
