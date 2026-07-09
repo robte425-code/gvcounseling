@@ -1,6 +1,8 @@
 import { getDriveAccessTokenForClient } from "@/lib/google-drive-access";
+import { ensureClientDriveFolderSharedWithTherapist } from "@/lib/client-drive-move";
 import type { ClientDriveFolderContents, DriveItemLink } from "@/lib/google-drive";
 import { listClientDriveContents } from "@/lib/google-drive";
+import { prisma } from "@/lib/prisma";
 
 export type ClientDriveContentsResult =
   | { linked: false; folderName: null; folderLink: null; items: DriveItemLink[]; error: null }
@@ -18,6 +20,16 @@ export async function loadClientDriveContents(
 ): Promise<ClientDriveContentsResult> {
   if (!driveFolderId) {
     return { linked: false, folderName: null, folderLink: null, items: [], error: null };
+  }
+
+  if (options?.therapistId) {
+    const therapist = await prisma.user.findUnique({
+      where: { id: options.therapistId },
+      select: { email: true, firstName: true, lastName: true },
+    });
+    if (therapist) {
+      await ensureClientDriveFolderSharedWithTherapist(driveFolderId, therapist);
+    }
   }
 
   try {

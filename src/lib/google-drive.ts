@@ -592,6 +592,40 @@ export async function moveDriveFolder(
   );
 }
 
+function isDrivePermissionAlreadyGrantedError(message: string): boolean {
+  return /already|duplicate|permission.*exist|cannot modify a permission/i.test(message);
+}
+
+/** Grant a therapist direct access to a Drive folder and its contents. */
+export async function shareDriveItemWithUser(
+  accessToken: string,
+  fileId: string,
+  email: string,
+  role: "reader" | "writer" = "writer",
+): Promise<void> {
+  const trimmed = email.trim();
+  if (!trimmed) return;
+
+  try {
+    await driveJson(
+      accessToken,
+      `/files/${fileId}/permissions?supportsAllDrives=true&sendNotificationEmail=false`,
+      {
+        method: "POST",
+        body: JSON.stringify({
+          type: "user",
+          role,
+          emailAddress: trimmed,
+        }),
+      },
+    );
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (isDrivePermissionAlreadyGrantedError(message)) return;
+    throw error;
+  }
+}
+
 export async function getDriveFolderParentIds(
   accessToken: string,
   folderId: string,
