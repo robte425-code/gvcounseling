@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -59,11 +60,18 @@ function SidebarNav({
 
 function SidebarBrand({ siteLabel }: { siteLabel: string }) {
   return (
-    <div className="border-b border-border px-5 py-4">
-      <Link href="/" className="font-serif text-lg font-semibold text-primary-dark">
-        Grandview Counseling
+    <div className="border-b border-border px-4 py-4">
+      <Link href="/" className="block">
+        <Image
+          src="/images/logo.png"
+          alt="Grandview Counseling"
+          width={200}
+          height={56}
+          className="h-10 w-auto"
+          priority
+        />
       </Link>
-      <p className="mt-1 truncate text-xs text-muted">{siteLabel}</p>
+      <p className="mt-2 truncate px-1 text-xs text-muted">{siteLabel}</p>
     </div>
   );
 }
@@ -123,10 +131,17 @@ export function PortalSidebar({ groups, siteLabel, footer, children }: PortalSid
               )}
             </svg>
           </button>
-          <div className="min-w-0">
-            <p className="truncate font-serif text-base font-semibold text-primary-dark">Grandview Counseling</p>
-            <p className="truncate text-xs text-muted">{siteLabel}</p>
-          </div>
+          <Link href="/" className="min-w-0 shrink">
+            <Image
+              src="/images/logo.png"
+              alt="Grandview Counseling"
+              width={160}
+              height={45}
+              className="h-8 w-auto"
+              priority
+            />
+            <p className="mt-0.5 truncate text-xs text-muted">{siteLabel}</p>
+          </Link>
         </header>
 
         <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-5 sm:px-6 sm:py-8">{children}</main>
