@@ -24,6 +24,7 @@ const therapistLinks = [
   { href: "/portal/therapist/invoices", label: "Invoices" },
   { href: "/portal/therapist/paychecks", label: "Paychecks" },
   { href: "/portal/therapist/fees", label: "Fees" },
+  { href: "/portal/therapist/account", label: "Account" },
 ];
 
 export async function PortalNav() {

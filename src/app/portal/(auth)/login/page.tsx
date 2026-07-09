@@ -54,6 +54,10 @@ export default function PortalLoginPage() {
         </button>
       </form>
       <p className="mt-6 text-center text-sm text-muted">
+        <Link href="/portal/forgot-password" className="text-primary hover:underline">
+          Forgot password?
+        </Link>
+        {" · "}
         <Link href="/" className="text-primary hover:underline">
           Back to website
         </Link>

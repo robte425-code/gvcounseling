@@ -22,8 +22,10 @@ import { formatVrcAcceptanceNote } from "@/lib/client-notes";
 import { ensureTherapistDriveFolder, removeTherapistDriveFolder, deleteInvoiceDriveAttachments, trashClientDriveFolder } from "@/lib/google-drive";
 import { getDriveAccessTokenForClient } from "@/lib/google-drive-access";
 import { getSystemDriveAccessToken } from "@/lib/google-drive-system";
-import { sendAdminWelcomeEmail, sendTherapistAssignmentEmail, sendTherapistLniFaxAcknowledgementEmail, sendTherapistWelcomeEmail, sendVrcReferralAcceptanceEmail, sendVrcReferralInfoRequestEmail } from "@/lib/referral-emails";
+import { sendAdminWelcomeEmail, sendTherapistAssignmentEmail, sendTherapistLniFaxAcknowledgementEmail, sendTherapistPasswordResetEmail, sendTherapistWelcomeEmail, sendVrcReferralAcceptanceEmail, sendVrcReferralInfoRequestEmail } from "@/lib/referral-emails";
 import { generateOneTimePassword, hashPassword, verifyPassword } from "@/lib/password";
+import { createTherapistPasswordResetToken, consumeTherapistPasswordResetToken } from "@/lib/password-reset";
+import { getSiteUrl } from "@/lib/site-url";
 import { fetchLniPayPeriods } from "@/lib/lni-pay-periods";
 import { createProcedureCodeFee, createTherapistProcedureCodeFee, updateTherapistProcedureCodeFee, applyTherapistFeeSchedule } from "@/lib/procedure-fees";
 import { prisma } from "@/lib/prisma";
@@ -143,6 +145,69 @@ export async function changePasswordAction(
   const dest =
     getRealRole(session) === "ADMIN" ? "/portal/admin/dashboard" : "/portal/therapist/dashboard";
   redirect(dest);
+}
+
+export type ForgotPasswordState = { error?: string; sent?: boolean };
+
+export async function requestTherapistPasswordResetAction(
+  _prevState: ForgotPasswordState,
+  formData: FormData,
+): Promise<ForgotPasswordState> {
+  const email = String(formData.get("email") ?? "")
+    .toLowerCase()
+    .trim();
+  if (!email) {
+    return { error: "Email is required." };
+  }
+
+  try {
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (user?.role === "THERAPIST" && user.active) {
+      const token = await createTherapistPasswordResetToken(user.id);
+      await sendTherapistPasswordResetEmail({
+        therapistEmail: user.email,
+        therapistName: `${user.firstName} ${user.lastName}`,
+        resetUrl: `${getSiteUrl()}/portal/reset-password?token=${encodeURIComponent(token)}`,
+      });
+    }
+  } catch (error) {
+    console.error("Therapist password reset email failed:", error);
+  }
+
+  return { sent: true };
+}
+
+export type ResetPasswordState = { error?: string; success?: boolean };
+
+export async function resetPasswordWithTokenAction(
+  _prevState: ResetPasswordState,
+  formData: FormData,
+): Promise<ResetPasswordState> {
+  const token = String(formData.get("token") ?? "").trim();
+  const next = String(formData.get("newPassword") ?? "");
+  const confirm = String(formData.get("confirmPassword") ?? "");
+
+  if (!token) {
+    return { error: "Reset link is invalid or expired." };
+  }
+  if (next.length < 10) {
+    return { error: "Password must be at least 10 characters." };
+  }
+  if (next !== confirm) {
+    return { error: "Passwords do not match." };
+  }
+
+  const userId = await consumeTherapistPasswordResetToken(token);
+  if (!userId) {
+    return { error: "Reset link is invalid or expired." };
+  }
+
+  await prisma.user.update({
+    where: { id: userId },
+    data: { passwordHash: await hashPassword(next), mustChangePassword: false },
+  });
+
+  return { success: true };
 }
 
 export async function startImpersonationAction(formData: FormData) {

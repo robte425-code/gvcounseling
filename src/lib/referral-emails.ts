@@ -254,6 +254,37 @@ export async function sendTherapistLniFaxAcknowledgementEmail(options: {
   });
 }
 
+export async function sendTherapistPasswordResetEmail(options: {
+  therapistEmail: string;
+  therapistName: string;
+  resetUrl: string;
+}) {
+  const intendedEmail = options.therapistEmail.trim();
+  if (!intendedEmail) return;
+
+  const { to, redirected } = await resolveTherapistOutboundEmail(intendedEmail);
+  const lines = [
+    `Hello ${options.therapistName},`,
+    "",
+    "We received a request to reset your Grandview Counseling billing portal password.",
+    "",
+    "Reset your password here (link expires in 1 hour):",
+    options.resetUrl,
+    "",
+    "If you did not request this, you can ignore this email. Your password will not change.",
+    "",
+    "Grandview Counseling",
+  ];
+  if (redirected) {
+    lines.push(outboundEmailRedirectNote(options.therapistName, intendedEmail));
+  }
+
+  await sendEmailTo(to, {
+    subject: "Reset your billing portal password",
+    text: lines.join("\n"),
+  });
+}
+
 export async function sendTherapistWelcomeEmail(options: {
   therapistEmail: string;
   therapistName: string;
