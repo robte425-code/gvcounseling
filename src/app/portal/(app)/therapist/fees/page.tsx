@@ -11,7 +11,7 @@ export default async function TherapistFeesPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="font-serif text-3xl font-semibold text-primary-dark">Fees</h1>
+        <h1 className="font-serif text-3xl font-semibold text-primary-dark">My rates</h1>
         <p className="mt-2 text-muted">
           Your invoice rates by procedure code and effective date. These amounts are applied when you
           create invoices. Contact the admin to request fee changes.
