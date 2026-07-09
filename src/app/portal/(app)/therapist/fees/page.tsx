@@ -24,7 +24,7 @@ export default async function TherapistFeesPage() {
       </div>
 
       <div className={portalCardClass}>
-        <h2 className="mb-4 font-serif text-xl font-semibold text-primary-dark">Fee history</h2>
+        <h2 className="mb-4 font-serif text-xl font-semibold text-primary-dark">Rate history</h2>
         <TherapistFeesHistoryTable fees={fees} />
       </div>
     </div>
