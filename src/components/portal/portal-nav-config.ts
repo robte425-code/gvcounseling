@@ -16,6 +16,7 @@ export const adminNavGroups: PortalNavGroup[] = [
       { href: "/portal/admin/billing", label: "Bill L&I" },
       { href: "/portal/admin/pay", label: "Process RA" },
       { href: "/portal/admin/paychecks", label: "Paychecks" },
+      { href: "/portal/admin/invoices", label: "Invoices" },
     ],
   },
   {
@@ -23,13 +24,12 @@ export const adminNavGroups: PortalNavGroup[] = [
     links: [
       { href: "/portal/admin/clients", label: "Clients" },
       { href: "/portal/admin/therapists", label: "Therapists" },
-      { href: "/portal/admin/admins", label: "Admin" },
     ],
   },
   {
-    label: "Records",
+    label: "Administrative",
     links: [
-      { href: "/portal/admin/invoices", label: "Invoices" },
+      { href: "/portal/admin/admins", label: "Admin" },
       { href: "/portal/admin/integrations/google-drive", label: "Google Drive" },
     ],
   },
@@ -51,7 +51,7 @@ export const therapistNavGroups: PortalNavGroup[] = [
     label: "Payments",
     links: [
       { href: "/portal/therapist/paychecks", label: "Paychecks" },
-      { href: "/portal/therapist/fees", label: "Fees" },
+      { href: "/portal/therapist/fees", label: "My rates" },
     ],
   },
   {
