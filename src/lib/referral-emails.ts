@@ -32,9 +32,7 @@ export async function sendVrcReferralAcceptanceEmail(options: {
   const greetingName = vrcFirstName(options.vrcName);
   const cc = await resolveAdminCcForVrcEmail(to);
   await sendEmailTo(to, {
-    subject: referralEmailSubject(
-      `Referral received: ${options.clientName} (${options.claimNumber})`,
-    ),
+    subject: referralEmailSubject(`Referral received: ${options.claimNumber}`),
     cc,
     text: [
       `Dear ${greetingName},`,
@@ -67,9 +65,7 @@ export async function sendVrcReferralInfoRequestEmail(options: {
   const greetingName = vrcFirstName(options.vrcName);
   const cc = await resolveAdminCcForVrcEmail(to);
   await sendEmailTo(to, {
-    subject: referralEmailSubject(
-      `More information needed: ${options.clientName} (${options.claimNumber})`,
-    ),
+    subject: referralEmailSubject(`More information needed: ${options.claimNumber}`),
     replyTo: options.replyToEmail,
     cc,
     text: [
@@ -159,7 +155,7 @@ export async function sendAdminTherapistClientStatusEmail(options: {
   };
   const clientUrl = `${getSiteUrl()}/portal/admin/clients/${options.clientId}`;
   await sendEmailTo(recipients.join(", "), {
-    subject: `Therapist ${actionLabels[options.action]} client: ${options.clientName} (${options.claimNumber})`,
+    subject: `Therapist ${actionLabels[options.action]} client: ${options.claimNumber}`,
     text: [
       `${options.therapistName} ${actionLabels[options.action]} the client ${options.clientName} (${options.claimNumber}).`,
       "",
@@ -189,7 +185,7 @@ export async function sendAdminLniFaxNotificationEmail(options: {
 
   const clientUrl = `${getSiteUrl()}/portal/admin/clients/${options.clientId}`;
   await sendEmailTo(adminEmails.join(", "), {
-    subject: `L&I fax sent: ${options.clientName} (${options.claimNumber})`,
+    subject: `L&I fax sent: ${options.claimNumber}`,
     text: [
       `An L&I fax was sent for ${options.clientName} (Claim #${options.claimNumber}).`,
       "",
@@ -249,7 +245,7 @@ export async function sendTherapistLniFaxAcknowledgementEmail(options: {
   }
 
   await sendEmailTo(to, {
-    subject: `L&I fax queued: ${options.clientName} (${options.claimNumber})`,
+    subject: `L&I fax queued: ${options.claimNumber}`,
     text: lines.filter((line): line is string => line != null).join("\n"),
   });
 }
@@ -392,7 +388,7 @@ export async function sendReferralIntakeAdminNotice(options: {
     lines.push("", "Notes:", ...options.warnings.map((w) => `- ${w}`));
   }
   await sendEmailTo(adminEmail, {
-    subject: `New referral: ${options.clientName} (${options.claimNumber})`,
+    subject: `New referral: ${options.claimNumber}`,
     replyTo: options.replyTo,
     text: lines.join("\n"),
     attachments: options.attachments,
@@ -401,14 +397,16 @@ export async function sendReferralIntakeAdminNotice(options: {
 
 export async function sendReferralIntakeFailedNotice(options: {
   clientName: string;
+  claimNumber?: string;
   formDetails: string;
   errorMessage: string;
   replyTo?: string;
   attachments?: { filename: string; content: string; contentType?: string }[];
 }) {
   const adminEmail = process.env.CONTACT_EMAIL?.trim() || "ghim@gvcounseling.com";
+  const claimLabel = options.claimNumber?.trim();
   await sendEmailTo(adminEmail, {
-    subject: `Referral intake failed: ${options.clientName}`,
+    subject: claimLabel ? `Referral intake failed: ${claimLabel}` : "Referral intake failed",
     replyTo: options.replyTo,
     text: [
       "A referral was submitted but automatic client creation failed.",

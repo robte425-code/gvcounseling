@@ -76,6 +76,7 @@ export async function POST(request: NextRequest) {
       ];
       await sendReferralIntakeFailedNotice({
         clientName: String(clientName),
+        claimNumber: String(formData.get("claimNumbers") ?? "").trim() || undefined,
         formDetails,
         errorMessage: intakeWarnings[0]!,
         replyTo,
