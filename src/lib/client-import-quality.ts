@@ -427,6 +427,15 @@ function sanitizeSupplement(
     next.attendingDoctorName = undefined;
   }
 
+  if (
+    next.attendingDoctorName &&
+    next.clientName &&
+    next.attendingDoctorName.trim().toUpperCase() === next.clientName.trim().toUpperCase()
+  ) {
+    repairs.push(`Cleared attending doctor matching client name: ${next.attendingDoctorName}`);
+    next.attendingDoctorName = undefined;
+  }
+
   if (next.attendingDoctorPhone && !isPlausiblePhone(next.attendingDoctorPhone)) {
     next.attendingDoctorPhone = undefined;
   }

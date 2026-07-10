@@ -328,15 +328,53 @@ function isDocxBuffer(buffer: Buffer, mimeType?: string, filename?: string): boo
   return /\.docx$/i.test(filename ?? "") || isZipBuffer(buffer);
 }
 
+const MIN_USEFUL_WORD_TEXT = 80;
+
+function isMinimalWordText(text: string): boolean {
+  const trimmed = text.trim();
+  if (trimmed.length < MIN_USEFUL_WORD_TEXT) return true;
+  const normalized = trimmed.replace(/\s+/g, " ");
+  return /^(claim status|address\s*&?\s*contacts?):?$/i.test(normalized);
+}
+
+async function ocrDocxEmbeddedImages(buffer: Buffer): Promise<string> {
+  const imageBuffers: Buffer[] = [];
+  await mammoth.convertToHtml(
+    { buffer },
+    {
+      convertImage: mammoth.images.imgElement((image) =>
+        image.read().then((imageBuffer) => {
+          imageBuffers.push(Buffer.from(imageBuffer));
+          return { src: "" };
+        }),
+      ),
+    },
+  );
+
+  const parts: string[] = [];
+  for (const imageBuffer of imageBuffers) {
+    const text = await ocrImageBuffer(imageBuffer);
+    if (text.trim()) parts.push(text);
+  }
+  return parts.join("\n\n");
+}
+
 async function extractWordText(
   buffer: Buffer,
   mimeType?: string,
   filename?: string,
-): Promise<string> {
+): Promise<{ text: string; usedOcr: boolean }> {
   if (isDocxBuffer(buffer, mimeType, filename)) {
     try {
       const { value } = await mammoth.extractRawText({ buffer });
-      if (value.trim()) return value;
+      if (!isMinimalWordText(value)) {
+        return { text: value, usedOcr: false };
+      }
+      const ocrText = await ocrDocxEmbeddedImages(buffer);
+      if (ocrText.trim()) {
+        return { text: ocrText, usedOcr: true };
+      }
+      if (value.trim()) return { text: value, usedOcr: false };
     } catch {
       // Fall through to legacy .doc extractor.
     }
@@ -345,7 +383,7 @@ async function extractWordText(
   const WordExtractor = (await import("word-extractor")).default;
   const doc = await new WordExtractor().extract(buffer);
   const body = doc.getBody().trim();
-  if (body.length > 1) return body;
+  if (body.length > 1) return { text: body, usedOcr: false };
 
   throw new Error(
     "Legacy Word (.doc) file contains no extractable text. Re-save as .docx or PDF.",
@@ -362,8 +400,9 @@ async function extractFileText(
 
   if (kind === "word" || isWordCategory(category)) {
     try {
-      const text = await extractWordText(buffer, file.mimeType, file.name);
-      return { text, usedOcr: false, warnings: [] };
+      const { text, usedOcr } = await extractWordText(buffer, file.mimeType, file.name);
+      const warnings = usedOcr ? [`${file.name}: Word image OCR`] : [];
+      return { text, usedOcr, warnings };
     } catch (e) {
       return {
         text: "",
@@ -420,12 +459,19 @@ async function extractFileText(
 
     if (kind === "unknown") {
       try {
-        const wordText = await extractWordText(buffer, file.mimeType, file.name);
+        const { text: wordText, usedOcr: wordOcr } = await extractWordText(
+          buffer,
+          file.mimeType,
+          file.name,
+        );
         if (wordText.trim()) {
           return {
             text: wordText,
-            usedOcr: false,
-            warnings: [`${file.name}: extracted as Word (mislabeled type ${file.mimeType})`],
+            usedOcr: wordOcr,
+            warnings: [
+              `${file.name}: extracted as Word (mislabeled type ${file.mimeType})`,
+              ...(wordOcr ? [`${file.name}: Word image OCR`] : []),
+            ],
           };
         }
       } catch {
