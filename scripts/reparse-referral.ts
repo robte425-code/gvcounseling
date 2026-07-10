@@ -191,6 +191,14 @@ async function main() {
     driveFolderId: client.driveFolderId ?? folder.folderId,
   };
 
+  if (
+    updateData.attendingDoctorName &&
+    `${updateData.firstName} ${updateData.lastName}`.trim().toUpperCase() ===
+      updateData.attendingDoctorName.trim().toUpperCase()
+  ) {
+    updateData.attendingDoctorName = null;
+  }
+
   console.log("\nMerged supplement:", JSON.stringify(supplement, null, 2));
 
   console.log("\nBefore → After (key fields):");
