@@ -110,6 +110,7 @@ export default async function TherapistClientsPage({
     lastName: client.lastName,
     lniClaimNumber: client.lniClaimNumber,
     assignmentStatus: client.assignmentStatus,
+    createdAt: client.createdAt,
   }));
 
   const emptyMessage = query

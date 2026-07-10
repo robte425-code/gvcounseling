@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { TherapistClientQuickActions } from "@/components/portal/TherapistClientQuickActions";
 import { StatusBadge } from "@/components/portal/ui";
-import { clientListLabel } from "@/lib/client-list-ui";
+import { clientListLabel, isNewClient } from "@/lib/client-list-ui";
 import type { ClientListRow } from "@/lib/client-list-ui";
 import type { ClientAssignmentStatus } from "@/generated/prisma/client";
 
@@ -64,8 +64,15 @@ export function TherapistClientListItem({ client, basePath, returnTo }: Props) {
           {clientInitials(client.firstName, client.lastName)}
         </span>
         <span className="min-w-0">
-          <span className="block font-medium text-primary-dark group-hover:text-primary">
-            {label}
+          <span className="flex flex-wrap items-center gap-2">
+            <span className="font-medium text-primary-dark group-hover:text-primary">
+              {label}
+            </span>
+            {isNewClient(client.createdAt) ? (
+              <span className="inline-flex rounded-full bg-sky-100 px-2 py-0.5 text-xs font-semibold text-sky-900">
+                New client
+              </span>
+            ) : null}
           </span>
           <span className="mt-0.5 block font-mono text-xs text-muted">{client.lniClaimNumber}</span>
         </span>
