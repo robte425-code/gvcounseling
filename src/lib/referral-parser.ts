@@ -238,4 +238,44 @@ export async function parseReferralDocx(buffer: Buffer): Promise<ParsedReferral>
   return parseReferralSubmissionText(text);
 }
 
+/** Prefer existing values; fill gaps from document extraction. */
+export function mergeParsedReferral(base: ParsedReferral, patch?: ParsedReferral): ParsedReferral {
+  if (!patch) return base;
+
+  const diagnoses = [...base.diagnoses];
+  const seen = new Set(diagnoses.map((c) => c.toUpperCase()));
+  for (const code of patch.diagnoses) {
+    const upper = code.toUpperCase();
+    if (!seen.has(upper)) {
+      seen.add(upper);
+      diagnoses.push(upper);
+    }
+  }
+
+  return {
+    vrcName: base.vrcName || patch.vrcName,
+    vrcEmail: base.vrcEmail || patch.vrcEmail,
+    vrcPhone: base.vrcPhone || patch.vrcPhone,
+    clientName: base.clientName || patch.clientName,
+    claimNumber: base.claimNumber || patch.claimNumber,
+    dateOfBirth: base.dateOfBirth ?? patch.dateOfBirth,
+    dateOfInjury: base.dateOfInjury ?? patch.dateOfInjury,
+    clientEmail: base.clientEmail || patch.clientEmail,
+    gender: base.gender ?? patch.gender,
+    attendingNpi: base.attendingNpi || patch.attendingNpi,
+    diagnoses,
+    clientHistory: base.clientHistory || patch.clientHistory,
+    warnings: [...base.warnings, ...patch.warnings],
+  };
+}
+
+function looksLikeReferralSubmissionText(text: string): boolean {
+  return /referral submission|referring vrc name|please enter the lni claim number/i.test(text);
+}
+
+export function parseReferralFromDocumentText(text: string): ParsedReferral | undefined {
+  if (!looksLikeReferralSubmissionText(text)) return undefined;
+  return parseReferralSubmissionText(text);
+}
+
 export { splitClientName };

@@ -1,6 +1,7 @@
 import mammoth from "mammoth";
 import {
   classifyClientDocument,
+  GOOGLE_DOC_MIME,
   type ImportableDocCategory,
 } from "@/lib/client-document-types";
 import {
@@ -14,6 +15,11 @@ import { parseContactAddressesDocxText } from "@/lib/parse-contact-addresses-doc
 import { parseLniAddressesText, type ParsedAddressesContacts } from "@/lib/parse-lni-addresses";
 import { parseLniClaimStatusText, type ParsedClaimStatus } from "@/lib/parse-lni-claim-status";
 import { parseReferralSheetText, type ParsedReferralSheet } from "@/lib/parse-referral-sheet";
+import {
+  mergeParsedReferral,
+  parseReferralFromDocumentText,
+  type ParsedReferral,
+} from "@/lib/referral-parser";
 import { extractPdfText } from "@/lib/pdf-text";
 import type { ClientDocumentPart } from "@/lib/client-import-quality";
 
@@ -279,6 +285,37 @@ function isImageFile(file: DriveFile): boolean {
   );
 }
 
+function isWordMime(mimeType?: string): boolean {
+  return (
+    mimeType === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
+    mimeType === "application/msword" ||
+    mimeType === GOOGLE_DOC_MIME
+  );
+}
+
+function isWordFilename(filename?: string): boolean {
+  return /\.docx?$/i.test(filename ?? "");
+}
+
+function isPdfBuffer(buffer: Buffer): boolean {
+  return buffer.length >= 4 && buffer.subarray(0, 4).toString() === "%PDF";
+}
+
+function isZipBuffer(buffer: Buffer): boolean {
+  return buffer.length >= 2 && buffer[0] === 0x50 && buffer[1] === 0x4b;
+}
+
+type ExtractableFileKind = "word" | "image" | "pdf" | "unknown";
+
+function detectFileKind(buffer: Buffer, file: DriveFile): ExtractableFileKind {
+  if (isWordMime(file.mimeType) || isWordFilename(file.name) || isZipBuffer(buffer)) {
+    return "word";
+  }
+  if (isImageFile(file)) return "image";
+  if (isPdfFile(file) || isPdfBuffer(buffer)) return "pdf";
+  return "unknown";
+}
+
 function isWordCategory(category: ImportableDocCategory): boolean {
   return category === "word-doc-cac-address" || category === "referral-sheet";
 }
@@ -287,8 +324,8 @@ function isDocxBuffer(buffer: Buffer, mimeType?: string, filename?: string): boo
   if (mimeType === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") {
     return true;
   }
-  if (mimeType === "application/vnd.google-apps.document") return true;
-  return /\.docx$/i.test(filename ?? "");
+  if (mimeType === GOOGLE_DOC_MIME) return true;
+  return /\.docx$/i.test(filename ?? "") || isZipBuffer(buffer);
 }
 
 async function extractWordText(
@@ -321,12 +358,24 @@ async function extractFileText(
   category: ImportableDocCategory,
   options?: { forceOcr?: boolean },
 ): Promise<{ text: string; usedOcr: boolean; warnings: string[] }> {
-  if (isWordCategory(category)) {
-    const text = await extractWordText(buffer, file.mimeType, file.name);
-    return { text, usedOcr: false, warnings: [] };
+  const kind = detectFileKind(buffer, file);
+
+  if (kind === "word" || isWordCategory(category)) {
+    try {
+      const text = await extractWordText(buffer, file.mimeType, file.name);
+      return { text, usedOcr: false, warnings: [] };
+    } catch (e) {
+      return {
+        text: "",
+        usedOcr: false,
+        warnings: [
+          `${file.name}: Word extraction failed (${e instanceof Error ? e.message : "unknown error"})`,
+        ],
+      };
+    }
   }
 
-  if (isImageFile(file)) {
+  if (kind === "image") {
     try {
       const ocrText = await ocrImageBuffer(buffer);
       if (ocrText.trim()) {
@@ -344,26 +393,59 @@ async function extractFileText(
     }
   }
 
-  if (options?.forceOcr && isPdfFile(file)) {
-    try {
-      const ocrText = await ocrPdfBuffer(buffer);
-      if (ocrText.trim()) {
-        return { text: ocrText, usedOcr: true, warnings: [`${file.name}: OCR retry`] };
+  if (kind === "pdf" || kind === "unknown") {
+    if (options?.forceOcr) {
+      try {
+        const ocrText = await ocrPdfBuffer(buffer);
+        if (ocrText.trim()) {
+          return { text: ocrText, usedOcr: true, warnings: [`${file.name}: OCR retry`] };
+        }
+        return { text: "", usedOcr: true, warnings: [`${file.name}: OCR retry returned no text`] };
+      } catch (e) {
+        return {
+          text: "",
+          usedOcr: true,
+          warnings: [
+            `${file.name}: OCR retry failed (${e instanceof Error ? e.message : "unknown error"})`,
+          ],
+        };
       }
-      return { text: "", usedOcr: true, warnings: [`${file.name}: OCR retry returned no text`] };
-    } catch (e) {
-      return {
-        text: "",
-        usedOcr: true,
-        warnings: [
-          `${file.name}: OCR retry failed (${e instanceof Error ? e.message : "unknown error"})`,
-        ],
-      };
     }
-  }
 
-  const { text, usedOcr, parseError, ocrError } = await extractPdfText(buffer);
-  if (!text.trim()) {
+    const { text, usedOcr, parseError, ocrError } = await extractPdfText(buffer);
+    if (text.trim()) {
+      const warnings = usedOcr ? [`${file.name}: used OCR`] : [];
+      return { text, usedOcr, warnings };
+    }
+
+    if (kind === "unknown") {
+      try {
+        const wordText = await extractWordText(buffer, file.mimeType, file.name);
+        if (wordText.trim()) {
+          return {
+            text: wordText,
+            usedOcr: false,
+            warnings: [`${file.name}: extracted as Word (mislabeled type ${file.mimeType})`],
+          };
+        }
+      } catch {
+        // Fall through to image OCR for mislabeled scans.
+      }
+
+      try {
+        const ocrText = await ocrImageBuffer(buffer);
+        if (ocrText.trim()) {
+          return {
+            text: ocrText,
+            usedOcr: true,
+            warnings: [`${file.name}: extracted via image OCR (mislabeled type ${file.mimeType})`],
+          };
+        }
+      } catch {
+        // Fall through to empty result.
+      }
+    }
+
     const details = [
       usedOcr ? "OCR attempted" : null,
       ocrError ? `OCR: ${ocrError.slice(0, 120)}` : null,
@@ -378,8 +460,7 @@ async function extractFileText(
     };
   }
 
-  const warnings = usedOcr ? [`${file.name}: used OCR`] : [];
-  return { text, usedOcr, warnings };
+  return { text: "", usedOcr: false, warnings: [`${file.name}: unsupported file type`] };
 }
 
 function supplementFromText(
@@ -570,8 +651,13 @@ function categoryForReferralUpload(
 
 export async function parseUploadedReferralDocuments(
   files: UploadedReferralFile[],
-): Promise<{ merged: ClientDocumentSupplement; parts: ClientDocumentPart[] }> {
+): Promise<{
+  merged: ClientDocumentSupplement;
+  parts: ClientDocumentPart[];
+  referralFromDocuments?: ParsedReferral;
+}> {
   const parts: ClientDocumentPart[] = [];
+  let referralFromDocuments: ParsedReferral | undefined;
 
   for (const file of files) {
     const category = categoryForReferralUpload(file.fieldName, file.filename, file.mimeType);
@@ -582,16 +668,29 @@ export async function parseUploadedReferralDocuments(
     };
 
     try {
-      const { text, warnings: extractWarnings } = await extractFileText(
+      let { text, warnings: extractWarnings } = await extractFileText(
         file.buffer,
         driveFile,
         category,
-        { forceOcr: true },
       );
+
+      if (!text.trim() && (isPdfFile(driveFile) || isImageFile(driveFile))) {
+        const retry = await extractFileText(file.buffer, driveFile, category, { forceOcr: true });
+        extractWarnings = [...extractWarnings, ...retry.warnings];
+        if (retry.text.trim()) text = retry.text;
+      }
+
       let supplement: ClientDocumentSupplement;
       if (!text.trim()) {
         supplement = { diagnoses: [], warnings: extractWarnings };
       } else {
+        const referralPatch = parseReferralFromDocumentText(text);
+        if (referralPatch) {
+          referralFromDocuments = mergeParsedReferral(
+            referralFromDocuments ?? { diagnoses: [], warnings: [] },
+            referralPatch,
+          );
+        }
         supplement = supplementFromText(text, category, file.filename, "all-parsers");
         supplement.warnings.push(...extractWarnings);
       }
@@ -609,5 +708,5 @@ export async function parseUploadedReferralDocuments(
     }
   }
 
-  return { merged: mergeDocumentPartsPreferValid(parts), parts };
+  return { merged: mergeDocumentPartsPreferValid(parts), parts, referralFromDocuments };
 }

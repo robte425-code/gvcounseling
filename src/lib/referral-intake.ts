@@ -18,8 +18,7 @@ import {
   uploadDriveFile,
 } from "@/lib/google-drive";
 import { getSystemDriveAccessToken } from "@/lib/google-drive-system";
-import { resolveClientName } from "@/lib/referral-parser";
-import type { ParsedReferral } from "@/lib/referral-parser";
+import { mergeParsedReferral, resolveClientName, type ParsedReferral } from "@/lib/referral-parser";
 import { prisma } from "@/lib/prisma";
 
 export type ReferralIntakeResult = {
@@ -178,9 +177,11 @@ export async function processReferralIntake(
   }
 
   const uploads = preloadedUploads ?? (await collectReferralUploads(formData));
-  const { merged: supplement, parts } = await parseUploadedReferralDocuments(uploads);
+  const { merged: supplement, parts, referralFromDocuments } =
+    await parseUploadedReferralDocuments(uploads);
+  const enrichedParsed = mergeParsedReferral(parsed, referralFromDocuments);
 
-  const quality = validateAndRepairClientImport(parsed, supplement, {
+  const quality = validateAndRepairClientImport(enrichedParsed, supplement, {
     folderClaimNumber: parsed.claimNumber,
     folderDisplayName: clientFolderName(parsed.claimNumber, payload.clientName),
     documentParts: parts,

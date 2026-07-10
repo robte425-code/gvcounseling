@@ -65,7 +65,7 @@ export function classifyClientDocument(
   if (/^fax\d+\.pdf$/i.test(filename.trim())) return "addresses-contacts";
   if (/^\d{10,}\.pdf$/i.test(filename.trim())) return "addresses-contacts";
 
-  if (/\.pdf$/i.test(n)) return null;
+  if (/\.pdf$/i.test(n)) return "addresses-contacts";
 
   return null;
 }
