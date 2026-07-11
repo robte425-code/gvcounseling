@@ -19,20 +19,26 @@ function isInteractiveTarget(target: EventTarget | null): boolean {
   );
 }
 
+/**
+ * Invoice list row. When `leading` (e.g. a checkbox) is present, the row is not a
+ * link — nesting controls inside role="link" breaks checkbox clicks in browsers.
+ * Callers should put a normal <Link> on the invoice number instead.
+ */
 export function InvoiceTableRow({ href, children, actions, leading }: Props) {
   const router = useRouter();
+  const rowIsLink = !leading;
 
   function openInvoice() {
     router.push(href);
   }
 
   function handleRowClick(event: MouseEvent<HTMLTableRowElement>) {
-    if (event.defaultPrevented || isInteractiveTarget(event.target)) return;
+    if (!rowIsLink || event.defaultPrevented || isInteractiveTarget(event.target)) return;
     openInvoice();
   }
 
   function handleRowKeyDown(event: KeyboardEvent<HTMLTableRowElement>) {
-    if (event.defaultPrevented || isInteractiveTarget(event.target)) return;
+    if (!rowIsLink || event.defaultPrevented || isInteractiveTarget(event.target)) return;
     if (event.key === "Enter" || event.key === " ") {
       event.preventDefault();
       openInvoice();
@@ -41,36 +47,22 @@ export function InvoiceTableRow({ href, children, actions, leading }: Props) {
 
   return (
     <tr
-      role="link"
-      tabIndex={0}
-      onClick={handleRowClick}
-      onKeyDown={handleRowKeyDown}
-      className="cursor-pointer border-b border-border/60 transition hover:bg-primary/5"
+      role={rowIsLink ? "link" : undefined}
+      tabIndex={rowIsLink ? 0 : undefined}
+      onClick={rowIsLink ? handleRowClick : undefined}
+      onKeyDown={rowIsLink ? handleRowKeyDown : undefined}
+      className={`border-b border-border/60 transition hover:bg-primary/5 ${
+        rowIsLink ? "cursor-pointer" : ""
+      }`}
     >
       {leading ? (
-        <td
-          className="py-3 pr-2"
-          data-no-row-nav
-          onClick={(event) => event.stopPropagation()}
-          onMouseDown={(event) => event.stopPropagation()}
-          onPointerDown={(event) => event.stopPropagation()}
-          onKeyDown={(event) => event.stopPropagation()}
-        >
-          <div className="flex items-center" data-no-row-nav>
-            {leading}
-          </div>
+        <td className="w-10 py-3 pr-2 align-middle" data-no-row-nav>
+          {leading}
         </td>
       ) : null}
       {children}
-      <td
-        className="py-3 text-right"
-        data-no-row-nav
-        onClick={(event) => event.stopPropagation()}
-        onMouseDown={(event) => event.stopPropagation()}
-        onPointerDown={(event) => event.stopPropagation()}
-        onKeyDown={(event) => event.stopPropagation()}
-      >
-        <div data-no-row-nav>{actions}</div>
+      <td className="py-3 text-right" data-no-row-nav>
+        {actions}
       </td>
     </tr>
   );

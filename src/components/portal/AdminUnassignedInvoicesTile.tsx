@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import type { AdminInvoiceRow, PayPeriodOption } from "@/components/portal/AdminInvoicesTable";
 import { InvoicePaymentStatusCell } from "@/components/portal/InvoicePaymentStatusCell";
 import { InvoiceTherapistPaymentCell } from "@/components/portal/InvoiceTherapistPaymentCell";
@@ -149,18 +150,24 @@ export function AdminUnassignedInvoicesTile({
                 key={inv.id}
                 href={`/portal/admin/invoices/${inv.id}`}
                 leading={
-                  <input
-                    type="checkbox"
-                    aria-label={`Select invoice #${inv.invoiceNumber}`}
-                    checked={selected.has(inv.id)}
-                    onClick={(e) => e.stopPropagation()}
-                    onMouseDown={(e) => e.stopPropagation()}
-                    onPointerDown={(e) => e.stopPropagation()}
-                    onChange={(e) => toggleOne(inv.id, e.target.checked)}
-                  />
+                  <label className="flex cursor-pointer items-center justify-center p-1">
+                    <input
+                      type="checkbox"
+                      aria-label={`Select invoice #${inv.invoiceNumber}`}
+                      checked={selected.has(inv.id)}
+                      onChange={(e) => toggleOne(inv.id, e.target.checked)}
+                    />
+                  </label>
                 }
               >
-                <td className="py-3 pr-4">{inv.invoiceNumber}</td>
+                <td className="py-3 pr-4">
+                  <Link
+                    href={`/portal/admin/invoices/${inv.id}`}
+                    className="font-medium text-primary hover:underline"
+                  >
+                    {inv.invoiceNumber}
+                  </Link>
+                </td>
                 <td className="py-3 pr-4">{inv.therapistName}</td>
                 <td className="py-3 pr-4">{inv.clientLabel}</td>
                 <td className="py-3 pr-4">{inv.serviceDates}</td>

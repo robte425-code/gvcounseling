@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, Fragment } from "react";
+import Link from "next/link";
 import { ConfirmSubmitButton } from "@/components/portal/ConfirmSubmitButton";
 import { InvoiceTableRow } from "@/components/portal/InvoiceTableRow";
 import { InvoicePaymentStatusCell } from "@/components/portal/InvoicePaymentStatusCell";
@@ -172,21 +173,20 @@ export function AdminInvoicesTable({ invoices, payPeriods, returnTo }: Props) {
                   key={inv.id}
                   href={`/portal/admin/invoices/${inv.id}`}
                   leading={
-                    <input
-                      type="checkbox"
-                      aria-label={`Select invoice #${inv.invoiceNumber}`}
-                      checked={selected.has(inv.id)}
-                      disabled={!inv.assignable}
-                      title={
-                        inv.assignable
-                          ? `Select invoice #${inv.invoiceNumber}`
-                          : "Only submitted invoices can be assigned to a pay period"
-                      }
-                      onClick={(e) => e.stopPropagation()}
-                      onMouseDown={(e) => e.stopPropagation()}
-                      onPointerDown={(e) => e.stopPropagation()}
-                      onChange={(e) => toggleOne(inv.id, e.target.checked)}
-                    />
+                    <label className="flex cursor-pointer items-center justify-center p-1">
+                      <input
+                        type="checkbox"
+                        aria-label={`Select invoice #${inv.invoiceNumber}`}
+                        checked={selected.has(inv.id)}
+                        disabled={!inv.assignable}
+                        title={
+                          inv.assignable
+                            ? `Select invoice #${inv.invoiceNumber}`
+                            : "Only submitted invoices can be assigned to a pay period"
+                        }
+                        onChange={(e) => toggleOne(inv.id, e.target.checked)}
+                      />
+                    </label>
                   }
                   actions={
                     <form action={deleteAdminInvoiceAction}>
@@ -200,7 +200,14 @@ export function AdminInvoicesTable({ invoices, payPeriods, returnTo }: Props) {
                     </form>
                   }
                 >
-                  <td className="py-3 pr-4">{inv.invoiceNumber}</td>
+                  <td className="py-3 pr-4">
+                    <Link
+                      href={`/portal/admin/invoices/${inv.id}`}
+                      className="font-medium text-primary hover:underline"
+                    >
+                      {inv.invoiceNumber}
+                    </Link>
+                  </td>
                   <td className="py-3 pr-4">{inv.therapistName}</td>
                   <td className="py-3 pr-4">{inv.clientLabel}</td>
                   <td className="py-3 pr-4">{inv.serviceDates}</td>
