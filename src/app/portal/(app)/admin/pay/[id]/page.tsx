@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireAdmin } from "@/auth";
-import { ApplyRemittanceForm, CreateWrongYearRebillForm, CreateWrongYearRebillsForm, DeleteRemittancePreviewForm, SupersedeRemittanceLineForm, SupersedeWrongYearStaleLinesForm, UnsupersedeRemittanceLineForm } from "@/components/portal/RemittancePayPanel";
+import { ApplyRemittanceForm, CreateWrongYearRebillForm, CreateWrongYearRebillsForm, DeleteRemittancePreviewForm, FinalizeTherapistPayRunForm, SupersedeRemittanceLineForm, SupersedeWrongYearStaleLinesForm, UnsupersedeRemittanceLineForm } from "@/components/portal/RemittancePayPanel";
 import { RemittanceBillRow, RemittanceBillRowActions } from "@/components/portal/RemittanceBillRow";
 import {
   portalCardClass,
@@ -67,7 +67,7 @@ export default async function PayRemittanceDetailPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ applied?: string; superseded?: string; rebilled?: string }>;
+  searchParams: Promise<{ applied?: string; superseded?: string; rebilled?: string; finalized?: string }>;
 }) {
   await requireAdmin();
   const { id } = await params;
@@ -296,6 +296,12 @@ export default async function PayRemittanceDetailPage({
       {query.rebilled === "1" && (
         <p className="rounded-xl bg-primary/10 px-4 py-3 text-sm text-primary-dark" role="status">
           Rebill invoice(s) created. Submit them to L&I when ready.
+        </p>
+      )}
+
+      {query.finalized === "1" && (
+        <p className="rounded-xl bg-primary/10 px-4 py-3 text-sm text-primary-dark" role="status">
+          Therapist pay finalized. Therapists were emailed their payout details.
         </p>
       )}
 
@@ -571,7 +577,26 @@ export default async function PayRemittanceDetailPage({
           )}
 
           {remittance.status === "APPLIED" && (
-            <p className="mt-6 text-sm text-muted">This remittance has been applied.</p>
+            <div className="mt-6 space-y-4 border-t border-border pt-6">
+              <p className="text-sm text-muted">
+                Remittance applied
+                {remittance.payRun?.status === "FINALIZED"
+                  ? ` · therapist pay finalized${
+                      remittance.payRun.finalizedAt
+                        ? ` ${formatDate(remittance.payRun.finalizedAt)}`
+                        : ""
+                    }`
+                  : " · therapist pay draft"}
+                .
+              </p>
+              {remittance.payRun?.status === "DRAFT" && (
+                <FinalizeTherapistPayRunForm
+                  remittanceAdviceId={remittance.id}
+                  therapistCount={remittance.payRun.payouts.length}
+                  therapistTotal={therapistTotal}
+                />
+              )}
+            </div>
           )}
         </section>
       </div>

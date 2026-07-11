@@ -235,6 +235,9 @@ export async function importRemittancePreview(options: {
     });
   }
 
+  const { notifyUnresolvedRemittanceIfNeeded } = await import("@/lib/therapist-pay-notifications");
+  await notifyUnresolvedRemittanceIfNeeded(remittance.id);
+
   return { remittanceAdviceId: remittance.id };
 }
 
@@ -643,4 +646,7 @@ export async function applyRemittanceAdvice(remittanceAdviceId: string): Promise
     },
     { timeout: 120_000 },
   );
+
+  const { notifyRaNeedsAttentionAfterApply } = await import("@/lib/therapist-pay-notifications");
+  await notifyRaNeedsAttentionAfterApply(remittance.id);
 }

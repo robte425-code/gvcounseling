@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/pending-referral-reminders",
+      "schedule": "0 15 * * *"
+    }
+  ]
+}

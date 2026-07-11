@@ -231,6 +231,72 @@ export async function sendTherapistClientNoteEmail(options: {
   });
 }
 
+export async function sendAdminInvoiceNoteEmail(options: {
+  therapistName: string;
+  invoiceNumber: number;
+  clientName: string;
+  claimNumber: string;
+  invoiceId: string;
+  noteBody: string;
+}) {
+  const adminEmails = await getAdminNotificationEmails();
+  if (adminEmails.length === 0) return;
+
+  const invoiceUrl = `${getSiteUrl()}/portal/admin/invoices/${options.invoiceId}`;
+  await sendEmailTo(adminEmails.join(", "), {
+    subject: `Therapist invoice note: #${options.invoiceNumber} (${options.claimNumber})`,
+    text: [
+      `${options.therapistName} added a note on invoice #${options.invoiceNumber} for ${options.clientName} (${options.claimNumber}).`,
+      "",
+      "Note:",
+      truncateNoteBody(options.noteBody),
+      "",
+      "View invoice in the portal:",
+      invoiceUrl,
+      "",
+      "Grandview Counseling",
+    ].join("\n"),
+  });
+}
+
+export async function sendTherapistInvoiceNoteEmail(options: {
+  therapistEmail: string;
+  therapistName: string;
+  adminName: string;
+  invoiceNumber: number;
+  clientName: string;
+  claimNumber: string;
+  invoiceId: string;
+  noteBody: string;
+}) {
+  const intendedEmail = options.therapistEmail.trim();
+  if (!intendedEmail) return;
+
+  const { to, redirected } = await resolveTherapistOutboundEmail(intendedEmail);
+  const invoiceUrl = `${getSiteUrl()}/portal/therapist/invoices/${options.invoiceId}`;
+  const lines = [
+    `Hello ${options.therapistName},`,
+    "",
+    `${options.adminName} added a note on invoice #${options.invoiceNumber} for ${options.clientName} (${options.claimNumber}).`,
+    "",
+    "Note:",
+    truncateNoteBody(options.noteBody),
+    "",
+    "View this invoice in the portal:",
+    invoiceUrl,
+    "",
+    "Grandview Counseling",
+  ];
+  if (redirected) {
+    lines.push(outboundEmailRedirectNote(options.therapistName, intendedEmail));
+  }
+
+  await sendEmailTo(to, {
+    subject: `Admin invoice note: #${options.invoiceNumber} (${options.claimNumber})`,
+    text: lines.join("\n"),
+  });
+}
+
 export async function sendAdminTherapistClientStatusEmail(options: {
   adminEmails: string[];
   therapistName: string;

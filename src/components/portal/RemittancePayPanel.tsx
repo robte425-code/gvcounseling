@@ -7,12 +7,14 @@ import {
   deleteRemittancePreviewAction,
   createWrongYearRebillAction,
   createWrongYearRebillsAction,
+  finalizeTherapistPayRunAction,
   supersedeRemittanceLineAction,
   supersedeWrongYearStaleLinesAction,
   unsupersedeRemittanceLineAction,
   type ApplyRemittanceState,
   type CreateWrongYearRebillState,
   type DeleteRemittancePreviewState,
+  type FinalizeTherapistPayRunState,
   type SupersedeRemittanceState,
 } from "@/lib/portal-actions";
 import { ConfirmSubmitButton } from "@/components/portal/ConfirmSubmitButton";
@@ -367,6 +369,41 @@ export function ApplyRemittanceForm({
         disabled={pending || hasUnmatched}
       >
         {pending ? "Applying…" : "Apply remittance & create pay run"}
+      </ConfirmSubmitButton>
+    </form>
+  );
+}
+
+const finalizePayRunInitialState: FinalizeTherapistPayRunState = {};
+
+export function FinalizeTherapistPayRunForm({
+  remittanceAdviceId,
+  therapistCount,
+  therapistTotal,
+}: {
+  remittanceAdviceId: string;
+  therapistCount: number;
+  therapistTotal: number;
+}) {
+  const [state, formAction, pending] = useActionState(
+    finalizeTherapistPayRunAction,
+    finalizePayRunInitialState,
+  );
+
+  return (
+    <form action={formAction} className="space-y-3">
+      <input type="hidden" name="remittanceAdviceId" value={remittanceAdviceId} />
+      {state.error && (
+        <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800" role="alert">
+          {state.error}
+        </p>
+      )}
+      <ConfirmSubmitButton
+        confirmMessage={`Finalize therapist pay for this remittance?\n\n${therapistCount} therapist(s) will be emailed their payout totaling $${therapistTotal.toFixed(2)}.`}
+        className={portalButtonClass}
+        disabled={pending}
+      >
+        {pending ? "Finalizing…" : "Finalize therapist pay"}
       </ConfirmSubmitButton>
     </form>
   );

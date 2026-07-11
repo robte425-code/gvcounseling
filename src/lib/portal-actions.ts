@@ -24,16 +24,20 @@ import { getDriveAccessTokenForClient } from "@/lib/google-drive-access";
 import { getSystemDriveAccessToken } from "@/lib/google-drive-system";
 import {
   sendAdminClientNoteEmail,
+  sendAdminInvoiceNoteEmail,
   sendAdminTherapistAcceptedClientEmail,
   sendAdminWelcomeEmail,
   sendTherapistAssignmentEmail,
   sendTherapistClientNoteEmail,
+  sendTherapistInvoiceNoteEmail,
   sendTherapistLniFaxAcknowledgementEmail,
   sendTherapistPasswordResetEmail,
   sendTherapistWelcomeEmail,
   sendVrcReferralAcceptanceEmail,
   sendVrcReferralInfoRequestEmail,
 } from "@/lib/referral-emails";
+import { sendAdminInvoiceSubmittedEmail } from "@/lib/portal-workflow-emails";
+import { finalizeTherapistPayRun } from "@/lib/therapist-pay-notifications";
 import { generateOneTimePassword, hashPassword, verifyPassword } from "@/lib/password";
 import { createTherapistPasswordResetToken, consumeTherapistPasswordResetToken } from "@/lib/password-reset";
 import { getSiteUrl } from "@/lib/site-url";
@@ -755,6 +759,31 @@ export async function submitInvoiceAction(
     where: { id: invoice.id },
     data: { status: "SUBMITTED", submittedAt: new Date() },
   });
+
+  try {
+    const submitted = await prisma.invoice.findUnique({
+      where: { id: invoice.id },
+      select: {
+        id: true,
+        invoiceNumber: true,
+        totalAmount: true,
+        therapist: { select: { firstName: true, lastName: true } },
+        client: { select: { firstName: true, lastName: true, lniClaimNumber: true } },
+      },
+    });
+    if (submitted) {
+      await sendAdminInvoiceSubmittedEmail({
+        therapistName: `${submitted.therapist.firstName} ${submitted.therapist.lastName}`.trim(),
+        invoiceNumber: submitted.invoiceNumber,
+        invoiceId: submitted.id,
+        clientName: `${submitted.client.lastName}, ${submitted.client.firstName}`,
+        claimNumber: submitted.client.lniClaimNumber,
+        totalAmount: Number(submitted.totalAmount),
+      });
+    }
+  } catch (error) {
+    console.error("Admin invoice-submitted notification email failed:", error);
+  }
 
   revalidatePath(`/portal/therapist/invoices/${invoice.id}`);
   revalidatePath("/portal/therapist/invoices");
@@ -2086,6 +2115,19 @@ export async function addInvoiceNoteAction(formData: FormData) {
   const { assertInvoiceNoteAccess } = await import("@/lib/invoice-notes");
   await assertInvoiceNoteAccess(invoiceId, session);
 
+  const invoice = await prisma.invoice.findUnique({
+    where: { id: invoiceId },
+    select: {
+      id: true,
+      invoiceNumber: true,
+      client: {
+        select: { firstName: true, lastName: true, lniClaimNumber: true },
+      },
+      therapist: { select: { email: true, firstName: true, lastName: true } },
+    },
+  });
+  if (!invoice) throw new Error("Invoice not found.");
+
   await prisma.invoiceNote.create({
     data: {
       invoiceId,
@@ -2093,6 +2135,38 @@ export async function addInvoiceNoteAction(formData: FormData) {
       body,
     },
   });
+
+  const authorName = actorDisplayName(session);
+  const clientName = clientDisplayName(invoice.client);
+  const isAdminAuthor = getRealRole(session) === "ADMIN" && !isImpersonating(session);
+
+  try {
+    if (isAdminAuthor) {
+      if (invoice.therapist.email) {
+        await sendTherapistInvoiceNoteEmail({
+          therapistEmail: invoice.therapist.email,
+          therapistName: `${invoice.therapist.firstName} ${invoice.therapist.lastName}`.trim(),
+          adminName: authorName,
+          invoiceNumber: invoice.invoiceNumber,
+          clientName,
+          claimNumber: invoice.client.lniClaimNumber,
+          invoiceId: invoice.id,
+          noteBody: body,
+        });
+      }
+    } else if (session.user.role === "THERAPIST") {
+      await sendAdminInvoiceNoteEmail({
+        therapistName: authorName,
+        invoiceNumber: invoice.invoiceNumber,
+        clientName,
+        claimNumber: invoice.client.lniClaimNumber,
+        invoiceId: invoice.id,
+        noteBody: body,
+      });
+    }
+  } catch (e) {
+    console.error("Invoice note notification email failed:", e);
+  }
 
   revalidateInvoiceNotePaths(invoiceId, returnTo);
 
@@ -2215,6 +2289,31 @@ export async function applyRemittanceAdviceAction(
   revalidatePath(`/portal/admin/pay/${remittanceAdviceId}`);
   revalidatePath("/portal/admin/invoices");
   redirect(`/portal/admin/pay/${remittanceAdviceId}?applied=1`);
+}
+
+export type FinalizeTherapistPayRunState = { error?: string };
+
+export async function finalizeTherapistPayRunAction(
+  _prevState: FinalizeTherapistPayRunState,
+  formData: FormData,
+): Promise<FinalizeTherapistPayRunState> {
+  await requireAdmin();
+  const remittanceAdviceId = String(formData.get("remittanceAdviceId") ?? "").trim();
+  if (!remittanceAdviceId) return { error: "Remittance is required." };
+
+  try {
+    await finalizeTherapistPayRun(remittanceAdviceId);
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : "Could not finalize therapist pay.",
+    };
+  }
+
+  revalidatePath("/portal/admin/pay");
+  revalidatePath(`/portal/admin/pay/${remittanceAdviceId}`);
+  revalidatePath("/portal/admin/invoices");
+  revalidatePath("/portal/therapist/invoices");
+  redirect(`/portal/admin/pay/${remittanceAdviceId}?finalized=1`);
 }
 
 export type SupersedeRemittanceState = { error?: string };
