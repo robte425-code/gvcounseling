@@ -76,6 +76,7 @@ model User {
   therapistProcedureCodeFeesCreated TherapistProcedureCodeFee[] @relation("TherapistProcedureCodeFeeCreatedBy")
   googleDriveConnection GoogleDriveConnection?
   clientNotes         ClientNote[]
+  invoiceNotes        InvoiceNote[]
   importedRemittances RemittanceAdvice[] @relation("RemittanceImportedBy")
   therapistPayPayouts TherapistPayRunPayout[]
   passwordResetTokens PasswordResetToken[]
@@ -191,6 +192,7 @@ model Invoice {
   lniEobCodeDescriptions Json            @default("{}")
   lineItems        InvoiceLineItem[]
   attachments      InvoiceAttachment[]
+  notes            InvoiceNote[]
   remittanceLines  RemittanceAdviceLine[]
   payRunLines      TherapistPayRunLine[]
   createdAt        DateTime            @default(now())
@@ -201,6 +203,19 @@ model Invoice {
   @@index([paymentStatus])
   @@index([clientId])
   @@index([payPeriodId])
+}
+
+model InvoiceNote {
+  id        String   @id @default(cuid())
+  invoiceId String
+  invoice   Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id])
+  body      String   @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([invoiceId, createdAt])
 }
 
 model InvoiceLineItem {

@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { requireAdmin } from "@/auth";
 import { InvoiceDetailClient } from "@/components/portal/InvoiceDetailClient";
 import { InvoiceLniPaymentSection } from "@/components/portal/InvoiceLniPaymentSection";
+import { InvoiceNotesSection } from "@/components/portal/InvoiceNotesSection";
 import { InvoiceTherapistPaymentSection } from "@/components/portal/InvoiceTherapistPaymentSection";
 import { StatusBadge } from "@/components/portal/ui";
 import { formatCurrency, formatDate, calendarIsoFromDate } from "@/lib/constants";
@@ -16,6 +17,7 @@ export default async function AdminInvoiceDetailPage({
 }) {
   await requireAdmin();
   const { id } = await params;
+  const invoiceDetailPath = `/portal/admin/invoices/${id}`;
 
   const invoice = await prisma.invoice.findUnique({
     where: { id },
@@ -94,6 +96,8 @@ export default async function AdminInvoiceDetailPage({
         attachments={invoice.attachments}
         savedServiceDates={serviceDates}
       />
+
+      <InvoiceNotesSection invoiceId={invoice.id} returnTo={invoiceDetailPath} />
     </div>
   );
 }

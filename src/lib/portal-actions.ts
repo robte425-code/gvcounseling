@@ -2073,6 +2073,86 @@ export async function deleteClientNoteAction(formData: FormData) {
   redirect(`${returnTo}${separator}noteDeleted=1`);
 }
 
+export async function addInvoiceNoteAction(formData: FormData) {
+  const session = await requireSession();
+  const invoiceId = String(formData.get("invoiceId") ?? "").trim();
+  const returnTo =
+    String(formData.get("returnTo") ?? "").trim() || `/portal/admin/invoices/${invoiceId}`;
+  const body = String(formData.get("body") ?? "").trim();
+
+  if (!invoiceId) throw new Error("Invoice is required.");
+  if (!body) throw new Error("Note cannot be empty.");
+
+  const { assertInvoiceNoteAccess } = await import("@/lib/invoice-notes");
+  await assertInvoiceNoteAccess(invoiceId, session);
+
+  await prisma.invoiceNote.create({
+    data: {
+      invoiceId,
+      authorId: getRealUserId(session),
+      body,
+    },
+  });
+
+  revalidateInvoiceNotePaths(invoiceId, returnTo);
+
+  const separator = returnTo.includes("?") ? "&" : "?";
+  redirect(`${returnTo}${separator}noted=1`);
+}
+
+function revalidateInvoiceNotePaths(invoiceId: string, returnTo: string) {
+  revalidatePath(returnTo);
+  revalidatePath(`/portal/admin/invoices/${invoiceId}`);
+  revalidatePath(`/portal/therapist/invoices/${invoiceId}`);
+}
+
+export async function updateInvoiceNoteAction(formData: FormData) {
+  const session = await requireSession();
+  const noteId = String(formData.get("noteId") ?? "").trim();
+  const invoiceId = String(formData.get("invoiceId") ?? "").trim();
+  const returnTo =
+    String(formData.get("returnTo") ?? "").trim() || `/portal/admin/invoices/${invoiceId}`;
+  const body = String(formData.get("body") ?? "").trim();
+
+  if (!noteId || !invoiceId) throw new Error("Note is required.");
+  if (!body) throw new Error("Note cannot be empty.");
+
+  const { assertCanModifyInvoiceNote } = await import("@/lib/invoice-notes");
+  const note = await assertCanModifyInvoiceNote(noteId, session);
+  if (note.invoiceId !== invoiceId) throw new Error("Note not found.");
+
+  await prisma.invoiceNote.update({
+    where: { id: noteId },
+    data: { body },
+  });
+
+  revalidateInvoiceNotePaths(invoiceId, returnTo);
+
+  const separator = returnTo.includes("?") ? "&" : "?";
+  redirect(`${returnTo}${separator}noteUpdated=1`);
+}
+
+export async function deleteInvoiceNoteAction(formData: FormData) {
+  const session = await requireSession();
+  const noteId = String(formData.get("noteId") ?? "").trim();
+  const invoiceId = String(formData.get("invoiceId") ?? "").trim();
+  const returnTo =
+    String(formData.get("returnTo") ?? "").trim() || `/portal/admin/invoices/${invoiceId}`;
+
+  if (!noteId || !invoiceId) throw new Error("Note is required.");
+
+  const { assertCanModifyInvoiceNote } = await import("@/lib/invoice-notes");
+  const note = await assertCanModifyInvoiceNote(noteId, session);
+  if (note.invoiceId !== invoiceId) throw new Error("Note not found.");
+
+  await prisma.invoiceNote.delete({ where: { id: noteId } });
+
+  revalidateInvoiceNotePaths(invoiceId, returnTo);
+
+  const separator = returnTo.includes("?") ? "&" : "?";
+  redirect(`${returnTo}${separator}noteDeleted=1`);
+}
+
 export type ApplyRemittanceState = { error?: string };
 
 export type DeleteRemittancePreviewState = { error?: string };

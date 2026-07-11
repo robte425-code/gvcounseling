@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { requireSession } from "@/auth";
 import { InvoiceDetailClient } from "@/components/portal/InvoiceDetailClient";
 import { InvoiceLniPaymentSection } from "@/components/portal/InvoiceLniPaymentSection";
+import { InvoiceNotesSection } from "@/components/portal/InvoiceNotesSection";
 import { InvoiceTherapistPaymentSection } from "@/components/portal/InvoiceTherapistPaymentSection";
 import { StatusBadge, portalButtonClass } from "@/components/portal/ui";
 import { formatCurrency, formatDate, calendarIsoFromDate } from "@/lib/constants";
@@ -17,6 +18,7 @@ import { prisma } from "@/lib/prisma";
 export default async function InvoiceDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await requireSession();
   const { id } = await params;
+  const invoiceDetailPath = `/portal/therapist/invoices/${id}`;
 
   const invoice = await prisma.invoice.findUnique({
     where: { id },
@@ -118,6 +120,8 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
         savedServiceDates={serviceDates}
         footerActions={footerActions}
       />
+
+      <InvoiceNotesSection invoiceId={invoice.id} returnTo={invoiceDetailPath} />
     </div>
   );
 }
