@@ -1,0 +1,180 @@
+◇ injected env (20) from .env.local // tip: ⌘ multiple files { path: ['.env.local', '.env'] }
+◇ injected env (4) from .env // tip: ◈ encrypted .env [www.dotenvx.com]
+(node:86385) Warning: SECURITY WARNING: The SSL modes 'prefer', 'require', and 'verify-ca' are treated as aliases for 'verify-full'.
+In the next major version (pg-connection-string v3.0.0 and pg v9.0.0), these modes will adopt standard libpq semantics, which have weaker security guarantees.
+
+To prepare for this change:
+- If you want the current behavior, explicitly use 'sslmode=verify-full'
+- If you want libpq compatibility now, use 'uselibpqcompat=true&sslmode=require'
+
+See https://www.postgresql.org/docs/current/libpq-ssl.html for libpq SSL mode definitions.
+(Use `node --trace-warnings ...` to show where the warning was created)
+Importing 137 Maria folders (92 from Closed Cases)…
+[1/137] BM47751 ... UPDATED 
+[2/137] BJ88007 ... UPDATED 
+[3/137] BM08580 ... UPDATED 
+[4/137] BJ87697 ... UPDATED 
+[5/137] BK03975 ... UPDATED 
+[6/137] BB92037 ... Warning: Required "glyf" table is not found -- trying to recover.
+Warning: Required "glyf" table is not found -- trying to recover.
+Warning: Required "glyf" table is not found -- trying to recover.
+Warning: Required "glyf" table is not found -- trying to recover.
+Warning: Required "glyf" table is not found -- trying to recover.
+Warning: Required "glyf" table is not found -- trying to recover.
+UPDATED 
+[7/137] BF12726 ... UPDATED 
+[8/137] BH23437 ... UPDATED 
+[9/137] BF56574 ... UPDATED 
+[10/137] BL44101 ... UPDATED 
+[11/137] BJ04455 ... UPDATED 
+[12/137] BL32974 ... UPDATED 
+[13/137] BL13687 ... UPDATED 
+[14/137] BM70906 ... UPDATED 
+[15/137] BK08154 ... UPDATED 
+[16/137] BL53128 ... UPDATED 
+[17/137] BJ02335 ... UPDATED (missing: Employer name)
+[18/137] ZB71415 ... UPDATED 
+[19/137] BL61172 ... UPDATED 
+[20/137] BM32698 ... UPDATED 
+[21/137] AR78431 ... UPDATED 
+[22/137] BL79123 ... UPDATED 
+[23/137] BJ03400 ... UPDATED 
+[24/137] AU51037 ... UPDATED 
+[25/137] ZB71243 ... UPDATED 
+[26/137] BN71306 ... UPDATED 
+[27/137] BL15562 ... UPDATED 
+[28/137] BM71187 ... UPDATED 
+[29/137] BN77205 ... UPDATED 
+[30/137] BL20510 ... UPDATED 
+[31/137] BA52296 ... UPDATED 
+[32/137] BJ91086 ... UPDATED 
+[33/137] BL69890 ... UPDATED (missing: Claim Manager)
+[34/137] BL77059 ... UPDATED 
+[35/137] BM51668 ... UPDATED 
+[36/137] BL05371 ... UPDATED 
+[37/137] BJ44244 ... UPDATED 
+[38/137] BK25284 ... UPDATED 
+[39/137] BL69748 ... UPDATED 
+[40/137] BJ03038 ... UPDATED 
+[41/137] BJ54412 ... UPDATED 
+[42/137] BG74810 ... UPDATED 
+[43/137] BJ97198 ... UPDATED 
+[44/137] BL64619 ... UPDATED 
+[45/137] BG46680 ... UPDATED 
+[46/137] BK47305 ... UPDATED 
+[47/137] BE77640 ... UPDATED 
+[48/137] BN79103 ... UPDATED 
+[49/137] BM26907 ... UPDATED 
+[50/137] BH15269 ... UPDATED 
+[51/137] BL43698 ... UPDATED (missing: Injury date)
+[52/137] BM40746 ... UPDATED 
+[53/137] BF83245 ... CREATED 
+[54/137] BG24681 ... CREATED 
+[55/137] BJ45489 ... CREATED 
+[56/137] BN14165 ... CREATED 
+[57/137] BL32520 ... CREATED 
+[58/137] BL24120 ... CREATED (missing: Attending doctor, Employer name)
+[59/137] BJ18467 ... CREATED 
+[60/137] BJ93593 ... CREATED (missing: Attending doctor, Claim Manager, Employer name, Worker mailing address, Worker residence address, Injury date)
+[61/137] BL94062 ... CREATED 
+[62/137] BH88161 ... CREATED 
+[63/137] BJ28318 ... CREATED (missing: Attending doctor, Claim Manager, Employer name, Worker mailing address, Worker residence address, Injury date)
+[64/137] BL91082 ... CREATED 
+[65/137] BL15442 ... CREATED 
+[66/137] BH92827 ... CREATED 
+[67/137] BK98770 ... CREATED 
+[68/137] BM37259 ... CREATED (missing: Attending doctor, Claim Manager, Employer name, Worker mailing address, Worker residence address, Injury date)
+[69/137] BH87736 ... CREATED 
+[70/137] BL32620 ... CREATED 
+[71/137] BM65887 ... CREATED (missing: Attending doctor, Claim Manager, Employer name, Worker mailing address, Worker residence address, Injury date)
+[72/137] BL41462 ... CREATED (missing: Attending doctor, Claim Manager, Employer name, Worker mailing address, Worker residence address, Injury date)
+[73/137] BL32211 ... CREATED 
+[74/137] BH86487 ... CREATED 
+[75/137] BB87306 ... CREATED 
+[76/137] BK14186 ... CREATED 
+[77/137] BH78574 ... CREATED 
+[78/137] AH27519 ... CREATED 
+[79/137] SG96365 ... CREATED 
+[80/137] BJ23430 ... CREATED 
+[81/137] BE41658 ... CREATED 
+[82/137] BC31192 ... CREATED (missing: Attending doctor, Claim Manager, Employer name, Worker mailing address, Worker residence address, Injury date)
+[83/137] BN66893 ... CREATED 
+[84/137] BC87745 ... CREATED 
+[85/137] BM29420 ... CREATED 
+[86/137] BJ15024 ... CREATED (missing: Attending doctor, Claim Manager, Employer name, Worker mailing address, Worker residence address, Injury date)
+[87/137] BJ62798 ... CREATED 
+[88/137] BJ28623 ... CREATED 
+[89/137] BM63571 ... CREATED 
+[90/137] BM54409 ... CREATED 
+[91/137] BK87459 ... CREATED 
+[92/137] BC05750 ... CREATED 
+[93/137] BE84598 ... CREATED 
+[94/137] BH46754 ... CREATED (missing: Claim Manager)
+[95/137] BD45091 ... CREATED 
+[96/137] ZB31901 ... CREATED 
+[97/137] BH01635 ... CREATED (missing: Employer name)
+[98/137] BG99421 ... CREATED (missing: Claim Manager)
+[99/137] BK76913 ... CREATED 
+[100/137] BK97115 ... CREATED 
+[101/137] BH78065 ... CREATED 
+[102/137] BM27306 ... CREATED 
+[103/137] BF90963 ... CREATED (missing: Employer name)
+[104/137] BC01258 ... CREATED 
+[105/137] BJ27592 ... CREATED (missing: Employer name)
+[106/137] BL65171 ... CREATED 
+[107/137] BL77528 ... CREATED 
+[108/137] ZB68335 ... CREATED (missing: Vocational counselor)
+[109/137] BL09714 ... CREATED 
+[110/137] BJ86926 ... CREATED 
+[111/137] BK31049 ... CREATED 
+[112/137] BL99673 ... CREATED 
+[113/137] ZB63633 ... CREATED 
+[114/137] ZB65683 ... CREATED 
+[115/137] BH96847 ... CREATED 
+[116/137] BH28311 ... CREATED 
+[117/137] BL02608 ... CREATED 
+[118/137] BL84433 ... CREATED 
+[119/137] BL89609 ... CREATED 
+[120/137] BC60344 ... CREATED 
+[121/137] BL19840 ... CREATED 
+[122/137] BK78317 ... CREATED 
+[123/137] BL34992 ... CREATED 
+[124/137] BH16064 ... CREATED (missing: Claim Manager)
+[125/137] AR26887 ... CREATED 
+[126/137] BF01603 ... CREATED 
+[127/137] BH92547 ... CREATED (missing: Claim Manager)
+[128/137] BK94910 ... CREATED (missing: Worker mailing address, Worker residence address)
+[129/137] BM62249 ... CREATED 
+[130/137] BL73369 ... CREATED 
+[131/137] BK76344 ... CREATED 
+[132/137] BH63363 ... CREATED 
+[133/137] BK94064 ... UPDATED 
+[134/137] BG98823 ... CREATED 
+[135/137] BG84450 ... CREATED 
+[136/137] AV56760 ... CREATED 
+[137/137] BG50642 ... CREATED 
+
+Done: 84 created, 53 updated, 0 unchanged, 0 failed
+Results: scripts/import-maria-clients-results.json
+
+20 clients created/updated with missing fields (edit manually):
+  BJ02335: Employer name
+  BL69890: Claim Manager
+  BL43698: Injury date
+  BL24120: Attending doctor, Employer name
+  BJ93593: Attending doctor, Claim Manager, Employer name, Worker mailing address, Worker residence address, Injury date
+  BJ28318: Attending doctor, Claim Manager, Employer name, Worker mailing address, Worker residence address, Injury date
+  BM37259: Attending doctor, Claim Manager, Employer name, Worker mailing address, Worker residence address, Injury date
+  BM65887: Attending doctor, Claim Manager, Employer name, Worker mailing address, Worker residence address, Injury date
+  BL41462: Attending doctor, Claim Manager, Employer name, Worker mailing address, Worker residence address, Injury date
+  BC31192: Attending doctor, Claim Manager, Employer name, Worker mailing address, Worker residence address, Injury date
+  BJ15024: Attending doctor, Claim Manager, Employer name, Worker mailing address, Worker residence address, Injury date
+  BH46754: Claim Manager
+  BH01635: Employer name
+  BG99421: Claim Manager
+  BF90963: Employer name
+  BJ27592: Employer name
+  ZB68335: Vocational counselor
+  BH16064: Claim Manager
+  BH92547: Claim Manager
+  BK94910: Worker mailing address, Worker residence address

@@ -1,0 +1,50 @@
+◇ injected env (20) from .env.local // tip: ⌘ custom filepath { path: '/custom/path/.env' }
+◇ injected env (4) from .env // tip: ◈ encrypted .env [www.dotenvx.com]
+(node:3927) Warning: SECURITY WARNING: The SSL modes 'prefer', 'require', and 'verify-ca' are treated as aliases for 'verify-full'.
+In the next major version (pg-connection-string v3.0.0 and pg v9.0.0), these modes will adopt standard libpq semantics, which have weaker security guarantees.
+
+To prepare for this change:
+- If you want the current behavior, explicitly use 'sslmode=verify-full'
+- If you want libpq compatibility now, use 'uselibpqcompat=true&sslmode=require'
+
+See https://www.postgresql.org/docs/current/libpq-ssl.html for libpq SSL mode definitions.
+(Use `node --trace-warnings ...` to show where the warning was created)
+Reassigned BM08580 (Heather Williams) from Steven to Maria.
+Importing 24 Steven folders (12 from CLOSED)…
+[1/24] BL69750 ... UPDATED 
+[2/24] BN44993 ... UPDATED 
+[3/24] ZB62154 ... UPDATED 
+[4/24] BH00259 ... UPDATED (missing: Employer name, Injury date)
+[5/24] ZB44332 ... UPDATED 
+[6/24] BP24936 ... UPDATED 
+[7/24] BM49430 ... UPDATED 
+[8/24] BM37705 ... UPDATED 
+[9/24] BN69737 ... UPDATED 
+[10/24] ZB66774 ... UPDATED 
+[11/24] BK75175 ... UPDATED 
+[12/24] Y965895 ... UPDATED 
+[13/24] BA25824 ... CREATED (missing: Claim Manager, Employer name, Worker mailing address, Worker residence address)
+[14/24] BM17605 ... CREATED (missing: Attending doctor, Claim Manager, Employer name, Worker mailing address, Worker residence address, Injury date)
+[15/24] BL00889 ... CREATED 
+[16/24] AW17192 ... CREATED (missing: Attending doctor, Claim Manager, Employer name, Worker mailing address, Worker residence address, Injury date)
+[17/24] AY83414 ... CREATED 
+[18/24] BM35909 ... CREATED 
+[19/24] BM50321 ... CREATED 
+[20/24] AZ48910 ... CREATED 
+[21/24] SG96366 ... CREATED 
+[22/24] BK98555 ... CREATED 
+[23/24] BG96995 ... Warning: TT: undefined function: 32
+Warning: TT: undefined function: 32
+CREATED (missing: Claim Manager)
+[24/24] BL96538 ... CREATED (missing: Attending doctor, Claim Manager, Employer name, Worker mailing address, Worker residence address, Injury date)
+
+Done: 12 created, 12 updated, 0 unchanged, 0 failed
+Results: scripts/import-steven-clients-results.json
+
+6 clients with missing fields (edit manually):
+  BH00259: Employer name, Injury date
+  BA25824: Claim Manager, Employer name, Worker mailing address, Worker residence address
+  BM17605: Attending doctor, Claim Manager, Employer name, Worker mailing address, Worker residence address, Injury date
+  AW17192: Attending doctor, Claim Manager, Employer name, Worker mailing address, Worker residence address, Injury date
+  BG96995: Claim Manager
+  BL96538: Attending doctor, Claim Manager, Employer name, Worker mailing address, Worker residence address, Injury date

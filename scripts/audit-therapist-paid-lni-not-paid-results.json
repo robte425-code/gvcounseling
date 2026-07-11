@@ -1,0 +1,1996 @@
+{
+  "summary": {
+    "totalConflicts": 36,
+    "byLniStatus": {
+      "DENIED": 1,
+      "UNPAID": 24,
+      "IN_PROCESS": 11,
+      "APPEAL_IN_PROGRESS": 0
+    },
+    "byReason": {
+      "lni_status_changed_after_therapist_paid": 36
+    },
+    "byTherapist": {
+      "maria@gvcounseling.com": 30,
+      "steven@gvcounseling.com": 6
+    },
+    "byPayRunSource": {
+      "31270": 9,
+      "80689": 20,
+      "798171": 1,
+      "803580": 1,
+      "809048": 1,
+      "814064": 1,
+      "829498": 1,
+      "845213": 1,
+      "944797": 1
+    }
+  },
+  "conflicts": [
+    {
+      "invoiceNumber": 64,
+      "lniStatus": "IN_PROCESS",
+      "client": "Leoncio Gaitan",
+      "claim": "BD45091",
+      "therapist": "Maria Belen Castro",
+      "therapistEmail": "maria@gvcounseling.com",
+      "dos": [
+        {
+          "date": "2024-05-30",
+          "code": "96156",
+          "amount": 70
+        }
+      ],
+      "lniEob": "EOB 746: INJURED WORKER'S ACCIDENT REJECTED BY L&I STATE FUND AND SERVICE NOT AUTHORIZED. CONTACT THE INJURED WORKER.",
+      "reason": "lni_status_changed_after_therapist_paid",
+      "reasonDetail": "Therapist was paid via a real RA pay run when L&I was PAID; L&I status later changed (re-import/reconcile)",
+      "payRunSources": [
+        "798171"
+      ],
+      "therapistAmounts": [
+        {
+          "amount": 70,
+          "ra": "798171",
+          "raDate": "2024-06-25",
+          "raSource": "RemittanceAdvice_0479998_6252024.pdf"
+        }
+      ],
+      "remittanceLines": [
+        {
+          "ra": "798171",
+          "raDate": "2024-06-25",
+          "section": "PAID",
+          "eobCodes": []
+        },
+        {
+          "ra": "954696",
+          "raDate": "2025-08-19",
+          "section": "IN_PROCESS",
+          "eobCodes": [
+            "746"
+          ]
+        }
+      ],
+      "latestRa": {
+        "ra": "954696",
+        "section": "IN_PROCESS",
+        "date": "2025-08-19"
+      }
+    },
+    {
+      "invoiceNumber": 93,
+      "lniStatus": "IN_PROCESS",
+      "client": "Leoncio Gaitan",
+      "claim": "BD45091",
+      "therapist": "Maria Belen Castro",
+      "therapistEmail": "maria@gvcounseling.com",
+      "dos": [
+        {
+          "date": "2024-06-26",
+          "code": "96158",
+          "amount": 35
+        },
+        {
+          "date": "2024-06-26",
+          "code": "96159",
+          "amount": 17.5
+        },
+        {
+          "date": "2024-06-26",
+          "code": "96159",
+          "amount": 17.5
+        }
+      ],
+      "lniEob": "EOB 746: INJURED WORKER'S ACCIDENT REJECTED BY L&I STATE FUND AND SERVICE NOT AUTHORIZED. CONTACT THE INJURED WORKER. EOB 391: THIS IS AN ADJUSTMENT TO CORRECT A PREVIOUSLY ADJUDICATED/PROCESSED BILL.",
+      "reason": "lni_status_changed_after_therapist_paid",
+      "reasonDetail": "Therapist was paid via a real RA pay run when L&I was PAID; L&I status later changed (re-import/reconcile)",
+      "payRunSources": [
+        "803580"
+      ],
+      "therapistAmounts": [
+        {
+          "amount": 70,
+          "ra": "803580",
+          "raDate": "2024-07-09",
+          "raSource": "RemittanceAdvice_0479998_792024.pdf"
+        }
+      ],
+      "remittanceLines": [
+        {
+          "ra": "803580",
+          "raDate": "2024-07-09",
+          "section": "PAID",
+          "eobCodes": []
+        },
+        {
+          "ra": "954696",
+          "raDate": "2025-08-19",
+          "section": "IN_PROCESS",
+          "eobCodes": [
+            "746",
+            "391"
+          ]
+        }
+      ],
+      "latestRa": {
+        "ra": "954696",
+        "section": "IN_PROCESS",
+        "date": "2025-08-19"
+      }
+    },
+    {
+      "invoiceNumber": 106,
+      "lniStatus": "IN_PROCESS",
+      "client": "Leoncio Gaitan",
+      "claim": "BD45091",
+      "therapist": "Maria Belen Castro",
+      "therapistEmail": "maria@gvcounseling.com",
+      "dos": [
+        {
+          "date": "2024-07-09",
+          "code": "96158",
+          "amount": 35
+        },
+        {
+          "date": "2024-07-09",
+          "code": "96159",
+          "amount": 17.5
+        }
+      ],
+      "lniEob": "EOB 746: INJURED WORKER'S ACCIDENT REJECTED BY L&I STATE FUND AND SERVICE NOT AUTHORIZED. CONTACT THE INJURED WORKER. EOB 391: THIS IS AN ADJUSTMENT TO CORRECT A PREVIOUSLY ADJUDICATED/PROCESSED BILL.",
+      "reason": "lni_status_changed_after_therapist_paid",
+      "reasonDetail": "Therapist was paid via a real RA pay run when L&I was PAID; L&I status later changed (re-import/reconcile)",
+      "payRunSources": [
+        "809048"
+      ],
+      "therapistAmounts": [
+        {
+          "amount": 52.5,
+          "ra": "809048",
+          "raDate": "2024-07-23",
+          "raSource": "RemittanceAdvice_0479998_7232024.pdf"
+        }
+      ],
+      "remittanceLines": [
+        {
+          "ra": "809048",
+          "raDate": "2024-07-23",
+          "section": "PAID",
+          "eobCodes": []
+        },
+        {
+          "ra": "954696",
+          "raDate": "2025-08-19",
+          "section": "IN_PROCESS",
+          "eobCodes": [
+            "746",
+            "391"
+          ]
+        }
+      ],
+      "latestRa": {
+        "ra": "954696",
+        "section": "IN_PROCESS",
+        "date": "2025-08-19"
+      }
+    },
+    {
+      "invoiceNumber": 120,
+      "lniStatus": "IN_PROCESS",
+      "client": "Leoncio Gaitan",
+      "claim": "BD45091",
+      "therapist": "Maria Belen Castro",
+      "therapistEmail": "maria@gvcounseling.com",
+      "dos": [
+        {
+          "date": "2024-07-22",
+          "code": "96158",
+          "amount": 35
+        }
+      ],
+      "lniEob": "EOB 391: THIS IS AN ADJUSTMENT TO CORRECT A PREVIOUSLY ADJUDICATED/PROCESSED BILL.",
+      "reason": "lni_status_changed_after_therapist_paid",
+      "reasonDetail": "Therapist was paid via a real RA pay run when L&I was PAID; L&I status later changed (re-import/reconcile)",
+      "payRunSources": [
+        "814064"
+      ],
+      "therapistAmounts": [
+        {
+          "amount": 35,
+          "ra": "814064",
+          "raDate": "2024-08-06",
+          "raSource": "RemittanceAdvice_0479998_862024.pdf"
+        }
+      ],
+      "remittanceLines": [
+        {
+          "ra": "814064",
+          "raDate": "2024-08-06",
+          "section": "PAID",
+          "eobCodes": []
+        },
+        {
+          "ra": "954696",
+          "raDate": "2025-08-19",
+          "section": "IN_PROCESS",
+          "eobCodes": [
+            "391"
+          ]
+        }
+      ],
+      "latestRa": {
+        "ra": "954696",
+        "section": "IN_PROCESS",
+        "date": "2025-08-19"
+      }
+    },
+    {
+      "invoiceNumber": 185,
+      "lniStatus": "IN_PROCESS",
+      "client": "Leoncio Gaitan",
+      "claim": "BD45091",
+      "therapist": "Maria Belen Castro",
+      "therapistEmail": "maria@gvcounseling.com",
+      "dos": [
+        {
+          "date": "2024-09-06",
+          "code": "96158",
+          "amount": 35
+        },
+        {
+          "date": "2024-09-06",
+          "code": "96159",
+          "amount": 17.5
+        },
+        {
+          "date": "2024-09-06",
+          "code": "96159",
+          "amount": 17.5
+        }
+      ],
+      "lniEob": "EOB 746: INJURED WORKER'S ACCIDENT REJECTED BY L&I STATE FUND AND SERVICE NOT AUTHORIZED. CONTACT THE INJURED WORKER.",
+      "reason": "lni_status_changed_after_therapist_paid",
+      "reasonDetail": "Therapist was paid via a real RA pay run when L&I was PAID; L&I status later changed (re-import/reconcile)",
+      "payRunSources": [
+        "829498"
+      ],
+      "therapistAmounts": [
+        {
+          "amount": 70,
+          "ra": "829498",
+          "raDate": "2024-09-17",
+          "raSource": "RemittanceAdvice_0479998_9172024.pdf"
+        }
+      ],
+      "remittanceLines": [
+        {
+          "ra": "829498",
+          "raDate": "2024-09-17",
+          "section": "PAID",
+          "eobCodes": []
+        },
+        {
+          "ra": "954696",
+          "raDate": "2025-08-19",
+          "section": "IN_PROCESS",
+          "eobCodes": [
+            "746"
+          ]
+        }
+      ],
+      "latestRa": {
+        "ra": "954696",
+        "section": "IN_PROCESS",
+        "date": "2025-08-19"
+      }
+    },
+    {
+      "invoiceNumber": 246,
+      "lniStatus": "IN_PROCESS",
+      "client": "Leoncio Gaitan",
+      "claim": "BD45091",
+      "therapist": "Maria Belen Castro",
+      "therapistEmail": "maria@gvcounseling.com",
+      "dos": [
+        {
+          "date": "2024-10-18",
+          "code": "96156",
+          "amount": 70
+        }
+      ],
+      "lniEob": "EOB 391: THIS IS AN ADJUSTMENT TO CORRECT A PREVIOUSLY ADJUDICATED/PROCESSED BILL.",
+      "reason": "lni_status_changed_after_therapist_paid",
+      "reasonDetail": "Therapist was paid via a real RA pay run when L&I was PAID; L&I status later changed (re-import/reconcile)",
+      "payRunSources": [
+        "845213"
+      ],
+      "therapistAmounts": [
+        {
+          "amount": 70,
+          "ra": "845213",
+          "raDate": "2024-10-29",
+          "raSource": "RemittanceAdvice_0479998_10292024.pdf"
+        }
+      ],
+      "remittanceLines": [
+        {
+          "ra": "845213",
+          "raDate": "2024-10-29",
+          "section": "PAID",
+          "eobCodes": []
+        },
+        {
+          "ra": "954696",
+          "raDate": "2025-08-19",
+          "section": "IN_PROCESS",
+          "eobCodes": [
+            "391"
+          ]
+        }
+      ],
+      "latestRa": {
+        "ra": "954696",
+        "section": "IN_PROCESS",
+        "date": "2025-08-19"
+      }
+    },
+    {
+      "invoiceNumber": 257,
+      "lniStatus": "UNPAID",
+      "client": "Eddie Davis",
+      "claim": "BH00259",
+      "therapist": "Steven Sample",
+      "therapistEmail": "steven@gvcounseling.com",
+      "dos": [
+        {
+          "date": "2026-06-17",
+          "code": "96158",
+          "amount": 42.5
+        },
+        {
+          "date": "2026-06-17",
+          "code": "96159",
+          "amount": 21.25
+        },
+        {
+          "date": "2026-06-17",
+          "code": "96159",
+          "amount": 21.25
+        }
+      ],
+      "lniEob": null,
+      "reason": "lni_status_changed_after_therapist_paid",
+      "reasonDetail": "Therapist was paid via a real RA pay run when L&I was PAID; L&I status later changed (re-import/reconcile)",
+      "payRunSources": [
+        "80689"
+      ],
+      "therapistAmounts": [
+        {
+          "amount": 85,
+          "ra": "80689",
+          "raDate": "2026-07-07",
+          "raSource": "RemittanceAdvice_0479998_772026.pdf"
+        }
+      ],
+      "remittanceLines": [
+        {
+          "ra": "80689",
+          "raDate": "2026-07-07",
+          "section": "PAID",
+          "eobCodes": []
+        }
+      ],
+      "latestRa": {
+        "ra": "80689",
+        "section": "PAID",
+        "date": "2026-07-07"
+      }
+    },
+    {
+      "invoiceNumber": 258,
+      "lniStatus": "UNPAID",
+      "client": "Heather Williams",
+      "claim": "BM08580",
+      "therapist": "Steven Sample",
+      "therapistEmail": "steven@gvcounseling.com",
+      "dos": [
+        {
+          "date": "2026-06-18",
+          "code": "96156",
+          "amount": 85
+        }
+      ],
+      "lniEob": null,
+      "reason": "lni_status_changed_after_therapist_paid",
+      "reasonDetail": "Therapist was paid via a real RA pay run when L&I was PAID; L&I status later changed (re-import/reconcile)",
+      "payRunSources": [
+        "80689"
+      ],
+      "therapistAmounts": [
+        {
+          "amount": 85,
+          "ra": "80689",
+          "raDate": "2026-07-07",
+          "raSource": "RemittanceAdvice_0479998_772026.pdf"
+        }
+      ],
+      "remittanceLines": [
+        {
+          "ra": "80689",
+          "raDate": "2026-07-07",
+          "section": "PAID",
+          "eobCodes": []
+        }
+      ],
+      "latestRa": {
+        "ra": "80689",
+        "section": "PAID",
+        "date": "2026-07-07"
+      }
+    },
+    {
+      "invoiceNumber": 259,
+      "lniStatus": "UNPAID",
+      "client": "Heather Williams",
+      "claim": "BM08580",
+      "therapist": "Steven Sample",
+      "therapistEmail": "steven@gvcounseling.com",
+      "dos": [
+        {
+          "date": "2026-06-21",
+          "code": "96159",
+          "amount": 21.25
+        },
+        {
+          "date": "2026-06-21",
+          "code": "96159",
+          "amount": 21.25
+        },
+        {
+          "date": "2026-06-21",
+          "code": "96158",
+          "amount": 42.5
+        }
+      ],
+      "lniEob": null,
+      "reason": "lni_status_changed_after_therapist_paid",
+      "reasonDetail": "Therapist was paid via a real RA pay run when L&I was PAID; L&I status later changed (re-import/reconcile)",
+      "payRunSources": [
+        "80689"
+      ],
+      "therapistAmounts": [
+        {
+          "amount": 85,
+          "ra": "80689",
+          "raDate": "2026-07-07",
+          "raSource": "RemittanceAdvice_0479998_772026.pdf"
+        }
+      ],
+      "remittanceLines": [
+        {
+          "ra": "80689",
+          "raDate": "2026-07-07",
+          "section": "PAID",
+          "eobCodes": []
+        }
+      ],
+      "latestRa": {
+        "ra": "80689",
+        "section": "PAID",
+        "date": "2026-07-07"
+      }
+    },
+    {
+      "invoiceNumber": 260,
+      "lniStatus": "UNPAID",
+      "client": "Briana Deann Sutherland",
+      "claim": "BK75175",
+      "therapist": "Steven Sample",
+      "therapistEmail": "steven@gvcounseling.com",
+      "dos": [
+        {
+          "date": "2026-06-26",
+          "code": "96158",
+          "amount": 42.5
+        },
+        {
+          "date": "2026-06-26",
+          "code": "96159",
+          "amount": 21.25
+        },
+        {
+          "date": "2026-06-26",
+          "code": "96159",
+          "amount": 21.25
+        }
+      ],
+      "lniEob": "EOB P56: THIS CHARGE HAS BEEN PROCESSED PER THE DEPARTMENT OCCUPATIONAL NURSE CONSULTANT.",
+      "reason": "lni_status_changed_after_therapist_paid",
+      "reasonDetail": "Therapist was paid via a real RA pay run when L&I was PAID; L&I status later changed (re-import/reconcile)",
+      "payRunSources": [
+        "80689"
+      ],
+      "therapistAmounts": [
+        {
+          "amount": 85,
+          "ra": "80689",
+          "raDate": "2026-07-07",
+          "raSource": "RemittanceAdvice_0479998_772026.pdf"
+        }
+      ],
+      "remittanceLines": [
+        {
+          "ra": "80689",
+          "raDate": "2026-07-07",
+          "section": "PAID",
+          "eobCodes": [
+            "P56"
+          ]
+        }
+      ],
+      "latestRa": {
+        "ra": "80689",
+        "section": "PAID",
+        "date": "2026-07-07"
+      }
+    },
+    {
+      "invoiceNumber": 261,
+      "lniStatus": "UNPAID",
+      "client": "Kimberly Cavanaugh",
+      "claim": "BL69750",
+      "therapist": "Steven Sample",
+      "therapistEmail": "steven@gvcounseling.com",
+      "dos": [
+        {
+          "date": "2026-07-01",
+          "code": "96158",
+          "amount": 42.5
+        },
+        {
+          "date": "2026-07-01",
+          "code": "96159",
+          "amount": 21.25
+        },
+        {
+          "date": "2026-07-01",
+          "code": "96159",
+          "amount": 21.25
+        }
+      ],
+      "lniEob": null,
+      "reason": "lni_status_changed_after_therapist_paid",
+      "reasonDetail": "Therapist was paid via a real RA pay run when L&I was PAID; L&I status later changed (re-import/reconcile)",
+      "payRunSources": [
+        "80689"
+      ],
+      "therapistAmounts": [
+        {
+          "amount": 85,
+          "ra": "80689",
+          "raDate": "2026-07-07",
+          "raSource": "RemittanceAdvice_0479998_772026.pdf"
+        }
+      ],
+      "remittanceLines": [
+        {
+          "ra": "80689",
+          "raDate": "2026-07-07",
+          "section": "PAID",
+          "eobCodes": []
+        }
+      ],
+      "latestRa": {
+        "ra": "80689",
+        "section": "PAID",
+        "date": "2026-07-07"
+      }
+    },
+    {
+      "invoiceNumber": 262,
+      "lniStatus": "UNPAID",
+      "client": "Eddie Davis",
+      "claim": "BH00259",
+      "therapist": "Steven Sample",
+      "therapistEmail": "steven@gvcounseling.com",
+      "dos": [
+        {
+          "date": "2026-07-01",
+          "code": "96158",
+          "amount": 42.5
+        },
+        {
+          "date": "2026-07-01",
+          "code": "96159",
+          "amount": 21.25
+        },
+        {
+          "date": "2026-07-01",
+          "code": "96159",
+          "amount": 21.25
+        }
+      ],
+      "lniEob": null,
+      "reason": "lni_status_changed_after_therapist_paid",
+      "reasonDetail": "Therapist was paid via a real RA pay run when L&I was PAID; L&I status later changed (re-import/reconcile)",
+      "payRunSources": [
+        "80689"
+      ],
+      "therapistAmounts": [
+        {
+          "amount": 85,
+          "ra": "80689",
+          "raDate": "2026-07-07",
+          "raSource": "RemittanceAdvice_0479998_772026.pdf"
+        }
+      ],
+      "remittanceLines": [
+        {
+          "ra": "80689",
+          "raDate": "2026-07-07",
+          "section": "PAID",
+          "eobCodes": []
+        }
+      ],
+      "latestRa": {
+        "ra": "80689",
+        "section": "PAID",
+        "date": "2026-07-07"
+      }
+    },
+    {
+      "invoiceNumber": 606,
+      "lniStatus": "DENIED",
+      "client": "Jacob Martin",
+      "claim": "BM71187",
+      "therapist": "Maria Belen Castro",
+      "therapistEmail": "maria@gvcounseling.com",
+      "dos": [
+        {
+          "date": "2025-07-11",
+          "code": "96156",
+          "amount": 75
+        }
+      ],
+      "lniEob": null,
+      "reason": "lni_status_changed_after_therapist_paid",
+      "reasonDetail": "Therapist was paid via a real RA pay run when L&I was PAID; L&I status later changed (re-import/reconcile)",
+      "payRunSources": [
+        "944797"
+      ],
+      "therapistAmounts": [
+        {
+          "amount": 75,
+          "ra": "944797",
+          "raDate": "2025-07-22",
+          "raSource": "RemittanceAdvice_0479998_7222025.pdf"
+        }
+      ],
+      "remittanceLines": [
+        {
+          "ra": "944797",
+          "raDate": "2025-07-22",
+          "section": "PAID",
+          "eobCodes": []
+        },
+        {
+          "ra": "949698",
+          "raDate": "2025-08-05",
+          "section": "IN_PROCESS",
+          "eobCodes": []
+        },
+        {
+          "ra": "954696",
+          "raDate": "2025-08-19",
+          "section": "IN_PROCESS",
+          "eobCodes": []
+        },
+        {
+          "ra": "959760",
+          "raDate": "2025-09-03",
+          "section": "DENIED",
+          "eobCodes": []
+        }
+      ],
+      "latestRa": {
+        "ra": "959760",
+        "section": "DENIED",
+        "date": "2025-09-03"
+      }
+    },
+    {
+      "invoiceNumber": 805,
+      "lniStatus": "IN_PROCESS",
+      "client": "Dunia Cordova",
+      "claim": "BG46680",
+      "therapist": "Maria Belen Castro",
+      "therapistEmail": "maria@gvcounseling.com",
+      "dos": [
+        {
+          "date": "2025-12-04",
+          "code": "96158",
+          "amount": 37.5
+        },
+        {
+          "date": "2025-12-04",
+          "code": "96159",
+          "amount": 18.75
+        }
+      ],
+      "lniEob": "EOB 599: ACTION IS BEING TAKEN. DO NOT SEND REBILL, ADJUSTMENT OR APPEAL UNTIL YOU RECEIVE NOTICE OF PAYMENT DECISION. AFTER 60 DAYS CALL L&I 800-848-0811.",
+      "reason": "lni_status_changed_after_therapist_paid",
+      "reasonDetail": "Therapist was paid via a real RA pay run when L&I was PAID; L&I status later changed (re-import/reconcile)",
+      "payRunSources": [
+        "31270"
+      ],
+      "therapistAmounts": [
+        {
+          "amount": 56.25,
+          "ra": "31270",
+          "raDate": "2026-03-03",
+          "raSource": "RemittanceAdvice_0479998_332026.pdf"
+        }
+      ],
+      "remittanceLines": [
+        {
+          "ra": "998172",
+          "raDate": "2025-12-09",
+          "section": "IN_PROCESS",
+          "eobCodes": [
+            "903"
+          ]
+        },
+        {
+          "ra": "3935",
+          "raDate": "2025-12-23",
+          "section": "IN_PROCESS",
+          "eobCodes": [
+            "599"
+          ]
+        },
+        {
+          "ra": "9309",
+          "raDate": "2026-01-06",
+          "section": "IN_PROCESS",
+          "eobCodes": [
+            "599"
+          ]
+        },
+        {
+          "ra": "14941",
+          "raDate": "2026-01-21",
+          "section": "IN_PROCESS",
+          "eobCodes": [
+            "599"
+          ]
+        },
+        {
+          "ra": "20263",
+          "raDate": "2026-02-03",
+          "section": "IN_PROCESS",
+          "eobCodes": [
+            "599"
+          ]
+        },
+        {
+          "ra": "25733",
+          "raDate": "2026-02-18",
+          "section": "IN_PROCESS",
+          "eobCodes": [
+            "599"
+          ]
+        },
+        {
+          "ra": "31270",
+          "raDate": "2026-03-03",
+          "section": "PAID",
+          "eobCodes": []
+        }
+      ],
+      "latestRa": {
+        "ra": "31270",
+        "section": "PAID",
+        "date": "2026-03-03"
+      }
+    },
+    {
+      "invoiceNumber": 840,
+      "lniStatus": "IN_PROCESS",
+      "client": "Jacob Martin",
+      "claim": "BM71187",
+      "therapist": "Maria Belen Castro",
+      "therapistEmail": "maria@gvcounseling.com",
+      "dos": [
+        {
+          "date": "2025-12-30",
+          "code": "96158",
+          "amount": 37.5
+        },
+        {
+          "date": "2025-12-30",
+          "code": "96159",
+          "amount": 18.75
+        },
+        {
+          "date": "2025-12-30",
+          "code": "96159",
+          "amount": 18.75
+        }
+      ],
+      "lniEob": "EOB 599: ACTION IS BEING TAKEN. DO NOT SEND REBILL, ADJUSTMENT OR APPEAL UNTIL YOU RECEIVE NOTICE OF PAYMENT DECISION. AFTER 60 DAYS CALL L&I 800-848-0811.",
+      "reason": "lni_status_changed_after_therapist_paid",
+      "reasonDetail": "Therapist was paid via a real RA pay run when L&I was PAID; L&I status later changed (re-import/reconcile)",
+      "payRunSources": [
+        "31270"
+      ],
+      "therapistAmounts": [
+        {
+          "amount": 75,
+          "ra": "31270",
+          "raDate": "2026-03-03",
+          "raSource": "RemittanceAdvice_0479998_332026.pdf"
+        }
+      ],
+      "remittanceLines": [
+        {
+          "ra": "9309",
+          "raDate": "2026-01-06",
+          "section": "IN_PROCESS",
+          "eobCodes": []
+        },
+        {
+          "ra": "14941",
+          "raDate": "2026-01-21",
+          "section": "IN_PROCESS",
+          "eobCodes": [
+            "903"
+          ]
+        },
+        {
+          "ra": "20263",
+          "raDate": "2026-02-03",
+          "section": "IN_PROCESS",
+          "eobCodes": [
+            "903"
+          ]
+        },
+        {
+          "ra": "25733",
+          "raDate": "2026-02-18",
+          "section": "IN_PROCESS",
+          "eobCodes": [
+            "599"
+          ]
+        },
+        {
+          "ra": "31270",
+          "raDate": "2026-03-03",
+          "section": "PAID",
+          "eobCodes": [
+            "P56"
+          ]
+        }
+      ],
+      "latestRa": {
+        "ra": "31270",
+        "section": "PAID",
+        "date": "2026-03-03"
+      }
+    },
+    {
+      "invoiceNumber": 850,
+      "lniStatus": "IN_PROCESS",
+      "client": "Jacob Martin",
+      "claim": "BM71187",
+      "therapist": "Maria Belen Castro",
+      "therapistEmail": "maria@gvcounseling.com",
+      "dos": [
+        {
+          "date": "2026-01-08",
+          "code": "96158",
+          "amount": 37.5
+        },
+        {
+          "date": "2026-01-08",
+          "code": "96159",
+          "amount": 18.75
+        },
+        {
+          "date": "2026-01-08",
+          "code": "96159",
+          "amount": 18.75
+        }
+      ],
+      "lniEob": "EOB 599: ACTION IS BEING TAKEN. DO NOT SEND REBILL, ADJUSTMENT OR APPEAL UNTIL YOU RECEIVE NOTICE OF PAYMENT DECISION. AFTER 60 DAYS CALL L&I 800-848-0811.",
+      "reason": "lni_status_changed_after_therapist_paid",
+      "reasonDetail": "Therapist was paid via a real RA pay run when L&I was PAID; L&I status later changed (re-import/reconcile)",
+      "payRunSources": [
+        "31270"
+      ],
+      "therapistAmounts": [
+        {
+          "amount": 75,
+          "ra": "31270",
+          "raDate": "2026-03-03",
+          "raSource": "RemittanceAdvice_0479998_332026.pdf"
+        }
+      ],
+      "remittanceLines": [
+        {
+          "ra": "14941",
+          "raDate": "2026-01-21",
+          "section": "IN_PROCESS",
+          "eobCodes": [
+            "903"
+          ]
+        },
+        {
+          "ra": "20263",
+          "raDate": "2026-02-03",
+          "section": "IN_PROCESS",
+          "eobCodes": [
+            "903"
+          ]
+        },
+        {
+          "ra": "25733",
+          "raDate": "2026-02-18",
+          "section": "IN_PROCESS",
+          "eobCodes": [
+            "599"
+          ]
+        },
+        {
+          "ra": "31270",
+          "raDate": "2026-03-03",
+          "section": "PAID",
+          "eobCodes": [
+            "P56"
+          ]
+        }
+      ],
+      "latestRa": {
+        "ra": "31270",
+        "section": "PAID",
+        "date": "2026-03-03"
+      }
+    },
+    {
+      "invoiceNumber": 851,
+      "lniStatus": "UNPAID",
+      "client": "Farah Deeba-Nawabi",
+      "claim": "ZB71415",
+      "therapist": "Maria Belen Castro",
+      "therapistEmail": "maria@gvcounseling.com",
+      "dos": [
+        {
+          "date": "2026-01-08",
+          "code": "96158",
+          "amount": 37.5
+        },
+        {
+          "date": "2026-01-08",
+          "code": "96159",
+          "amount": 18.75
+        },
+        {
+          "date": "2026-01-08",
+          "code": "96159",
+          "amount": 18.75
+        }
+      ],
+      "lniEob": null,
+      "reason": "lni_status_changed_after_therapist_paid",
+      "reasonDetail": "Therapist was paid via a real RA pay run when L&I was PAID; L&I status later changed (re-import/reconcile)",
+      "payRunSources": [
+        "31270"
+      ],
+      "therapistAmounts": [
+        {
+          "amount": 75,
+          "ra": "31270",
+          "raDate": "2026-03-03",
+          "raSource": "RemittanceAdvice_0479998_332026.pdf"
+        }
+      ],
+      "remittanceLines": [
+        {
+          "ra": "31270",
+          "raDate": "2026-03-03",
+          "section": "PAID",
+          "eobCodes": []
+        }
+      ],
+      "latestRa": {
+        "ra": "31270",
+        "section": "PAID",
+        "date": "2026-03-03"
+      }
+    },
+    {
+      "invoiceNumber": 853,
+      "lniStatus": "UNPAID",
+      "client": "Jared P. Outen",
+      "claim": "BM32698",
+      "therapist": "Maria Belen Castro",
+      "therapistEmail": "maria@gvcounseling.com",
+      "dos": [
+        {
+          "date": "2026-01-09",
+          "code": "96158",
+          "amount": 37.5
+        },
+        {
+          "date": "2026-01-09",
+          "code": "96159",
+          "amount": 18.75
+        },
+        {
+          "date": "2026-01-09",
+          "code": "96159",
+          "amount": 18.75
+        }
+      ],
+      "lniEob": null,
+      "reason": "lni_status_changed_after_therapist_paid",
+      "reasonDetail": "Therapist was paid via a real RA pay run when L&I was PAID; L&I status later changed (re-import/reconcile)",
+      "payRunSources": [
+        "31270"
+      ],
+      "therapistAmounts": [
+        {
+          "amount": 75,
+          "ra": "31270",
+          "raDate": "2026-03-03",
+          "raSource": "RemittanceAdvice_0479998_332026.pdf"
+        }
+      ],
+      "remittanceLines": [
+        {
+          "ra": "31270",
+          "raDate": "2026-03-03",
+          "section": "PAID",
+          "eobCodes": []
+        }
+      ],
+      "latestRa": {
+        "ra": "31270",
+        "section": "PAID",
+        "date": "2026-03-03"
+      }
+    },
+    {
+      "invoiceNumber": 861,
+      "lniStatus": "IN_PROCESS",
+      "client": "Jacob Martin",
+      "claim": "BM71187",
+      "therapist": "Maria Belen Castro",
+      "therapistEmail": "maria@gvcounseling.com",
+      "dos": [
+        {
+          "date": "2026-01-15",
+          "code": "96158",
+          "amount": 37.5
+        },
+        {
+          "date": "2026-01-15",
+          "code": "96159",
+          "amount": 18.75
+        },
+        {
+          "date": "2026-01-15",
+          "code": "96159",
+          "amount": 18.75
+        }
+      ],
+      "lniEob": null,
+      "reason": "lni_status_changed_after_therapist_paid",
+      "reasonDetail": "Therapist was paid via a real RA pay run when L&I was PAID; L&I status later changed (re-import/reconcile)",
+      "payRunSources": [
+        "31270"
+      ],
+      "therapistAmounts": [
+        {
+          "amount": 75,
+          "ra": "31270",
+          "raDate": "2026-03-03",
+          "raSource": "RemittanceAdvice_0479998_332026.pdf"
+        }
+      ],
+      "remittanceLines": [
+        {
+          "ra": "14941",
+          "raDate": "2026-01-21",
+          "section": "IN_PROCESS",
+          "eobCodes": [
+            "903"
+          ]
+        },
+        {
+          "ra": "20263",
+          "raDate": "2026-02-03",
+          "section": "IN_PROCESS",
+          "eobCodes": [
+            "903"
+          ]
+        },
+        {
+          "ra": "25733",
+          "raDate": "2026-02-18",
+          "section": "IN_PROCESS",
+          "eobCodes": []
+        },
+        {
+          "ra": "31270",
+          "raDate": "2026-03-03",
+          "section": "PAID",
+          "eobCodes": [
+            "P56"
+          ]
+        }
+      ],
+      "latestRa": {
+        "ra": "31270",
+        "section": "PAID",
+        "date": "2026-03-03"
+      }
+    },
+    {
+      "invoiceNumber": 897,
+      "lniStatus": "UNPAID",
+      "client": "Maricruz Torres",
+      "claim": "BK47305",
+      "therapist": "Maria Belen Castro",
+      "therapistEmail": "maria@gvcounseling.com",
+      "dos": [
+        {
+          "date": "2026-02-18",
+          "code": "90837",
+          "amount": 95
+        }
+      ],
+      "lniEob": null,
+      "reason": "lni_status_changed_after_therapist_paid",
+      "reasonDetail": "Therapist was paid via a real RA pay run when L&I was PAID; L&I status later changed (re-import/reconcile)",
+      "payRunSources": [
+        "31270"
+      ],
+      "therapistAmounts": [
+        {
+          "amount": 95,
+          "ra": "31270",
+          "raDate": "2026-03-03",
+          "raSource": "RemittanceAdvice_0479998_332026.pdf"
+        }
+      ],
+      "remittanceLines": [
+        {
+          "ra": "31270",
+          "raDate": "2026-03-03",
+          "section": "PAID",
+          "eobCodes": []
+        }
+      ],
+      "latestRa": {
+        "ra": "31270",
+        "section": "PAID",
+        "date": "2026-03-03"
+      }
+    },
+    {
+      "invoiceNumber": 906,
+      "lniStatus": "UNPAID",
+      "client": "Maricruz Torres",
+      "claim": "BK47305",
+      "therapist": "Maria Belen Castro",
+      "therapistEmail": "maria@gvcounseling.com",
+      "dos": [
+        {
+          "date": "2026-02-26",
+          "code": "90837",
+          "amount": 95
+        }
+      ],
+      "lniEob": null,
+      "reason": "lni_status_changed_after_therapist_paid",
+      "reasonDetail": "Therapist was paid via a real RA pay run when L&I was PAID; L&I status later changed (re-import/reconcile)",
+      "payRunSources": [
+        "31270"
+      ],
+      "therapistAmounts": [
+        {
+          "amount": 95,
+          "ra": "31270",
+          "raDate": "2026-03-03",
+          "raSource": "RemittanceAdvice_0479998_332026.pdf"
+        }
+      ],
+      "remittanceLines": [
+        {
+          "ra": "31270",
+          "raDate": "2026-03-03",
+          "section": "PAID",
+          "eobCodes": []
+        }
+      ],
+      "latestRa": {
+        "ra": "31270",
+        "section": "PAID",
+        "date": "2026-03-03"
+      }
+    },
+    {
+      "invoiceNumber": 998,
+      "lniStatus": "UNPAID",
+      "client": "Victor Tom",
+      "claim": "BK08154",
+      "therapist": "Maria Belen Castro",
+      "therapistEmail": "maria@gvcounseling.com",
+      "dos": [
+        {
+          "date": "2026-06-05",
+          "code": "96158",
+          "amount": 38.5
+        },
+        {
+          "date": "2026-06-05",
+          "code": "96159",
+          "amount": 19.25
+        },
+        {
+          "date": "2026-06-05",
+          "code": "96159",
+          "amount": 19.25
+        }
+      ],
+      "lniEob": null,
+      "reason": "lni_status_changed_after_therapist_paid",
+      "reasonDetail": "Therapist was paid via a real RA pay run when L&I was PAID; L&I status later changed (re-import/reconcile)",
+      "payRunSources": [
+        "80689"
+      ],
+      "therapistAmounts": [
+        {
+          "amount": 77,
+          "ra": "80689",
+          "raDate": "2026-07-07",
+          "raSource": "RemittanceAdvice_0479998_772026.pdf"
+        }
+      ],
+      "remittanceLines": [
+        {
+          "ra": "80689",
+          "raDate": "2026-07-07",
+          "section": "PAID",
+          "eobCodes": []
+        }
+      ],
+      "latestRa": {
+        "ra": "80689",
+        "section": "PAID",
+        "date": "2026-07-07"
+      }
+    },
+    {
+      "invoiceNumber": 999,
+      "lniStatus": "IN_PROCESS",
+      "client": "Ignacio Diaz-Ojeda",
+      "claim": "BL44101",
+      "therapist": "Maria Belen Castro",
+      "therapistEmail": "maria@gvcounseling.com",
+      "dos": [
+        {
+          "date": "2026-06-08",
+          "code": "96158",
+          "amount": 38.5
+        },
+        {
+          "date": "2026-06-08",
+          "code": "96159",
+          "amount": 19.25
+        },
+        {
+          "date": "2026-06-08",
+          "code": "96159",
+          "amount": 19.25
+        }
+      ],
+      "lniEob": "EOB 903: ACTION IS BEING TAKEN. DO NOT SEND REBILL, ADJUSTMENT OR APPEAL UNTIL YOU RECEIVE NOTICE OF PAYMENT DECISION. AFTER 60 DAYS CALL L&I 800-848-0811.",
+      "reason": "lni_status_changed_after_therapist_paid",
+      "reasonDetail": "Therapist was paid via a real RA pay run when L&I was PAID; L&I status later changed (re-import/reconcile)",
+      "payRunSources": [
+        "80689"
+      ],
+      "therapistAmounts": [
+        {
+          "amount": 77,
+          "ra": "80689",
+          "raDate": "2026-07-07",
+          "raSource": "RemittanceAdvice_0479998_772026.pdf"
+        }
+      ],
+      "remittanceLines": [
+        {
+          "ra": "70106",
+          "raDate": "2026-06-09",
+          "section": "IN_PROCESS",
+          "eobCodes": [
+            "903"
+          ]
+        },
+        {
+          "ra": "80689",
+          "raDate": "2026-07-07",
+          "section": "PAID",
+          "eobCodes": []
+        }
+      ],
+      "latestRa": {
+        "ra": "80689",
+        "section": "PAID",
+        "date": "2026-07-07"
+      }
+    },
+    {
+      "invoiceNumber": 1000,
+      "lniStatus": "UNPAID",
+      "client": "Wesley Saole",
+      "claim": "BL61172",
+      "therapist": "Maria Belen Castro",
+      "therapistEmail": "maria@gvcounseling.com",
+      "dos": [
+        {
+          "date": "2026-06-11",
+          "code": "96158",
+          "amount": 38.5
+        },
+        {
+          "date": "2026-06-11",
+          "code": "96159",
+          "amount": 19.25
+        },
+        {
+          "date": "2026-06-11",
+          "code": "96159",
+          "amount": 19.25
+        }
+      ],
+      "lniEob": null,
+      "reason": "lni_status_changed_after_therapist_paid",
+      "reasonDetail": "Therapist was paid via a real RA pay run when L&I was PAID; L&I status later changed (re-import/reconcile)",
+      "payRunSources": [
+        "80689"
+      ],
+      "therapistAmounts": [
+        {
+          "amount": 77,
+          "ra": "80689",
+          "raDate": "2026-07-07",
+          "raSource": "RemittanceAdvice_0479998_772026.pdf"
+        }
+      ],
+      "remittanceLines": [
+        {
+          "ra": "80689",
+          "raDate": "2026-07-07",
+          "section": "PAID",
+          "eobCodes": []
+        }
+      ],
+      "latestRa": {
+        "ra": "80689",
+        "section": "PAID",
+        "date": "2026-07-07"
+      }
+    },
+    {
+      "invoiceNumber": 1001,
+      "lniStatus": "UNPAID",
+      "client": "Teresa Lembke",
+      "claim": "BJ04455",
+      "therapist": "Maria Belen Castro",
+      "therapistEmail": "maria@gvcounseling.com",
+      "dos": [
+        {
+          "date": "2026-06-11",
+          "code": "96158",
+          "amount": 38.5
+        },
+        {
+          "date": "2026-06-11",
+          "code": "96159",
+          "amount": 19.25
+        },
+        {
+          "date": "2026-06-11",
+          "code": "96159",
+          "amount": 19.25
+        }
+      ],
+      "lniEob": null,
+      "reason": "lni_status_changed_after_therapist_paid",
+      "reasonDetail": "Therapist was paid via a real RA pay run when L&I was PAID; L&I status later changed (re-import/reconcile)",
+      "payRunSources": [
+        "80689"
+      ],
+      "therapistAmounts": [
+        {
+          "amount": 77,
+          "ra": "80689",
+          "raDate": "2026-07-07",
+          "raSource": "RemittanceAdvice_0479998_772026.pdf"
+        }
+      ],
+      "remittanceLines": [
+        {
+          "ra": "80689",
+          "raDate": "2026-07-07",
+          "section": "PAID",
+          "eobCodes": []
+        }
+      ],
+      "latestRa": {
+        "ra": "80689",
+        "section": "PAID",
+        "date": "2026-07-07"
+      }
+    },
+    {
+      "invoiceNumber": 1002,
+      "lniStatus": "UNPAID",
+      "client": "James Stanton",
+      "claim": "BL53128",
+      "therapist": "Maria Belen Castro",
+      "therapistEmail": "maria@gvcounseling.com",
+      "dos": [
+        {
+          "date": "2026-06-16",
+          "code": "96158",
+          "amount": 38.5
+        },
+        {
+          "date": "2026-06-16",
+          "code": "96159",
+          "amount": 19.25
+        },
+        {
+          "date": "2026-06-16",
+          "code": "96159",
+          "amount": 19.25
+        }
+      ],
+      "lniEob": null,
+      "reason": "lni_status_changed_after_therapist_paid",
+      "reasonDetail": "Therapist was paid via a real RA pay run when L&I was PAID; L&I status later changed (re-import/reconcile)",
+      "payRunSources": [
+        "80689"
+      ],
+      "therapistAmounts": [
+        {
+          "amount": 77,
+          "ra": "80689",
+          "raDate": "2026-07-07",
+          "raSource": "RemittanceAdvice_0479998_772026.pdf"
+        }
+      ],
+      "remittanceLines": [
+        {
+          "ra": "80689",
+          "raDate": "2026-07-07",
+          "section": "PAID",
+          "eobCodes": []
+        }
+      ],
+      "latestRa": {
+        "ra": "80689",
+        "section": "PAID",
+        "date": "2026-07-07"
+      }
+    },
+    {
+      "invoiceNumber": 1003,
+      "lniStatus": "UNPAID",
+      "client": "Deloris Murphy",
+      "claim": "BF56574",
+      "therapist": "Maria Belen Castro",
+      "therapistEmail": "maria@gvcounseling.com",
+      "dos": [
+        {
+          "date": "2026-06-16",
+          "code": "96156",
+          "amount": 77
+        }
+      ],
+      "lniEob": null,
+      "reason": "lni_status_changed_after_therapist_paid",
+      "reasonDetail": "Therapist was paid via a real RA pay run when L&I was PAID; L&I status later changed (re-import/reconcile)",
+      "payRunSources": [
+        "80689"
+      ],
+      "therapistAmounts": [
+        {
+          "amount": 77,
+          "ra": "80689",
+          "raDate": "2026-07-07",
+          "raSource": "RemittanceAdvice_0479998_772026.pdf"
+        }
+      ],
+      "remittanceLines": [
+        {
+          "ra": "80689",
+          "raDate": "2026-07-07",
+          "section": "PAID",
+          "eobCodes": []
+        }
+      ],
+      "latestRa": {
+        "ra": "80689",
+        "section": "PAID",
+        "date": "2026-07-07"
+      }
+    },
+    {
+      "invoiceNumber": 1005,
+      "lniStatus": "UNPAID",
+      "client": "Jared P. Outen",
+      "claim": "BM32698",
+      "therapist": "Maria Belen Castro",
+      "therapistEmail": "maria@gvcounseling.com",
+      "dos": [
+        {
+          "date": "2026-06-18",
+          "code": "96158",
+          "amount": 38.5
+        },
+        {
+          "date": "2026-06-18",
+          "code": "96159",
+          "amount": 19.25
+        },
+        {
+          "date": "2026-06-18",
+          "code": "96159",
+          "amount": 19.25
+        }
+      ],
+      "lniEob": null,
+      "reason": "lni_status_changed_after_therapist_paid",
+      "reasonDetail": "Therapist was paid via a real RA pay run when L&I was PAID; L&I status later changed (re-import/reconcile)",
+      "payRunSources": [
+        "80689"
+      ],
+      "therapistAmounts": [
+        {
+          "amount": 77,
+          "ra": "80689",
+          "raDate": "2026-07-07",
+          "raSource": "RemittanceAdvice_0479998_772026.pdf"
+        }
+      ],
+      "remittanceLines": [
+        {
+          "ra": "80689",
+          "raDate": "2026-07-07",
+          "section": "PAID",
+          "eobCodes": []
+        }
+      ],
+      "latestRa": {
+        "ra": "80689",
+        "section": "PAID",
+        "date": "2026-07-07"
+      }
+    },
+    {
+      "invoiceNumber": 1006,
+      "lniStatus": "UNPAID",
+      "client": "Ignacio Diaz-Ojeda",
+      "claim": "BL44101",
+      "therapist": "Maria Belen Castro",
+      "therapistEmail": "maria@gvcounseling.com",
+      "dos": [
+        {
+          "date": "2026-06-22",
+          "code": "96158",
+          "amount": 38.5
+        },
+        {
+          "date": "2026-06-22",
+          "code": "96159",
+          "amount": 19.25
+        },
+        {
+          "date": "2026-06-22",
+          "code": "96159",
+          "amount": 19.25
+        }
+      ],
+      "lniEob": null,
+      "reason": "lni_status_changed_after_therapist_paid",
+      "reasonDetail": "Therapist was paid via a real RA pay run when L&I was PAID; L&I status later changed (re-import/reconcile)",
+      "payRunSources": [
+        "80689"
+      ],
+      "therapistAmounts": [
+        {
+          "amount": 77,
+          "ra": "80689",
+          "raDate": "2026-07-07",
+          "raSource": "RemittanceAdvice_0479998_772026.pdf"
+        }
+      ],
+      "remittanceLines": [
+        {
+          "ra": "80689",
+          "raDate": "2026-07-07",
+          "section": "PAID",
+          "eobCodes": []
+        }
+      ],
+      "latestRa": {
+        "ra": "80689",
+        "section": "PAID",
+        "date": "2026-07-07"
+      }
+    },
+    {
+      "invoiceNumber": 1007,
+      "lniStatus": "UNPAID",
+      "client": "Federico Gonzalez Jimenez",
+      "claim": "BL77059",
+      "therapist": "Maria Belen Castro",
+      "therapistEmail": "maria@gvcounseling.com",
+      "dos": [
+        {
+          "date": "2026-06-22",
+          "code": "96158",
+          "amount": 38.5
+        },
+        {
+          "date": "2026-06-22",
+          "code": "96159",
+          "amount": 19.25
+        },
+        {
+          "date": "2026-06-22",
+          "code": "96159",
+          "amount": 19.25
+        }
+      ],
+      "lniEob": null,
+      "reason": "lni_status_changed_after_therapist_paid",
+      "reasonDetail": "Therapist was paid via a real RA pay run when L&I was PAID; L&I status later changed (re-import/reconcile)",
+      "payRunSources": [
+        "80689"
+      ],
+      "therapistAmounts": [
+        {
+          "amount": 77,
+          "ra": "80689",
+          "raDate": "2026-07-07",
+          "raSource": "RemittanceAdvice_0479998_772026.pdf"
+        }
+      ],
+      "remittanceLines": [
+        {
+          "ra": "80689",
+          "raDate": "2026-07-07",
+          "section": "PAID",
+          "eobCodes": []
+        }
+      ],
+      "latestRa": {
+        "ra": "80689",
+        "section": "PAID",
+        "date": "2026-07-07"
+      }
+    },
+    {
+      "invoiceNumber": 1008,
+      "lniStatus": "UNPAID",
+      "client": "Geovanni Manriquez Valdez",
+      "claim": "BM47751",
+      "therapist": "Maria Belen Castro",
+      "therapistEmail": "maria@gvcounseling.com",
+      "dos": [
+        {
+          "date": "2026-06-25",
+          "code": "96156",
+          "amount": 77
+        }
+      ],
+      "lniEob": null,
+      "reason": "lni_status_changed_after_therapist_paid",
+      "reasonDetail": "Therapist was paid via a real RA pay run when L&I was PAID; L&I status later changed (re-import/reconcile)",
+      "payRunSources": [
+        "80689"
+      ],
+      "therapistAmounts": [
+        {
+          "amount": 77,
+          "ra": "80689",
+          "raDate": "2026-07-07",
+          "raSource": "RemittanceAdvice_0479998_772026.pdf"
+        }
+      ],
+      "remittanceLines": [
+        {
+          "ra": "80689",
+          "raDate": "2026-07-07",
+          "section": "PAID",
+          "eobCodes": []
+        }
+      ],
+      "latestRa": {
+        "ra": "80689",
+        "section": "PAID",
+        "date": "2026-07-07"
+      }
+    },
+    {
+      "invoiceNumber": 1009,
+      "lniStatus": "UNPAID",
+      "client": "Marcelina Lopez",
+      "claim": "BJ02335",
+      "therapist": "Maria Belen Castro",
+      "therapistEmail": "maria@gvcounseling.com",
+      "dos": [
+        {
+          "date": "2026-06-25",
+          "code": "96158",
+          "amount": 38.5
+        },
+        {
+          "date": "2026-06-25",
+          "code": "96159",
+          "amount": 19.25
+        }
+      ],
+      "lniEob": null,
+      "reason": "lni_status_changed_after_therapist_paid",
+      "reasonDetail": "Therapist was paid via a real RA pay run when L&I was PAID; L&I status later changed (re-import/reconcile)",
+      "payRunSources": [
+        "80689"
+      ],
+      "therapistAmounts": [
+        {
+          "amount": 57.75,
+          "ra": "80689",
+          "raDate": "2026-07-07",
+          "raSource": "RemittanceAdvice_0479998_772026.pdf"
+        }
+      ],
+      "remittanceLines": [
+        {
+          "ra": "80689",
+          "raDate": "2026-07-07",
+          "section": "PAID",
+          "eobCodes": []
+        }
+      ],
+      "latestRa": {
+        "ra": "80689",
+        "section": "PAID",
+        "date": "2026-07-07"
+      }
+    },
+    {
+      "invoiceNumber": 1011,
+      "lniStatus": "UNPAID",
+      "client": "Victor Tom",
+      "claim": "BK08154",
+      "therapist": "Maria Belen Castro",
+      "therapistEmail": "maria@gvcounseling.com",
+      "dos": [
+        {
+          "date": "2026-06-26",
+          "code": "96158",
+          "amount": 38.5
+        },
+        {
+          "date": "2026-06-26",
+          "code": "96159",
+          "amount": 19.25
+        },
+        {
+          "date": "2026-06-26",
+          "code": "96159",
+          "amount": 19.25
+        }
+      ],
+      "lniEob": null,
+      "reason": "lni_status_changed_after_therapist_paid",
+      "reasonDetail": "Therapist was paid via a real RA pay run when L&I was PAID; L&I status later changed (re-import/reconcile)",
+      "payRunSources": [
+        "80689"
+      ],
+      "therapistAmounts": [
+        {
+          "amount": 77,
+          "ra": "80689",
+          "raDate": "2026-07-07",
+          "raSource": "RemittanceAdvice_0479998_772026.pdf"
+        }
+      ],
+      "remittanceLines": [
+        {
+          "ra": "80689",
+          "raDate": "2026-07-07",
+          "section": "PAID",
+          "eobCodes": []
+        }
+      ],
+      "latestRa": {
+        "ra": "80689",
+        "section": "PAID",
+        "date": "2026-07-07"
+      }
+    },
+    {
+      "invoiceNumber": 1012,
+      "lniStatus": "UNPAID",
+      "client": "Ignacio Diaz-Ojeda",
+      "claim": "BL44101",
+      "therapist": "Maria Belen Castro",
+      "therapistEmail": "maria@gvcounseling.com",
+      "dos": [
+        {
+          "date": "2026-06-29",
+          "code": "96158",
+          "amount": 38.5
+        },
+        {
+          "date": "2026-06-29",
+          "code": "96159",
+          "amount": 19.25
+        },
+        {
+          "date": "2026-06-29",
+          "code": "96159",
+          "amount": 19.25
+        }
+      ],
+      "lniEob": null,
+      "reason": "lni_status_changed_after_therapist_paid",
+      "reasonDetail": "Therapist was paid via a real RA pay run when L&I was PAID; L&I status later changed (re-import/reconcile)",
+      "payRunSources": [
+        "80689"
+      ],
+      "therapistAmounts": [
+        {
+          "amount": 77,
+          "ra": "80689",
+          "raDate": "2026-07-07",
+          "raSource": "RemittanceAdvice_0479998_772026.pdf"
+        }
+      ],
+      "remittanceLines": [
+        {
+          "ra": "80689",
+          "raDate": "2026-07-07",
+          "section": "PAID",
+          "eobCodes": []
+        }
+      ],
+      "latestRa": {
+        "ra": "80689",
+        "section": "PAID",
+        "date": "2026-07-07"
+      }
+    },
+    {
+      "invoiceNumber": 1014,
+      "lniStatus": "UNPAID",
+      "client": "Leticia Zuniga Rivera",
+      "claim": "BF12726",
+      "therapist": "Maria Belen Castro",
+      "therapistEmail": "maria@gvcounseling.com",
+      "dos": [
+        {
+          "date": "2026-07-01",
+          "code": "96158",
+          "amount": 38.5
+        },
+        {
+          "date": "2026-07-01",
+          "code": "96159",
+          "amount": 19.25
+        },
+        {
+          "date": "2026-07-01",
+          "code": "96159",
+          "amount": 19.25
+        }
+      ],
+      "lniEob": null,
+      "reason": "lni_status_changed_after_therapist_paid",
+      "reasonDetail": "Therapist was paid via a real RA pay run when L&I was PAID; L&I status later changed (re-import/reconcile)",
+      "payRunSources": [
+        "80689"
+      ],
+      "therapistAmounts": [
+        {
+          "amount": 77,
+          "ra": "80689",
+          "raDate": "2026-07-07",
+          "raSource": "RemittanceAdvice_0479998_772026.pdf"
+        }
+      ],
+      "remittanceLines": [
+        {
+          "ra": "80689",
+          "raDate": "2026-07-07",
+          "section": "PAID",
+          "eobCodes": []
+        }
+      ],
+      "latestRa": {
+        "ra": "80689",
+        "section": "PAID",
+        "date": "2026-07-07"
+      }
+    },
+    {
+      "invoiceNumber": 1021,
+      "lniStatus": "UNPAID",
+      "client": "Maria Alonso Rivera",
+      "claim": "BL13687",
+      "therapist": "Maria Belen Castro",
+      "therapistEmail": "maria@gvcounseling.com",
+      "dos": [
+        {
+          "date": "2026-02-05",
+          "code": "96156",
+          "amount": 75
+        }
+      ],
+      "lniEob": null,
+      "reason": "lni_status_changed_after_therapist_paid",
+      "reasonDetail": "Therapist was paid via a real RA pay run when L&I was PAID; L&I status later changed (re-import/reconcile)",
+      "payRunSources": [
+        "31270"
+      ],
+      "therapistAmounts": [
+        {
+          "amount": 75,
+          "ra": "31270",
+          "raDate": "2026-03-03",
+          "raSource": "RemittanceAdvice_0479998_332026.pdf"
+        }
+      ],
+      "remittanceLines": [
+        {
+          "ra": "31270",
+          "raDate": "2026-03-03",
+          "section": "PAID",
+          "eobCodes": []
+        }
+      ],
+      "latestRa": {
+        "ra": "31270",
+        "section": "PAID",
+        "date": "2026-03-03"
+      }
+    }
+  ]
+}

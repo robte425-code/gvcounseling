@@ -1,0 +1,3340 @@
+{
+  "at": "2026-07-04T20:15:21.076Z",
+  "scans": [
+    {
+      "claim": "BL69750",
+      "folder": "BL69750 - Kimberly Cavanaugh",
+      "sessionFolder": "7-1-26",
+      "filename": "Invoice_BL69750 K Cavanaugh 7.1.26 530pm.pdf",
+      "invoiceNumber": 261,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BL69750",
+      "folder": "BL69750 - Kimberly Cavanaugh",
+      "sessionFolder": "6-1-26",
+      "filename": "Invoice_BL69750 K Cavanaugh 600pm.pdf",
+      "invoiceNumber": 255,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BL69750",
+      "folder": "BL69750 - Kimberly Cavanaugh",
+      "sessionFolder": "5-11-26",
+      "filename": "Invoice BL69750 K Cavanaugh 5.11.26 600pm.pdf",
+      "invoiceNumber": 251,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BL69750",
+      "folder": "BL69750 - Kimberly Cavanaugh",
+      "sessionFolder": "3-30-26",
+      "filename": "Invoice_BL69750 K Cavanaugh 3.30.25 630pm.pdf",
+      "invoiceNumber": 241,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BL69750",
+      "folder": "BL69750 - Kimberly Cavanaugh",
+      "sessionFolder": "3-16-26",
+      "filename": "Invoice_BL69750 K Cavanaugh 3.16.26 600pm.pdf",
+      "invoiceNumber": 239,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BL69750",
+      "folder": "BL69750 - Kimberly Cavanaugh",
+      "sessionFolder": "2-21-26",
+      "filename": "Invoice_BL69750 K. Cavanaugh 2.21.26 430pm.pdf",
+      "invoiceNumber": 232,
+      "lineItems": [
+        {
+          "procedureCode": "96156",
+          "amount": 85
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BN44993",
+      "folder": "BN44993 - Jonathan Pretre",
+      "sessionFolder": "2-21-26",
+      "filename": "Invoice_BN 44993 J. Pretre 2.21.26 900am.pdf",
+      "invoiceNumber": 231,
+      "lineItems": [
+        {
+          "procedureCode": "96156",
+          "amount": 85
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "ZB62154",
+      "folder": "ZB62154 - Scarlet Gore",
+      "sessionFolder": "7-2-26",
+      "filename": "Invoice_ZB62154 S Gore 7.2.26 600pm.pdf",
+      "invoiceNumber": 263,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "ZB62154",
+      "folder": "ZB62154 - Scarlet Gore",
+      "sessionFolder": "6-11-26",
+      "filename": "Invoice_ZB62154 S Gore 6.11.26 600pm.pdf",
+      "invoiceNumber": 256,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "ZB62154",
+      "folder": "ZB62154 - Scarlet Gore",
+      "sessionFolder": "5-21-26",
+      "filename": "Invoice_ZB62154 S Gore 5.21.26 600pm.pdf",
+      "invoiceNumber": 253,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "ZB62154",
+      "folder": "ZB62154 - Scarlet Gore",
+      "sessionFolder": "4-30-26",
+      "filename": "Invoice ZB62154 S Gore 4.30.26 600pm.pdf",
+      "invoiceNumber": 248,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "ZB62154",
+      "folder": "ZB62154 - Scarlet Gore",
+      "sessionFolder": "4-9-26",
+      "filename": "Invoice_ZB62154 S Gore 4.9.2026 600pm.pdf",
+      "invoiceNumber": 244,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "ZB62154",
+      "folder": "ZB62154 - Scarlet Gore",
+      "sessionFolder": "4-2-26",
+      "filename": "Invoice ZB62154 S Gore 4.2.26 600pm.pdf",
+      "invoiceNumber": 242,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "ZB62154",
+      "folder": "ZB62154 - Scarlet Gore",
+      "sessionFolder": "3-12-26",
+      "filename": "Invoice ZB62154 S Gore 3.12.26 600pm.pdf",
+      "invoiceNumber": 237,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "ZB62154",
+      "folder": "ZB62154 - Scarlet Gore",
+      "sessionFolder": "3-5-26",
+      "filename": "Invoice_ZB62154 S Gore 3.5.26 600pm.pdf",
+      "invoiceNumber": 235,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "ZB62154",
+      "folder": "ZB62154 - Scarlet Gore",
+      "sessionFolder": "2-19-26",
+      "filename": "Invoice ZB62154 S Gore 2.19.26 600pm.pdf",
+      "invoiceNumber": 230,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "ZB62154",
+      "folder": "ZB62154 - Scarlet Gore",
+      "sessionFolder": "2-12-26",
+      "filename": "Invoice ZB62154 S Gore 2,12,26 630pm.pdf",
+      "invoiceNumber": 228,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "ZB62154",
+      "folder": "ZB62154 - Scarlet Gore",
+      "sessionFolder": "1-29-26",
+      "filename": "Invoice ZB62154 S Gore 1.29.26 600pm.pdf",
+      "invoiceNumber": 223,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BH00259",
+      "folder": "BH00259 - Eddie Davis",
+      "sessionFolder": "7-1-26",
+      "filename": "Invoice_BH00259 E Davis 7.1.2026 630pm.pdf",
+      "invoiceNumber": 262,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BH00259",
+      "folder": "BH00259 - Eddie Davis",
+      "sessionFolder": "6-17-26",
+      "filename": "Invoice BH00259 E Davis 6.17.26 530pm.pdf",
+      "invoiceNumber": 257,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BH00259",
+      "folder": "BH00259 - Eddie Davis",
+      "sessionFolder": "5-27-26",
+      "filename": "Invoice_BH00259 E Davis 5.27.26 630pm.pdf",
+      "invoiceNumber": 254,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BH00259",
+      "folder": "BH00259 - Eddie Davis",
+      "sessionFolder": "5-20-26",
+      "filename": "InvoiceBH00259 E Davis 5.20.26 630pm.pdf",
+      "invoiceNumber": 252,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BH00259",
+      "folder": "BH00259 - Eddie Davis",
+      "sessionFolder": "5-6-26",
+      "filename": "Invoice_BH00259 E Davis 5.6.26 630pm.pdf",
+      "invoiceNumber": 250,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BH00259",
+      "folder": "BH00259 - Eddie Davis",
+      "sessionFolder": "4-15-26",
+      "filename": "Invoice_BH00259 E Davis 4.15.26 630pm.pdf",
+      "invoiceNumber": 246,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BH00259",
+      "folder": "BH00259 - Eddie Davis",
+      "sessionFolder": "3-18-26",
+      "filename": "Invoice BH00259 E Davis 3.18.26 630pm.pdf",
+      "invoiceNumber": 240,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BH00259",
+      "folder": "BH00259 - Eddie Davis",
+      "sessionFolder": "3-11-26",
+      "filename": "Invoice BH00259 E Davis 3.11.26 630pm.pdf",
+      "invoiceNumber": 236,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BH00259",
+      "folder": "BH00259 - Eddie Davis",
+      "sessionFolder": "2-25-26",
+      "filename": "Invoice BH00258 E Davis 2.25.26 630pm.pdf",
+      "invoiceNumber": 234,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BH00259",
+      "folder": "BH00259 - Eddie Davis",
+      "sessionFolder": "2-18-26",
+      "filename": "Invoice BH00258 E Davis 2.18.26 630pm.pdf",
+      "invoiceNumber": 229,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BH00259",
+      "folder": "BH00259 - Eddie Davis",
+      "sessionFolder": "2-11-26",
+      "filename": "Invoice_BH200258 E Davis 2.11.26 630 pm.pdf",
+      "invoiceNumber": 227,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BH00259",
+      "folder": "BH00259 - Eddie Davis",
+      "sessionFolder": "2-4-26",
+      "filename": "Invoice BH00259 E Davis 2.4.26 630pm.pdf",
+      "invoiceNumber": 226,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BH00259",
+      "folder": "BH00259 - Eddie Davis",
+      "sessionFolder": "1-28-26",
+      "filename": "Invoice BH00259 E Davis1.28.26  630pm.pdf",
+      "invoiceNumber": 222,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BH00259",
+      "folder": "BH00259 - Eddie Davis",
+      "sessionFolder": "1-14-26",
+      "filename": "Invoice BH00259 E Harris 630 pm.pdf",
+      "invoiceNumber": 219,
+      "lineItems": [
+        {
+          "procedureCode": "96156",
+          "amount": 85
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BP24936",
+      "folder": "BP24936 - Malik Wallace",
+      "sessionFolder": "1-7-26",
+      "filename": "Invoice BP24936 M Wallace 1.7.26 630pm.pdf",
+      "invoiceNumber": 218,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BP24936",
+      "folder": "BP24936 - Malik Wallace",
+      "sessionFolder": "12-29-25",
+      "filename": "Invoice_BP24936 M Wallace 12.29.25 630pm.pdf",
+      "invoiceNumber": 217,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BP24936",
+      "folder": "BP24936 - Malik Wallace",
+      "sessionFolder": "12-22-25",
+      "filename": "Invoice_BP24936 M Wallace 12.22.25 630pm.pdf",
+      "invoiceNumber": 216,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 63.75,
+      "usedOcr": true
+    },
+    {
+      "claim": "BP24936",
+      "folder": "BP24936 - Malik Wallace",
+      "sessionFolder": "12-19-25",
+      "filename": "Invoice_BP24936 M Wallace 12.19.25 600pm.pdf",
+      "invoiceNumber": 212,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        }
+      ],
+      "totalDue": 42.5,
+      "usedOcr": true
+    },
+    {
+      "claim": "BP24936",
+      "folder": "BP24936 - Malik Wallace",
+      "sessionFolder": "12-8-25",
+      "filename": "Invoice_BP24936 M. Wallace 12.8.25 600pm.pdf",
+      "invoiceNumber": 208,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BM49430",
+      "folder": "BM49430 - Donna Anderson",
+      "sessionFolder": "11-22-25",
+      "filename": "Invoice_BM49430 D. Anderson 11.22.25 630pm.pdf",
+      "invoiceNumber": 202,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BM49430",
+      "folder": "BM49430 - Donna Anderson",
+      "sessionFolder": "11-16-25",
+      "filename": "Invoice_BM49430 D. Anderson 11.16.15 530pm.pdf",
+      "invoiceNumber": 200,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BM49430",
+      "folder": "BM49430 - Donna Anderson",
+      "sessionFolder": "11-10-25",
+      "filename": "Invoice_BM49430 D. Anderson 11.10.25 600pm.pdf",
+      "invoiceNumber": 197,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BM49430",
+      "folder": "BM49430 - Donna Anderson",
+      "sessionFolder": "11-1-25",
+      "filename": "Invoice_BM49430 D. Anderson 11.1.25 400pm.pdf",
+      "invoiceNumber": 194,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BM49430",
+      "folder": "BM49430 - Donna Anderson",
+      "sessionFolder": "10-25-25",
+      "filename": "Invoice BM49430 D Anderon 10.25.25 230pm.pdf",
+      "invoiceNumber": 192,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BM49430",
+      "folder": "BM49430 - Donna Anderson",
+      "sessionFolder": "10-16-25",
+      "filename": "Invoice_BM49430 D. Anderson 10.16.25 1200pm.pdf",
+      "invoiceNumber": 190,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BM49430",
+      "folder": "BM49430 - Donna Anderson",
+      "sessionFolder": "10-5-25",
+      "filename": "Invoice_BM49430 D. Anderson 10.5.25 630pm.pdf",
+      "invoiceNumber": 185,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BM49430",
+      "folder": "BM49430 - Donna Anderson",
+      "sessionFolder": "9-27-25",
+      "filename": "Invoice BM49430 D. Anderson 9.27.25 730pm.pdf",
+      "invoiceNumber": 182,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BM49430",
+      "folder": "BM49430 - Donna Anderson",
+      "sessionFolder": "9-20-25",
+      "filename": "Invoice_BM49430 D Anderson 9.20.25 430pm.pdf",
+      "invoiceNumber": 179,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BM49430",
+      "folder": "BM49430 - Donna Anderson",
+      "sessionFolder": "9-12-25",
+      "filename": "Invoice BM49430 D. Anderson 9.12.25 600pm.pdf",
+      "invoiceNumber": 174,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BM49430",
+      "folder": "BM49430 - Donna Anderson",
+      "sessionFolder": "9-3-25",
+      "filename": "Invoice_BM49430 D.Anderson. 9.3.25 530pm.pdf",
+      "invoiceNumber": 167,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BM49430",
+      "folder": "BM49430 - Donna Anderson",
+      "sessionFolder": "8-27-25",
+      "filename": "Invoice BM49430 D. Anderson 8.27.25 530pm.pdf",
+      "invoiceNumber": 164,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BM49430",
+      "folder": "BM49430 - Donna Anderson",
+      "sessionFolder": "8-20-25",
+      "filename": "Invoice_BM49430 D. Anderson 8.20.25 530pm.pdf",
+      "invoiceNumber": 159,
+      "lineItems": [
+        {
+          "procedureCode": "96156",
+          "amount": 85
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BM37705",
+      "folder": "BM37705 - Myrna Reblando",
+      "sessionFolder": "12-21-25",
+      "filename": "Invoice_BM37705 M Roblando 12.21.25 330pm.pdf",
+      "invoiceNumber": 214,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BM37705",
+      "folder": "BM37705 - Myrna Reblando",
+      "sessionFolder": "12-10-25",
+      "filename": "Invoice BM37705 M Roblando 12.10.25 1230pm.pdf",
+      "invoiceNumber": 209,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BM37705",
+      "folder": "BM37705 - Myrna Reblando",
+      "sessionFolder": "11-23-25",
+      "filename": "Invoice_BM37705 M. Roblando 11.23.25 530.pdf",
+      "invoiceNumber": 203,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BM37705",
+      "folder": "BM37705 - Myrna Reblando",
+      "sessionFolder": "11-15-25",
+      "filename": "Invoice_BM37705 M Roblando 11.15.25 330pm.pdf",
+      "invoiceNumber": 199,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BM37705",
+      "folder": "BM37705 - Myrna Reblando",
+      "sessionFolder": "11-3-25",
+      "filename": "Invoice_BM37705 M. Roblando 11.3.25 600pm.pdf",
+      "invoiceNumber": 196,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BM37705",
+      "folder": "BM37705 - Myrna Reblando",
+      "sessionFolder": "10-15-25",
+      "filename": "Invoice BM37705 M Roblando 10.15.25 400pm.pdf",
+      "invoiceNumber": 189,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BM37705",
+      "folder": "BM37705 - Myrna Reblando",
+      "sessionFolder": "10-6-25",
+      "filename": "Invoice BM37705 M Roblando 10.6.2025 630pm.pdf",
+      "invoiceNumber": 187,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BM37705",
+      "folder": "BM37705 - Myrna Reblando",
+      "sessionFolder": "9-29-25",
+      "filename": "Invoice_BM37705 M Roblando 9.29.25 730pm.pdf",
+      "invoiceNumber": 183,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BM37705",
+      "folder": "BM37705 - Myrna Reblando",
+      "sessionFolder": "9-24-25",
+      "filename": "Invoice_BM37705 M. Roblando 9.24.25 230pm.pdf",
+      "invoiceNumber": 181,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BM37705",
+      "folder": "BM37705 - Myrna Reblando",
+      "sessionFolder": "9-15-25",
+      "filename": "Invoice_BM37705 M Roblando 9.15.25 630pm.pdf",
+      "invoiceNumber": 176,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BM37705",
+      "folder": "BM37705 - Myrna Reblando",
+      "sessionFolder": "9-8-25",
+      "filename": "Invoice BM37705 M Roblando 9.8.25 630pm.pdf",
+      "invoiceNumber": 172,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BM37705",
+      "folder": "BM37705 - Myrna Reblando",
+      "sessionFolder": "9-7-25",
+      "filename": "Invoice_BM37705 M Roblando 9.7.25 530pm.pdf",
+      "invoiceNumber": 170,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BM37705",
+      "folder": "BM37705 - Myrna Reblando",
+      "sessionFolder": "8-25-25",
+      "filename": "Invoice_BM37705 M. Roblando 630pm.pdf",
+      "invoiceNumber": 163,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BM37705",
+      "folder": "BM37705 - Myrna Reblando",
+      "sessionFolder": "6-18-25",
+      "filename": "Invoice BM37705 M. Roblando 8.18.25 630pm.pdf",
+      "invoiceNumber": 158,
+      "lineItems": [
+        {
+          "procedureCode": "96156",
+          "amount": 85
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BN69737",
+      "folder": "BN69737 - Ethan Schulze",
+      "sessionFolder": "12-22-25",
+      "filename": "Invoice_BN69737 E Schulze 12.22.25 530pm.pdf",
+      "invoiceNumber": 215,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BN69737",
+      "folder": "BN69737 - Ethan Schulze",
+      "sessionFolder": "12-14-25",
+      "filename": "Invoice_BN697373 E Schulze 12.14.25 230pm.pdf",
+      "invoiceNumber": 211,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BN69737",
+      "folder": "BN69737 - Ethan Schulze",
+      "sessionFolder": "11-30-25",
+      "filename": "Invoice_BN697373 E Schukze 11.30.25 600pm.pdf",
+      "invoiceNumber": 205,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BN69737",
+      "folder": "BN69737 - Ethan Schulze",
+      "sessionFolder": "11-17-25",
+      "filename": "Invoice_BN697373 E Shulze 11.17.25 730pm.pdf",
+      "invoiceNumber": 201,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BN69737",
+      "folder": "BN69737 - Ethan Schulze",
+      "sessionFolder": "11-3-25",
+      "filename": "Invoice_BN697373 E Shulze 11.3.25 1030am.pdf",
+      "invoiceNumber": 195,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BN69737",
+      "folder": "BN69737 - Ethan Schulze",
+      "sessionFolder": "10-12-25",
+      "filename": "Invoice BN697373 E Schulze, 10.12.25 330pm.pdf",
+      "invoiceNumber": 188,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 63.75,
+      "usedOcr": true
+    },
+    {
+      "claim": "BN69737",
+      "folder": "BN69737 - Ethan Schulze",
+      "sessionFolder": "10-6-25",
+      "filename": "Invoice_BN697373 E Shulze 10.6.2025 1100am.pdf",
+      "invoiceNumber": 186,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BN69737",
+      "folder": "BN69737 - Ethan Schulze",
+      "sessionFolder": "9-21-25",
+      "filename": "Invoice_BN697373 E Shulze, 9.21.25 400pm.pdf",
+      "invoiceNumber": 180,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BN69737",
+      "folder": "BN69737 - Ethan Schulze",
+      "sessionFolder": "9-14-25",
+      "filename": "Invoice BN697373 E Shculze, 9.14.25 530pm.pdf",
+      "invoiceNumber": 175,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BN69737",
+      "folder": "BN69737 - Ethan Schulze",
+      "sessionFolder": "9-7-25",
+      "filename": "Invoice_BN69737 E Shulze 9.7.25 630pm.pdf",
+      "invoiceNumber": 171,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BN69737",
+      "folder": "BN69737 - Ethan Schulze",
+      "sessionFolder": "8-31-25",
+      "filename": "Invoice_BN69737 E Shulze 8.31.25 500pm.pdf",
+      "invoiceNumber": 166,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BN69737",
+      "folder": "BN69737 - Ethan Schulze",
+      "sessionFolder": "8-17-25",
+      "filename": "Invoice_BN69737 E. Shulze, 8.17.25. 630pm.pdf",
+      "invoiceNumber": 157,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BN69737",
+      "folder": "BN69737 - Ethan Schulze",
+      "sessionFolder": "8-13-25",
+      "filename": "Invoice BN69737 E. Schulze 8.13.2025 830 am.pdf",
+      "invoiceNumber": 156,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BN69737",
+      "folder": "BN69737 - Ethan Schulze",
+      "sessionFolder": "8-3-25",
+      "filename": "InvoiceBN69737 E Shulze 8.3.25 600pm.pdf",
+      "invoiceNumber": 153,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BN69737",
+      "folder": "BN69737 - Ethan Schulze",
+      "sessionFolder": "7-27-25",
+      "filename": "Invoice BN69737 E. Schulze 7.27.25 600pm.pdf",
+      "invoiceNumber": 151,
+      "lineItems": [
+        {
+          "procedureCode": "96156",
+          "amount": 85
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BK75175",
+      "folder": "BK75175 - Briana Deann Sutherland",
+      "sessionFolder": "6-26-26",
+      "filename": "Invoice BK75175 B Sutherland 6.26.26 630pm.pdf",
+      "invoiceNumber": 260,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BK75175",
+      "folder": "BK75175 - Briana Deann Sutherland",
+      "sessionFolder": "5-4-26",
+      "filename": "Invoice BK75175 B Sutherland 5.4.26 630pm.pdf",
+      "invoiceNumber": 249,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BK75175",
+      "folder": "BK75175 - Briana Deann Sutherland",
+      "sessionFolder": "4-20-26",
+      "filename": "Invoice BK75175 B Sutherland 4.20.26 630pm.pdf",
+      "invoiceNumber": 247,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BK75175",
+      "folder": "BK75175 - Briana Deann Sutherland",
+      "sessionFolder": "4-13-26",
+      "filename": "Invoice_BK75175 B Sutherland 4.13.26 630pm.pdf",
+      "invoiceNumber": 245,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BK75175",
+      "folder": "BK75175 - Briana Deann Sutherland",
+      "sessionFolder": "4-6-26",
+      "filename": "Invoice BK75175 B Sutherland 4.6.26 630pm.pdf",
+      "invoiceNumber": 243,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BK75175",
+      "folder": "BK75175 - Briana Deann Sutherland",
+      "sessionFolder": "3-15-26",
+      "filename": "Invoice BK75175 B Sutherland 3.15.26 300pm.pdf",
+      "invoiceNumber": 238,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BK75175",
+      "folder": "BK75175 - Briana Deann Sutherland",
+      "sessionFolder": "2-23-26",
+      "filename": "Invoice_BK75175 B Sutherland 2,23,26 600pm.pdf",
+      "invoiceNumber": 233,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BK75175",
+      "folder": "BK75175 - Briana Deann Sutherland",
+      "sessionFolder": "12-20-25",
+      "filename": "Invoice BK75175 B Sutherland 12.20.25 500pm.pdf",
+      "invoiceNumber": 213,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BK75175",
+      "folder": "BK75175 - Briana Deann Sutherland",
+      "sessionFolder": "12-6-25",
+      "filename": "Invoice_bk75176 b Sutherland 12.6.25 1200pm.pdf",
+      "invoiceNumber": 206,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        }
+      ],
+      "totalDue": 42.5,
+      "usedOcr": true
+    },
+    {
+      "claim": "BK75175",
+      "folder": "BK75175 - Briana Deann Sutherland",
+      "sessionFolder": "11-15-25",
+      "filename": "Invoice_BK75175 B Sutherland 11.15.25 100pm.pdf",
+      "invoiceNumber": 198,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BK75175",
+      "folder": "BK75175 - Briana Deann Sutherland",
+      "sessionFolder": "10-19-25",
+      "filename": "invoice BK75175 B Sutherland 10.19.2025 400pm.pdf",
+      "invoiceNumber": 191,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BK75175",
+      "folder": "BK75175 - Briana Deann Sutherland",
+      "sessionFolder": "10-4-25",
+      "filename": "Invoice_BK75175 B Sutherland 10.4.25 1230pm.pdf",
+      "invoiceNumber": 184,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BK75175",
+      "folder": "BK75175 - Briana Deann Sutherland",
+      "sessionFolder": "9-20-25",
+      "filename": "Invoice_BK75175 B. Sutherland 9.20.25 1200pm.pdf",
+      "invoiceNumber": 178,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BK75175",
+      "folder": "BK75175 - Briana Deann Sutherland",
+      "sessionFolder": "9-6-25",
+      "filename": "Invoice_BK75175 B Sutherland 9.6.25 10,30am.pdf",
+      "invoiceNumber": 169,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BK75175",
+      "folder": "BK75175 - Briana Deann Sutherland",
+      "sessionFolder": "8-30-25",
+      "filename": "Invoice_BK75175 B Sutherland 8.30.25 1200pm.pdf",
+      "invoiceNumber": 165,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BK75175",
+      "folder": "BK75175 - Briana Deann Sutherland",
+      "sessionFolder": "8-23-25",
+      "filename": "Invoice_BK75175  Sutherland 8.23.25 1200pm.pdf",
+      "invoiceNumber": 161,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BK75175",
+      "folder": "BK75175 - Briana Deann Sutherland",
+      "sessionFolder": "8-8-25",
+      "filename": "Invoice BK75175 B Sutherland 8.8.25 600pm.pdf",
+      "invoiceNumber": 155,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BK75175",
+      "folder": "BK75175 - Briana Deann Sutherland",
+      "sessionFolder": "8-2-25",
+      "filename": "Invoice_BK75175 B. Sutherland 8.2.25 300pm.pdf",
+      "invoiceNumber": 152,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BK75175",
+      "folder": "BK75175 - Briana Deann Sutherland",
+      "sessionFolder": "7-25-25",
+      "filename": "Invoice_BK17515 B Sutherland 7.25.25 6;00pm.pdf",
+      "invoiceNumber": 149,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BK75175",
+      "folder": "BK75175 - Briana Deann Sutherland",
+      "sessionFolder": "7-18-25",
+      "filename": "Invoice_BK175 B Sutherland 7.18.25 600pm.pdf",
+      "invoiceNumber": 147,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BK75175",
+      "folder": "BK75175 - Briana Deann Sutherland",
+      "sessionFolder": "7-9-25",
+      "filename": "Invoice BK75175 B. Sutherland 7.9.25 530pm.pdf",
+      "invoiceNumber": 143,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BK75175",
+      "folder": "BK75175 - Briana Deann Sutherland",
+      "sessionFolder": "7-2-25",
+      "filename": "Invoice_BK75175 B.Sutherland 7.2.25.pdf",
+      "invoiceNumber": 141,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BK75175",
+      "folder": "BK75175 - Briana Deann Sutherland",
+      "sessionFolder": "6-14-25",
+      "filename": "Invoice BK75175 B, Sutherland 6.14.25 700pm.pdf",
+      "invoiceNumber": 133,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BA25824",
+      "folder": "BA25824 - Jose Munoz - Decided to stop",
+      "sessionFolder": "8-23-25",
+      "filename": "Invoice_BA25842 J Munoz 8.23.2025 900 am.pdf",
+      "invoiceNumber": 160,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        }
+      ],
+      "totalDue": 42.5,
+      "usedOcr": true
+    },
+    {
+      "claim": "BA25824",
+      "folder": "BA25824 - Jose Munoz - Decided to stop",
+      "sessionFolder": "8-7-25",
+      "filename": "Invoice BA25842 J Munoz 8.7.25 600pm.pdf",
+      "invoiceNumber": 154,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        }
+      ],
+      "totalDue": 42.5,
+      "usedOcr": true
+    },
+    {
+      "claim": "BA25824",
+      "folder": "BA25824 - Jose Munoz - Decided to stop",
+      "sessionFolder": "7-26-25",
+      "filename": "Invoice_BA25842 J. Munoz 72625 900am.pdf",
+      "invoiceNumber": 150,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        }
+      ],
+      "totalDue": 42.5,
+      "usedOcr": true
+    },
+    {
+      "claim": "BA25824",
+      "folder": "BA25824 - Jose Munoz - Decided to stop",
+      "sessionFolder": "7-19-25",
+      "filename": "Invoice_BA25842 J. Munoz 7.19.25 900am.pdf",
+      "invoiceNumber": 148,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        }
+      ],
+      "totalDue": 42.5,
+      "usedOcr": true
+    },
+    {
+      "claim": "BA25824",
+      "folder": "BA25824 - Jose Munoz - Decided to stop",
+      "sessionFolder": "7-12-25",
+      "filename": "Invoice BA25842 J. Munoz 7.12.25 900am.pdf",
+      "invoiceNumber": 145,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BA25824",
+      "folder": "BA25824 - Jose Munoz - Decided to stop",
+      "sessionFolder": "7-5-25",
+      "filename": "Invoice_BA25824 J Munoz 7.5.2025 900am.pdf",
+      "invoiceNumber": 142,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BA25824",
+      "folder": "BA25824 - Jose Munoz - Decided to stop",
+      "sessionFolder": "6-21-25",
+      "filename": "Invoice BA25824 J.Munoz 6.21.15 1000 am.pdf",
+      "invoiceNumber": 136,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 63.75,
+      "usedOcr": true
+    },
+    {
+      "claim": "BA25824",
+      "folder": "BA25824 - Jose Munoz - Decided to stop",
+      "sessionFolder": "6-12-25",
+      "filename": "Invoice_BA25824 J Munoz 6.12.25 6;00pm.pdf",
+      "invoiceNumber": 131,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BA25824",
+      "folder": "BA25824 - Jose Munoz - Decided to stop",
+      "sessionFolder": "6-5-25",
+      "filename": "Invoice BA25824 J Munoz 6.5.25 6pm.pdf",
+      "invoiceNumber": 127,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BA25824",
+      "folder": "BA25824 - Jose Munoz - Decided to stop",
+      "sessionFolder": "5-31-25",
+      "filename": "Invoice_BA25824 J. Munoz 5.31.25 11;00 am.pdf",
+      "invoiceNumber": 124,
+      "lineItems": [
+        {
+          "procedureCode": "96156",
+          "amount": 85
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BM17605",
+      "folder": "BM17605 - Tareyn Jones - Returned to work",
+      "sessionFolder": "7-16-25",
+      "filename": "Invoice_T.Jones BM17605 7.16.25 630pm.pdf",
+      "invoiceNumber": 146,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BM17605",
+      "folder": "BM17605 - Tareyn Jones - Returned to work",
+      "sessionFolder": "7-9-25",
+      "filename": "Invoice_T.Jones BM17605 7.9.25 630pm.pdf",
+      "invoiceNumber": 144,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BM17605",
+      "folder": "BM17605 - Tareyn Jones - Returned to work",
+      "sessionFolder": "6-29-25",
+      "filename": "Invoice_T.Jones BM1705 6.29.25 600pm.pdf",
+      "invoiceNumber": 122,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BM17605",
+      "folder": "BM17605 - Tareyn Jones - Returned to work",
+      "sessionFolder": "5-28-25",
+      "filename": "Invoice_Tareyn Jones BM17605 5.28.25.pdf",
+      "invoiceNumber": 122,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BM17605",
+      "folder": "BM17605 - Tareyn Jones - Returned to work",
+      "sessionFolder": "5-24-25",
+      "filename": "Invoice_Tareyn Jones BM17605 5.24.25 6;00pm.pdf",
+      "invoiceNumber": 121,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BM17605",
+      "folder": "BM17605 - Tareyn Jones - Returned to work",
+      "sessionFolder": "5-10-25",
+      "filename": "Invoice_Tareyn Jones BM17605 600pm.pdf",
+      "invoiceNumber": 113,
+      "lineItems": [
+        {
+          "procedureCode": "96156",
+          "amount": 85
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BL00889",
+      "folder": "BL00889 - Etienne Pierson - No response",
+      "sessionFolder": "6-18-25",
+      "filename": "Invoice_E. Pierson BL00889 5;00.pdf",
+      "invoiceNumber": 134,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BL00889",
+      "folder": "BL00889 - Etienne Pierson - No response",
+      "sessionFolder": "5-12-25",
+      "filename": "Invoice_E.Pierson BL00889 7;00pm.pdf",
+      "invoiceNumber": 116,
+      "lineItems": [
+        {
+          "procedureCode": "96156",
+          "amount": 85
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "AW17192",
+      "folder": "AW17192 - Milton Smith - No response",
+      "sessionFolder": "6-28-25",
+      "filename": "InvoiceAW17192 M. Smith 6.28.2025 628.25 1000am.pdf",
+      "invoiceNumber": 139,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "AW17192",
+      "folder": "AW17192 - Milton Smith - No response",
+      "sessionFolder": "6-22-25",
+      "filename": "Invoice AW17192 M. Smith 6.22.2025 300pm.pdf",
+      "invoiceNumber": 137,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "AW17192",
+      "folder": "AW17192 - Milton Smith - No response",
+      "sessionFolder": "6-14-25",
+      "filename": "Invoice AW17192 M. Smith 6.14.2025 10 am.pdf",
+      "invoiceNumber": 132,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "AW17192",
+      "folder": "AW17192 - Milton Smith - No response",
+      "sessionFolder": "6-7-25",
+      "filename": "Invoice_AW17192 M. Smith 10;00am 6.7.25.pdf",
+      "invoiceNumber": 128,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "AW17192",
+      "folder": "AW17192 - Milton Smith - No response",
+      "sessionFolder": "5-31-25",
+      "filename": "Invoice_AW17192 Milton Smith 5.31.25.pdf",
+      "invoiceNumber": 123,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "AW17192",
+      "folder": "AW17192 - Milton Smith - No response",
+      "sessionFolder": "5-21-25",
+      "filename": "Invoice_AW17191 Milton Smith 5.21.25.pdf",
+      "invoiceNumber": 119,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 63.75,
+      "usedOcr": true
+    },
+    {
+      "claim": "AW17192",
+      "folder": "AW17192 - Milton Smith - No response",
+      "sessionFolder": "5-14-25",
+      "filename": "Invoice AW17192 Milton Smith 5.14.25.pdf",
+      "invoiceNumber": 117,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "AW17192",
+      "folder": "AW17192 - Milton Smith - No response",
+      "sessionFolder": "4-27-25",
+      "filename": "Invoice_4.27.25.pdf",
+      "invoiceNumber": 108,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "AW17192",
+      "folder": "AW17192 - Milton Smith - No response",
+      "sessionFolder": "4-20-25",
+      "filename": "Invoice 4.20.2025.pdf",
+      "invoiceNumber": 106,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "AW17192",
+      "folder": "AW17192 - Milton Smith - No response",
+      "sessionFolder": "4-12-25",
+      "filename": "Invoice_4.12.25.pdf",
+      "invoiceNumber": 105,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "AW17192",
+      "folder": "AW17192 - Milton Smith - No response",
+      "sessionFolder": "4-5-25",
+      "filename": "Invoice_4.5.25 #101.pdf",
+      "invoiceNumber": 101,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "AW17192",
+      "folder": "AW17192 - Milton Smith - No response",
+      "sessionFolder": "3-30-25",
+      "filename": "Invoice_20250403_0001.pdf",
+      "invoiceNumber": 100,
+      "lineItems": [
+        {
+          "procedureCode": "96156",
+          "amount": 85
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "AY83414",
+      "folder": "AY83414 - Ken Pryor - Returned to work",
+      "sessionFolder": "6-22-25",
+      "filename": "Invoice_AY83414 K.Pryor 6.22.25. 600pm.pdf",
+      "invoiceNumber": 138,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "AY83414",
+      "folder": "AY83414 - Ken Pryor - Returned to work",
+      "sessionFolder": "6-8-25",
+      "filename": "Invoice_AY83414 K. Pryor 6.9.25.pdf",
+      "invoiceNumber": 129,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "AY83414",
+      "folder": "AY83414 - Ken Pryor - Returned to work",
+      "sessionFolder": "6-1-25",
+      "filename": "Invoice AY83414 Ken Pryor 6.1.25 500pm.pdf",
+      "invoiceNumber": 125,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "AY83414",
+      "folder": "AY83414 - Ken Pryor - Returned to work",
+      "sessionFolder": "5-23-25",
+      "filename": "Invoice_Ken Pryor AY83414 5.23.2025.pdf",
+      "invoiceNumber": 120,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "AY83414",
+      "folder": "AY83414 - Ken Pryor - Returned to work",
+      "sessionFolder": "5-11-25",
+      "filename": "Invoice_AY83414 Ken Pryor 5.11.2025.pdf",
+      "invoiceNumber": 114,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "AY83414",
+      "folder": "AY83414 - Ken Pryor - Returned to work",
+      "sessionFolder": "5-4-25",
+      "filename": "Invoice AY83414 Ken Pryor 5.4.25.pdf",
+      "invoiceNumber": 110,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BM35909",
+      "folder": "BM35909 - Kim Ordway - Client stopped service",
+      "sessionFolder": "6-19-25",
+      "filename": "Invoice BM35909 K. Ordway 6.19.25 530.pdf",
+      "invoiceNumber": 135,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BM35909",
+      "folder": "BM35909 - Kim Ordway - Client stopped service",
+      "sessionFolder": "6-9-25",
+      "filename": "Invoice K.Ordway BM35909 6.9.25 5;30.pdf",
+      "invoiceNumber": 129,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BM35909",
+      "folder": "BM35909 - Kim Ordway - Client stopped service",
+      "sessionFolder": "6-2-25",
+      "filename": "Invoice_K.Ordway BM35909 6.2.2025 530pm.pdf",
+      "invoiceNumber": 126,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BM35909",
+      "folder": "BM35909 - Kim Ordway - Client stopped service",
+      "sessionFolder": "5-19-25",
+      "filename": "Invoice_BM35909 5.19.25 530.pdf",
+      "invoiceNumber": 118,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BM35909",
+      "folder": "BM35909 - Kim Ordway - Client stopped service",
+      "sessionFolder": "5-12-25",
+      "filename": "Invoice_K.Ordway BM35909.pdf",
+      "invoiceNumber": 115,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BM35909",
+      "folder": "BM35909 - Kim Ordway - Client stopped service",
+      "sessionFolder": "5-5-25",
+      "filename": "Invoice_K. Ordway 5.5.2025 530pm.pdf",
+      "invoiceNumber": 111,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BM35909",
+      "folder": "BM35909 - Kim Ordway - Client stopped service",
+      "sessionFolder": "4-21-25",
+      "filename": "Invoice Ordway 4.21.2025.pdf",
+      "invoiceNumber": 108,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        }
+      ],
+      "totalDue": 42.5,
+      "usedOcr": true
+    },
+    {
+      "claim": "BM35909",
+      "folder": "BM35909 - Kim Ordway - Client stopped service",
+      "sessionFolder": "4-14-25",
+      "filename": "Invoice Ordway 4.14.2025.pdf",
+      "invoiceNumber": 107,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BM35909",
+      "folder": "BM35909 - Kim Ordway - Client stopped service",
+      "sessionFolder": "4-7-25",
+      "filename": "Invoice Ordway.pdf",
+      "invoiceNumber": 103,
+      "lineItems": [
+        {
+          "procedureCode": "96156",
+          "amount": 85
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BM50321",
+      "folder": "BM50321 - Corey Burson - Stopped responding",
+      "sessionFolder": "5-8-25",
+      "filename": "Invoice BM50321 Cory Burson 5.8.2025 6.30.pdf",
+      "invoiceNumber": 112,
+      "lineItems": [
+        {
+          "procedureCode": "96156",
+          "amount": 85
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "AZ48910",
+      "folder": "AZ48910 - Christine Hoyt - Transferred to in person therapist",
+      "sessionFolder": "9-17-25",
+      "filename": "Invoice AZ48910 C Hoyt 9.17.2025 5;30 pm.pdf",
+      "invoiceNumber": 177,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "AZ48910",
+      "folder": "AZ48910 - Christine Hoyt - Transferred to in person therapist",
+      "sessionFolder": "9-10-25",
+      "filename": "Invoice AZ48910 C Hoyt 9.10.2025 630pm.pdf",
+      "invoiceNumber": 173,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "AZ48910",
+      "folder": "AZ48910 - Christine Hoyt - Transferred to in person therapist",
+      "sessionFolder": "9-3-25",
+      "filename": "Invoice_AZ48910 C. Hoyt 9.3.25. 630pm.pdf",
+      "invoiceNumber": 168,
+      "lineItems": [
+        {
+          "procedureCode": "96156",
+          "amount": 85
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BM08580",
+      "folder": "BM08580 - Heather Williams  ",
+      "sessionFolder": "6-21-26",
+      "filename": "Invoice BM08580 6.21.26 Heather W 6.21. 26 400pm.pdf",
+      "invoiceNumber": 259,
+      "lineItems": [
+        {
+          "procedureCode": "96158",
+          "amount": 42.5
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        },
+        {
+          "procedureCode": "96159",
+          "amount": 21.25
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    },
+    {
+      "claim": "BM08580",
+      "folder": "BM08580 - Heather Williams  ",
+      "sessionFolder": "6-18-26",
+      "filename": "Invoice BM08580 6.18.26 Heather W 600pm.pdf",
+      "invoiceNumber": 258,
+      "lineItems": [
+        {
+          "procedureCode": "96156",
+          "amount": 85
+        }
+      ],
+      "totalDue": 85,
+      "usedOcr": true
+    }
+  ]
+}

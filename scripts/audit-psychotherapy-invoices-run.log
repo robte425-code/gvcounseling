@@ -1,0 +1,428 @@
+◇ injected env (0) from .env.local // tip: ◈ secrets for agents [www.dotenvx.com]
+◇ injected env (4) from .env // tip: ◈ secrets for agents [www.dotenvx.com]
+(node:5167) Warning: SECURITY WARNING: The SSL modes 'prefer', 'require', and 'verify-ca' are treated as aliases for 'verify-full'.
+In the next major version (pg-connection-string v3.0.0 and pg v9.0.0), these modes will adopt standard libpq semantics, which have weaker security guarantees.
+
+To prepare for this change:
+- If you want the current behavior, explicitly use 'sslmode=verify-full'
+- If you want libpq compatibility now, use 'uselibpqcompat=true&sslmode=require'
+
+See https://www.postgresql.org/docs/current/libpq-ssl.html for libpq SSL mode definitions.
+(Use `node --trace-warnings ...` to show where the warning was created)
+Scanning 61 applied RA(s) from Drive...
+  skip RA MARIA-SPREADSHEET: PDF not found on Drive
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+  skip RA STEVEN-SPREADSHEET: PDF not found on Drive
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+
+=== Psychotherapy invoice summary ===
+{
+  psychotherapyInvoices: 72,
+  paid: 70,
+  inProcess: 0,
+  denied: 1,
+  unpaid: 1,
+  withoutRaLine: 66,
+  raGaps: 54,
+  statusMismatch: 0
+}
+
+RAs with parse/import gaps: 54
+  RA 776114: DB 6 bills (0 psych) → parsed 7 (0 psych), missing 0
+  RA 781456: DB 9 bills (0 psych) → parsed 10 (1 psych), missing 1
+  RA 786972: DB 9 bills (0 psych) → parsed 14 (1 psych), missing 1
+  RA 792460: DB 10 bills (0 psych) → parsed 13 (2 psych), missing 2
+  RA 798171: DB 20 bills (0 psych) → parsed 23 (2 psych), missing 2
+  RA 803580: DB 12 bills (0 psych) → parsed 16 (1 psych), missing 1
+  RA 809048: DB 12 bills (0 psych) → parsed 18 (3 psych), missing 3
+  RA 814064: DB 13 bills (0 psych) → parsed 17 (2 psych), missing 2
+  RA 819427: DB 19 bills (0 psych) → parsed 25 (2 psych), missing 2
+  RA 824563: DB 15 bills (0 psych) → parsed 20 (2 psych), missing 2
+  RA 829498: DB 10 bills (0 psych) → parsed 18 (2 psych), missing 2
+  RA 834672: DB 13 bills (0 psych) → parsed 26 (1 psych), missing 1
+  RA 839745: DB 15 bills (0 psych) → parsed 17 (2 psych), missing 2
+  RA 845213: DB 12 bills (0 psych) → parsed 20 (1 psych), missing 1
+  RA 850806: DB 11 bills (0 psych) → parsed 24 (0 psych), missing 0
+  RA 856231: DB 22 bills (0 psych) → parsed 35 (0 psych), missing 0
+  RA 861243: DB 18 bills (0 psych) → parsed 21 (0 psych), missing 0
+  RA 866678: DB 18 bills (0 psych) → parsed 25 (0 psych), missing 0
+  RA 871457: DB 6 bills (0 psych) → parsed 9 (0 psych), missing 0
+  RA 876724: DB 23 bills (0 psych) → parsed 25 (0 psych), missing 0
+  RA 881623: DB 2 bills (0 psych) → parsed 6 (0 psych), missing 0
+  RA 886706: DB 14 bills (0 psych) → parsed 16 (0 psych), missing 0
+  RA 891605: DB 32 bills (0 psych) → parsed 45 (5 psych), missing 5
+  RA 897017: DB 12 bills (0 psych) → parsed 22 (2 psych), missing 2
+  RA 902695: DB 18 bills (0 psych) → parsed 22 (2 psych), missing 2
+  RA 908473: DB 15 bills (0 psych) → parsed 21 (1 psych), missing 1
+  RA 914092: DB 21 bills (0 psych) → parsed 33 (3 psych), missing 3
+  RA 919707: DB 16 bills (0 psych) → parsed 22 (1 psych), missing 1
+  RA 925139: DB 19 bills (0 psych) → parsed 25 (1 psych), missing 1
+  RA 930213: DB 21 bills (1 psych) → parsed 33 (1 psych), missing 0
+  RA 935218: DB 22 bills (0 psych) → parsed 30 (0 psych), missing 0
+  RA 939942: DB 11 bills (0 psych) → parsed 12 (0 psych), missing 0
+  RA 944797: DB 25 bills (0 psych) → parsed 32 (1 psych), missing 1
+  RA 949698: DB 15 bills (0 psych) → parsed 23 (3 psych), missing 3
+  RA 954696: DB 28 bills (0 psych) → parsed 32 (2 psych), missing 2
+  RA 959760: DB 24 bills (0 psych) → parsed 30 (3 psych), missing 3
+  RA 965116: DB 23 bills (0 psych) → parsed 25 (0 psych), missing 0
+  RA 970517: DB 27 bills (0 psych) → parsed 29 (0 psych), missing 0
+  RA 976064: DB 27 bills (0 psych) → parsed 31 (1 psych), missing 1
+  RA 981739: DB 34 bills (0 psych) → parsed 35 (1 psych), missing 1
+  RA 987347: DB 28 bills (0 psych) → parsed 33 (2 psych), missing 2
+  RA 992757: DB 25 bills (0 psych) → parsed 31 (2 psych), missing 2
+  RA 998172: DB 21 bills (0 psych) → parsed 25 (2 psych), missing 2
+  RA 3935: DB 33 bills (0 psych) → parsed 36 (1 psych), missing 1
+  RA 9309: DB 27 bills (0 psych) → parsed 30 (2 psych), missing 2
+  RA 14941: DB 27 bills (0 psych) → parsed 32 (0 psych), missing 0
+  RA 20263: DB 31 bills (0 psych) → parsed 33 (0 psych), missing 0
+  RA 25733: DB 21 bills (0 psych) → parsed 25 (0 psych), missing 0
+  RA 37039: DB 24 bills (0 psych) → parsed 27 (2 psych), missing 2
+  RA 42749: DB 17 bills (0 psych) → parsed 21 (2 psych), missing 2
+  RA 48310: DB 20 bills (0 psych) → parsed 22 (2 psych), missing 2
+  RA 59241: DB 18 bills (0 psych) → parsed 19 (1 psych), missing 1
+  RA 64667: DB 18 bills (0 psych) → parsed 20 (1 psych), missing 1
+  RA 75265: DB 8 bills (0 psych) → parsed 9 (0 psych), missing 0
+
+Psychotherapy invoices without any RA line (66):
+  #36 ZB63633 90837@2024-05-02 status=PAID
+  #48 ZB63633 90837@2024-05-16 status=PAID
+  #54 ZB63633 90837@2024-05-23 status=PAID
+  #63 ZB63633 90832@2024-05-30 status=PAID
+  #72 ZB63633 90837@2024-06-06 status=PAID
+  #80 ZB63633 90837@2024-06-13 status=PAID
+  #95 ZB63633 90837@2024-06-27 status=PAID
+  #103 ZB63633 90837@2024-07-05 status=PAID
+  #110 ZB63633 90837@2024-07-11 status=PAID
+  #119 ZB63633 90837@2024-07-18 status=PAID
+  #127 ZB63633 90837@2024-07-25 status=PAID
+  #135 ZB63633 90837@2024-08-01 status=PAID
+  #146 ZB63633 90837@2024-08-08 status=PAID
+  #159 ZB63633 90837@2024-08-15 status=PAID
+  #168 ZB63633 90837@2024-08-22 status=PAID
+  #178 ZB63633 90837@2024-08-29 status=PAID
+  #184 ZB63633 90837@2024-09-05 status=PAID
+  #195 ZB63633 90837@2024-09-12 status=PAID
+  #219 ZB63633 90837@2024-09-26 status=PAID
+  #234 ZB63633 90837@2024-10-03 status=PAID
+  #239 ZB63633 90837@2024-10-10 status=PAID
+  #245 ZB63633 90837@2024-10-17 status=PAID
+  #404 BK47305 90837@2025-01-29 status=PAID
+  #411 BK47305 90837@2025-02-05 status=PAID
+  #421 BK47305 90834@2025-02-12 status=PAID
+  #429 BK47305 90837@2025-02-19 status=PAID
+  #439 BK47305 90837@2025-02-26 status=PAID
+  #450 BK47305 90837@2025-03-05 status=PAID
+  #457 BK47305 90837@2025-03-13 status=PAID
+  #468 BK47305 90837@2025-03-20 status=PAID
+  ... and 36 more
+
+Re-importing 36 RA(s) with missing psychotherapy bills...
+  reimport RA 781456...
+Warning: Indexing all PDF objects
+  reimport RA 786972...
+Warning: Indexing all PDF objects
+  reimport RA 792460...
+Warning: Indexing all PDF objects
+  reimport RA 798171...
+Warning: Indexing all PDF objects
+  reimport RA 803580...
+Warning: Indexing all PDF objects
+Error: Cannot apply remittance: 1 bill(s) could not be matched to an invoice. Fix matching or supersede stale lines before applying.
+    at applyRemittanceAdvice (/Users/ghim/Projects/gvcounseling/src/lib/remittance-advice.ts:527:11)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async reimportAppliedRemittance (/Users/ghim/Projects/gvcounseling/scripts/audit-psychotherapy-invoices-vs-ras.ts:117:3)
+    at async main (/Users/ghim/Projects/gvcounseling/scripts/audit-psychotherapy-invoices-vs-ras.ts:326:22)
+◇ injected env (0) from .env.local // tip: ⌘ enable debugging { debug: true }
+◇ injected env (4) from .env // tip: ⌁ auth for agents [www.vestauth.com]
+(node:5679) Warning: SECURITY WARNING: The SSL modes 'prefer', 'require', and 'verify-ca' are treated as aliases for 'verify-full'.
+In the next major version (pg-connection-string v3.0.0 and pg v9.0.0), these modes will adopt standard libpq semantics, which have weaker security guarantees.
+
+To prepare for this change:
+- If you want the current behavior, explicitly use 'sslmode=verify-full'
+- If you want libpq compatibility now, use 'uselibpqcompat=true&sslmode=require'
+
+See https://www.postgresql.org/docs/current/libpq-ssl.html for libpq SSL mode definitions.
+(Use `node --trace-warnings ...` to show where the warning was created)
+Scanning 61 applied RA(s) from Drive...
+  skip RA MARIA-SPREADSHEET: PDF not found on Drive
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+  skip RA STEVEN-SPREADSHEET: PDF not found on Drive
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+
+=== Psychotherapy invoice summary ===
+{
+  psychotherapyInvoices: 72,
+  paid: 70,
+  inProcess: 0,
+  denied: 1,
+  unpaid: 1,
+  withoutRaLine: 59,
+  raGaps: 50,
+  statusMismatch: 0
+}
+
+RAs with parse/import gaps: 50
+  RA 776114: DB 6 bills (0 psych) → parsed 7 (0 psych), missing 0
+  RA 803580: DB 15 bills (1 psych) → parsed 16 (1 psych), missing 0
+  RA 809048: DB 12 bills (0 psych) → parsed 18 (3 psych), missing 3
+  RA 814064: DB 13 bills (0 psych) → parsed 17 (2 psych), missing 2
+  RA 819427: DB 19 bills (0 psych) → parsed 25 (2 psych), missing 2
+  RA 824563: DB 15 bills (0 psych) → parsed 20 (2 psych), missing 2
+  RA 829498: DB 10 bills (0 psych) → parsed 18 (2 psych), missing 2
+  RA 834672: DB 13 bills (0 psych) → parsed 26 (1 psych), missing 1
+  RA 839745: DB 15 bills (0 psych) → parsed 17 (2 psych), missing 2
+  RA 845213: DB 12 bills (0 psych) → parsed 20 (1 psych), missing 1
+  RA 850806: DB 11 bills (0 psych) → parsed 24 (0 psych), missing 0
+  RA 856231: DB 22 bills (0 psych) → parsed 35 (0 psych), missing 0
+  RA 861243: DB 18 bills (0 psych) → parsed 21 (0 psych), missing 0
+  RA 866678: DB 18 bills (0 psych) → parsed 25 (0 psych), missing 0
+  RA 871457: DB 6 bills (0 psych) → parsed 9 (0 psych), missing 0
+  RA 876724: DB 23 bills (0 psych) → parsed 25 (0 psych), missing 0
+  RA 881623: DB 2 bills (0 psych) → parsed 6 (0 psych), missing 0
+  RA 886706: DB 14 bills (0 psych) → parsed 16 (0 psych), missing 0
+  RA 891605: DB 32 bills (0 psych) → parsed 45 (5 psych), missing 5
+  RA 897017: DB 12 bills (0 psych) → parsed 22 (2 psych), missing 2
+  RA 902695: DB 18 bills (0 psych) → parsed 22 (2 psych), missing 2
+  RA 908473: DB 15 bills (0 psych) → parsed 21 (1 psych), missing 1
+  RA 914092: DB 21 bills (0 psych) → parsed 33 (3 psych), missing 3
+  RA 919707: DB 16 bills (0 psych) → parsed 22 (1 psych), missing 1
+  RA 925139: DB 19 bills (0 psych) → parsed 25 (1 psych), missing 1
+  RA 930213: DB 21 bills (1 psych) → parsed 33 (1 psych), missing 0
+  RA 935218: DB 22 bills (0 psych) → parsed 30 (0 psych), missing 0
+  RA 939942: DB 11 bills (0 psych) → parsed 12 (0 psych), missing 0
+  RA 944797: DB 25 bills (0 psych) → parsed 32 (1 psych), missing 1
+  RA 949698: DB 15 bills (0 psych) → parsed 23 (3 psych), missing 3
+  RA 954696: DB 28 bills (0 psych) → parsed 32 (2 psych), missing 2
+  RA 959760: DB 24 bills (0 psych) → parsed 30 (3 psych), missing 3
+  RA 965116: DB 23 bills (0 psych) → parsed 25 (0 psych), missing 0
+  RA 970517: DB 27 bills (0 psych) → parsed 29 (0 psych), missing 0
+  RA 976064: DB 27 bills (0 psych) → parsed 31 (1 psych), missing 1
+  RA 981739: DB 34 bills (0 psych) → parsed 35 (1 psych), missing 1
+  RA 987347: DB 28 bills (0 psych) → parsed 33 (2 psych), missing 2
+  RA 992757: DB 25 bills (0 psych) → parsed 31 (2 psych), missing 2
+  RA 998172: DB 21 bills (0 psych) → parsed 25 (2 psych), missing 2
+  RA 3935: DB 33 bills (0 psych) → parsed 36 (1 psych), missing 1
+  RA 9309: DB 27 bills (0 psych) → parsed 30 (2 psych), missing 2
+  RA 14941: DB 27 bills (0 psych) → parsed 32 (0 psych), missing 0
+  RA 20263: DB 31 bills (0 psych) → parsed 33 (0 psych), missing 0
+  RA 25733: DB 21 bills (0 psych) → parsed 25 (0 psych), missing 0
+  RA 37039: DB 24 bills (0 psych) → parsed 27 (2 psych), missing 2
+  RA 42749: DB 17 bills (0 psych) → parsed 21 (2 psych), missing 2
+  RA 48310: DB 20 bills (0 psych) → parsed 22 (2 psych), missing 2
+  RA 59241: DB 18 bills (0 psych) → parsed 19 (1 psych), missing 1
+  RA 64667: DB 18 bills (0 psych) → parsed 20 (1 psych), missing 1
+  RA 75265: DB 8 bills (0 psych) → parsed 9 (0 psych), missing 0
+
+Psychotherapy invoices without any RA line (59):
+  #103 ZB63633 90837@2024-07-05 status=PAID
+  #110 ZB63633 90837@2024-07-11 status=PAID
+  #119 ZB63633 90837@2024-07-18 status=PAID
+  #127 ZB63633 90837@2024-07-25 status=PAID
+  #135 ZB63633 90837@2024-08-01 status=PAID
+  #146 ZB63633 90837@2024-08-08 status=PAID
+  #159 ZB63633 90837@2024-08-15 status=PAID
+  #168 ZB63633 90837@2024-08-22 status=PAID
+  #178 ZB63633 90837@2024-08-29 status=PAID
+  #184 ZB63633 90837@2024-09-05 status=PAID
+  #195 ZB63633 90837@2024-09-12 status=PAID
+  #219 ZB63633 90837@2024-09-26 status=PAID
+  #234 ZB63633 90837@2024-10-03 status=PAID
+  #239 ZB63633 90837@2024-10-10 status=PAID
+  #245 ZB63633 90837@2024-10-17 status=PAID
+  #404 BK47305 90837@2025-01-29 status=PAID
+  #411 BK47305 90837@2025-02-05 status=PAID
+  #421 BK47305 90834@2025-02-12 status=PAID
+  #429 BK47305 90837@2025-02-19 status=PAID
+  #439 BK47305 90837@2025-02-26 status=PAID
+  #450 BK47305 90837@2025-03-05 status=PAID
+  #457 BK47305 90837@2025-03-13 status=PAID
+  #468 BK47305 90837@2025-03-20 status=PAID
+  #475 BK47305 90837@2025-03-27 status=PAID
+  #482 BK47305 90837@2025-04-03 status=PAID
+  #493 BK47305 90837@2025-04-10 status=PAID
+  #504 BK47305 90837@2025-04-17 status=PAID
+  #508 BK47305 90837@2025-04-22 status=PAID
+  #608 BK47305 90837@2025-07-11 status=PAID
+  #619 BK47305 90837@2025-07-18 status=PAID
+  ... and 29 more
+
+Re-importing 31 RA(s) with missing psychotherapy bills...
+  reimport RA 809048...
+Warning: Indexing all PDF objects
+  reimport RA 814064...
+Warning: Indexing all PDF objects
+  reimport RA 819427...
+Warning: Indexing all PDF objects
+  reimport RA 824563...
+Warning: Indexing all PDF objects
+  reimport RA 829498...
+Warning: Indexing all PDF objects
+  reimport RA 834672...
+Warning: Indexing all PDF objects
+  reimport RA 839745...
+Warning: Indexing all PDF objects
+  reimport RA 845213...
+Warning: Indexing all PDF objects
+  reimport RA 891605...
+Warning: Indexing all PDF objects
+  reimport RA 897017...
+Warning: Indexing all PDF objects
+  reimport RA 902695...
+Warning: Indexing all PDF objects
+  reimport RA 908473...
+Warning: Indexing all PDF objects
+  reimport RA 914092...
+Warning: Indexing all PDF objects
+  reimport RA 919707...
+Warning: Indexing all PDF objects
+  reimport RA 925139...
+Warning: Indexing all PDF objects
+  reimport RA 944797...
+Warning: Indexing all PDF objects
+  reimport RA 949698...
+Warning: Indexing all PDF objects
+  reimport RA 954696...
+Warning: Indexing all PDF objects
+  reimport RA 959760...
+Warning: Indexing all PDF objects
+  reimport RA 976064...
+Warning: Indexing all PDF objects
+  reimport RA 981739...
+Warning: Indexing all PDF objects
+  reimport RA 987347...
+Warning: Indexing all PDF objects
+  reimport RA 992757...
+Warning: Indexing all PDF objects
+  reimport RA 998172...
+Warning: Indexing all PDF objects
+  reimport RA 3935...
+Warning: Indexing all PDF objects
+  reimport RA 9309...
+Warning: Indexing all PDF objects
+  reimport RA 37039...
+Warning: Indexing all PDF objects
+  reimport RA 42749...
+Warning: Indexing all PDF objects
+  reimport RA 48310...
+Warning: Indexing all PDF objects
+  reimport RA 59241...
+Warning: Indexing all PDF objects
+  reimport RA 64667...
+Warning: Indexing all PDF objects
+Reconciled 753 invoice payment status(es)
+
+Results written to scripts/audit-psychotherapy-invoices-results.json

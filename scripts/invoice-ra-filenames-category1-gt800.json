@@ -1,0 +1,756 @@
+{
+  "generatedAt": "2026-07-07T18:54:09.702Z",
+  "invoices": [
+    {
+      "invoiceNumber": 805,
+      "client": "Dunia Cordova",
+      "claim": "BG46680",
+      "dos": [
+        "2025-12-04"
+      ],
+      "paymentStatus": "IN_PROCESS",
+      "raFilenamesMatchedToInvoice": [
+        "RemittanceAdvice_0479998_1292025.pdf",
+        "RemittanceAdvice_0479998_12232025.pdf",
+        "RemittanceAdvice_0479998_162026.pdf",
+        "RemittanceAdvice_0479998_1212026.pdf",
+        "RemittanceAdvice_0479998_232026.pdf",
+        "RemittanceAdvice_0479998_2182026.pdf"
+      ],
+      "remittanceAdviceMatchedToInvoice": [
+        {
+          "remittanceNumber": "998172",
+          "invoiceDate": "2025-12-09",
+          "raStatus": "APPLIED",
+          "section": "IN_PROCESS",
+          "sourceFilename": "RemittanceAdvice_0479998_1292025.pdf",
+          "eobCodes": [
+            "903"
+          ]
+        },
+        {
+          "remittanceNumber": "3935",
+          "invoiceDate": "2025-12-23",
+          "raStatus": "APPLIED",
+          "section": "IN_PROCESS",
+          "sourceFilename": "RemittanceAdvice_0479998_12232025.pdf",
+          "eobCodes": [
+            "599"
+          ]
+        },
+        {
+          "remittanceNumber": "9309",
+          "invoiceDate": "2026-01-06",
+          "raStatus": "APPLIED",
+          "section": "IN_PROCESS",
+          "sourceFilename": "RemittanceAdvice_0479998_162026.pdf",
+          "eobCodes": [
+            "599"
+          ]
+        },
+        {
+          "remittanceNumber": "14941",
+          "invoiceDate": "2026-01-21",
+          "raStatus": "APPLIED",
+          "section": "IN_PROCESS",
+          "sourceFilename": "RemittanceAdvice_0479998_1212026.pdf",
+          "eobCodes": [
+            "599"
+          ]
+        },
+        {
+          "remittanceNumber": "20263",
+          "invoiceDate": "2026-02-03",
+          "raStatus": "APPLIED",
+          "section": "IN_PROCESS",
+          "sourceFilename": "RemittanceAdvice_0479998_232026.pdf",
+          "eobCodes": [
+            "599"
+          ]
+        },
+        {
+          "remittanceNumber": "25733",
+          "invoiceDate": "2026-02-18",
+          "raStatus": "APPLIED",
+          "section": "IN_PROCESS",
+          "sourceFilename": "RemittanceAdvice_0479998_2182026.pdf",
+          "eobCodes": [
+            "599"
+          ]
+        }
+      ],
+      "raFilenamesSameClaimAndDos": [
+        "RemittanceAdvice_0479998_1292025.pdf",
+        "RemittanceAdvice_0479998_12232025.pdf",
+        "RemittanceAdvice_0479998_162026.pdf",
+        "RemittanceAdvice_0479998_1212026.pdf",
+        "RemittanceAdvice_0479998_232026.pdf",
+        "RemittanceAdvice_0479998_2182026.pdf"
+      ],
+      "remittanceAdviceSameClaimAndDos": [
+        {
+          "remittanceNumber": "998172",
+          "invoiceDate": "2025-12-09",
+          "section": "IN_PROCESS",
+          "sourceFilename": "RemittanceAdvice_0479998_1292025.pdf",
+          "matchedInvoice": 805
+        },
+        {
+          "remittanceNumber": "3935",
+          "invoiceDate": "2025-12-23",
+          "section": "IN_PROCESS",
+          "sourceFilename": "RemittanceAdvice_0479998_12232025.pdf",
+          "matchedInvoice": 805
+        },
+        {
+          "remittanceNumber": "9309",
+          "invoiceDate": "2026-01-06",
+          "section": "IN_PROCESS",
+          "sourceFilename": "RemittanceAdvice_0479998_162026.pdf",
+          "matchedInvoice": 805
+        },
+        {
+          "remittanceNumber": "14941",
+          "invoiceDate": "2026-01-21",
+          "section": "IN_PROCESS",
+          "sourceFilename": "RemittanceAdvice_0479998_1212026.pdf",
+          "matchedInvoice": 805
+        },
+        {
+          "remittanceNumber": "20263",
+          "invoiceDate": "2026-02-03",
+          "section": "IN_PROCESS",
+          "sourceFilename": "RemittanceAdvice_0479998_232026.pdf",
+          "matchedInvoice": 805
+        },
+        {
+          "remittanceNumber": "25733",
+          "invoiceDate": "2026-02-18",
+          "section": "IN_PROCESS",
+          "sourceFilename": "RemittanceAdvice_0479998_2182026.pdf",
+          "matchedInvoice": 805
+        }
+      ],
+      "driveParsedSections": [
+        {
+          "ra": "998172",
+          "date": "12/09/2025",
+          "section": "IN_PROCESS",
+          "codes": [
+            "96158",
+            "96159"
+          ],
+          "dos": [
+            "2025-12-04"
+          ],
+          "eobCodes": [
+            "903"
+          ],
+          "payable": 0
+        },
+        {
+          "ra": "3935",
+          "date": "12/23/2025",
+          "section": "IN_PROCESS",
+          "codes": [
+            "96158",
+            "96159"
+          ],
+          "dos": [
+            "2025-12-04"
+          ],
+          "eobCodes": [
+            "599"
+          ],
+          "payable": 0
+        },
+        {
+          "ra": "9309",
+          "date": "01/06/2026",
+          "section": "IN_PROCESS",
+          "codes": [
+            "96158",
+            "96159"
+          ],
+          "dos": [
+            "2025-12-04"
+          ],
+          "eobCodes": [
+            "599"
+          ],
+          "payable": 0
+        },
+        {
+          "ra": "14941",
+          "date": "01/21/2026",
+          "section": "IN_PROCESS",
+          "codes": [
+            "96158",
+            "96159"
+          ],
+          "dos": [
+            "2025-12-04"
+          ],
+          "eobCodes": [
+            "599"
+          ],
+          "payable": 0
+        },
+        {
+          "ra": "20263",
+          "date": "02/03/2026",
+          "section": "IN_PROCESS",
+          "codes": [
+            "96158",
+            "96159"
+          ],
+          "dos": [
+            "2025-12-04"
+          ],
+          "eobCodes": [
+            "599"
+          ],
+          "payable": 0
+        },
+        {
+          "ra": "25733",
+          "date": "02/18/2026",
+          "section": "IN_PROCESS",
+          "codes": [
+            "96158",
+            "96159"
+          ],
+          "dos": [
+            "2025-12-04"
+          ],
+          "eobCodes": [
+            "599"
+          ],
+          "payable": 0
+        }
+      ]
+    },
+    {
+      "invoiceNumber": 840,
+      "client": "Jacob Martin",
+      "claim": "BM71187",
+      "dos": [
+        "2025-12-30"
+      ],
+      "paymentStatus": "IN_PROCESS",
+      "raFilenamesMatchedToInvoice": [
+        "RemittanceAdvice_0479998_162026.pdf",
+        "RemittanceAdvice_0479998_1212026.pdf",
+        "RemittanceAdvice_0479998_232026.pdf",
+        "RemittanceAdvice_0479998_2182026.pdf"
+      ],
+      "remittanceAdviceMatchedToInvoice": [
+        {
+          "remittanceNumber": "9309",
+          "invoiceDate": "2026-01-06",
+          "raStatus": "APPLIED",
+          "section": "IN_PROCESS",
+          "sourceFilename": "RemittanceAdvice_0479998_162026.pdf",
+          "eobCodes": []
+        },
+        {
+          "remittanceNumber": "14941",
+          "invoiceDate": "2026-01-21",
+          "raStatus": "APPLIED",
+          "section": "IN_PROCESS",
+          "sourceFilename": "RemittanceAdvice_0479998_1212026.pdf",
+          "eobCodes": [
+            "903"
+          ]
+        },
+        {
+          "remittanceNumber": "20263",
+          "invoiceDate": "2026-02-03",
+          "raStatus": "APPLIED",
+          "section": "IN_PROCESS",
+          "sourceFilename": "RemittanceAdvice_0479998_232026.pdf",
+          "eobCodes": [
+            "903"
+          ]
+        },
+        {
+          "remittanceNumber": "25733",
+          "invoiceDate": "2026-02-18",
+          "raStatus": "APPLIED",
+          "section": "IN_PROCESS",
+          "sourceFilename": "RemittanceAdvice_0479998_2182026.pdf",
+          "eobCodes": [
+            "599"
+          ]
+        }
+      ],
+      "raFilenamesSameClaimAndDos": [
+        "RemittanceAdvice_0479998_162026.pdf",
+        "RemittanceAdvice_0479998_1212026.pdf",
+        "RemittanceAdvice_0479998_232026.pdf",
+        "RemittanceAdvice_0479998_2182026.pdf"
+      ],
+      "remittanceAdviceSameClaimAndDos": [
+        {
+          "remittanceNumber": "9309",
+          "invoiceDate": "2026-01-06",
+          "section": "IN_PROCESS",
+          "sourceFilename": "RemittanceAdvice_0479998_162026.pdf",
+          "matchedInvoice": 840
+        },
+        {
+          "remittanceNumber": "14941",
+          "invoiceDate": "2026-01-21",
+          "section": "IN_PROCESS",
+          "sourceFilename": "RemittanceAdvice_0479998_1212026.pdf",
+          "matchedInvoice": 840
+        },
+        {
+          "remittanceNumber": "20263",
+          "invoiceDate": "2026-02-03",
+          "section": "IN_PROCESS",
+          "sourceFilename": "RemittanceAdvice_0479998_232026.pdf",
+          "matchedInvoice": 840
+        },
+        {
+          "remittanceNumber": "25733",
+          "invoiceDate": "2026-02-18",
+          "section": "IN_PROCESS",
+          "sourceFilename": "RemittanceAdvice_0479998_2182026.pdf",
+          "matchedInvoice": 840
+        }
+      ],
+      "driveParsedSections": [
+        {
+          "ra": "9309",
+          "date": "01/06/2026",
+          "section": "IN_PROCESS",
+          "codes": [
+            "96158"
+          ],
+          "dos": [
+            "2025-12-30"
+          ],
+          "eobCodes": [],
+          "payable": 0
+        },
+        {
+          "ra": "14941",
+          "date": "01/21/2026",
+          "section": "IN_PROCESS",
+          "codes": [
+            "96158",
+            "96159"
+          ],
+          "dos": [
+            "2025-12-30"
+          ],
+          "eobCodes": [
+            "903"
+          ],
+          "payable": 0
+        },
+        {
+          "ra": "20263",
+          "date": "02/03/2026",
+          "section": "IN_PROCESS",
+          "codes": [
+            "96158",
+            "96159"
+          ],
+          "dos": [
+            "2025-12-30"
+          ],
+          "eobCodes": [
+            "903"
+          ],
+          "payable": 0
+        },
+        {
+          "ra": "25733",
+          "date": "02/18/2026",
+          "section": "IN_PROCESS",
+          "codes": [
+            "96158",
+            "96159"
+          ],
+          "dos": [
+            "2025-12-30"
+          ],
+          "eobCodes": [
+            "599"
+          ],
+          "payable": 0
+        }
+      ]
+    },
+    {
+      "invoiceNumber": 850,
+      "client": "Jacob Martin",
+      "claim": "BM71187",
+      "dos": [
+        "2026-01-08"
+      ],
+      "paymentStatus": "IN_PROCESS",
+      "raFilenamesMatchedToInvoice": [
+        "RemittanceAdvice_0479998_1212026.pdf",
+        "RemittanceAdvice_0479998_232026.pdf",
+        "RemittanceAdvice_0479998_2182026.pdf"
+      ],
+      "remittanceAdviceMatchedToInvoice": [
+        {
+          "remittanceNumber": "14941",
+          "invoiceDate": "2026-01-21",
+          "raStatus": "APPLIED",
+          "section": "IN_PROCESS",
+          "sourceFilename": "RemittanceAdvice_0479998_1212026.pdf",
+          "eobCodes": [
+            "903"
+          ]
+        },
+        {
+          "remittanceNumber": "20263",
+          "invoiceDate": "2026-02-03",
+          "raStatus": "APPLIED",
+          "section": "IN_PROCESS",
+          "sourceFilename": "RemittanceAdvice_0479998_232026.pdf",
+          "eobCodes": [
+            "903"
+          ]
+        },
+        {
+          "remittanceNumber": "25733",
+          "invoiceDate": "2026-02-18",
+          "raStatus": "APPLIED",
+          "section": "IN_PROCESS",
+          "sourceFilename": "RemittanceAdvice_0479998_2182026.pdf",
+          "eobCodes": [
+            "599"
+          ]
+        }
+      ],
+      "raFilenamesSameClaimAndDos": [
+        "RemittanceAdvice_0479998_1212026.pdf",
+        "RemittanceAdvice_0479998_232026.pdf",
+        "RemittanceAdvice_0479998_2182026.pdf"
+      ],
+      "remittanceAdviceSameClaimAndDos": [
+        {
+          "remittanceNumber": "14941",
+          "invoiceDate": "2026-01-21",
+          "section": "IN_PROCESS",
+          "sourceFilename": "RemittanceAdvice_0479998_1212026.pdf",
+          "matchedInvoice": 850
+        },
+        {
+          "remittanceNumber": "20263",
+          "invoiceDate": "2026-02-03",
+          "section": "IN_PROCESS",
+          "sourceFilename": "RemittanceAdvice_0479998_232026.pdf",
+          "matchedInvoice": 850
+        },
+        {
+          "remittanceNumber": "25733",
+          "invoiceDate": "2026-02-18",
+          "section": "IN_PROCESS",
+          "sourceFilename": "RemittanceAdvice_0479998_2182026.pdf",
+          "matchedInvoice": 850
+        }
+      ],
+      "driveParsedSections": [
+        {
+          "ra": "14941",
+          "date": "01/21/2026",
+          "section": "IN_PROCESS",
+          "codes": [
+            "96158",
+            "96159"
+          ],
+          "dos": [
+            "2026-01-08"
+          ],
+          "eobCodes": [
+            "903"
+          ],
+          "payable": 0
+        },
+        {
+          "ra": "20263",
+          "date": "02/03/2026",
+          "section": "IN_PROCESS",
+          "codes": [
+            "96158",
+            "96159"
+          ],
+          "dos": [
+            "2026-01-08"
+          ],
+          "eobCodes": [
+            "903"
+          ],
+          "payable": 0
+        },
+        {
+          "ra": "25733",
+          "date": "02/18/2026",
+          "section": "IN_PROCESS",
+          "codes": [
+            "96158",
+            "96159"
+          ],
+          "dos": [
+            "2026-01-08"
+          ],
+          "eobCodes": [
+            "599"
+          ],
+          "payable": 0
+        }
+      ]
+    },
+    {
+      "invoiceNumber": 861,
+      "client": "Jacob Martin",
+      "claim": "BM71187",
+      "dos": [
+        "2026-01-15"
+      ],
+      "paymentStatus": "IN_PROCESS",
+      "raFilenamesMatchedToInvoice": [
+        "RemittanceAdvice_0479998_1212026.pdf",
+        "RemittanceAdvice_0479998_232026.pdf",
+        "RemittanceAdvice_0479998_2182026.pdf"
+      ],
+      "remittanceAdviceMatchedToInvoice": [
+        {
+          "remittanceNumber": "14941",
+          "invoiceDate": "2026-01-21",
+          "raStatus": "APPLIED",
+          "section": "IN_PROCESS",
+          "sourceFilename": "RemittanceAdvice_0479998_1212026.pdf",
+          "eobCodes": [
+            "903"
+          ]
+        },
+        {
+          "remittanceNumber": "20263",
+          "invoiceDate": "2026-02-03",
+          "raStatus": "APPLIED",
+          "section": "IN_PROCESS",
+          "sourceFilename": "RemittanceAdvice_0479998_232026.pdf",
+          "eobCodes": [
+            "903"
+          ]
+        },
+        {
+          "remittanceNumber": "25733",
+          "invoiceDate": "2026-02-18",
+          "raStatus": "APPLIED",
+          "section": "IN_PROCESS",
+          "sourceFilename": "RemittanceAdvice_0479998_2182026.pdf",
+          "eobCodes": []
+        }
+      ],
+      "raFilenamesSameClaimAndDos": [
+        "RemittanceAdvice_0479998_1212026.pdf",
+        "RemittanceAdvice_0479998_232026.pdf",
+        "RemittanceAdvice_0479998_2182026.pdf"
+      ],
+      "remittanceAdviceSameClaimAndDos": [
+        {
+          "remittanceNumber": "14941",
+          "invoiceDate": "2026-01-21",
+          "section": "IN_PROCESS",
+          "sourceFilename": "RemittanceAdvice_0479998_1212026.pdf",
+          "matchedInvoice": 861
+        },
+        {
+          "remittanceNumber": "20263",
+          "invoiceDate": "2026-02-03",
+          "section": "IN_PROCESS",
+          "sourceFilename": "RemittanceAdvice_0479998_232026.pdf",
+          "matchedInvoice": 861
+        },
+        {
+          "remittanceNumber": "25733",
+          "invoiceDate": "2026-02-18",
+          "section": "IN_PROCESS",
+          "sourceFilename": "RemittanceAdvice_0479998_2182026.pdf",
+          "matchedInvoice": 861
+        }
+      ],
+      "driveParsedSections": [
+        {
+          "ra": "14941",
+          "date": "01/21/2026",
+          "section": "IN_PROCESS",
+          "codes": [
+            "96158",
+            "96159"
+          ],
+          "dos": [
+            "2026-01-15"
+          ],
+          "eobCodes": [
+            "903"
+          ],
+          "payable": 0
+        },
+        {
+          "ra": "20263",
+          "date": "02/03/2026",
+          "section": "IN_PROCESS",
+          "codes": [
+            "96158",
+            "96159"
+          ],
+          "dos": [
+            "2026-01-15"
+          ],
+          "eobCodes": [
+            "903"
+          ],
+          "payable": 0
+        },
+        {
+          "ra": "25733",
+          "date": "02/18/2026",
+          "section": "IN_PROCESS",
+          "codes": [
+            "96158",
+            "96159"
+          ],
+          "dos": [
+            "2026-01-15"
+          ],
+          "eobCodes": [],
+          "payable": 0
+        }
+      ]
+    },
+    {
+      "invoiceNumber": 851,
+      "client": "Farah Deeba-Nawabi",
+      "claim": "ZB71415",
+      "dos": [
+        "2026-01-08"
+      ],
+      "paymentStatus": "UNPAID",
+      "raFilenamesMatchedToInvoice": [],
+      "remittanceAdviceMatchedToInvoice": [],
+      "raFilenamesSameClaimAndDos": [],
+      "remittanceAdviceSameClaimAndDos": [],
+      "driveParsedSections": []
+    },
+    {
+      "invoiceNumber": 853,
+      "client": "Jared P. Outen",
+      "claim": "BM32698",
+      "dos": [
+        "2026-01-09"
+      ],
+      "paymentStatus": "UNPAID",
+      "raFilenamesMatchedToInvoice": [],
+      "remittanceAdviceMatchedToInvoice": [],
+      "raFilenamesSameClaimAndDos": [],
+      "remittanceAdviceSameClaimAndDos": [],
+      "driveParsedSections": []
+    },
+    {
+      "invoiceNumber": 897,
+      "client": "Maricruz Torres",
+      "claim": "BK47305",
+      "dos": [
+        "2026-02-18"
+      ],
+      "paymentStatus": "UNPAID",
+      "raFilenamesMatchedToInvoice": [],
+      "remittanceAdviceMatchedToInvoice": [],
+      "raFilenamesSameClaimAndDos": [],
+      "remittanceAdviceSameClaimAndDos": [],
+      "driveParsedSections": []
+    },
+    {
+      "invoiceNumber": 906,
+      "client": "Maricruz Torres",
+      "claim": "BK47305",
+      "dos": [
+        "2026-02-26"
+      ],
+      "paymentStatus": "UNPAID",
+      "raFilenamesMatchedToInvoice": [],
+      "remittanceAdviceMatchedToInvoice": [],
+      "raFilenamesSameClaimAndDos": [],
+      "remittanceAdviceSameClaimAndDos": [],
+      "driveParsedSections": []
+    },
+    {
+      "invoiceNumber": 956,
+      "client": "Teresa Lembke",
+      "claim": "BJ04455",
+      "dos": [
+        "2026-04-21"
+      ],
+      "paymentStatus": "DENIED",
+      "raFilenamesMatchedToInvoice": [
+        "RemittanceAdvice_0479998_4282026.pdf"
+      ],
+      "remittanceAdviceMatchedToInvoice": [
+        {
+          "remittanceNumber": "53703",
+          "invoiceDate": "2026-04-28",
+          "raStatus": "APPLIED",
+          "section": "DENIED",
+          "sourceFilename": "RemittanceAdvice_0479998_4282026.pdf",
+          "eobCodes": [
+            "101"
+          ]
+        }
+      ],
+      "raFilenamesSameClaimAndDos": [
+        "RemittanceAdvice_0479998_4282026.pdf"
+      ],
+      "remittanceAdviceSameClaimAndDos": [
+        {
+          "remittanceNumber": "53703",
+          "invoiceDate": "2026-04-28",
+          "section": "PAID",
+          "sourceFilename": "RemittanceAdvice_0479998_4282026.pdf",
+          "matchedInvoice": 966
+        }
+      ],
+      "driveParsedSections": [
+        {
+          "ra": "53703",
+          "date": "04/28/2026",
+          "section": "PAID",
+          "codes": [
+            "96158",
+            "96159"
+          ],
+          "dos": [
+            "2026-04-21"
+          ],
+          "eobCodes": [],
+          "payable": 211.73
+        },
+        {
+          "ra": "53703",
+          "date": "04/28/2026",
+          "section": "DENIED",
+          "codes": [
+            "96158",
+            "96159"
+          ],
+          "dos": [
+            "2026-04-21"
+          ],
+          "eobCodes": [
+            "101"
+          ],
+          "payable": 0
+        }
+      ]
+    }
+  ]
+}

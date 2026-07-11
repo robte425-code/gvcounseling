@@ -1,0 +1,15 @@
+Loaded 153 cached PDF scans from scripts/rescan-steven-invoice-line-items-cache.json
+
+Parsed 153 PDFs → 150 unique invoice numbers
+#109 AW17192 OK via DOS+claim (DOS+claim fallback, OCR #108)
+#130 BM35909 OK via DOS+claim (DOS+claim fallback, OCR #129)
+#140 BM17605 OK via DOS+claim (DOS+claim fallback, OCR #122)
+#162 BN69737 MISSING PDF
+#193 BM37705 MISSING PDF
+#204 BP24936 MISSING PDF
+#207 BM49430 MISSING PDF
+#210 BM49430 MISSING PDF
+#220 ZB62154 MISSING PDF
+#221 BH00259 MISSING PDF
+#224 BK75175 MISSING PDF
+#225 BP24936 MISSING PDF
