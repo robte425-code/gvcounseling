@@ -70,8 +70,8 @@ export function groupInvoicesByPayPeriod<T extends PayPeriodGroupableInvoice>(
       }),
     }))
     .sort((a, b) => {
-      if (a.key === UNASSIGNED_GROUP_KEY) return 1;
-      if (b.key === UNASSIGNED_GROUP_KEY) return -1;
+      if (a.key === UNASSIGNED_GROUP_KEY) return -1;
+      if (b.key === UNASSIGNED_GROUP_KEY) return 1;
       return b.payPeriodSortKey.localeCompare(a.payPeriodSortKey);
     })
     .map(({ key, label, invoices: groupInvoices }) => ({

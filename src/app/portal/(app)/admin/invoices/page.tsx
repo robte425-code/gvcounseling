@@ -204,6 +204,13 @@ export default async function AdminInvoicesPage({
         </p>
       </div>
 
+      <AdminUnassignedInvoicesTile
+        invoices={unassignedRows}
+        payPeriods={periodOptions}
+        nextPayPeriodId={nextPayPeriodId}
+        returnTo={returnTo}
+      />
+
       <AdminInvoiceFilters
         therapists={therapists.map((therapist) => ({
           id: therapist.id,
@@ -212,13 +219,6 @@ export default async function AdminInvoicesPage({
         payPeriods={periodOptions}
         values={filters}
         resultCount={invoiceRows.length + unassignedRows.length}
-      />
-
-      <AdminUnassignedInvoicesTile
-        invoices={unassignedRows}
-        payPeriods={periodOptions}
-        nextPayPeriodId={nextPayPeriodId}
-        returnTo={returnTo}
       />
 
       {assignedMessage && (
