@@ -1,14 +1,6 @@
 "use client";
 
-import {
-  Children,
-  cloneElement,
-  isValidElement,
-  type KeyboardEvent,
-  type MouseEvent,
-  type ReactElement,
-  type ReactNode,
-} from "react";
+import type { KeyboardEvent, MouseEvent, ReactNode } from "react";
 import { useRouter } from "next/navigation";
 
 type Props = {
@@ -18,16 +10,13 @@ type Props = {
   leading?: ReactNode;
 };
 
-type TableCellProps = {
-  className?: string;
-  role?: string;
-  tabIndex?: number;
-  onClick?: (event: MouseEvent<HTMLTableCellElement>) => void;
-  onKeyDown?: (event: KeyboardEvent<HTMLTableCellElement>) => void;
-};
-
-function isTableCell(child: ReactNode): child is ReactElement<TableCellProps> {
-  return isValidElement(child) && child.type === "td";
+function isInteractiveTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof Element)) return false;
+  return Boolean(
+    target.closest(
+      "a, button, input, label, select, textarea, [data-no-row-nav]",
+    ),
+  );
 }
 
 export function InvoiceTableRow({ href, children, actions, leading }: Props) {
@@ -37,49 +26,51 @@ export function InvoiceTableRow({ href, children, actions, leading }: Props) {
     router.push(href);
   }
 
-  function makeCellInteractive(child: ReactElement<TableCellProps>) {
-    return cloneElement(child, {
-      onClick: (event: MouseEvent<HTMLTableCellElement>) => {
-        child.props.onClick?.(event);
-        if (!event.defaultPrevented) openInvoice();
-      },
-      onKeyDown: (event: KeyboardEvent<HTMLTableCellElement>) => {
-        child.props.onKeyDown?.(event);
-        if (event.defaultPrevented) return;
-        if (event.key === "Enter" || event.key === " ") {
-          event.preventDefault();
-          openInvoice();
-        }
-      },
-      className: `${child.props.className ?? ""} cursor-pointer`.trim(),
-      role: "link",
-      tabIndex: 0,
-    });
+  function handleRowClick(event: MouseEvent<HTMLTableRowElement>) {
+    if (event.defaultPrevented || isInteractiveTarget(event.target)) return;
+    openInvoice();
+  }
+
+  function handleRowKeyDown(event: KeyboardEvent<HTMLTableRowElement>) {
+    if (event.defaultPrevented || isInteractiveTarget(event.target)) return;
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      openInvoice();
+    }
   }
 
   return (
-    <tr className="border-b border-border/60 transition hover:bg-primary/5">
+    <tr
+      role="link"
+      tabIndex={0}
+      onClick={handleRowClick}
+      onKeyDown={handleRowKeyDown}
+      className="cursor-pointer border-b border-border/60 transition hover:bg-primary/5"
+    >
       {leading ? (
-        <td className="py-3 pr-2">
-          <div
-            className="flex items-center"
-            onClick={(event) => event.stopPropagation()}
-            onMouseDown={(event) => event.stopPropagation()}
-            onKeyDown={(event) => event.stopPropagation()}
-          >
+        <td
+          className="py-3 pr-2"
+          data-no-row-nav
+          onClick={(event) => event.stopPropagation()}
+          onMouseDown={(event) => event.stopPropagation()}
+          onPointerDown={(event) => event.stopPropagation()}
+          onKeyDown={(event) => event.stopPropagation()}
+        >
+          <div className="flex items-center" data-no-row-nav>
             {leading}
           </div>
         </td>
       ) : null}
-      {Children.map(children, (child) => (isTableCell(child) ? makeCellInteractive(child) : child))}
-      <td className="py-3 text-right">
-        <div
-          onClick={(event) => event.stopPropagation()}
-          onMouseDown={(event) => event.stopPropagation()}
-          onKeyDown={(event) => event.stopPropagation()}
-        >
-          {actions}
-        </div>
+      {children}
+      <td
+        className="py-3 text-right"
+        data-no-row-nav
+        onClick={(event) => event.stopPropagation()}
+        onMouseDown={(event) => event.stopPropagation()}
+        onPointerDown={(event) => event.stopPropagation()}
+        onKeyDown={(event) => event.stopPropagation()}
+      >
+        <div data-no-row-nav>{actions}</div>
       </td>
     </tr>
   );

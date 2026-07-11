@@ -153,6 +153,9 @@ export function AdminUnassignedInvoicesTile({
                     type="checkbox"
                     aria-label={`Select invoice #${inv.invoiceNumber}`}
                     checked={selected.has(inv.id)}
+                    onClick={(e) => e.stopPropagation()}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onPointerDown={(e) => e.stopPropagation()}
                     onChange={(e) => toggleOne(inv.id, e.target.checked)}
                   />
                 }

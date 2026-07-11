@@ -177,6 +177,14 @@ export function AdminInvoicesTable({ invoices, payPeriods, returnTo }: Props) {
                       aria-label={`Select invoice #${inv.invoiceNumber}`}
                       checked={selected.has(inv.id)}
                       disabled={!inv.assignable}
+                      title={
+                        inv.assignable
+                          ? `Select invoice #${inv.invoiceNumber}`
+                          : "Only submitted invoices can be assigned to a pay period"
+                      }
+                      onClick={(e) => e.stopPropagation()}
+                      onMouseDown={(e) => e.stopPropagation()}
+                      onPointerDown={(e) => e.stopPropagation()}
                       onChange={(e) => toggleOne(inv.id, e.target.checked)}
                     />
                   }
