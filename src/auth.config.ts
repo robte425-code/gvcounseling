@@ -1,5 +1,9 @@
 import type { NextAuthConfig } from "next-auth";
 import { Role } from "@/generated/prisma/client";
+import {
+  type PasswordGateClearMarker,
+  verifyPasswordGateClearMarker,
+} from "@/lib/session-update-tokens";
 import type { ImpersonationUpdate } from "@/types/next-auth";
 
 type AdminSnapshot = {
@@ -21,25 +25,31 @@ export const authConfig = {
       if (trigger === "update" && session) {
         const impersonation = (session as { impersonation?: ImpersonationUpdate }).impersonation;
         if (impersonation?.action === "start") {
-          if (!token.adminSnapshot) {
-            token.adminSnapshot = {
-              id: token.id as string,
-              role: token.role as Role,
-              firstName: token.firstName as string,
-              lastName: token.lastName as string,
-            } satisfies AdminSnapshot;
+          const realRole = (token.realRole ?? token.role) as Role;
+          if (realRole === "ADMIN") {
+            if (!token.adminSnapshot) {
+              token.adminSnapshot = {
+                id: token.id as string,
+                role: token.role as Role,
+                firstName: token.firstName as string,
+                lastName: token.lastName as string,
+              } satisfies AdminSnapshot;
+            }
+            const admin = token.adminSnapshot as AdminSnapshot;
+            token.realUserId = admin.id;
+            token.realRole = admin.role;
+            token.id = impersonation.user.id;
+            token.role = impersonation.user.role;
+            token.firstName = impersonation.user.firstName;
+            token.lastName = impersonation.user.lastName;
+            token.impersonatingUserId = impersonation.user.id;
           }
-          const admin = token.adminSnapshot as AdminSnapshot;
-          token.realUserId = admin.id;
-          token.realRole = admin.role;
-          token.id = impersonation.user.id;
-          token.role = impersonation.user.role;
-          token.firstName = impersonation.user.firstName;
-          token.lastName = impersonation.user.lastName;
-          token.impersonatingUserId = impersonation.user.id;
         }
         if (impersonation?.action === "stop" && token.adminSnapshot) {
           const admin = token.adminSnapshot as AdminSnapshot;
+          if (admin.role !== "ADMIN") {
+            return token;
+          }
           token.id = admin.id;
           token.role = admin.role;
           token.firstName = admin.firstName;
@@ -49,8 +59,13 @@ export const authConfig = {
           delete token.impersonatingUserId;
           delete token.adminSnapshot;
         }
-        if (session.user?.mustChangePassword !== undefined) {
-          token.mustChangePassword = session.user.mustChangePassword;
+        const passwordGateClear = (session as { passwordGateClear?: PasswordGateClearMarker })
+          .passwordGateClear;
+        if (
+          session.user?.mustChangePassword === false &&
+          verifyPasswordGateClearMarker(token.id as string, passwordGateClear)
+        ) {
+          token.mustChangePassword = false;
         }
         if (session.user?.firstName !== undefined) {
           token.firstName = session.user.firstName;
