@@ -1,0 +1,513 @@
+{
+  "scannedAt": "2026-07-07T18:46:09.241Z",
+  "source": "all RA PDFs re-parsed from Google Drive",
+  "drivePdfCount": 59,
+  "parsedCount": 59,
+  "parseErrors": 0,
+  "summary": {
+    "targets": 9,
+    "paidByLni": 1,
+    "notPaid": 8
+  },
+  "results": [
+    {
+      "invoiceNumber": 805,
+      "claim": "BG46680",
+      "client": "Dunia Cordova",
+      "dos": [
+        "2025-12-04"
+      ],
+      "codes": [
+        "96158",
+        "96159"
+      ],
+      "currentDbLniStatus": "IN_PROCESS",
+      "paidByLni": false,
+      "verdict": "Not PAID — latest section IN_PROCESS on RA 3935 (12/23/2025)",
+      "paidHits": [],
+      "allRaSections": [
+        {
+          "ra": "998172",
+          "date": "12/09/2025",
+          "section": "IN_PROCESS",
+          "codes": [
+            "96158",
+            "96159"
+          ],
+          "dos": [
+            "2025-12-04"
+          ],
+          "eobCodes": [
+            "903"
+          ],
+          "payable": 0
+        },
+        {
+          "ra": "3935",
+          "date": "12/23/2025",
+          "section": "IN_PROCESS",
+          "codes": [
+            "96158",
+            "96159"
+          ],
+          "dos": [
+            "2025-12-04"
+          ],
+          "eobCodes": [
+            "599"
+          ],
+          "payable": 0
+        },
+        {
+          "ra": "9309",
+          "date": "01/06/2026",
+          "section": "IN_PROCESS",
+          "codes": [
+            "96158",
+            "96159"
+          ],
+          "dos": [
+            "2025-12-04"
+          ],
+          "eobCodes": [
+            "599"
+          ],
+          "payable": 0
+        },
+        {
+          "ra": "14941",
+          "date": "01/21/2026",
+          "section": "IN_PROCESS",
+          "codes": [
+            "96158",
+            "96159"
+          ],
+          "dos": [
+            "2025-12-04"
+          ],
+          "eobCodes": [
+            "599"
+          ],
+          "payable": 0
+        },
+        {
+          "ra": "20263",
+          "date": "02/03/2026",
+          "section": "IN_PROCESS",
+          "codes": [
+            "96158",
+            "96159"
+          ],
+          "dos": [
+            "2025-12-04"
+          ],
+          "eobCodes": [
+            "599"
+          ],
+          "payable": 0
+        },
+        {
+          "ra": "25733",
+          "date": "02/18/2026",
+          "section": "IN_PROCESS",
+          "codes": [
+            "96158",
+            "96159"
+          ],
+          "dos": [
+            "2025-12-04"
+          ],
+          "eobCodes": [
+            "599"
+          ],
+          "payable": 0
+        }
+      ],
+      "latestRaSection": {
+        "ra": "3935",
+        "date": "12/23/2025",
+        "section": "IN_PROCESS",
+        "eobCodes": [
+          "599"
+        ]
+      }
+    },
+    {
+      "invoiceNumber": 840,
+      "claim": "BM71187",
+      "client": "Jacob Martin",
+      "dos": [
+        "2025-12-30"
+      ],
+      "codes": [
+        "96158",
+        "96159",
+        "96159"
+      ],
+      "currentDbLniStatus": "IN_PROCESS",
+      "paidByLni": false,
+      "verdict": "Not PAID — latest section IN_PROCESS on RA 25733 (02/18/2026)",
+      "paidHits": [],
+      "allRaSections": [
+        {
+          "ra": "9309",
+          "date": "01/06/2026",
+          "section": "IN_PROCESS",
+          "codes": [
+            "96158"
+          ],
+          "dos": [
+            "2025-12-30"
+          ],
+          "eobCodes": [],
+          "payable": 0
+        },
+        {
+          "ra": "14941",
+          "date": "01/21/2026",
+          "section": "IN_PROCESS",
+          "codes": [
+            "96158",
+            "96159"
+          ],
+          "dos": [
+            "2025-12-30"
+          ],
+          "eobCodes": [
+            "903"
+          ],
+          "payable": 0
+        },
+        {
+          "ra": "20263",
+          "date": "02/03/2026",
+          "section": "IN_PROCESS",
+          "codes": [
+            "96158",
+            "96159"
+          ],
+          "dos": [
+            "2025-12-30"
+          ],
+          "eobCodes": [
+            "903"
+          ],
+          "payable": 0
+        },
+        {
+          "ra": "25733",
+          "date": "02/18/2026",
+          "section": "IN_PROCESS",
+          "codes": [
+            "96158",
+            "96159"
+          ],
+          "dos": [
+            "2025-12-30"
+          ],
+          "eobCodes": [
+            "599"
+          ],
+          "payable": 0
+        }
+      ],
+      "latestRaSection": {
+        "ra": "25733",
+        "date": "02/18/2026",
+        "section": "IN_PROCESS",
+        "eobCodes": [
+          "599"
+        ]
+      }
+    },
+    {
+      "invoiceNumber": 850,
+      "claim": "BM71187",
+      "client": "Jacob Martin",
+      "dos": [
+        "2026-01-08"
+      ],
+      "codes": [
+        "96158",
+        "96159",
+        "96159"
+      ],
+      "currentDbLniStatus": "IN_PROCESS",
+      "paidByLni": false,
+      "verdict": "Not PAID — latest section IN_PROCESS on RA 25733 (02/18/2026)",
+      "paidHits": [],
+      "allRaSections": [
+        {
+          "ra": "14941",
+          "date": "01/21/2026",
+          "section": "IN_PROCESS",
+          "codes": [
+            "96158",
+            "96159"
+          ],
+          "dos": [
+            "2026-01-08"
+          ],
+          "eobCodes": [
+            "903"
+          ],
+          "payable": 0
+        },
+        {
+          "ra": "20263",
+          "date": "02/03/2026",
+          "section": "IN_PROCESS",
+          "codes": [
+            "96158",
+            "96159"
+          ],
+          "dos": [
+            "2026-01-08"
+          ],
+          "eobCodes": [
+            "903"
+          ],
+          "payable": 0
+        },
+        {
+          "ra": "25733",
+          "date": "02/18/2026",
+          "section": "IN_PROCESS",
+          "codes": [
+            "96158",
+            "96159"
+          ],
+          "dos": [
+            "2026-01-08"
+          ],
+          "eobCodes": [
+            "599"
+          ],
+          "payable": 0
+        }
+      ],
+      "latestRaSection": {
+        "ra": "25733",
+        "date": "02/18/2026",
+        "section": "IN_PROCESS",
+        "eobCodes": [
+          "599"
+        ]
+      }
+    },
+    {
+      "invoiceNumber": 861,
+      "claim": "BM71187",
+      "client": "Jacob Martin",
+      "dos": [
+        "2026-01-15"
+      ],
+      "codes": [
+        "96158",
+        "96159",
+        "96159"
+      ],
+      "currentDbLniStatus": "IN_PROCESS",
+      "paidByLni": false,
+      "verdict": "Not PAID — latest section IN_PROCESS on RA 25733 (02/18/2026)",
+      "paidHits": [],
+      "allRaSections": [
+        {
+          "ra": "14941",
+          "date": "01/21/2026",
+          "section": "IN_PROCESS",
+          "codes": [
+            "96158",
+            "96159"
+          ],
+          "dos": [
+            "2026-01-15"
+          ],
+          "eobCodes": [
+            "903"
+          ],
+          "payable": 0
+        },
+        {
+          "ra": "20263",
+          "date": "02/03/2026",
+          "section": "IN_PROCESS",
+          "codes": [
+            "96158",
+            "96159"
+          ],
+          "dos": [
+            "2026-01-15"
+          ],
+          "eobCodes": [
+            "903"
+          ],
+          "payable": 0
+        },
+        {
+          "ra": "25733",
+          "date": "02/18/2026",
+          "section": "IN_PROCESS",
+          "codes": [
+            "96158",
+            "96159"
+          ],
+          "dos": [
+            "2026-01-15"
+          ],
+          "eobCodes": [],
+          "payable": 0
+        }
+      ],
+      "latestRaSection": {
+        "ra": "25733",
+        "date": "02/18/2026",
+        "section": "IN_PROCESS",
+        "eobCodes": []
+      }
+    },
+    {
+      "invoiceNumber": 851,
+      "claim": "ZB71415",
+      "client": "Farah Deeba-Nawabi",
+      "dos": [
+        "2026-01-08"
+      ],
+      "codes": [
+        "96158",
+        "96159",
+        "96159"
+      ],
+      "currentDbLniStatus": "UNPAID",
+      "paidByLni": false,
+      "verdict": "Not found on any RA PDF",
+      "paidHits": [],
+      "allRaSections": [],
+      "latestRaSection": null
+    },
+    {
+      "invoiceNumber": 853,
+      "claim": "BM32698",
+      "client": "Jared P. Outen",
+      "dos": [
+        "2026-01-09"
+      ],
+      "codes": [
+        "96158",
+        "96159",
+        "96159"
+      ],
+      "currentDbLniStatus": "UNPAID",
+      "paidByLni": false,
+      "verdict": "Not found on any RA PDF",
+      "paidHits": [],
+      "allRaSections": [],
+      "latestRaSection": null
+    },
+    {
+      "invoiceNumber": 897,
+      "claim": "BK47305",
+      "client": "Maricruz Torres",
+      "dos": [
+        "2026-02-18"
+      ],
+      "codes": [
+        "90837"
+      ],
+      "currentDbLniStatus": "UNPAID",
+      "paidByLni": false,
+      "verdict": "Not found on any RA PDF",
+      "paidHits": [],
+      "allRaSections": [],
+      "latestRaSection": null
+    },
+    {
+      "invoiceNumber": 906,
+      "claim": "BK47305",
+      "client": "Maricruz Torres",
+      "dos": [
+        "2026-02-26"
+      ],
+      "codes": [
+        "90837"
+      ],
+      "currentDbLniStatus": "UNPAID",
+      "paidByLni": false,
+      "verdict": "Not found on any RA PDF",
+      "paidHits": [],
+      "allRaSections": [],
+      "latestRaSection": null
+    },
+    {
+      "invoiceNumber": 956,
+      "claim": "BJ04455",
+      "client": "Teresa Lembke",
+      "dos": [
+        "2026-04-21"
+      ],
+      "codes": [
+        "96156"
+      ],
+      "currentDbLniStatus": "DENIED",
+      "paidByLni": true,
+      "verdict": "PAID on 1 RA bill(s): 53703",
+      "paidHits": [
+        {
+          "remittanceNumber": "53703",
+          "invoiceDate": "04/28/2026",
+          "sourceFilename": "RemittanceAdvice_0479998_4282026.pdf",
+          "section": "PAID",
+          "payable": 211.73,
+          "raCodes": [
+            "96158",
+            "96159"
+          ],
+          "raDos": [
+            "2026-04-21"
+          ],
+          "eobCodes": []
+        }
+      ],
+      "allRaSections": [
+        {
+          "ra": "53703",
+          "date": "04/28/2026",
+          "section": "PAID",
+          "codes": [
+            "96158",
+            "96159"
+          ],
+          "dos": [
+            "2026-04-21"
+          ],
+          "eobCodes": [],
+          "payable": 211.73
+        },
+        {
+          "ra": "53703",
+          "date": "04/28/2026",
+          "section": "DENIED",
+          "codes": [
+            "96158",
+            "96159"
+          ],
+          "dos": [
+            "2026-04-21"
+          ],
+          "eobCodes": [
+            "101"
+          ],
+          "payable": 0
+        }
+      ],
+      "latestRaSection": {
+        "ra": "53703",
+        "date": "04/28/2026",
+        "section": "DENIED",
+        "eobCodes": [
+          "101"
+        ]
+      }
+    }
+  ]
+}

@@ -6,12 +6,12 @@ import {
   fetchGoogleUserEmail,
   getGoogleOAuthConfig,
   getGoogleOAuthStateCookieName,
+  saveGoogleDriveConnection,
 } from "@/lib/google-oauth";
 import {
   GOOGLE_DRIVE_ADMIN_PAGE,
   googleDriveIntegrationsPath,
 } from "@/lib/google-drive-oauth-redirect";
-import { prisma } from "@/lib/prisma";
 
 function importRedirect(request: Request, role: "ADMIN" | "THERAPIST", params: Record<string, string>) {
   const url = new URL(googleDriveIntegrationsPath(role), request.url);
@@ -78,21 +78,11 @@ export async function GET(request: Request) {
     const expiresAt = new Date(Date.now() + tokens.expires_in * 1000);
 
     const userId = getRealUserId(session);
-    await prisma.googleDriveConnection.upsert({
-      where: { userId },
-      create: {
-        userId,
-        googleEmail,
-        accessToken: tokens.access_token,
-        refreshToken: tokens.refresh_token,
-        expiresAt,
-      },
-      update: {
-        googleEmail,
-        accessToken: tokens.access_token,
-        refreshToken: tokens.refresh_token,
-        expiresAt,
-      },
+    await saveGoogleDriveConnection(userId, {
+      accessToken: tokens.access_token,
+      refreshToken: tokens.refresh_token,
+      expiresAt,
+      googleEmail,
     });
 
     const response = importRedirect(request, role, { driveConnected: "1" });

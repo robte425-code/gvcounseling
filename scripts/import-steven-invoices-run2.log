@@ -1,0 +1,180 @@
+◇ injected env (20) from .env.local // tip: ⌁ auth for agents [www.vestauth.com]
+◇ injected env (4) from .env // tip: ⌘ custom filepath { path: '/custom/path/.env' }
+(node:6762) Warning: SECURITY WARNING: The SSL modes 'prefer', 'require', and 'verify-ca' are treated as aliases for 'verify-full'.
+In the next major version (pg-connection-string v3.0.0 and pg v9.0.0), these modes will adopt standard libpq semantics, which have weaker security guarantees.
+
+To prepare for this change:
+- If you want the current behavior, explicitly use 'sslmode=verify-full'
+- If you want libpq compatibility now, use 'uselibpqcompat=true&sslmode=require'
+
+See https://www.postgresql.org/docs/current/libpq-ssl.html for libpq SSL mode definitions.
+(Use `node --trace-warnings ...` to show where the warning was created)
+Read 162 invoice rows from spreadsheet
+#100 AW17192 SKIP — already imported
+#101 AW17192 SKIP — already imported
+#103 BM35909 SKIP — already imported
+#105 AW17192 SKIP — already imported
+#107 BM35909 SKIP — already imported
+#106 AW17192 SKIP — already imported
+#108 BM35909 SKIP — already imported
+#109 AW17192 SKIP — already imported
+#110 AY83414 SKIP — already imported
+#111 BM35909 SKIP — already imported
+#112 BM50321 SKIP — already imported
+#113 BM17605 SKIP — already imported
+#114 AY83414 SKIP — already imported
+#115 BM35909 SKIP — already imported
+#116 BL00889 SKIP — already imported
+#117 AW17192 SKIP — already imported
+#118 BM35909 SKIP — already imported
+#119 AW17192 SKIP — already imported
+#120 AY83414 SKIP — already imported
+#121 BM17605 SKIP — already imported
+#122 BM17605 SKIP — already imported
+#123 AW17192 SKIP — already imported
+#124 BA25824 SKIP — already imported
+#125 AY83414 SKIP — already imported
+#126 BM35909 SKIP — already imported
+#127 BA25824 SKIP — already imported
+#128 AW17192 SKIP — already imported
+#129 AY83414 SKIP — already imported
+#130 BM35909 SKIP — already imported
+#131 BA25824 SKIP — already imported
+#132 AW17192 SKIP — already imported
+#133 BK75175 SKIP — already imported
+#134 BL00889 SKIP — already imported
+#135 BM35909 SKIP — already imported
+#136 BA25824 SKIP — already imported
+#137 AW17192 SKIP — already imported
+#138 AY83414 SKIP — already imported
+#139 AW17192 SKIP — already imported
+#140 BM17605 SKIP — already imported
+#141 BK75175 SKIP — already imported
+#142 BA25824 SKIP — already imported
+#143 BK75175 SKIP — already imported
+#144 BM17605 SKIP — already imported
+#145 BA25824 SKIP — already imported
+#146 BM17605 SKIP — already imported
+#147 BK75175 SKIP — already imported
+#148 BA25824 SKIP — already imported
+#149 BK75175 SKIP — already imported
+#150 BA25824 SKIP — already imported
+#151 BN69737 SKIP — already imported
+#152 BK75175 SKIP — already imported
+#153 BN69737 SKIP — already imported
+#154 BA25824 SKIP — already imported
+#155 BK75175 SKIP — already imported
+#156 BN69737 SKIP — already imported
+#157 BN69737 SKIP — already imported
+#158 BM37705 SKIP — already imported
+#159 BM49430 SKIP — already imported
+#160 BA25824 SKIP — already imported
+#161 BK75175 SKIP — already imported
+#162 BN69737 SKIP — already imported
+#163 BM37705 SKIP — already imported
+#164 BM49430 SKIP — already imported
+#165 BK75175 SKIP — already imported
+#166 BN69737 SKIP — already imported
+#167 BM49430 SKIP — already imported
+#168 AZ48910 SKIP — already imported
+#169 BK75175 SKIP — already imported
+#170 BM37705 SKIP — already imported
+#171 BN69737 SKIP — already imported
+#172 BM37705 SKIP — already imported
+#173 AZ48910 SKIP — already imported
+#174 BM49430 SKIP — already imported
+#175 BN69737 SKIP — already imported
+#176 BM37705 SKIP — already imported
+#177 AZ48910 SKIP — already imported
+#178 BK75175 SKIP — already imported
+#179 BM49430 SKIP — already imported
+#180 BN69737 SKIP — already imported
+#181 BM37705 SKIP — already imported
+#182 BM49430 UPDATE $85.00 PAID
+#183 BM37705 SKIP — already imported
+#184 BK75175 SKIP — already imported
+#185 BM49430 SKIP — already imported
+#186 BN69737 SKIP — already imported
+#187 BM37705 SKIP — already imported
+#188 BN69737 UPDATE $63.75 PAID
+#189 BM37705 SKIP — already imported
+#190 BM49430 SKIP — already imported
+#191 BK75175 SKIP — already imported
+#192 BM49430 UPDATE $85.00 PAID
+#193 BM37705 SKIP — already imported
+#194 BM49430 SKIP — already imported
+#195 BN69737 SKIP — already imported
+#196 BM37705 SKIP — already imported
+#197 BM49430 UPDATE $85.00 PAID
+#198 BK75175 SKIP — already imported
+#199 BM37705 SKIP — already imported
+#200 BM49430 SKIP — already imported
+#201 BN69737 SKIP — already imported
+#202 BM49430 SKIP — already imported
+#203 BM37705 SKIP — already imported
+#204 BP24936 SKIP — already imported
+#205 BN69737 SKIP — already imported
+#206 BK75175 UPDATE $42.50 PAID
+#207 BM49430 SKIP — already imported
+#208 BP24936 SKIP — already imported
+#209 BM37705 SKIP — already imported
+#210 BM49430 SKIP — already imported
+#211 BN69737 SKIP — already imported
+#212 BP24936 SKIP — already imported
+#213 BK75175 SKIP — already imported
+#214 BM37705 SKIP — already imported
+#215 BN69737 SKIP — already imported
+#216 BP24936 SKIP — already imported
+#217 BP24936 SKIP — already imported
+#218 BP24936 UPDATE $85.00 PAID
+#219 BH00259 UPDATE $85.00 UNPAID
+#220 ZB62154 UPDATE $85.00 PAID
+#221 BH00259 SKIP — already imported
+#222 BH00259 SKIP — already imported
+#223 ZB62154 SKIP — already imported
+#224 BK75175 UPDATE $85.00 PAID
+#225 BP24936 SKIP — already imported
+#226 BH00259 SKIP — already imported
+#227 BH00259 SKIP — already imported
+#228 ZB62154 SKIP — already imported
+#229 BH00259 UPDATE $85.00 PAID (No pay period for cutoff 2026-02-26)
+#230 ZB62154 SKIP — already imported
+#231 BN44993 SKIP — already imported
+#232 BL69750 SKIP — already imported
+#233 BK75175 SKIP — already imported
+#234 BH00259 SKIP — already imported
+#235 ZB62154 UPDATE $85.00 PAID
+#236 BH00259 SKIP — already imported
+#237 ZB62154 SKIP — already imported
+#238 BK75175 UPDATE $85.00 PAID
+#239 BL69750 SKIP — already imported
+#240 BH00259 SKIP — already imported
+#241 BL69750 UPDATE $85.00 PAID
+#242 ZB62154 SKIP — already imported
+#243 BK75175 SKIP — already imported
+#244 ZB62154 SKIP — already imported
+#245 BK75175 UPDATE $85.00 PAID
+#246 BH00259 SKIP — already imported
+#247 BK75175 SKIP — already imported
+#248 ZB62154 UPDATE $85.00 PAID
+#249 BK75175 SKIP — already imported
+#250 BH00259 SKIP — already imported
+#251 BL69750 UPDATE $85.00 PAID
+#252 BH00259 SKIP — already imported
+#253 ZB62154 SKIP — already imported
+#254 BH00259 UPDATE $85.00 PAID
+#255 BL69750 SKIP — already imported
+#256 ZB62154 UPDATE $85.00 PAID
+#257 BH00259 SKIP — already imported
+#258 BM08580 SKIP — already imported
+#259 BM08580 UPDATE $85.00 PAID (Client assigned to another therapist (HEATHER WILLIAMS))
+#260 BK75175 SKIP — already imported
+#261 BL69750 SKIP — already imported
+#262 BH00259 SKIP — already imported
+#263 ZB62154 UPDATE $85.00 PAID
+
+Done: 0 created, 20 updated, 142 skipped, 0 failed — $1636.25 total
+Results: scripts/import-steven-invoices-results.json
+Log: scripts/import-steven-invoices-run.log
+
+Missing pay periods for cutoffs: 2026-02-26

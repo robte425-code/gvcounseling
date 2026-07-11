@@ -1,8 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sendEmail } from "@/lib/email";
+import { clientIpFromRequest, enforceRateLimit, RateLimitError } from "@/lib/rate-limit";
+
+const CONTACT_RATE_LIMIT = 20;
+const CONTACT_RATE_WINDOW_MS = 15 * 60 * 1000;
 
 export async function POST(request: NextRequest) {
   try {
+    await enforceRateLimit(
+      `contact:${clientIpFromRequest(request)}`,
+      CONTACT_RATE_LIMIT,
+      CONTACT_RATE_WINDOW_MS,
+    );
+
     const body = await request.json();
     const { firstName, lastName, email, message } = body;
 
@@ -26,6 +36,9 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ ok: true });
   } catch (error) {
+    if (error instanceof RateLimitError) {
+      return NextResponse.json({ error: error.message }, { status: 429 });
+    }
     console.error("Contact form error:", error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Failed to send message." },

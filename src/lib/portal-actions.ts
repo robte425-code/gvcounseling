@@ -39,6 +39,7 @@ import {
 import { sendAdminInvoiceSubmittedEmail } from "@/lib/portal-workflow-emails";
 import { finalizeTherapistPayRun } from "@/lib/therapist-pay-notifications";
 import { generateOneTimePassword, hashPassword, verifyPassword } from "@/lib/password";
+import { createPasswordGateClearMarker } from "@/lib/session-update-tokens";
 import { createTherapistPasswordResetToken, consumeTherapistPasswordResetToken } from "@/lib/password-reset";
 import { getSiteUrl } from "@/lib/site-url";
 import { fetchLniPayPeriods } from "@/lib/lni-pay-periods";
@@ -155,7 +156,10 @@ export async function changePasswordAction(
     data: { passwordHash: await hashPassword(next), mustChangePassword: false },
   });
 
-  await unstable_update({ user: { mustChangePassword: false } });
+  await unstable_update({
+    user: { mustChangePassword: false },
+    passwordGateClear: createPasswordGateClearMarker(user.id),
+  } as Record<string, unknown>);
 
   const dest =
     getRealRole(session) === "ADMIN" ? "/portal/admin/dashboard" : "/portal/therapist/dashboard";

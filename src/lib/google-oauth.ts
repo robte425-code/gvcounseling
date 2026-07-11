@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { decryptSecret, encryptSecret, hasSecretEncryptionKey } from "@/lib/secret-crypto";
 
 export const GOOGLE_DRIVE_SCOPE = "https://www.googleapis.com/auth/drive";
 
@@ -88,27 +89,108 @@ export async function fetchGoogleUserEmail(accessToken: string): Promise<string 
   return data.email ?? null;
 }
 
+function encryptTokenForStorage(plaintext: string): string {
+  if (!hasSecretEncryptionKey()) {
+    if (process.env.NODE_ENV === "production") {
+      throw new Error("DRIVE_TOKEN_ENCRYPTION_KEY is not configured.");
+    }
+    return plaintext;
+  }
+  return encryptSecret(plaintext);
+}
+
+function decryptTokenFromStorage(stored: string): string {
+  return decryptSecret(stored);
+}
+
+async function persistGoogleDriveTokens(
+  userId: string,
+  data: {
+    accessToken: string;
+    refreshToken: string;
+    expiresAt: Date;
+    googleEmail?: string | null;
+  },
+) {
+  const encryptedAccess = encryptTokenForStorage(data.accessToken);
+  const encryptedRefresh = encryptTokenForStorage(data.refreshToken);
+
+  await prisma.googleDriveConnection.upsert({
+    where: { userId },
+    create: {
+      userId,
+      googleEmail: data.googleEmail ?? null,
+      accessToken: encryptedAccess,
+      refreshToken: encryptedRefresh,
+      expiresAt: data.expiresAt,
+    },
+    update: {
+      googleEmail: data.googleEmail ?? null,
+      accessToken: encryptedAccess,
+      refreshToken: encryptedRefresh,
+      expiresAt: data.expiresAt,
+    },
+  });
+}
+
+export async function saveGoogleDriveConnection(
+  userId: string,
+  tokens: {
+    accessToken: string;
+    refreshToken: string;
+    expiresAt: Date;
+    googleEmail?: string | null;
+  },
+) {
+  await persistGoogleDriveTokens(userId, tokens);
+}
+
+async function maybeReencryptStoredTokens(connection: {
+  id: string;
+  accessToken: string;
+  refreshToken: string;
+}) {
+  if (!hasSecretEncryptionKey()) return;
+  if (
+    connection.accessToken.startsWith("enc:v1:") &&
+    connection.refreshToken.startsWith("enc:v1:")
+  ) {
+    return;
+  }
+
+  await prisma.googleDriveConnection.update({
+    where: { id: connection.id },
+    data: {
+      accessToken: encryptTokenForStorage(decryptTokenFromStorage(connection.accessToken)),
+      refreshToken: encryptTokenForStorage(decryptTokenFromStorage(connection.refreshToken)),
+    },
+  });
+}
+
 export async function getValidGoogleAccessToken(userId: string): Promise<string> {
   const connection = await prisma.googleDriveConnection.findUnique({ where: { userId } });
   if (!connection) {
     throw new Error("Google Drive is not connected. Connect your account first.");
   }
 
+  const accessToken = decryptTokenFromStorage(connection.accessToken);
+  const refreshToken = decryptTokenFromStorage(connection.refreshToken);
+
   const bufferMs = 60_000;
   if (connection.expiresAt.getTime() > Date.now() + bufferMs) {
-    return connection.accessToken;
+    await maybeReencryptStoredTokens(connection);
+    return accessToken;
   }
 
-  const tokens = await refreshAccessToken(connection.refreshToken);
+  const tokens = await refreshAccessToken(refreshToken);
   const expiresAt = new Date(Date.now() + tokens.expires_in * 1000);
+  const nextRefreshToken = tokens.refresh_token ?? refreshToken;
 
-  await prisma.googleDriveConnection.update({
-    where: { id: connection.id },
-    data: {
-      accessToken: tokens.access_token,
-      expiresAt,
-      ...(tokens.refresh_token ? { refreshToken: tokens.refresh_token } : {}),
-    },
+  await persistGoogleDriveTokens(connection.userId, {
+    accessToken: tokens.access_token,
+    refreshToken: nextRefreshToken,
+    expiresAt,
+    googleEmail: connection.googleEmail,
   });
 
   return tokens.access_token;

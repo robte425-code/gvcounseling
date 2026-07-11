@@ -39,7 +39,7 @@ After deploying, add `gvcounseling.com` and `www.gvcounseling.com` in your Verce
 
 ## Forms
 
-Contact and referral forms send email via the Postmark API. File attachments on the referral form are included in the notification email. If `POSTMARK_SERVER_TOKEN` is not set, forms will show a configuration error until environment variables are added.
+Contact and referral forms send email via the Postmark API. Referral uploads are stored in Google Drive; admin notification emails include form details only (not file attachments). If `POSTMARK_SERVER_TOKEN` is not set, forms will show a configuration error until environment variables are added.
 
 ## Billing portal (Phase 1)
 
@@ -58,6 +58,7 @@ Therapists and admin sign in at **`/portal/login`**.
 | `GOOGLE_OAUTH_CLIENT_ID` | Google OAuth client ID (Drive import) |
 | `GOOGLE_OAUTH_CLIENT_SECRET` | Google OAuth client secret |
 | `GOOGLE_OAUTH_REDIRECT_URI` | OAuth callback URL (must match Google Cloud console) |
+| `DRIVE_TOKEN_ENCRYPTION_KEY` | 32-byte key for encrypting Drive OAuth tokens at rest (`openssl rand -base64 32`) |
 
 3. Run migrations and seed users:
 

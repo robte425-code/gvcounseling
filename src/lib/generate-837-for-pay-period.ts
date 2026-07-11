@@ -11,6 +11,8 @@ import { loadAllProcedureCodeFees, resolveFeeAmount } from "@/lib/procedure-fees
 import { prisma } from "@/lib/prisma";
 
 type InvoiceFor837 = {
+  id: string;
+  status: "DRAFT" | "SUBMITTED" | "BILLED";
   invoiceNumber: number;
   clmControlNumber: string | null;
   client: {
@@ -47,7 +49,33 @@ const invoice837Include = {
   lineItems: { orderBy: { sortOrder: "asc" as const } },
 };
 
-async function buildEdiClaimsForInvoices(invoices: InvoiceFor837[]): Promise<Edi837Claim[]> {
+type ResolvedInvoiceFor837 = InvoiceFor837 & { resolvedClm: string };
+
+function resolveClmsForInvoices(invoices: InvoiceFor837[]): ResolvedInvoiceFor837[] {
+  return invoices.map((inv) => ({
+    ...inv,
+    resolvedClm: inv.clmControlNumber ?? generateClmControlNumber(),
+  }));
+}
+
+async function persistBilledInvoices(invoices: ResolvedInvoiceFor837[]): Promise<void> {
+  const now = new Date();
+  await prisma.$transaction(
+    invoices.map((inv) =>
+      prisma.invoice.update({
+        where: { id: inv.id },
+        data: {
+          ...(inv.clmControlNumber ? {} : { clmControlNumber: inv.resolvedClm }),
+          ...(inv.status === "SUBMITTED" ? { status: "BILLED", billedAt: now } : {}),
+        },
+      }),
+    ),
+  );
+}
+
+async function buildEdiClaimsForResolvedInvoices(
+  invoices: ResolvedInvoiceFor837[],
+): Promise<Edi837Claim[]> {
   const blocked: string[] = [];
   for (const inv of invoices) {
     const readiness = client837Ready(inv.client);
@@ -71,7 +99,7 @@ async function buildEdiClaimsForInvoices(invoices: InvoiceFor837[]): Promise<Edi
   const claims: Edi837Claim[] = invoices.map((inv) => {
     const dx = inv.client.diagnoses;
     return {
-      clmControlNumber: inv.clmControlNumber ?? generateClmControlNumber(),
+      clmControlNumber: inv.resolvedClm,
       client: {
         claimNumber: inv.client.lniClaimNumber,
         lastName: inv.client.lastName,
@@ -137,6 +165,9 @@ export async function generate837ForPayPeriod(
     );
   }
 
-  const claims = await buildEdiClaimsForInvoices(invoices);
-  return buildEdi837(claims, { usageIndicator: options?.usageIndicator });
+  const resolved = resolveClmsForInvoices(invoices);
+  const claims = await buildEdiClaimsForResolvedInvoices(resolved);
+  const result = buildEdi837(claims, { usageIndicator: options?.usageIndicator });
+  await persistBilledInvoices(resolved);
+  return result;
 }

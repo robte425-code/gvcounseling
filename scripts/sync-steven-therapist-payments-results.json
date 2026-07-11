@@ -1,0 +1,766 @@
+{
+  "dryRun": true,
+  "results": [
+    {
+      "invoiceNumber": 101,
+      "claim": "AW17192",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 103,
+      "claim": "BM35909",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 105,
+      "claim": "AW17192",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 107,
+      "claim": "BM35909",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 106,
+      "claim": "AW17192",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 108,
+      "claim": "BM35909",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 109,
+      "claim": "AW17192",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 110,
+      "claim": "AY83414",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 111,
+      "claim": "BM35909",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 112,
+      "claim": "BM50321",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 113,
+      "claim": "BM17605",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 114,
+      "claim": "AY83414",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 115,
+      "claim": "BM35909",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 116,
+      "claim": "BL00889",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 117,
+      "claim": "AW17192",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 118,
+      "claim": "BM35909",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 119,
+      "claim": "AW17192",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 120,
+      "claim": "AY83414",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 121,
+      "claim": "BM17605",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 122,
+      "claim": "BM17605",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 123,
+      "claim": "AW17192",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 124,
+      "claim": "BA25824",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 125,
+      "claim": "AY83414",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 126,
+      "claim": "BM35909",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 127,
+      "claim": "BA25824",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 128,
+      "claim": "AW17192",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 129,
+      "claim": "AY83414",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 130,
+      "claim": "BM35909",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 131,
+      "claim": "BA25824",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 132,
+      "claim": "AW17192",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 133,
+      "claim": "BK75175",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 134,
+      "claim": "BL00889",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 135,
+      "claim": "BM35909",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 136,
+      "claim": "BA25824",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 137,
+      "claim": "AW17192",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 138,
+      "claim": "AY83414",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 139,
+      "claim": "AW17192",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 140,
+      "claim": "BM17605",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 141,
+      "claim": "BK75175",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 142,
+      "claim": "BA25824",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 143,
+      "claim": "BK75175",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 144,
+      "claim": "BM17605",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 145,
+      "claim": "BA25824",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 146,
+      "claim": "BM17605",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 147,
+      "claim": "BK75175",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 148,
+      "claim": "BA25824",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 149,
+      "claim": "BK75175",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 150,
+      "claim": "BA25824",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 151,
+      "claim": "BN69737",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 152,
+      "claim": "BK75175",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 153,
+      "claim": "BN69737",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 154,
+      "claim": "BA25824",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 155,
+      "claim": "BK75175",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 156,
+      "claim": "BN69737",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 157,
+      "claim": "BN69737",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 158,
+      "claim": "BM37705",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 159,
+      "claim": "BM49430",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 160,
+      "claim": "BA25824",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 161,
+      "claim": "BK75175",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 162,
+      "claim": "BN69737",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 163,
+      "claim": "BM37705",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 164,
+      "claim": "BM49430",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 165,
+      "claim": "BK75175",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 166,
+      "claim": "BN69737",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 167,
+      "claim": "BM49430",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 168,
+      "claim": "AZ48910",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 169,
+      "claim": "BK75175",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 170,
+      "claim": "BM37705",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 171,
+      "claim": "BN69737",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 172,
+      "claim": "BM37705",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 173,
+      "claim": "AZ48910",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 174,
+      "claim": "BM49430",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 175,
+      "claim": "BN69737",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 176,
+      "claim": "BM37705",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 177,
+      "claim": "AZ48910",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 178,
+      "claim": "BK75175",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 179,
+      "claim": "BM49430",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 180,
+      "claim": "BN69737",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 181,
+      "claim": "BM37705",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 182,
+      "claim": "BM49430",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 183,
+      "claim": "BM37705",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 184,
+      "claim": "BK75175",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 185,
+      "claim": "BM49430",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 186,
+      "claim": "BN69737",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 187,
+      "claim": "BM37705",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 188,
+      "claim": "BN69737",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 189,
+      "claim": "BM37705",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 190,
+      "claim": "BM49430",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 191,
+      "claim": "BK75175",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 192,
+      "claim": "BM49430",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 193,
+      "claim": "BM37705",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 194,
+      "claim": "BM49430",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 195,
+      "claim": "BN69737",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 196,
+      "claim": "BM37705",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 197,
+      "claim": "BM49430",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 198,
+      "claim": "BK75175",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 199,
+      "claim": "BM37705",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 200,
+      "claim": "BM49430",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 201,
+      "claim": "BN69737",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 202,
+      "claim": "BM49430",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 203,
+      "claim": "BM37705",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 204,
+      "claim": "BP24936",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 205,
+      "claim": "BN69737",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 206,
+      "claim": "BK75175",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 207,
+      "claim": "BM49430",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 208,
+      "claim": "BP24936",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 209,
+      "claim": "BM37705",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 210,
+      "claim": "BM49430",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 211,
+      "claim": "BN69737",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 212,
+      "claim": "BP24936",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 213,
+      "claim": "BK75175",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 214,
+      "claim": "BM37705",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 215,
+      "claim": "BN69737",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 216,
+      "claim": "BP24936",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 217,
+      "claim": "BP24936",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 218,
+      "claim": "BP24936",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 219,
+      "claim": "BH00259",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 220,
+      "claim": "ZB62154",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 221,
+      "claim": "BH00259",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 222,
+      "claim": "BH00259",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 223,
+      "claim": "ZB62154",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 224,
+      "claim": "BK75175",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 225,
+      "claim": "BP24936",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 226,
+      "claim": "BH00259",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 227,
+      "claim": "BH00259",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 228,
+      "claim": "ZB62154",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 229,
+      "claim": "BH00259",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 230,
+      "claim": "ZB62154",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 231,
+      "claim": "BN44993",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 232,
+      "claim": "BL69750",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 233,
+      "claim": "BK75175",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 234,
+      "claim": "BH00259",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 235,
+      "claim": "ZB62154",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 236,
+      "claim": "BH00259",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 237,
+      "claim": "ZB62154",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 238,
+      "claim": "BK75175",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 241,
+      "claim": "BL69750",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 242,
+      "claim": "ZB62154",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 243,
+      "claim": "BK75175",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 244,
+      "claim": "ZB62154",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 245,
+      "claim": "BK75175",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 246,
+      "claim": "BH00259",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 247,
+      "claim": "BK75175",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 248,
+      "claim": "ZB62154",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 249,
+      "claim": "BK75175",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 250,
+      "claim": "BH00259",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 251,
+      "claim": "BL69750",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 252,
+      "claim": "BH00259",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 253,
+      "claim": "ZB62154",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 254,
+      "claim": "BH00259",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 255,
+      "claim": "BL69750",
+      "action": "already_paid"
+    },
+    {
+      "invoiceNumber": 256,
+      "claim": "ZB62154",
+      "action": "already_paid"
+    }
+  ],
+  "toCreate": []
+}

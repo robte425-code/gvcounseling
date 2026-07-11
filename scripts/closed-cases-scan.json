@@ -1,0 +1,1203 @@
+{
+  "at": "2026-07-04T18:01:16.159Z",
+  "mariaFolder": {
+    "id": "13LdiJWgZys9M21Si1SJHSlcnPuSmk6AI",
+    "name": "Maria: Client files"
+  },
+  "closedCasesFolder": {
+    "id": "1sUdxjUlk9SP4qSp5sP1izNLFDjiLjBdY",
+    "name": "Closed Cases"
+  },
+  "activeFolderCount": 48,
+  "activeParseableCount": 46,
+  "closedFolderCount": 101,
+  "closedFolders": [
+    {
+      "folderId": "1tA3o6QOwLpBwTBBxCIViChHW403fNtVj",
+      "folderName": "BK47305 - Maricruz Torres - CLOSED",
+      "claimNumber": "BK47305",
+      "displayName": "Maricruz Torres - CLOSED",
+      "parseable": true,
+      "parseMethod": "standard",
+      "standardParseWorks": true
+    },
+    {
+      "folderId": "1nbRbxESyifT0LIdwJMUY0iCKtkqCUmpx",
+      "folderName": "BE77640 - Petra Aguila Sabalza - CLOSED - BHI Complete",
+      "claimNumber": "BE77640",
+      "displayName": "Petra Aguila Sabalza - CLOSED - BHI Complete",
+      "parseable": true,
+      "parseMethod": "standard",
+      "standardParseWorks": true
+    },
+    {
+      "folderId": "1f2Pih-IDwEYQNEHRAWXGb8RheeLvhWVS",
+      "folderName": "BN79103 - Christopher Skyta - CLOSED - feeling better",
+      "claimNumber": "BN79103",
+      "displayName": "Christopher Skyta - CLOSED - feeling better",
+      "parseable": true,
+      "parseMethod": "standard",
+      "standardParseWorks": true
+    },
+    {
+      "folderId": "14mje8vxCPiw5JrorxJmd5XqM6O7Vep9w",
+      "folderName": "BM26907 - Antony Rodriguez - CLOSED - feeling better",
+      "claimNumber": "BM26907",
+      "displayName": "Antony Rodriguez - CLOSED - feeling better",
+      "parseable": true,
+      "parseMethod": "standard",
+      "standardParseWorks": true
+    },
+    {
+      "folderId": "14KQd5FwIXGqCK7qRbl1DLpCiQ6rlov4K",
+      "folderName": "BH15269 - Martha Lucas - CLOSED - lost contact",
+      "claimNumber": "BH15269",
+      "displayName": "Martha Lucas - CLOSED - lost contact",
+      "parseable": true,
+      "parseMethod": "standard",
+      "standardParseWorks": true
+    },
+    {
+      "folderId": "1ijp85nCuAK2g0YxzCi5hBnR53Am4gXHe",
+      "folderName": "BL43698 - Martha Moore - CLOSED - addtl BHI denied",
+      "claimNumber": "BL43698",
+      "displayName": "Martha Moore - CLOSED - addtl BHI denied",
+      "parseable": true,
+      "parseMethod": "standard",
+      "standardParseWorks": true
+    },
+    {
+      "folderId": "1zrzqwAadP62RnnQPaMZhPEYt-FJsl1aX",
+      "folderName": "CLOSED - BM40746 - Nicole Harris - addtl BHI denied",
+      "claimNumber": "CLOSED",
+      "displayName": "BM40746 - Nicole Harris - addtl BHI denied",
+      "parseable": false,
+      "parseMethod": "none",
+      "standardParseWorks": false
+    },
+    {
+      "folderId": "1FqPxtePgbPcumUamNjkuBrmJEr_LE_Z2",
+      "folderName": "CLOSED - BF83245 - Ricky Buckles - prefers in-person",
+      "claimNumber": "CLOSED",
+      "displayName": "BF83245 - Ricky Buckles - prefers in-person",
+      "parseable": false,
+      "parseMethod": "none",
+      "standardParseWorks": false
+    },
+    {
+      "folderId": "1e5bnaJjvoWfVWYw1xLw9XI9WC1x3oPbO",
+      "folderName": "CLOSED - BG24681 - Montan Mathis - Not able to make contact",
+      "claimNumber": "CLOSED",
+      "displayName": "BG24681 - Montan Mathis - Not able to make contact",
+      "parseable": false,
+      "parseMethod": "none",
+      "standardParseWorks": false
+    },
+    {
+      "folderId": "1aTqZKKPuc1QZY8IhAjha99LIuRM7XMxf",
+      "folderName": "CLOSED - BJ45489 - Alma Luviano Ruiz",
+      "claimNumber": "CLOSED",
+      "displayName": "BJ45489 - Alma Luviano Ruiz",
+      "parseable": false,
+      "parseMethod": "none",
+      "standardParseWorks": false
+    },
+    {
+      "folderId": "1Nlbycu4nOv6vVr1v8LHZ6nTTRMWiiUwe",
+      "folderName": "BN14165 - Abdiwahab Mumin - seeing a different BHI provider",
+      "claimNumber": "BN14165",
+      "displayName": "Abdiwahab Mumin - seeing a different BHI provider",
+      "parseable": true,
+      "parseMethod": "standard",
+      "standardParseWorks": true
+    },
+    {
+      "folderId": "1u9RHKsNxxbm1zVo6EXk1Sb3H9DTvHB7F",
+      "folderName": "BL32520 - Diana McKenna - declined for now as of 1.6.26",
+      "claimNumber": "BL32520",
+      "displayName": "Diana McKenna - declined for now as of 1.6.26",
+      "parseable": true,
+      "parseMethod": "standard",
+      "standardParseWorks": true
+    },
+    {
+      "folderId": "19R1JO7TMUSXM6MXgk4LhbTu5bBnffe4b",
+      "folderName": "BL69748 - Alma Ackermann ",
+      "claimNumber": "BL69748",
+      "displayName": "Alma Ackermann",
+      "parseable": true,
+      "parseMethod": "standard",
+      "standardParseWorks": true
+    },
+    {
+      "folderId": "1cQKz12hUC3_5sjZOI1KU8-GqA1Eb5-VZ",
+      "folderName": "CLOSED - BL24120 - Irina Rusanova - needed interpreter",
+      "claimNumber": "CLOSED",
+      "displayName": "BL24120 - Irina Rusanova - needed interpreter",
+      "parseable": false,
+      "parseMethod": "none",
+      "standardParseWorks": false
+    },
+    {
+      "folderId": "1orUp7l2KrWCmJwaivl638nbUCV_Q7KSV",
+      "folderName": "CLOSED BJ18467 - Henry Lorang",
+      "claimNumber": "BJ18467",
+      "displayName": "Henry Lorang",
+      "parseable": true,
+      "parseMethod": "strip-closed",
+      "standardParseWorks": false
+    },
+    {
+      "folderId": "1TaFXnqsFtlb50Vk4tLs3Nmot_l7GwHYs",
+      "folderName": "CLOSED BJ93593 - Veronica Larry-Warren",
+      "claimNumber": "BJ93593",
+      "displayName": "Veronica Larry-Warren",
+      "parseable": true,
+      "parseMethod": "strip-closed",
+      "standardParseWorks": false
+    },
+    {
+      "folderId": "1ymkzaL3UR-2V0I0aTnbWyNg5WiR9ntDn",
+      "folderName": "CLOSED - BL94062 - Katherin Saunders - moved out of state",
+      "claimNumber": "CLOSED",
+      "displayName": "BL94062 - Katherin Saunders - moved out of state",
+      "parseable": false,
+      "parseMethod": "none",
+      "standardParseWorks": false
+    },
+    {
+      "folderId": "1fJb6O_HozCqp1E-2okAIs8Hqohp6Wcuk",
+      "folderName": "CLOSED BH88161 - Madolores Gomez Salgado - Declined BHI",
+      "claimNumber": "BH88161",
+      "displayName": "Madolores Gomez Salgado - Declined BHI",
+      "parseable": true,
+      "parseMethod": "strip-closed",
+      "standardParseWorks": false
+    },
+    {
+      "folderId": "1bpQeBCFfRD_ww4mmYYVARMeJb6m_kVBE",
+      "folderName": "CLOSED BJ28318 - Natalia Brightwood - no longer interested",
+      "claimNumber": "BJ28318",
+      "displayName": "Natalia Brightwood - no longer interested",
+      "parseable": true,
+      "parseMethod": "strip-closed",
+      "standardParseWorks": false
+    },
+    {
+      "folderId": "1qzGbGep5JGImA_4ChkE3zcLFA8M0B_bV",
+      "folderName": "CLOSED BL91082 - Elmer Medrano G - Seeing a different therapist",
+      "claimNumber": "BL91082",
+      "displayName": "Elmer Medrano G - Seeing a different therapist",
+      "parseable": true,
+      "parseMethod": "strip-closed",
+      "standardParseWorks": false
+    },
+    {
+      "folderId": "16Y8QcewLHu_lTfpFC2e3QO-cDND7UiA2",
+      "folderName": "CLOSED BL15442 - Olyad Kimo - Referred elsewhere",
+      "claimNumber": "BL15442",
+      "displayName": "Olyad Kimo - Referred elsewhere",
+      "parseable": true,
+      "parseMethod": "strip-closed",
+      "standardParseWorks": false
+    },
+    {
+      "folderId": "1YEBTVqHwF8golx5OJ8UyVdjmtPb4Oceb",
+      "folderName": "CLOSED BH92827 - Nicole Kulp - No longer interested",
+      "claimNumber": "BH92827",
+      "displayName": "Nicole Kulp - No longer interested",
+      "parseable": true,
+      "parseMethod": "strip-closed",
+      "standardParseWorks": false
+    },
+    {
+      "folderId": "18AO9JbXPiOpz0Ke8s3YSAY7Vc3CLQegw",
+      "folderName": "CLOSED BK98770 - Jaime Monroy - lost contact",
+      "claimNumber": "BK98770",
+      "displayName": "Jaime Monroy - lost contact",
+      "parseable": true,
+      "parseMethod": "strip-closed",
+      "standardParseWorks": false
+    },
+    {
+      "folderId": "1pEIuzoYYKrJs9McnAf8aoIhsljgBL25a",
+      "folderName": "CLOSED BM37259 - Francisco Martinez - No longer interested",
+      "claimNumber": "BM37259",
+      "displayName": "Francisco Martinez - No longer interested",
+      "parseable": true,
+      "parseMethod": "strip-closed",
+      "standardParseWorks": false
+    },
+    {
+      "folderId": "1CqDD4yyUqk059BX3F-mF8HdPjkHa3-1D",
+      "folderName": "CLOSED BH87736 - Richard Goodman - no longer interested",
+      "claimNumber": "BH87736",
+      "displayName": "Richard Goodman - no longer interested",
+      "parseable": true,
+      "parseMethod": "strip-closed",
+      "standardParseWorks": false
+    },
+    {
+      "folderId": "1yAYIf8Awc78e50fFNn0dgsul6rUgSBd-",
+      "folderName": "CLOSED - BL32620 - Rosita Babor - No longer interested",
+      "claimNumber": "CLOSED",
+      "displayName": "BL32620 - Rosita Babor - No longer interested",
+      "parseable": false,
+      "parseMethod": "none",
+      "standardParseWorks": false
+    },
+    {
+      "folderId": "10mQ3wdFNuCKUCB5lNbGnZfgzhuouwkB2",
+      "folderName": "CLOSED - BM65887 - Jenelle Boateng",
+      "claimNumber": "CLOSED",
+      "displayName": "BM65887 - Jenelle Boateng",
+      "parseable": false,
+      "parseMethod": "none",
+      "standardParseWorks": false
+    },
+    {
+      "folderId": "1zbr2srPnGAyVO153_yr2QNMjClDip-y-",
+      "folderName": "CLOSED - BL41462 - Susan Edwards - Not able to make contact",
+      "claimNumber": "CLOSED",
+      "displayName": "BL41462 - Susan Edwards - Not able to make contact",
+      "parseable": false,
+      "parseMethod": "none",
+      "standardParseWorks": false
+    },
+    {
+      "folderId": "1nLggoJ7--MED7QPBBH5LtEE4y4NQR0v2",
+      "folderName": "CLOSED - BL32211 - Gabriel Mijares-Gamboa",
+      "claimNumber": "CLOSED",
+      "displayName": "BL32211 - Gabriel Mijares-Gamboa",
+      "parseable": false,
+      "parseMethod": "none",
+      "standardParseWorks": false
+    },
+    {
+      "folderId": "15Cge-LfZLQUimRZQ3m-IRFo8FkmQUNfU",
+      "folderName": "CLOSED - BH86487 - Brandon Morgan - Did not request BHI",
+      "claimNumber": "CLOSED",
+      "displayName": "BH86487 - Brandon Morgan - Did not request BHI",
+      "parseable": false,
+      "parseMethod": "none",
+      "standardParseWorks": false
+    },
+    {
+      "folderId": "1-eN-iVrJsgc1XCei1RRpHE3WYGsQhieK",
+      "folderName": "CLOSED - BB87306 - Jose Morales - Declined due to difficulty with contact",
+      "claimNumber": "CLOSED",
+      "displayName": "BB87306 - Jose Morales - Declined due to difficulty with contact",
+      "parseable": false,
+      "parseMethod": "none",
+      "standardParseWorks": false
+    },
+    {
+      "folderId": "1nfzrKauuUKGWpjFOz7GGFUaJhB1gbPyp",
+      "folderName": "CLOSED - BK14186 - Karen Banks",
+      "claimNumber": "CLOSED",
+      "displayName": "BK14186 - Karen Banks",
+      "parseable": false,
+      "parseMethod": "none",
+      "standardParseWorks": false
+    },
+    {
+      "folderId": "1RgOAys_g4nGuzcHKpNBoTNijVMmp1Sgp",
+      "folderName": "CLOSED - BH78574 - Reynalda Barragan - prefers in-person",
+      "claimNumber": "CLOSED",
+      "displayName": "BH78574 - Reynalda Barragan - prefers in-person",
+      "parseable": false,
+      "parseMethod": "none",
+      "standardParseWorks": false
+    },
+    {
+      "folderId": "1ya0doidhtd71j6pEOkSP8PTZk9dRXghs",
+      "folderName": "CLOSED - AH27519 - Lars Edshammar - Unable to make contact",
+      "claimNumber": "CLOSED",
+      "displayName": "AH27519 - Lars Edshammar - Unable to make contact",
+      "parseable": false,
+      "parseMethod": "none",
+      "standardParseWorks": false
+    },
+    {
+      "folderId": "1ScP1gJrhp8EosGqYDnlhnExujxORnIQd",
+      "folderName": "CLOSED - SG96365 - Rodney Smith - not able to make contact",
+      "claimNumber": "CLOSED",
+      "displayName": "SG96365 - Rodney Smith - not able to make contact",
+      "parseable": false,
+      "parseMethod": "none",
+      "standardParseWorks": false
+    },
+    {
+      "folderId": "10AoD4id40SkJS8GWiXpXcyGGgLMJYaVw",
+      "folderName": "CLOSED - BJ23430 - Danielle Stephenson - referred elsewhere",
+      "claimNumber": "CLOSED",
+      "displayName": "BJ23430 - Danielle Stephenson - referred elsewhere",
+      "parseable": false,
+      "parseMethod": "none",
+      "standardParseWorks": false
+    },
+    {
+      "folderId": "1sJy1q1zEHuu08DT0zbzA7KsKPecCQRhu",
+      "folderName": "CLOSED - BE41658 - Melissa Moritz - unable to make contact",
+      "claimNumber": "CLOSED",
+      "displayName": "BE41658 - Melissa Moritz - unable to make contact",
+      "parseable": false,
+      "parseMethod": "none",
+      "standardParseWorks": false
+    },
+    {
+      "folderId": "1dljyfMgf7iwI5ZdcEU8llWvbuwIPbcQI",
+      "folderName": "CLOSED - BC31192 - Tracy Ann Brown - tech issues",
+      "claimNumber": "CLOSED",
+      "displayName": "BC31192 - Tracy Ann Brown - tech issues",
+      "parseable": false,
+      "parseMethod": "none",
+      "standardParseWorks": false
+    },
+    {
+      "folderId": "1WX_c99zBuPCY3_4kk1eLZkNx_t3w-Yjd",
+      "folderName": "CLOSED - BN66893 - Katherine Cunyas - client declined BHI",
+      "claimNumber": "CLOSED",
+      "displayName": "BN66893 - Katherine Cunyas - client declined BHI",
+      "parseable": false,
+      "parseMethod": "none",
+      "standardParseWorks": false
+    },
+    {
+      "folderId": "10FggeViNiS-LZ6r1AJSzqN3g4evcNGY4",
+      "folderName": "BC87745 - Luis Esquivel - CLOSED - Lives Out of State",
+      "claimNumber": "BC87745",
+      "displayName": "Luis Esquivel - CLOSED - Lives Out of State",
+      "parseable": true,
+      "parseMethod": "standard",
+      "standardParseWorks": true
+    },
+    {
+      "folderId": "1ppruacDDDYE44-AaYY0j-R7Um6WHqhnF",
+      "folderName": "BM29420 - Mark Cronkhite - Referred elsewhere",
+      "claimNumber": "BM29420",
+      "displayName": "Mark Cronkhite - Referred elsewhere",
+      "parseable": true,
+      "parseMethod": "standard",
+      "standardParseWorks": true
+    },
+    {
+      "folderId": "15z_ck1IANjOnShmHkRO3ozTA3_e8EqYN",
+      "folderName": "BJ15024 - Katherine T. Day - Not Interested, may return",
+      "claimNumber": "BJ15024",
+      "displayName": "Katherine T. Day - Not Interested, may return",
+      "parseable": true,
+      "parseMethod": "standard",
+      "standardParseWorks": true
+    },
+    {
+      "folderId": "1zM6IF9jnfzfQSkFXqBopnDH9wOj5nbiP",
+      "folderName": "CLOSED BJ62798 - Michele Duncan",
+      "claimNumber": "BJ62798",
+      "displayName": "Michele Duncan",
+      "parseable": true,
+      "parseMethod": "strip-closed",
+      "standardParseWorks": false
+    },
+    {
+      "folderId": "1RbyOAvNcV3hHbVqP-VOZ0_xqsT8DKJm7",
+      "folderName": "CLOSED BJ28623 - Juan Gonzalez Lara",
+      "claimNumber": "BJ28623",
+      "displayName": "Juan Gonzalez Lara",
+      "parseable": true,
+      "parseMethod": "strip-closed",
+      "standardParseWorks": false
+    },
+    {
+      "folderId": "14M1-u2xZyb7u6sZUxDrYbf_0ueXKONI0",
+      "folderName": "CLOSED BM63571 - Jesus Acosta",
+      "claimNumber": "BM63571",
+      "displayName": "Jesus Acosta",
+      "parseable": true,
+      "parseMethod": "strip-closed",
+      "standardParseWorks": false
+    },
+    {
+      "folderId": "1dUrYsOpruONpWIrWRICy9u6zmjPWt9u5",
+      "folderName": "CLOSED BM54409 - Ricardo Flores Barrera",
+      "claimNumber": "BM54409",
+      "displayName": "Ricardo Flores Barrera",
+      "parseable": true,
+      "parseMethod": "strip-closed",
+      "standardParseWorks": false
+    },
+    {
+      "folderId": "1lReyI5Mvz-fXllgWpB2OHryTQ43cRn4c",
+      "folderName": "CLOSED BK87459 - Sophia Leal",
+      "claimNumber": "BK87459",
+      "displayName": "Sophia Leal",
+      "parseable": true,
+      "parseMethod": "strip-closed",
+      "standardParseWorks": false
+    },
+    {
+      "folderId": "1Mnnph4ryOKz-vPTU7Xf0k9fdmodnICb1",
+      "folderName": "CLOSED BC05750 - Leolynn Duval",
+      "claimNumber": "BC05750",
+      "displayName": "Leolynn Duval",
+      "parseable": true,
+      "parseMethod": "strip-closed",
+      "standardParseWorks": false
+    },
+    {
+      "folderId": "1f6d6S6RJMFfBIdi1WaIh9s5MioGQ7c_p",
+      "folderName": "CLOSED BE84598 - Steve Christensen",
+      "claimNumber": "BE84598",
+      "displayName": "Steve Christensen",
+      "parseable": true,
+      "parseMethod": "strip-closed",
+      "standardParseWorks": false
+    },
+    {
+      "folderId": "1ANba_dCIrtwhqOf6zbefNbDKLMjiIGtA",
+      "folderName": "CLOSED BH46754 - Ismael Martinez",
+      "claimNumber": "BH46754",
+      "displayName": "Ismael Martinez",
+      "parseable": true,
+      "parseMethod": "strip-closed",
+      "standardParseWorks": false
+    },
+    {
+      "folderId": "1QWPPa8nmL_y3llyQmYYL7fsFbqPE3b5V",
+      "folderName": "CLOSED BD45091 - Leoncio Gaitan",
+      "claimNumber": "BD45091",
+      "displayName": "Leoncio Gaitan",
+      "parseable": true,
+      "parseMethod": "strip-closed",
+      "standardParseWorks": false
+    },
+    {
+      "folderId": "1_A9N_VRNygbQbZb3rmdgu-KNGEW8wtL1",
+      "folderName": "CLOSED ZB31901 - JESSE PARKER",
+      "claimNumber": "ZB31901",
+      "displayName": "JESSE PARKER",
+      "parseable": true,
+      "parseMethod": "strip-closed",
+      "standardParseWorks": false
+    },
+    {
+      "folderId": "1qkQU9SaHwh2l2p60_NDbUVz5xsWeCIHh",
+      "folderName": "CLOSED BH01635 - Rick Riley",
+      "claimNumber": "BH01635",
+      "displayName": "Rick Riley",
+      "parseable": true,
+      "parseMethod": "strip-closed",
+      "standardParseWorks": false
+    },
+    {
+      "folderId": "1u0GhBhnTYR_1pdeHxduXfdPUofC1H17R",
+      "folderName": "CLOSED BG99421 - Fabian Heras",
+      "claimNumber": "BG99421",
+      "displayName": "Fabian Heras",
+      "parseable": true,
+      "parseMethod": "strip-closed",
+      "standardParseWorks": false
+    },
+    {
+      "folderId": "1_PrXvFJu8YrCGzF9AdOXZvH6RhQvWvLr",
+      "folderName": "CLOSED - BK76913 - TERESIA NJERI",
+      "claimNumber": "CLOSED",
+      "displayName": "BK76913 - TERESIA NJERI",
+      "parseable": false,
+      "parseMethod": "none",
+      "standardParseWorks": false
+    },
+    {
+      "folderId": "1DtuQr304nc37E2bD5OPekbeEEzsvJzNt",
+      "folderName": "CLOSED - BK97115 - GEREMIUS PEREZ",
+      "claimNumber": "CLOSED",
+      "displayName": "BK97115 - GEREMIUS PEREZ",
+      "parseable": false,
+      "parseMethod": "none",
+      "standardParseWorks": false
+    },
+    {
+      "folderId": "1mYegpIqvukbtVfoEa_e-91mYKQiGc_JN",
+      "folderName": "CLOSED - BH78065 - Jose Rodriguez Arias",
+      "claimNumber": "CLOSED",
+      "displayName": "BH78065 - Jose Rodriguez Arias",
+      "parseable": false,
+      "parseMethod": "none",
+      "standardParseWorks": false
+    },
+    {
+      "folderId": "1NkU_2prpY510t_-OfrpvPewUsU9htE2c",
+      "folderName": "BM27306 - Arturo Olguin - Feeling better",
+      "claimNumber": "BM27306",
+      "displayName": "Arturo Olguin - Feeling better",
+      "parseable": true,
+      "parseMethod": "standard",
+      "standardParseWorks": true
+    },
+    {
+      "folderId": "1aNCwWcG_ItpHz9SSs9Qr6-zHZ2IiJBd-",
+      "folderName": "CLOSED - BF90963 - Becky Frick",
+      "claimNumber": "CLOSED",
+      "displayName": "BF90963 - Becky Frick",
+      "parseable": false,
+      "parseMethod": "none",
+      "standardParseWorks": false
+    },
+    {
+      "folderId": "1nOTulkJfi2-2bG6wJmHnDQfcIACh4bMz",
+      "folderName": "CLOSED - BC01258 - Michelle Pace",
+      "claimNumber": "CLOSED",
+      "displayName": "BC01258 - Michelle Pace",
+      "parseable": false,
+      "parseMethod": "none",
+      "standardParseWorks": false
+    },
+    {
+      "folderId": "1PHAVjuu0mY9bc9t9b2s4Y3o_gzZ5sFDN",
+      "folderName": "CLOSED - BJ27592 - Dana Drake",
+      "claimNumber": "CLOSED",
+      "displayName": "BJ27592 - Dana Drake",
+      "parseable": false,
+      "parseMethod": "none",
+      "standardParseWorks": false
+    },
+    {
+      "folderId": "1pizUSBVQtywL3qexXVzcZys_Qtf_CFZY",
+      "folderName": "CLOSED : BL65171 - Raquel Peterson",
+      "claimNumber": "CLOSED : BL65171",
+      "displayName": "Raquel Peterson",
+      "parseable": false,
+      "parseMethod": "none",
+      "standardParseWorks": false
+    },
+    {
+      "folderId": "1s2j0bHgb-GE2SkEF4uUoV_dssHZlJ78U",
+      "folderName": "CLOSED - BL77528 - Olga Solis Cuevas - Started MHS",
+      "claimNumber": "CLOSED",
+      "displayName": "BL77528 - Olga Solis Cuevas - Started MHS",
+      "parseable": false,
+      "parseMethod": "none",
+      "standardParseWorks": false
+    },
+    {
+      "folderId": "1uDjXVxWRliJVB1m2mTswVFa9tyS2LC44",
+      "folderName": "CLOSED: ZB68335 - Anna Stedman",
+      "claimNumber": "CLOSED: ZB68335",
+      "displayName": "Anna Stedman",
+      "parseable": false,
+      "parseMethod": "none",
+      "standardParseWorks": false
+    },
+    {
+      "folderId": "1573RBpDVhx2bCFoW-XeMqfPie7dU52pK",
+      "folderName": "Refused BHI: BG38617 - Aleksey Generalov",
+      "claimNumber": "Refused BHI: BG38617",
+      "displayName": "Aleksey Generalov",
+      "parseable": false,
+      "parseMethod": "none",
+      "standardParseWorks": false
+    },
+    {
+      "folderId": "19hHG6DIxbzrTXbQx-4hcEDNWCg-z2jyr",
+      "folderName": "Closed: BL09714 - Dana Basque - Wessing",
+      "claimNumber": "Closed: BL09714",
+      "displayName": "Dana Basque - Wessing",
+      "parseable": false,
+      "parseMethod": "none",
+      "standardParseWorks": false
+    },
+    {
+      "folderId": "19lJjNSoDH20VkHQhhsaNvAzn23KfpnRL",
+      "folderName": "CLAIM CLOSED - BJ86926 - Norma Guerrero Valencia",
+      "claimNumber": "CLAIM CLOSED",
+      "displayName": "BJ86926 - Norma Guerrero Valencia",
+      "parseable": false,
+      "parseMethod": "none",
+      "standardParseWorks": false
+    },
+    {
+      "folderId": "16EL_y6XtSuM-At9Ol1tab3ZU3A0wo62k",
+      "folderName": "BK31049 - Ernest Williams - unable to make contact",
+      "claimNumber": "BK31049",
+      "displayName": "Ernest Williams - unable to make contact",
+      "parseable": true,
+      "parseMethod": "standard",
+      "standardParseWorks": true
+    },
+    {
+      "folderId": "18uYuTX6G0p-4U6TSoO8qYa9qhc_87ASa",
+      "folderName": "BL99673 - Armando De La Cruz Toro - CLOSED",
+      "claimNumber": "BL99673",
+      "displayName": "Armando De La Cruz Toro - CLOSED",
+      "parseable": true,
+      "parseMethod": "standard",
+      "standardParseWorks": true
+    },
+    {
+      "folderId": "1nyAK11YRO13wsWtf16dD7uAjXfMC-VwK",
+      "folderName": "ZB63633 - Jonas Allen - Completed Sessions",
+      "claimNumber": "ZB63633",
+      "displayName": "Jonas Allen - Completed Sessions",
+      "parseable": true,
+      "parseMethod": "standard",
+      "standardParseWorks": true
+    },
+    {
+      "folderId": "1P4N9vSOjiiQ0h2wQp8U0V8QOB4c7x7LC",
+      "folderName": "ZB65683 - Joshua Lewis - unable to contact referred back to VRC",
+      "claimNumber": "ZB65683",
+      "displayName": "Joshua Lewis - unable to contact referred back to VRC",
+      "parseable": true,
+      "parseMethod": "standard",
+      "standardParseWorks": true
+    },
+    {
+      "folderId": "1ier6fyLkby69AMCvi3jVf7e3-FWKlIGI",
+      "folderName": "CLOSED - BH96847 - Michael Chavez - Receiving BHI elsewhere",
+      "claimNumber": "CLOSED",
+      "displayName": "BH96847 - Michael Chavez - Receiving BHI elsewhere",
+      "parseable": false,
+      "parseMethod": "none",
+      "standardParseWorks": false
+    },
+    {
+      "folderId": "1GMaiAdKSIav5CITJwVOHhb9CKuBTZ1Kx",
+      "folderName": "BH28311 - Jeremy Androit - Needs reeval, VRC has retracted referral",
+      "claimNumber": "BH28311",
+      "displayName": "Jeremy Androit - Needs reeval, VRC has retracted referral",
+      "parseable": true,
+      "parseMethod": "standard",
+      "standardParseWorks": true
+    },
+    {
+      "folderId": "1G4qTPoMyFJeutBzAcFS8jwVMC6F_ZoHs",
+      "folderName": "DECLINED - BK84057 - Mark Francis Watson - Prefers In-Person",
+      "claimNumber": "DECLINED",
+      "displayName": "BK84057 - Mark Francis Watson - Prefers In-Person",
+      "parseable": false,
+      "parseMethod": "none",
+      "standardParseWorks": false
+    },
+    {
+      "folderId": "1OTFxbshgw08yniTEoCgYZe2moRx-4XOS",
+      "folderName": "CLOSED: BL02608 - Jose Milanez Moreno - Returned to work",
+      "claimNumber": "CLOSED: BL02608",
+      "displayName": "Jose Milanez Moreno - Returned to work",
+      "parseable": false,
+      "parseMethod": "none",
+      "standardParseWorks": false
+    },
+    {
+      "folderId": "1ThgTUvDWdrl_AqhZA2UdUXJlGpYSc-24",
+      "folderName": "CLOSED: BL84433 - Janet Swisher",
+      "claimNumber": "CLOSED: BL84433",
+      "displayName": "Janet Swisher",
+      "parseable": false,
+      "parseMethod": "none",
+      "standardParseWorks": false
+    },
+    {
+      "folderId": "13kN8MhvW9-tc24o-vd9RFn9TzOvrMvwk",
+      "folderName": "CLOSED - BL89609 - David Torres - Referred to different BHI",
+      "claimNumber": "CLOSED",
+      "displayName": "BL89609 - David Torres - Referred to different BHI",
+      "parseable": false,
+      "parseMethod": "none",
+      "standardParseWorks": false
+    },
+    {
+      "folderId": "131I4Zd2n1I9S8JqeLXS-7nyukPoC8I67",
+      "folderName": "CLOSED - BC60344 - Arnulfo Nunez - Referred to different BHI",
+      "claimNumber": "CLOSED",
+      "displayName": "BC60344 - Arnulfo Nunez - Referred to different BHI",
+      "parseable": false,
+      "parseMethod": "none",
+      "standardParseWorks": false
+    },
+    {
+      "folderId": "1ZQ-WRC8yTTFf-e03hNn2tZmn_n5QLBNs",
+      "folderName": "CLOSED - BL19840 - Vicki Canon - in Hospice Care",
+      "claimNumber": "CLOSED",
+      "displayName": "BL19840 - Vicki Canon - in Hospice Care",
+      "parseable": false,
+      "parseMethod": "none",
+      "standardParseWorks": false
+    },
+    {
+      "folderId": "1PZiPO4WTpCeelXyJqXtyQ6i9rZLiPlqo",
+      "folderName": "CLOSED BK78317 - April Hummell, prefers in-person",
+      "claimNumber": "BK78317",
+      "displayName": "April Hummell, prefers in-person",
+      "parseable": true,
+      "parseMethod": "strip-closed",
+      "standardParseWorks": false
+    },
+    {
+      "folderId": "1r89K_DQ0P1Lvpi8kZ1GfOwvGHfD4JjFf",
+      "folderName": "BL34992 - Sindy Reyes - Declined BHI",
+      "claimNumber": "BL34992",
+      "displayName": "Sindy Reyes - Declined BHI",
+      "parseable": true,
+      "parseMethod": "standard",
+      "standardParseWorks": true
+    },
+    {
+      "folderId": "14w1YIRKU3Goa0VyPhe6HfwiuILew4Ph1",
+      "folderName": "BH16064 - Davilman Espinosa - Declined BHI",
+      "claimNumber": "BH16064",
+      "displayName": "Davilman Espinosa - Declined BHI",
+      "parseable": true,
+      "parseMethod": "standard",
+      "standardParseWorks": true
+    },
+    {
+      "folderId": "1TPQgKBL46Kd_rWHILYHbaR8xx2cduR-5",
+      "folderName": "AR26887 - NICOLE SANCHEZ - BHI Completed",
+      "claimNumber": "AR26887",
+      "displayName": "NICOLE SANCHEZ - BHI Completed",
+      "parseable": true,
+      "parseMethod": "standard",
+      "standardParseWorks": true
+    },
+    {
+      "folderId": "1Eqf0nLwgAXxbz4uA3dRFkdk06jb34Ejb",
+      "folderName": "BF01603 - Daniel Ramirez-Hernandez - Prefers In-person therapy",
+      "claimNumber": "BF01603",
+      "displayName": "Daniel Ramirez-Hernandez - Prefers In-person therapy",
+      "parseable": true,
+      "parseMethod": "standard",
+      "standardParseWorks": true
+    },
+    {
+      "folderId": "1BBpnkaZa11uxYEs3vGtWnXlocNfgBWyj",
+      "folderName": "BH92547 - Roggier Cruz Mercado - Claim Closed",
+      "claimNumber": "BH92547",
+      "displayName": "Roggier Cruz Mercado - Claim Closed",
+      "parseable": true,
+      "parseMethod": "standard",
+      "standardParseWorks": true
+    },
+    {
+      "folderId": "1_vBjLwd06_9YO8SAEn0LU7TiFNVG45Hg",
+      "folderName": "BK94910 - Kevin Ayala Zambrano - Claim Closed",
+      "claimNumber": "BK94910",
+      "displayName": "Kevin Ayala Zambrano - Claim Closed",
+      "parseable": true,
+      "parseMethod": "standard",
+      "standardParseWorks": true
+    },
+    {
+      "folderId": "1CyYxSKkHTfaM67Y-AbXk_Ud81M5X-mE2",
+      "folderName": "BM62249 - Francisca Castaneda Sotelo - Received new BHI referral",
+      "claimNumber": "BM62249",
+      "displayName": "Francisca Castaneda Sotelo - Received new BHI referral",
+      "parseable": true,
+      "parseMethod": "standard",
+      "standardParseWorks": true
+    },
+    {
+      "folderId": "13I0kI9_lGJXNH5V7SugMUv89JbyeIRap",
+      "folderName": "BL73369 - Pierre Borders - Employer Contesting - BHI on HOLD",
+      "claimNumber": "BL73369",
+      "displayName": "Pierre Borders - Employer Contesting - BHI on HOLD",
+      "parseable": true,
+      "parseMethod": "standard",
+      "standardParseWorks": true
+    },
+    {
+      "folderId": "1ewwW_kwK4rwb--KReJAERhsq_knlPp9F",
+      "folderName": "BK76344 - Jennie De La Paz - Returned to Work NO BHI",
+      "claimNumber": "BK76344",
+      "displayName": "Jennie De La Paz - Returned to Work NO BHI",
+      "parseable": true,
+      "parseMethod": "standard",
+      "standardParseWorks": true
+    },
+    {
+      "folderId": "1wY_rOU3f_tcYr9rNVPcLQv3ctQqn8ne7",
+      "folderName": "REJECTED: AY60642 - Murad Abdalla",
+      "claimNumber": "REJECTED: AY60642",
+      "displayName": "Murad Abdalla",
+      "parseable": false,
+      "parseMethod": "none",
+      "standardParseWorks": false
+    },
+    {
+      "folderId": "18XZY9yNNXce4C20skkVW5zkXGw-oJ6Al",
+      "folderName": "CLOSED: BH63363 - Sergio Quinones",
+      "claimNumber": "CLOSED: BH63363",
+      "displayName": "Sergio Quinones",
+      "parseable": false,
+      "parseMethod": "none",
+      "standardParseWorks": false
+    },
+    {
+      "folderId": "1uEBAflacFdp19ZhF7kiF1t11aH2FwnJM",
+      "folderName": "REJECTED: BH03745 - Erick Zarate",
+      "claimNumber": "REJECTED: BH03745",
+      "displayName": "Erick Zarate",
+      "parseable": false,
+      "parseMethod": "none",
+      "standardParseWorks": false
+    },
+    {
+      "folderId": "1RHOVmecHipDhrRJ_g1e5m8m8_2JtPQTj",
+      "folderName": "REJECTED: BH22612 - Elieser Ceballos Dias",
+      "claimNumber": "REJECTED: BH22612",
+      "displayName": "Elieser Ceballos Dias",
+      "parseable": false,
+      "parseMethod": "none",
+      "standardParseWorks": false
+    },
+    {
+      "folderId": "1zJ2bqGOUFSWm2Gi4h_e50VNX4a6-BCKC",
+      "folderName": "CLOSED: BK94064 - DAVID WIGGINS",
+      "claimNumber": "CLOSED: BK94064",
+      "displayName": "DAVID WIGGINS",
+      "parseable": false,
+      "parseMethod": "none",
+      "standardParseWorks": false
+    },
+    {
+      "folderId": "1D0_R4ZTG93PJpygQBCqDpXsmUkCUJVFG",
+      "folderName": "CLOSED: BG98823 - Jesse Knapp",
+      "claimNumber": "CLOSED: BG98823",
+      "displayName": "Jesse Knapp",
+      "parseable": false,
+      "parseMethod": "none",
+      "standardParseWorks": false
+    },
+    {
+      "folderId": "1nKbL1fr1YmnIwoZsrSxmjyCDECAY3wjW",
+      "folderName": "REJECTED: BG44924 - CLAUDIA CAMPOS ROBLES",
+      "claimNumber": "REJECTED: BG44924",
+      "displayName": "CLAUDIA CAMPOS ROBLES",
+      "parseable": false,
+      "parseMethod": "none",
+      "standardParseWorks": false
+    },
+    {
+      "folderId": "1_-Cob8OdvBzXG0HCCBkmui0TpPUebxpU",
+      "folderName": "CLOSED: BG84450 - BRANDON LAMBARD",
+      "claimNumber": "CLOSED: BG84450",
+      "displayName": "BRANDON LAMBARD",
+      "parseable": false,
+      "parseMethod": "none",
+      "standardParseWorks": false
+    },
+    {
+      "folderId": "1Nhs9NPR_ckCkSRaC0j1qJqKuAj4WM1OB",
+      "folderName": "CLOSED: AV56760 - DENISE BUCHANAN-LANZ",
+      "claimNumber": "CLOSED: AV56760",
+      "displayName": "DENISE BUCHANAN-LANZ",
+      "parseable": false,
+      "parseMethod": "none",
+      "standardParseWorks": false
+    },
+    {
+      "folderId": "1C-OrDoM-qqp8YgvbfsehN1BcnX1GpYrz",
+      "folderName": "REJECTED: BK46231 - Joan Magbagay",
+      "claimNumber": "REJECTED: BK46231",
+      "displayName": "Joan Magbagay",
+      "parseable": false,
+      "parseMethod": "none",
+      "standardParseWorks": false
+    },
+    {
+      "folderId": "1GCe6YugmE4V6W2sWOMDs4JkqNBru49J3",
+      "folderName": "CLOSED: BG50642 - AGUEDA ESPINDOLA",
+      "claimNumber": "CLOSED: BG50642",
+      "displayName": "AGUEDA ESPINDOLA",
+      "parseable": false,
+      "parseMethod": "none",
+      "standardParseWorks": false
+    },
+    {
+      "folderId": "1TkzOYSES6gipXqk0yX9ZOk6yNZKYVBlC",
+      "folderName": "REJECTED: BJ25089 - JODI LEMASTER",
+      "claimNumber": "REJECTED: BJ25089",
+      "displayName": "JODI LEMASTER",
+      "parseable": false,
+      "parseMethod": "none",
+      "standardParseWorks": false
+    }
+  ],
+  "activeFolders": [
+    {
+      "folderId": "1M8GRmBwhnpttgpU4L_JOGWqvX8MOn3Pe",
+      "folderName": "BM47751 - GEOVANNI MANRIQUEZ VALDEZ Claim#(s): BM47751",
+      "claimNumber": "BM47751",
+      "displayName": "GEOVANNI MANRIQUEZ VALDEZ Claim#(s): BM47751"
+    },
+    {
+      "folderId": "1UQVmEzT5bDJdodidJiUD_U3D9skkh4x6",
+      "folderName": "BJ88007 - Mayra Hernandez",
+      "claimNumber": "BJ88007",
+      "displayName": "Mayra Hernandez"
+    },
+    {
+      "folderId": "1k2auve0nuLziLq8HNoy-WcEEKwAYuUZ5",
+      "folderName": "BM08580 - Heather Williams  ",
+      "claimNumber": "BM08580",
+      "displayName": "Heather Williams"
+    },
+    {
+      "folderId": "1stHenNV94sTdJ5u4MJ_qnjjppZO9kohv",
+      "folderName": "BJ87697 - Adriana Keyes",
+      "claimNumber": "BJ87697",
+      "displayName": "Adriana Keyes"
+    },
+    {
+      "folderId": "10oOd36O3S-wyvh7TB2G0F2UeWp9KC4Cr",
+      "folderName": "BK03975 - Anabel Valdovinos Marin",
+      "claimNumber": "BK03975",
+      "displayName": "Anabel Valdovinos Marin"
+    },
+    {
+      "folderId": "1ZXJ952hm6KqmOkd3VDdhByqhYVWq-Cza",
+      "folderName": "BB92037 - Jose Castellon",
+      "claimNumber": "BB92037",
+      "displayName": "Jose Castellon"
+    },
+    {
+      "folderId": "13KSjBpnzGjgz_oAP1P7z5c7jlzGGW-Rd",
+      "folderName": "BF12726 - Leticia Zuniga Rivera",
+      "claimNumber": "BF12726",
+      "displayName": "Leticia Zuniga Rivera"
+    },
+    {
+      "folderId": "1A0p_scwjWnUOyTa8TYh3ZGw-LtRptSOb",
+      "folderName": "BH23437 - Maria Merino-Aviles",
+      "claimNumber": "BH23437",
+      "displayName": "Maria Merino-Aviles"
+    },
+    {
+      "folderId": "19DTehJMuPCMwQIh7F6D129-XBBxrfIVF",
+      "folderName": "BF56574 - Deloris Murphy",
+      "claimNumber": "BF56574",
+      "displayName": "Deloris Murphy"
+    },
+    {
+      "folderId": "1tSUxnByc4f90eEgUkpDo_Tbd1EOPRlEA",
+      "folderName": "BL44101 - Ignacio Diaz-Ojeda",
+      "claimNumber": "BL44101",
+      "displayName": "Ignacio Diaz-Ojeda"
+    },
+    {
+      "folderId": "1fg2uvfveYunFFnJyzXNTCHS_bdUhKlSr",
+      "folderName": "BJ04455 - Teresa Lembke",
+      "claimNumber": "BJ04455",
+      "displayName": "Teresa Lembke"
+    },
+    {
+      "folderId": "1Ebd-NOe2OzhHgS6HlHpgBzi6z0ddFUq3",
+      "folderName": "BL32974 - Tamara Vangas",
+      "claimNumber": "BL32974",
+      "displayName": "Tamara Vangas"
+    },
+    {
+      "folderId": "1FKtJf7WuoEaf2lnRrjutqEXpc02PHgKq",
+      "folderName": "BL13687 - Maria Alonso Rivera",
+      "claimNumber": "BL13687",
+      "displayName": "Maria Alonso Rivera"
+    },
+    {
+      "folderId": "1AJB1EV_S4wddVCK--zxovNq__d_4xUpi",
+      "folderName": "BM70906 - Alberto Alvarez",
+      "claimNumber": "BM70906",
+      "displayName": "Alberto Alvarez"
+    },
+    {
+      "folderId": "1hwL2cwXT1h2yvLHqdnQE_MBRDUT61_2i",
+      "folderName": "BK08154 - Victor Tom",
+      "claimNumber": "BK08154",
+      "displayName": "Victor Tom"
+    },
+    {
+      "folderId": "1c4BKWfkpwW3UQ6iiA8BALdLpWgqwdMUj",
+      "folderName": "BL53128 - James Stanton",
+      "claimNumber": "BL53128",
+      "displayName": "James Stanton"
+    },
+    {
+      "folderId": "1NrGm9pZ4rqK4es3bGr03QMljtvfgh-la",
+      "folderName": "BJ02335 - Marcelina Lopez",
+      "claimNumber": "BJ02335",
+      "displayName": "Marcelina Lopez"
+    },
+    {
+      "folderId": "125t7UEopxfityQePyoHnvvUu17Yuh68v",
+      "folderName": "ZB71415 - Farah Deeba Nawabi",
+      "claimNumber": "ZB71415",
+      "displayName": "Farah Deeba Nawabi"
+    },
+    {
+      "folderId": "1OreGEm8JdSZ2ztvYVkqEzA4RIF1wEpBw",
+      "folderName": "BL61172 - Wesley Saole",
+      "claimNumber": "BL61172",
+      "displayName": "Wesley Saole"
+    },
+    {
+      "folderId": "16yqr9pjnNjrT7E8KNKmVXMeBm7owtGbH",
+      "folderName": "BM32698 - Jared P. Outen",
+      "claimNumber": "BM32698",
+      "displayName": "Jared P. Outen"
+    },
+    {
+      "folderId": "19LFx6CPF7Lg5lqtU2xV3fw0bje0GoE-6",
+      "folderName": "AR78431 - Nelson Rios",
+      "claimNumber": "AR78431",
+      "displayName": "Nelson Rios"
+    },
+    {
+      "folderId": "16Eaaut0cOqsQYSsJcfUrhEsc_nzG2FL9",
+      "folderName": "BL79123 - Desira Jackson",
+      "claimNumber": "BL79123",
+      "displayName": "Desira Jackson"
+    },
+    {
+      "folderId": "1-5sD3NIJM0NvZ6TXpLkfHa2AwSRuhvcq",
+      "folderName": "BJ03400 - Martin Ayala",
+      "claimNumber": "BJ03400",
+      "displayName": "Martin Ayala"
+    },
+    {
+      "folderId": "1Il3qh8_YoV5NNMdYcVuyHVQnIQ18VULz",
+      "folderName": "AU51037 - Ken Hales",
+      "claimNumber": "AU51037",
+      "displayName": "Ken Hales"
+    },
+    {
+      "folderId": "1qHPbONph8cfhhYyOBfLCEQpbzVfhYBSu",
+      "folderName": "ZB71243 - Edrian Gallegos",
+      "claimNumber": "ZB71243",
+      "displayName": "Edrian Gallegos"
+    },
+    {
+      "folderId": "1FoP3_v6ftJfALYTt0XVFAMXi69ATdD66",
+      "folderName": "BN71306 - Spencer Schaefer",
+      "claimNumber": "BN71306",
+      "displayName": "Spencer Schaefer"
+    },
+    {
+      "folderId": "1-uZ_4wI5NV7NSR9khkbWbiiHm2EF4qzh",
+      "folderName": "BM47751 - Geovanni Manriquez Valdez",
+      "claimNumber": "BM47751",
+      "displayName": "Geovanni Manriquez Valdez"
+    },
+    {
+      "folderId": "1JbDCI6riSF6pXFS1obXJSaElYVrGSdtz",
+      "folderName": "BL15562 - Luz Camacho Ponce",
+      "claimNumber": "BL15562",
+      "displayName": "Luz Camacho Ponce"
+    },
+    {
+      "folderId": "1cPJyJT0eQVntK66qV7RvheXHLaxerANX",
+      "folderName": "BM71187 - Jacob Martin",
+      "claimNumber": "BM71187",
+      "displayName": "Jacob Martin"
+    },
+    {
+      "folderId": "1V_ol9wmIC1ySjsqu20EaiEf8-gRGsRql",
+      "folderName": "BN77205 - Adrian Eduardo Garcia",
+      "claimNumber": "BN77205",
+      "displayName": "Adrian Eduardo Garcia"
+    },
+    {
+      "folderId": "1qKqmu7rd_VPszjxw2yniKiqMqaSuGH6m",
+      "folderName": "BL20510 - Deontay Davis",
+      "claimNumber": "BL20510",
+      "displayName": "Deontay Davis"
+    },
+    {
+      "folderId": "1uvug-SHRuTPOttYFoxGlocYHAa5zKlwM",
+      "folderName": "BA52296 - Nathaniel Turbush",
+      "claimNumber": "BA52296",
+      "displayName": "Nathaniel Turbush"
+    },
+    {
+      "folderId": "1y5JsoFNiA46cmkt1mNbWU8h0Qy1BU63-",
+      "folderName": "BJ91086 - Olga Rivera Chavez",
+      "claimNumber": "BJ91086",
+      "displayName": "Olga Rivera Chavez"
+    },
+    {
+      "folderId": "1P95lFlWnTDRvdlltl-VZtoN6dBvuysjA",
+      "folderName": "BL69890 - Karissa McGaa",
+      "claimNumber": "BL69890",
+      "displayName": "Karissa McGaa"
+    },
+    {
+      "folderId": "1DD9ho0RyXAdymdGuOM2SZGbSQKOAbPvN",
+      "folderName": "BL77059 - Federico Gonzalez Jimenez",
+      "claimNumber": "BL77059",
+      "displayName": "Federico Gonzalez Jimenez"
+    },
+    {
+      "folderId": "1lSLVq3A63lUwVB-v6qbzqj6fpdqz2Ign",
+      "folderName": "BM51668 - Francisca Lopez Chavez",
+      "claimNumber": "BM51668",
+      "displayName": "Francisca Lopez Chavez"
+    },
+    {
+      "folderId": "1GN2Dl0rbDxzw0agbsCV7ld0aq-UjjetM",
+      "folderName": "BL05371 - Maria Tinoco",
+      "claimNumber": "BL05371",
+      "displayName": "Maria Tinoco"
+    },
+    {
+      "folderId": "1OZbDMe9P1Ap-NtrdVv2ZEJgbdQlkh4Yp",
+      "folderName": "BJ44244 - Yesenia Salinas Curiel",
+      "claimNumber": "BJ44244",
+      "displayName": "Yesenia Salinas Curiel"
+    },
+    {
+      "folderId": "1J90-MB4FXT5JQL00wQDJhLtp2QEatMqM",
+      "folderName": "BK25284 - Casey Poare",
+      "claimNumber": "BK25284",
+      "displayName": "Casey Poare"
+    },
+    {
+      "folderId": "1emrURIkZfnSYuVSkrCxXH7NKSkBcD2vu",
+      "folderName": "BL69748 - Alma Ackermann",
+      "claimNumber": "BL69748",
+      "displayName": "Alma Ackermann"
+    },
+    {
+      "folderId": "1jtz2kzG5MAInEEN5Yy-93sD7_v7db7g9",
+      "folderName": "BJ03038 - Alison Acevedo",
+      "claimNumber": "BJ03038",
+      "displayName": "Alison Acevedo"
+    },
+    {
+      "folderId": "1MWtBz_pOJFFxjEcEUa7GueykfYrV_wGr",
+      "folderName": "BJ54412 - Maria Gaona-Pedro",
+      "claimNumber": "BJ54412",
+      "displayName": "Maria Gaona-Pedro"
+    },
+    {
+      "folderId": "1u-guIJTbujswSCoWGQES-U3o4sFLaaSk",
+      "folderName": "BG74810 - Elizabeth Placencia",
+      "claimNumber": "BG74810",
+      "displayName": "Elizabeth Placencia"
+    },
+    {
+      "folderId": "1xlxci859tsk1MKL0OGFB7MFP_OTKI-KZ",
+      "folderName": "BJ97198 - Luis Acevedo Ramos",
+      "claimNumber": "BJ97198",
+      "displayName": "Luis Acevedo Ramos"
+    },
+    {
+      "folderId": "1WEE8gQF_IfJpUR67vdHk3s6ogSztNemP",
+      "folderName": "BL64619 - Dalila Valdez-Torres",
+      "claimNumber": "BL64619",
+      "displayName": "Dalila Valdez-Torres"
+    },
+    {
+      "folderId": "1zzPU24jkKznrqWJiwWrZJgF1Liwv6zvT",
+      "folderName": "BG46680 - Dunia Cordova",
+      "claimNumber": "BG46680",
+      "displayName": "Dunia Cordova"
+    }
+  ]
+}

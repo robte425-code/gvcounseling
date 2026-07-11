@@ -79,6 +79,9 @@ export async function requireAdminApi() {
   if (getRealRole(session) !== "ADMIN") {
     return { ok: false as const, response: Response.json({ error: "Forbidden." }, { status: 403 }) };
   }
+  if (isImpersonating(session)) {
+    return { ok: false as const, response: Response.json({ error: "Forbidden." }, { status: 403 }) };
+  }
   return { ok: true as const, session, role: "ADMIN" as const };
 }
 

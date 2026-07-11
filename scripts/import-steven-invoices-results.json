@@ -1,0 +1,1159 @@
+{
+  "at": "2026-07-04T19:37:19.057Z",
+  "dryRun": false,
+  "spreadsheet": "/Users/ghim/Downloads/Steven_ Client Billing Status (1).xlsx",
+  "totalRows": 162,
+  "created": 0,
+  "updated": 6,
+  "skipped": 156,
+  "failed": 0,
+  "totalAmount": 510,
+  "paymentStatus": {
+    "paid": 34,
+    "unpaid": 128
+  },
+  "missingClients": [],
+  "missingPayPeriods": [],
+  "results": [
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 100,
+      "claim": "AW17192",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 101,
+      "claim": "AW17192",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 103,
+      "claim": "BM35909",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 105,
+      "claim": "AW17192",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 107,
+      "claim": "BM35909",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 106,
+      "claim": "AW17192",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 108,
+      "claim": "BM35909",
+      "amount": 42.5,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 109,
+      "claim": "AW17192",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 110,
+      "claim": "AY83414",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 111,
+      "claim": "BM35909",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 112,
+      "claim": "BM50321",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 113,
+      "claim": "BM17605",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 114,
+      "claim": "AY83414",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 115,
+      "claim": "BM35909",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 116,
+      "claim": "BL00889",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 117,
+      "claim": "AW17192",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 118,
+      "claim": "BM35909",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 119,
+      "claim": "AW17192",
+      "amount": 63.75,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 120,
+      "claim": "AY83414",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 121,
+      "claim": "BM17605",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 122,
+      "claim": "BM17605",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 123,
+      "claim": "AW17192",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 124,
+      "claim": "BA25824",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 125,
+      "claim": "AY83414",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 126,
+      "claim": "BM35909",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 127,
+      "claim": "BA25824",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 128,
+      "claim": "AW17192",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 129,
+      "claim": "AY83414",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 130,
+      "claim": "BM35909",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 131,
+      "claim": "BA25824",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 132,
+      "claim": "AW17192",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 133,
+      "claim": "BK75175",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 134,
+      "claim": "BL00889",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 135,
+      "claim": "BM35909",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 136,
+      "claim": "BA25824",
+      "amount": 63.75,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 137,
+      "claim": "AW17192",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 138,
+      "claim": "AY83414",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 139,
+      "claim": "AW17192",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 140,
+      "claim": "BM17605",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 141,
+      "claim": "BK75175",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 142,
+      "claim": "BA25824",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 143,
+      "claim": "BK75175",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 144,
+      "claim": "BM17605",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 145,
+      "claim": "BA25824",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 146,
+      "claim": "BM17605",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 147,
+      "claim": "BK75175",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 148,
+      "claim": "BA25824",
+      "amount": 42.5,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 149,
+      "claim": "BK75175",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 150,
+      "claim": "BA25824",
+      "amount": 42.5,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 151,
+      "claim": "BN69737",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 152,
+      "claim": "BK75175",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 153,
+      "claim": "BN69737",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 154,
+      "claim": "BA25824",
+      "amount": 42.5,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 155,
+      "claim": "BK75175",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 156,
+      "claim": "BN69737",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 157,
+      "claim": "BN69737",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 158,
+      "claim": "BM37705",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 159,
+      "claim": "BM49430",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 160,
+      "claim": "BA25824",
+      "amount": 42.5,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 161,
+      "claim": "BK75175",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 162,
+      "claim": "BN69737",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 163,
+      "claim": "BM37705",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 164,
+      "claim": "BM49430",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 165,
+      "claim": "BK75175",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 166,
+      "claim": "BN69737",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 167,
+      "claim": "BM49430",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 168,
+      "claim": "AZ48910",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 169,
+      "claim": "BK75175",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 170,
+      "claim": "BM37705",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 171,
+      "claim": "BN69737",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 172,
+      "claim": "BM37705",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 173,
+      "claim": "AZ48910",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 174,
+      "claim": "BM49430",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 175,
+      "claim": "BN69737",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 176,
+      "claim": "BM37705",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 177,
+      "claim": "AZ48910",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 178,
+      "claim": "BK75175",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 179,
+      "claim": "BM49430",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 180,
+      "claim": "BN69737",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 181,
+      "claim": "BM37705",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 182,
+      "claim": "BM49430",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 183,
+      "claim": "BM37705",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 184,
+      "claim": "BK75175",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 185,
+      "claim": "BM49430",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 186,
+      "claim": "BN69737",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 187,
+      "claim": "BM37705",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 188,
+      "claim": "BN69737",
+      "amount": 63.75,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 189,
+      "claim": "BM37705",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 190,
+      "claim": "BM49430",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 191,
+      "claim": "BK75175",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 192,
+      "claim": "BM49430",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 193,
+      "claim": "BM37705",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 194,
+      "claim": "BM49430",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 195,
+      "claim": "BN69737",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 196,
+      "claim": "BM37705",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 197,
+      "claim": "BM49430",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 198,
+      "claim": "BK75175",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 199,
+      "claim": "BM37705",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 200,
+      "claim": "BM49430",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 201,
+      "claim": "BN69737",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 202,
+      "claim": "BM49430",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 203,
+      "claim": "BM37705",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 204,
+      "claim": "BP24936",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 205,
+      "claim": "BN69737",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 206,
+      "claim": "BK75175",
+      "amount": 42.5,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 207,
+      "claim": "BM49430",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 208,
+      "claim": "BP24936",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 209,
+      "claim": "BM37705",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 210,
+      "claim": "BM49430",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 211,
+      "claim": "BN69737",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 212,
+      "claim": "BP24936",
+      "amount": 42.5,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 213,
+      "claim": "BK75175",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 214,
+      "claim": "BM37705",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 215,
+      "claim": "BN69737",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 216,
+      "claim": "BP24936",
+      "amount": 63.75,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2025",
+      "invoiceNum": 217,
+      "claim": "BP24936",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2026",
+      "invoiceNum": 218,
+      "claim": "BP24936",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2026",
+      "invoiceNum": 219,
+      "claim": "BH00259",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2026",
+      "invoiceNum": 220,
+      "claim": "ZB62154",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2026",
+      "invoiceNum": 221,
+      "claim": "BH00259",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2026",
+      "invoiceNum": 222,
+      "claim": "BH00259",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2026",
+      "invoiceNum": 223,
+      "claim": "ZB62154",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2026",
+      "invoiceNum": 224,
+      "claim": "BK75175",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2026",
+      "invoiceNum": 225,
+      "claim": "BP24936",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2026",
+      "invoiceNum": 226,
+      "claim": "BH00259",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2026",
+      "invoiceNum": 227,
+      "claim": "BH00259",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2026",
+      "invoiceNum": 228,
+      "claim": "ZB62154",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2026",
+      "invoiceNum": 229,
+      "claim": "BH00259",
+      "amount": 85,
+      "action": "updated"
+    },
+    {
+      "sheet": "Invoiced 2026",
+      "invoiceNum": 230,
+      "claim": "ZB62154",
+      "amount": 85,
+      "action": "updated"
+    },
+    {
+      "sheet": "Invoiced 2026",
+      "invoiceNum": 231,
+      "claim": "BN44993",
+      "amount": 85,
+      "action": "updated"
+    },
+    {
+      "sheet": "Invoiced 2026",
+      "invoiceNum": 232,
+      "claim": "BL69750",
+      "amount": 85,
+      "action": "updated"
+    },
+    {
+      "sheet": "Invoiced 2026",
+      "invoiceNum": 233,
+      "claim": "BK75175",
+      "amount": 85,
+      "action": "updated"
+    },
+    {
+      "sheet": "Invoiced 2026",
+      "invoiceNum": 234,
+      "claim": "BH00259",
+      "amount": 85,
+      "action": "updated"
+    },
+    {
+      "sheet": "Invoiced 2026",
+      "invoiceNum": 235,
+      "claim": "ZB62154",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2026",
+      "invoiceNum": 236,
+      "claim": "BH00259",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2026",
+      "invoiceNum": 237,
+      "claim": "ZB62154",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2026",
+      "invoiceNum": 238,
+      "claim": "BK75175",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2026",
+      "invoiceNum": 239,
+      "claim": "BL69750",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2026",
+      "invoiceNum": 240,
+      "claim": "BH00259",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2026",
+      "invoiceNum": 241,
+      "claim": "BL69750",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2026",
+      "invoiceNum": 242,
+      "claim": "ZB62154",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2026",
+      "invoiceNum": 243,
+      "claim": "BK75175",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2026",
+      "invoiceNum": 244,
+      "claim": "ZB62154",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2026",
+      "invoiceNum": 245,
+      "claim": "BK75175",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2026",
+      "invoiceNum": 246,
+      "claim": "BH00259",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2026",
+      "invoiceNum": 247,
+      "claim": "BK75175",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2026",
+      "invoiceNum": 248,
+      "claim": "ZB62154",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2026",
+      "invoiceNum": 249,
+      "claim": "BK75175",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2026",
+      "invoiceNum": 250,
+      "claim": "BH00259",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2026",
+      "invoiceNum": 251,
+      "claim": "BL69750",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2026",
+      "invoiceNum": 252,
+      "claim": "BH00259",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2026",
+      "invoiceNum": 253,
+      "claim": "ZB62154",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2026",
+      "invoiceNum": 254,
+      "claim": "BH00259",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2026",
+      "invoiceNum": 255,
+      "claim": "BL69750",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2026",
+      "invoiceNum": 256,
+      "claim": "ZB62154",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2026",
+      "invoiceNum": 257,
+      "claim": "BH00259",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2026",
+      "invoiceNum": 258,
+      "claim": "BM08580",
+      "amount": 85,
+      "action": "skipped",
+      "warnings": [
+        "Client assigned to another therapist (HEATHER WILLIAMS)"
+      ]
+    },
+    {
+      "sheet": "Invoiced 2026",
+      "invoiceNum": 259,
+      "claim": "BM08580",
+      "amount": 85,
+      "action": "skipped",
+      "warnings": [
+        "Client assigned to another therapist (HEATHER WILLIAMS)"
+      ]
+    },
+    {
+      "sheet": "Invoiced 2026",
+      "invoiceNum": 260,
+      "claim": "BK75175",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2026",
+      "invoiceNum": 261,
+      "claim": "BL69750",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2026",
+      "invoiceNum": 262,
+      "claim": "BH00259",
+      "amount": 85,
+      "action": "skipped"
+    },
+    {
+      "sheet": "Invoiced 2026",
+      "invoiceNum": 263,
+      "claim": "ZB62154",
+      "amount": 85,
+      "action": "skipped"
+    }
+  ]
+}

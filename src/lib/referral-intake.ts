@@ -20,6 +20,7 @@ import {
 import { getSystemDriveAccessToken } from "@/lib/google-drive-system";
 import { mergeParsedReferral, resolveClientName, type ParsedReferral } from "@/lib/referral-parser";
 import { prisma } from "@/lib/prisma";
+import { UploadValidationError, validateReferralUploadBatch } from "@/lib/upload-validation";
 
 export type ReferralIntakeResult = {
   clientId: string;
@@ -69,8 +70,11 @@ export async function collectReferralUploads(formData: FormData): Promise<Upload
       });
     }
   }
+  validateReferralUploadBatch(files);
   return files;
 }
+
+export { UploadValidationError };
 
 async function uploadReferralToDrive(
   claimNumber: string,

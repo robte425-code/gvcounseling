@@ -1,0 +1,297 @@
+{
+  "therapist": {
+    "id": "cmqqp201e0002x4ylpz9hgv2u",
+    "firstName": "Steven",
+    "lastName": "Sample",
+    "lniProviderId": "497007"
+  },
+  "paycheck": {
+    "payPeriodLabel": "Apr 24, 2026",
+    "paymentDateLabel": "Apr 27, 2026",
+    "portalTherapistTotal": 595,
+    "portalLniTotal": 1482.11,
+    "invoiceCount": 7
+  },
+  "remittances": [
+    {
+      "remittanceNumber": "53703",
+      "warrantRegister": "60928",
+      "invoiceDate": "Apr 27, 2026",
+      "sourceFilename": "RemittanceAdvice_0479998_4282026.pdf",
+      "portalTotal": 595,
+      "recalculatedTotal": 595,
+      "payRunTotal": 595,
+      "stevenPaidRaLines": 7,
+      "allStevenRaLineSummary": [
+        {
+          "invoiceNumber": 224,
+          "claim": "BK75175",
+          "section": "PAID",
+          "raPayable": 211.73,
+          "onPortalPaycheck": true
+        },
+        {
+          "invoiceNumber": 233,
+          "claim": "BK75175",
+          "section": "PAID",
+          "raPayable": 211.73,
+          "onPortalPaycheck": true
+        },
+        {
+          "invoiceNumber": 238,
+          "claim": "BK75175",
+          "section": "PAID",
+          "raPayable": 211.73,
+          "onPortalPaycheck": true
+        },
+        {
+          "invoiceNumber": 247,
+          "claim": "BK75175",
+          "section": "PAID",
+          "raPayable": 211.73,
+          "onPortalPaycheck": true
+        },
+        {
+          "invoiceNumber": 264,
+          "claim": "BH00259",
+          "section": "PAID",
+          "raPayable": 211.73,
+          "onPortalPaycheck": true
+        },
+        {
+          "invoiceNumber": 245,
+          "claim": "BK75175",
+          "section": "PAID",
+          "raPayable": 211.73,
+          "onPortalPaycheck": true
+        },
+        {
+          "invoiceNumber": 243,
+          "claim": "BK75175",
+          "section": "PAID",
+          "raPayable": 211.73,
+          "onPortalPaycheck": true
+        }
+      ],
+      "lines": [
+        {
+          "invoiceNumber": 224,
+          "claim": "BK75175",
+          "client": "Sutherland, Briana Deann",
+          "raSection": "PAID",
+          "raPayable": 211.73,
+          "portalTherapistAmount": 85,
+          "recalculatedTherapistAmount": 85,
+          "payRunTherapistAmount": 85,
+          "invoiceLineItems": [
+            {
+              "code": "96158",
+              "amount": 42.5,
+              "units": 1,
+              "serviceDate": "Feb 2, 2026"
+            },
+            {
+              "code": "96159",
+              "amount": 21.25,
+              "units": 1,
+              "serviceDate": "Feb 2, 2026"
+            },
+            {
+              "code": "96159",
+              "amount": 21.25,
+              "units": 1,
+              "serviceDate": "Feb 2, 2026"
+            }
+          ],
+          "billingPayPeriod": "Feb 13, 2026"
+        },
+        {
+          "invoiceNumber": 233,
+          "claim": "BK75175",
+          "client": "Sutherland, Briana Deann",
+          "raSection": "PAID",
+          "raPayable": 211.73,
+          "portalTherapistAmount": 85,
+          "recalculatedTherapistAmount": 85,
+          "payRunTherapistAmount": 85,
+          "invoiceLineItems": [
+            {
+              "code": "96158",
+              "amount": 42.5,
+              "units": 1,
+              "serviceDate": "Feb 23, 2026"
+            },
+            {
+              "code": "96159",
+              "amount": 21.25,
+              "units": 1,
+              "serviceDate": "Feb 23, 2026"
+            },
+            {
+              "code": "96159",
+              "amount": 21.25,
+              "units": 1,
+              "serviceDate": "Feb 23, 2026"
+            }
+          ],
+          "billingPayPeriod": "Feb 27, 2026"
+        },
+        {
+          "invoiceNumber": 238,
+          "claim": "BK75175",
+          "client": "Sutherland, Briana Deann",
+          "raSection": "PAID",
+          "raPayable": 211.73,
+          "portalTherapistAmount": 85,
+          "recalculatedTherapistAmount": 85,
+          "payRunTherapistAmount": 85,
+          "invoiceLineItems": [
+            {
+              "code": "96158",
+              "amount": 42.5,
+              "units": 1,
+              "serviceDate": "Mar 15, 2026"
+            },
+            {
+              "code": "96159",
+              "amount": 21.25,
+              "units": 1,
+              "serviceDate": "Mar 15, 2026"
+            },
+            {
+              "code": "96159",
+              "amount": 21.25,
+              "units": 1,
+              "serviceDate": "Mar 15, 2026"
+            }
+          ],
+          "billingPayPeriod": "Mar 27, 2026"
+        },
+        {
+          "invoiceNumber": 243,
+          "claim": "BK75175",
+          "client": "Sutherland, Briana Deann",
+          "raSection": "PAID",
+          "raPayable": 211.73,
+          "portalTherapistAmount": 85,
+          "recalculatedTherapistAmount": 85,
+          "payRunTherapistAmount": 85,
+          "invoiceLineItems": [
+            {
+              "code": "96158",
+              "amount": 42.5,
+              "units": 1,
+              "serviceDate": "Apr 6, 2026"
+            },
+            {
+              "code": "96159",
+              "amount": 21.25,
+              "units": 1,
+              "serviceDate": "Apr 6, 2026"
+            },
+            {
+              "code": "96159",
+              "amount": 21.25,
+              "units": 1,
+              "serviceDate": "Apr 6, 2026"
+            }
+          ],
+          "billingPayPeriod": "Apr 10, 2026"
+        },
+        {
+          "invoiceNumber": 245,
+          "claim": "BK75175",
+          "client": "Sutherland, Briana Deann",
+          "raSection": "PAID",
+          "raPayable": 211.73,
+          "portalTherapistAmount": 85,
+          "recalculatedTherapistAmount": 85,
+          "payRunTherapistAmount": 85,
+          "invoiceLineItems": [
+            {
+              "code": "96158",
+              "amount": 42.5,
+              "units": 1,
+              "serviceDate": "Apr 13, 2026"
+            },
+            {
+              "code": "96159",
+              "amount": 21.25,
+              "units": 1,
+              "serviceDate": "Apr 13, 2026"
+            },
+            {
+              "code": "96159",
+              "amount": 21.25,
+              "units": 1,
+              "serviceDate": "Apr 13, 2026"
+            }
+          ],
+          "billingPayPeriod": "Apr 24, 2026"
+        },
+        {
+          "invoiceNumber": 247,
+          "claim": "BK75175",
+          "client": "Sutherland, Briana Deann",
+          "raSection": "PAID",
+          "raPayable": 211.73,
+          "portalTherapistAmount": 85,
+          "recalculatedTherapistAmount": 85,
+          "payRunTherapistAmount": 85,
+          "invoiceLineItems": [
+            {
+              "code": "96158",
+              "amount": 42.5,
+              "units": 1,
+              "serviceDate": "Apr 20, 2026"
+            },
+            {
+              "code": "96159",
+              "amount": 21.25,
+              "units": 1,
+              "serviceDate": "Apr 20, 2026"
+            },
+            {
+              "code": "96159",
+              "amount": 21.25,
+              "units": 1,
+              "serviceDate": "Apr 20, 2026"
+            }
+          ],
+          "billingPayPeriod": "Apr 24, 2026"
+        },
+        {
+          "invoiceNumber": 264,
+          "claim": "BH00259",
+          "client": "Davis, Eddie",
+          "raSection": "PAID",
+          "raPayable": 211.73,
+          "portalTherapistAmount": 85,
+          "recalculatedTherapistAmount": 85,
+          "payRunTherapistAmount": 85,
+          "invoiceLineItems": [
+            {
+              "code": "96158",
+              "amount": 42.5,
+              "units": 1,
+              "serviceDate": "Dec 28, 2025"
+            },
+            {
+              "code": "96159",
+              "amount": 21.25,
+              "units": 1,
+              "serviceDate": "Dec 28, 2025"
+            },
+            {
+              "code": "96159",
+              "amount": 21.25,
+              "units": 1,
+              "serviceDate": "Dec 28, 2025"
+            }
+          ],
+          "billingPayPeriod": "Jan 2, 2026"
+        }
+      ]
+    }
+  ]
+}

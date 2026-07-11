@@ -1,9 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { collectReferralUploads, processReferralIntake } from "@/lib/referral-intake";
+import {
+  collectReferralUploads,
+  processReferralIntake,
+  UploadValidationError,
+} from "@/lib/referral-intake";
 import {
   sendReferralIntakeAdminNotice,
   sendReferralIntakeFailedNotice,
 } from "@/lib/referral-emails";
+import { clientIpFromRequest, enforceRateLimit, RateLimitError } from "@/lib/rate-limit";
 
 const textFields = [
   "vrcName",
@@ -21,8 +26,13 @@ const textFields = [
   "clientHistory",
 ] as const;
 
+const REFER_RATE_LIMIT = 10;
+const REFER_RATE_WINDOW_MS = 15 * 60 * 1000;
+
 export async function POST(request: NextRequest) {
   try {
+    await enforceRateLimit(`refer:${clientIpFromRequest(request)}`, REFER_RATE_LIMIT, REFER_RATE_WINDOW_MS);
+
     const formData = await request.formData();
 
     const vrcName = formData.get("vrcName");
@@ -41,15 +51,9 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const attachments: { filename: string; content: string; contentType?: string }[] = [];
     const uploads = await collectReferralUploads(formData);
 
     for (const upload of uploads) {
-      attachments.push({
-        filename: upload.filename,
-        content: upload.buffer.toString("base64"),
-        contentType: upload.mimeType || undefined,
-      });
       lines.push(`${upload.fieldName}: ${upload.filename} (${Math.round(upload.buffer.length / 1024)} KB)`);
     }
 
@@ -67,7 +71,6 @@ export async function POST(request: NextRequest) {
         warnings: intake.warnings,
         formDetails,
         replyTo,
-        attachments,
       });
     } catch (intakeError) {
       console.error("Referral intake error:", intakeError);
@@ -80,12 +83,17 @@ export async function POST(request: NextRequest) {
         formDetails,
         errorMessage: intakeWarnings[0]!,
         replyTo,
-        attachments,
       });
     }
 
     return NextResponse.json({ ok: true, warnings: intakeWarnings });
   } catch (error) {
+    if (error instanceof RateLimitError) {
+      return NextResponse.json({ error: error.message }, { status: 429 });
+    }
+    if (error instanceof UploadValidationError) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
     console.error("Referral form error:", error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Failed to submit referral." },

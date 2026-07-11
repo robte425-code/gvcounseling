@@ -1,0 +1,96 @@
+◇ injected env (0) from .env.local // tip: ⌘ override existing { override: true }
+(node:17012) Warning: SECURITY WARNING: The SSL modes 'prefer', 'require', and 'verify-ca' are treated as aliases for 'verify-full'.
+In the next major version (pg-connection-string v3.0.0 and pg v9.0.0), these modes will adopt standard libpq semantics, which have weaker security guarantees.
+
+To prepare for this change:
+- If you want the current behavior, explicitly use 'sslmode=verify-full'
+- If you want libpq compatibility now, use 'uselibpqcompat=true&sslmode=require'
+
+See https://www.postgresql.org/docs/current/libpq-ssl.html for libpq SSL mode definitions.
+(Use `node --trace-warnings ...` to show where the warning was created)
+Re-parsing 59 RA PDF(s) from Drive...
+
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+  parsed 10/59...
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+  parsed 20/59...
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+  parsed 30/59...
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+  parsed 40/59...
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+  parsed 50/59...
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+Warning: Indexing all PDF objects
+
+=== Summary ===
+{
+  "targets": 9,
+  "paidByLni": 1,
+  "notPaid": 8
+}
+
+=== Per invoice ===
+#805 BG46680 Dunia Cordova | DB: IN_PROCESS | Not PAID — latest section IN_PROCESS on RA 3935 (12/23/2025)
+#840 BM71187 Jacob Martin | DB: IN_PROCESS | Not PAID — latest section IN_PROCESS on RA 25733 (02/18/2026)
+#850 BM71187 Jacob Martin | DB: IN_PROCESS | Not PAID — latest section IN_PROCESS on RA 25733 (02/18/2026)
+#861 BM71187 Jacob Martin | DB: IN_PROCESS | Not PAID — latest section IN_PROCESS on RA 25733 (02/18/2026)
+#851 ZB71415 Farah Deeba-Nawabi | DB: UNPAID | Not found on any RA PDF
+#853 BM32698 Jared P. Outen | DB: UNPAID | Not found on any RA PDF
+#897 BK47305 Maricruz Torres | DB: UNPAID | Not found on any RA PDF
+#906 BK47305 Maricruz Torres | DB: UNPAID | Not found on any RA PDF
+#956 BJ04455 Teresa Lembke | DB: DENIED | PAID on 1 RA bill(s): 53703
+
+Wrote scripts/rescan-ras-category1-invoices-gt800-results.json
