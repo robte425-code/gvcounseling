@@ -54,8 +54,7 @@ Therapists and admin sign in at **`/portal/login`**.
 |----------|-------------|
 | `DATABASE_URL` | PostgreSQL connection string |
 | `AUTH_SECRET` | Random secret (`openssl rand -base64 32`) |
-| `BLOB_READ_WRITE_TOKEN` | Vercel Blob token for invoice PDF attachments |
-| `GOOGLE_OAUTH_CLIENT_ID` | Google OAuth client ID (Drive import) |
+| `GOOGLE_OAUTH_CLIENT_ID` | Google OAuth client ID (Drive import and invoice attachments) |
 | `GOOGLE_OAUTH_CLIENT_SECRET` | Google OAuth client secret |
 | `GOOGLE_OAUTH_REDIRECT_URI` | OAuth callback URL (must match Google Cloud console) |
 | `DRIVE_TOKEN_ENCRYPTION_KEY` | 32-byte key for encrypting Drive OAuth tokens at rest (`openssl rand -base64 32`) |
@@ -72,7 +71,7 @@ The seed script prints one-time passwords for `ghim@gvcounseling.com`, `maria@gv
 ### Portal features
 
 - **Admin:** pay periods, client registry, Referral Submission (.docx) import, CSV import, invoice queue, generate consolidated **837 EDI** bill, bill history
-- **Therapists:** create/edit/submit invoices, un-submit before billing, attach PDFs, view billed invoices
+- **Therapists:** create/edit/submit invoices, un-submit before billing, attach PDFs to the client’s Google Drive folder, view billed invoices
 
 ### Referral Submission import
 
