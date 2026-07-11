@@ -22,7 +22,18 @@ import { formatVrcAcceptanceNote } from "@/lib/client-notes";
 import { ensureTherapistDriveFolder, removeTherapistDriveFolder, deleteInvoiceDriveAttachments, trashClientDriveFolder } from "@/lib/google-drive";
 import { getDriveAccessTokenForClient } from "@/lib/google-drive-access";
 import { getSystemDriveAccessToken } from "@/lib/google-drive-system";
-import { sendAdminWelcomeEmail, sendTherapistAssignmentEmail, sendTherapistLniFaxAcknowledgementEmail, sendTherapistPasswordResetEmail, sendTherapistWelcomeEmail, sendVrcReferralAcceptanceEmail, sendVrcReferralInfoRequestEmail } from "@/lib/referral-emails";
+import {
+  sendAdminClientNoteEmail,
+  sendAdminTherapistAcceptedClientEmail,
+  sendAdminWelcomeEmail,
+  sendTherapistAssignmentEmail,
+  sendTherapistClientNoteEmail,
+  sendTherapistLniFaxAcknowledgementEmail,
+  sendTherapistPasswordResetEmail,
+  sendTherapistWelcomeEmail,
+  sendVrcReferralAcceptanceEmail,
+  sendVrcReferralInfoRequestEmail,
+} from "@/lib/referral-emails";
 import { generateOneTimePassword, hashPassword, verifyPassword } from "@/lib/password";
 import { createTherapistPasswordResetToken, consumeTherapistPasswordResetToken } from "@/lib/password-reset";
 import { getSiteUrl } from "@/lib/site-url";
@@ -1444,6 +1455,17 @@ export async function therapistAcceptReferralAction(formData: FormData) {
     data: { assignmentStatus: "ACTIVE" },
   });
 
+  try {
+    await sendAdminTherapistAcceptedClientEmail({
+      therapistName: `${therapist.firstName} ${therapist.lastName}`.trim(),
+      clientName: clientDisplayName(client),
+      claimNumber: client.lniClaimNumber,
+      clientId: client.id,
+    });
+  } catch (e) {
+    console.error("Admin referral-accepted email failed:", e);
+  }
+
   revalidatePath("/portal/therapist/dashboard");
   redirect("/portal/therapist/dashboard?referralAccepted=1");
 }
@@ -1943,6 +1965,18 @@ export async function addClientNoteAction(formData: FormData) {
   const { assertClientNoteAccess } = await import("@/lib/client-notes");
   await assertClientNoteAccess(clientId, session);
 
+  const client = await prisma.client.findUnique({
+    where: { id: clientId },
+    select: {
+      id: true,
+      firstName: true,
+      lastName: true,
+      lniClaimNumber: true,
+      therapist: { select: { email: true, firstName: true, lastName: true } },
+    },
+  });
+  if (!client) throw new Error("Client not found.");
+
   await prisma.clientNote.create({
     data: {
       clientId,
@@ -1950,6 +1984,36 @@ export async function addClientNoteAction(formData: FormData) {
       body,
     },
   });
+
+  const authorName = actorDisplayName(session);
+  const clientName = clientDisplayName(client);
+  const isAdminAuthor = getRealRole(session) === "ADMIN" && !isImpersonating(session);
+
+  try {
+    if (isAdminAuthor) {
+      if (client.therapist?.email) {
+        await sendTherapistClientNoteEmail({
+          therapistEmail: client.therapist.email,
+          therapistName: `${client.therapist.firstName} ${client.therapist.lastName}`.trim(),
+          adminName: authorName,
+          clientName,
+          claimNumber: client.lniClaimNumber,
+          clientId: client.id,
+          noteBody: body,
+        });
+      }
+    } else if (session.user.role === "THERAPIST") {
+      await sendAdminClientNoteEmail({
+        therapistName: authorName,
+        clientName,
+        claimNumber: client.lniClaimNumber,
+        clientId: client.id,
+        noteBody: body,
+      });
+    }
+  } catch (e) {
+    console.error("Client note notification email failed:", e);
+  }
 
   revalidateClientNotePaths(clientId, returnTo);
 

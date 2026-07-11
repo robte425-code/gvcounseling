@@ -136,6 +136,101 @@ export async function sendAdminTherapistRejectionEmail(options: {
   });
 }
 
+export async function sendAdminTherapistAcceptedClientEmail(options: {
+  therapistName: string;
+  clientName: string;
+  claimNumber: string;
+  clientId: string;
+}) {
+  const adminEmails = await getAdminNotificationEmails();
+  if (adminEmails.length === 0) return;
+
+  const clientUrl = `${getSiteUrl()}/portal/admin/clients/${options.clientId}`;
+  await sendEmailTo(adminEmails.join(", "), {
+    subject: `Therapist accepted client: ${options.claimNumber}`,
+    text: [
+      `${options.therapistName} accepted the client referral for ${options.clientName} (${options.claimNumber}).`,
+      "",
+      "The client is now active on their caseload.",
+      "",
+      "View client in the portal:",
+      clientUrl,
+      "",
+      "Grandview Counseling",
+    ].join("\n"),
+  });
+}
+
+function truncateNoteBody(body: string, maxLength = 800): string {
+  const trimmed = body.trim();
+  if (trimmed.length <= maxLength) return trimmed;
+  return `${trimmed.slice(0, maxLength).trimEnd()}…`;
+}
+
+export async function sendAdminClientNoteEmail(options: {
+  therapistName: string;
+  clientName: string;
+  claimNumber: string;
+  clientId: string;
+  noteBody: string;
+}) {
+  const adminEmails = await getAdminNotificationEmails();
+  if (adminEmails.length === 0) return;
+
+  const clientUrl = `${getSiteUrl()}/portal/admin/clients/${options.clientId}`;
+  await sendEmailTo(adminEmails.join(", "), {
+    subject: `Therapist note: ${options.claimNumber}`,
+    text: [
+      `${options.therapistName} added a note for ${options.clientName} (${options.claimNumber}).`,
+      "",
+      "Note:",
+      truncateNoteBody(options.noteBody),
+      "",
+      "View client in the portal:",
+      clientUrl,
+      "",
+      "Grandview Counseling",
+    ].join("\n"),
+  });
+}
+
+export async function sendTherapistClientNoteEmail(options: {
+  therapistEmail: string;
+  therapistName: string;
+  adminName: string;
+  clientName: string;
+  claimNumber: string;
+  clientId: string;
+  noteBody: string;
+}) {
+  const intendedEmail = options.therapistEmail.trim();
+  if (!intendedEmail) return;
+
+  const { to, redirected } = await resolveTherapistOutboundEmail(intendedEmail);
+  const clientUrl = `${getSiteUrl()}/portal/therapist/clients/${options.clientId}`;
+  const lines = [
+    `Hello ${options.therapistName},`,
+    "",
+    `${options.adminName} added a note for ${options.clientName} (${options.claimNumber}).`,
+    "",
+    "Note:",
+    truncateNoteBody(options.noteBody),
+    "",
+    "View this client in the portal:",
+    clientUrl,
+    "",
+    "Grandview Counseling",
+  ];
+  if (redirected) {
+    lines.push(outboundEmailRedirectNote(options.therapistName, intendedEmail));
+  }
+
+  await sendEmailTo(to, {
+    subject: `Admin note: ${options.claimNumber}`,
+    text: lines.join("\n"),
+  });
+}
+
 export async function sendAdminTherapistClientStatusEmail(options: {
   adminEmails: string[];
   therapistName: string;
