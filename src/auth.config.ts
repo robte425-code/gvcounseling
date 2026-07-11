@@ -63,7 +63,7 @@ export const authConfig = {
           .passwordGateClear;
         if (
           session.user?.mustChangePassword === false &&
-          verifyPasswordGateClearMarker(token.id as string, passwordGateClear)
+          (await verifyPasswordGateClearMarker(token.id as string, passwordGateClear))
         ) {
           token.mustChangePassword = false;
         }

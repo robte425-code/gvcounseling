@@ -158,7 +158,7 @@ export async function changePasswordAction(
 
   await unstable_update({
     user: { mustChangePassword: false },
-    passwordGateClear: createPasswordGateClearMarker(user.id),
+    passwordGateClear: await createPasswordGateClearMarker(user.id),
   } as Record<string, unknown>);
 
   const dest =
