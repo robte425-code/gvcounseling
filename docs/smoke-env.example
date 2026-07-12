@@ -1,0 +1,11 @@
+# Copy to .env.smoke.local (gitignored) or run: npm run setup:smoke-credentials
+#
+# Required for: npm run smoke:critical-fixes -- --all
+
+# From Vercel → gvcounseling → Settings → Environment Variables → Production:
+# DATABASE_URL=          (often POSTGRES_URL from Neon)
+# AUTH_SECRET=
+
+# Generate with: openssl rand -base64 32 — add to Vercel Production, then redeploy:
+# DRIVE_TOKEN_ENCRYPTION_KEY=
+# SMOKE_TEST_SECRET=

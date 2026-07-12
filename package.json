@@ -10,7 +10,8 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:seed": "tsx prisma/seed.ts",
-    "smoke:critical-fixes": "tsx scripts/smoke-critical-fixes.ts"
+    "smoke:critical-fixes": "tsx scripts/smoke-critical-fixes.ts",
+    "setup:smoke-credentials": "bash scripts/setup-smoke-credentials.sh"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.8.0",

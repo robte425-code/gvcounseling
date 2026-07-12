@@ -113,22 +113,13 @@ Exits non-zero if any test fails.
 
 #### Pulling credentials from Vercel
 
-1. Install the [Vercel CLI](https://vercel.com/docs/cli) and run `vercel login`.
-2. In the project directory: `vercel link` (select the **gvcounseling** project).
-3. Pull env vars into a local file (do not commit): `vercel env pull .env.smoke.local`
-4. Run smoke tests with that file:
+**Automated (recommended):**
 
 ```bash
-set -a && source .env.smoke.local && set +a
-npm run smoke:critical-fixes -- --all
+vercel login
+npm run setup:smoke-credentials
 ```
 
-Or copy individual values from **Vercel → gvcounseling → Settings → Environment Variables**:
+This pulls `DATABASE_URL` and `AUTH_SECRET`, generates `DRIVE_TOKEN_ENCRYPTION_KEY` and `SMOKE_TEST_SECRET` if missing, adds them to Vercel Production, and writes `.env.smoke.local`.
 
-| Variable | Where to find it |
-|----------|------------------|
-| `DATABASE_URL` | Often `POSTGRES_URL` or `DATABASE_URL` from the Neon integration |
-| `DATABASE_URL_UNPOOLED` | Direct URL for migrations; use either this or `DATABASE_URL` for `--db` smoke checks |
-| `AUTH_SECRET` | Environment Variables (used by NextAuth) |
-| `DRIVE_TOKEN_ENCRYPTION_KEY` | Environment Variables — add with `openssl rand -base64 32` if missing |
-| `SMOKE_TEST_SECRET` | Add yourself (`openssl rand -base64 32`) — redeploy after adding |
+**Manual:** copy from **Vercel → gvcounseling → Settings → Environment Variables** (see `docs/smoke-env.example`).
