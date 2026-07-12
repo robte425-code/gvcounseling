@@ -13,6 +13,8 @@
  *   AUTH_SECRET — required for local JWT marker tests
  *   DRIVE_TOKEN_ENCRYPTION_KEY — required for local crypto tests
  *   DATABASE_URL — enables DB checks (rate limit table, Drive tokens, BILLED+CLM)
+ *   SMOKE_TEST_SECRET — must match Vercel env for remote tests that hit /api/refer or /api/contact
+ *                       (skips intake/email; only exercises rate limits)
  */
 
 import "dotenv/config";
@@ -223,8 +225,21 @@ async function testLocalRateLimit() {
   await prisma.rateLimitBucket.deleteMany({ where: { key } }).catch(() => undefined);
 }
 
-async function postRefer(base: string, body: FormData): Promise<{ status: number; text: string }> {
-  const res = await fetch(`${base}/api/refer`, { method: "POST", body });
+function smokeHeaders(): Record<string, string> {
+  const secret = process.env.SMOKE_TEST_SECRET?.trim();
+  return secret ? { "x-smoke-test-secret": secret } : {};
+}
+
+function hasSmokeSecret(): boolean {
+  return !!process.env.SMOKE_TEST_SECRET?.trim();
+}
+
+async function postRefer(
+  base: string,
+  body: FormData,
+  headers: Record<string, string> = {},
+): Promise<{ status: number; text: string }> {
+  const res = await fetch(`${base}/api/refer`, { method: "POST", body, headers });
   return { status: res.status, text: await res.text() };
 }
 
@@ -259,9 +274,14 @@ async function testRemoteReferValidation() {
 }
 
 async function testRemoteContact() {
+  if (!hasSmokeSecret()) {
+    record("remote/contact-accepts-json", "SKIP", "set SMOKE_TEST_SECRET to avoid sending contact emails");
+    return;
+  }
+
   const res = await fetch(`${baseUrl}/api/contact`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...smokeHeaders() },
     body: JSON.stringify({
       email: "smoke-test@example.com",
       firstName: "Smoke",
@@ -269,30 +289,41 @@ async function testRemoteContact() {
       message: "critical fixes smoke test",
     }),
   });
-  record("remote/contact-accepts-json", res.status === 200 ? "PASS" : "FAIL", `status=${res.status}`);
+  const json = await res.json().catch(() => ({}));
+  record(
+    "remote/contact-smoke-bypass",
+    res.status === 200 && (json as { smoke?: boolean }).smoke === true ? "PASS" : "FAIL",
+    `status=${res.status}`,
+  );
 }
 
 async function testRemoteRateLimit() {
+  if (!hasSmokeSecret()) {
+    record(
+      "remote/refer-rate-limit",
+      "SKIP",
+      "set SMOKE_TEST_SECRET in Vercel + locally to test rate limits without referral emails",
+    );
+    return;
+  }
+
+  const headers = smokeHeaders();
   const codes: number[] = [];
   for (let i = 0; i < 12; i++) {
     const fd = new FormData();
     fd.set("vrcName", "Smoke RL");
     fd.set("clientName", "Smoke RL");
     fd.set("claimNumbers", `SMOKE-RL-${i}`);
-    const { status } = await postRefer(baseUrl, fd);
+    const { status } = await postRefer(baseUrl, fd, headers);
     codes.push(status);
   }
 
   const has429 = codes.includes(429);
-  if (has429) {
-    record("remote/refer-rate-limit", "PASS", `codes=${codes.join(",")}`);
-    return;
-  }
-
+  const allSmokeOk = codes.filter((c) => c !== 429).every((c) => c === 200);
   record(
     "remote/refer-rate-limit",
-    "SKIP",
-    `no 429 in ${codes.join(",")} — egress IP may rotate; run with --db or local DATABASE_URL`,
+    has429 && allSmokeOk ? "PASS" : "FAIL",
+    `codes=${codes.join(",")}`,
   );
 }
 

@@ -93,14 +93,42 @@ After deploying security/billing fixes, run:
 # Local logic only (no production HTTP / DB)
 AUTH_SECRET=... DRIVE_TOKEN_ENCRYPTION_KEY=... npm run smoke:critical-fixes
 
-# Include production HTTP checks (default base https://www.gvcounseling.com)
+# Production HTTP checks (validation only — no intake emails)
 npm run smoke:critical-fixes -- --remote
 
-# Include DB checks (rate limit table, Drive token encryption, BILLED+CLM)
+# Rate-limit checks against production (no emails) — requires shared secret:
+#   1. openssl rand -base64 32  → add as SMOKE_TEST_SECRET in Vercel (Production)
+#   2. export SMOKE_TEST_SECRET=... locally, then:
+SMOKE_TEST_SECRET=... npm run smoke:critical-fixes -- --remote
+
+# DB checks (rate limit table, Drive token encryption, BILLED+CLM)
 DATABASE_URL=... npm run smoke:critical-fixes -- --db
 
 # Full suite
-AUTH_SECRET=... DRIVE_TOKEN_ENCRYPTION_KEY=... DATABASE_URL=... npm run smoke:critical-fixes -- --all
+AUTH_SECRET=... DRIVE_TOKEN_ENCRYPTION_KEY=... DATABASE_URL=... SMOKE_TEST_SECRET=... \
+  npm run smoke:critical-fixes -- --all
 ```
 
 Exits non-zero if any test fails.
+
+#### Pulling credentials from Vercel
+
+1. Install the [Vercel CLI](https://vercel.com/docs/cli) and run `vercel login`.
+2. In the project directory: `vercel link` (select the **gvcounseling** project).
+3. Pull env vars into a local file (do not commit): `vercel env pull .env.smoke.local`
+4. Run smoke tests with that file:
+
+```bash
+set -a && source .env.smoke.local && set +a
+npm run smoke:critical-fixes -- --all
+```
+
+Or copy individual values from **Vercel → gvcounseling → Settings → Environment Variables**:
+
+| Variable | Where to find it |
+|----------|------------------|
+| `DATABASE_URL` | Often `POSTGRES_URL` or `DATABASE_URL` from the Neon integration |
+| `DATABASE_URL_UNPOOLED` | Direct URL for migrations; use either this or `DATABASE_URL` for `--db` smoke checks |
+| `AUTH_SECRET` | Environment Variables (used by NextAuth) |
+| `DRIVE_TOKEN_ENCRYPTION_KEY` | Environment Variables — add with `openssl rand -base64 32` if missing |
+| `SMOKE_TEST_SECRET` | Add yourself (`openssl rand -base64 32`) — redeploy after adding |

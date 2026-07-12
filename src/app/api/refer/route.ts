@@ -9,6 +9,7 @@ import {
   sendReferralIntakeFailedNotice,
 } from "@/lib/referral-emails";
 import { clientIpFromRequest, enforceRateLimit, RateLimitError } from "@/lib/rate-limit";
+import { isSmokeTestRequest } from "@/lib/smoke-test";
 
 const textFields = [
   "vrcName",
@@ -32,6 +33,10 @@ const REFER_RATE_WINDOW_MS = 15 * 60 * 1000;
 export async function POST(request: NextRequest) {
   try {
     await enforceRateLimit(`refer:${clientIpFromRequest(request)}`, REFER_RATE_LIMIT, REFER_RATE_WINDOW_MS);
+
+    if (isSmokeTestRequest(request)) {
+      return NextResponse.json({ ok: true, smoke: true });
+    }
 
     const formData = await request.formData();
 
