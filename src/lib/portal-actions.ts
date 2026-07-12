@@ -57,6 +57,14 @@ import {
 } from "@/lib/portal-settings";
 import { getNextInvoiceNumber } from "@/lib/invoice-numbers";
 import { parseTherapistInvoicesReturnTo } from "@/lib/invoice-list-filters";
+import { assertAdminCanDeleteInvoice } from "@/lib/invoice-delete-policy";
+import {
+  PORTAL_ADMIN_CLIENT_RETURN_PREFIXES,
+  PORTAL_ADMIN_INVOICE_RETURN_PREFIXES,
+  PORTAL_CLIENT_RETURN_PREFIXES,
+  PORTAL_INVOICE_RETURN_PREFIXES,
+  sanitizePortalReturnTo,
+} from "@/lib/sanitize-portal-return-to";
 import { emailVrcsForPayPeriod } from "@/lib/vrc-billing-emails";
 import { faxClientDocumentsToLni } from "@/lib/client-lni-fax";
 import { faxLniForPayPeriod } from "@/lib/lni-billing-faxes";
@@ -69,6 +77,46 @@ import {
   unsupersedeRemittanceLine,
 } from "@/lib/remittance-line-supersede";
 
+const CLIENT_RETURN = {
+  fallback: "/portal/admin/clients",
+  allowedPrefixes: PORTAL_CLIENT_RETURN_PREFIXES,
+} as const;
+
+const ADMIN_CLIENT_RETURN = {
+  fallback: "/portal/admin/clients",
+  allowedPrefixes: PORTAL_ADMIN_CLIENT_RETURN_PREFIXES,
+} as const;
+
+function clientDetailReturnFallback(clientId: string, role: "ADMIN" | "THERAPIST"): string {
+  return role === "ADMIN"
+    ? `/portal/admin/clients/${clientId}`
+    : `/portal/therapist/clients/${clientId}`;
+}
+
+function parseClientReturnTo(
+  value: string,
+  clientId: string,
+  role?: "ADMIN" | "THERAPIST",
+): string {
+  return sanitizePortalReturnTo(value, {
+    fallback: role ? clientDetailReturnFallback(clientId, role) : CLIENT_RETURN.fallback,
+    allowedPrefixes: PORTAL_CLIENT_RETURN_PREFIXES,
+  });
+}
+
+function parseInvoiceReturnTo(value: string, invoiceId: string): string {
+  return sanitizePortalReturnTo(value, {
+    fallback: `/portal/admin/invoices/${invoiceId}`,
+    allowedPrefixes: PORTAL_INVOICE_RETURN_PREFIXES,
+  });
+}
+
+function parseAdminInvoiceListReturnTo(value: string): string {
+  return sanitizePortalReturnTo(value, {
+    fallback: "/portal/admin/invoices",
+    allowedPrefixes: PORTAL_ADMIN_INVOICE_RETURN_PREFIXES,
+  });
+}
 function parseDecimal(value: FormDataEntryValue | null): number {
   const n = parseFloat(String(value ?? "0"));
   return Number.isFinite(n) ? n : 0;
@@ -520,8 +568,11 @@ export async function saveClientAction(formData: FormData) {
     revalidatePath(`/portal/therapist/clients/${id}`);
     revalidatePath(`/portal/therapist/clients/${id}/edit`);
     revalidatePath("/portal/therapist/dashboard");
-    const returnTo = returnToRaw || `/portal/admin/clients/${id}`;
-    redirect(returnTo.includes("?") ? `${returnTo}&saved=1` : `${returnTo}?saved=1`);
+    const returnTo = sanitizePortalReturnTo(returnToRaw, {
+      fallback: `/portal/admin/clients/${id}`,
+      allowedPrefixes: PORTAL_CLIENT_RETURN_PREFIXES,
+    });
+    redirect(appendQueryParam(returnTo, "saved=1"));
   } else {
     const client = await prisma.client.create({
       data: { ...data, therapistId: therapistId!, assignmentStatus: "PENDING_THERAPIST" },
@@ -536,7 +587,7 @@ export async function saveClientAction(formData: FormData) {
 export async function deleteClientAction(formData: FormData) {
   await requireAdmin();
   const id = String(formData.get("id") ?? formData.get("clientId") ?? "").trim();
-  const returnTo = String(formData.get("returnTo") ?? "").trim();
+  const returnToRaw = String(formData.get("returnTo") ?? "").trim();
   if (!id) throw new Error("Client is required.");
 
   const client = await prisma.client.findUnique({
@@ -560,9 +611,11 @@ export async function deleteClientAction(formData: FormData) {
   revalidatePath(`/portal/admin/clients/${id}`);
   revalidatePath("/portal/therapist/clients");
 
-  const destination = returnTo || "/portal/admin/clients";
-  const separator = destination.includes("?") ? "&" : "?";
-  redirect(`${destination}${separator}deleted=1`);
+  const destination = sanitizePortalReturnTo(returnToRaw, {
+    fallback: "/portal/admin/clients",
+    allowedPrefixes: PORTAL_ADMIN_CLIENT_RETURN_PREFIXES,
+  });
+  redirect(appendQueryParam(destination, "deleted=1"));
 }
 
 function parseInvoiceLineItems(formData: FormData) {
@@ -863,9 +916,18 @@ export async function deleteAdminInvoiceAction(formData: FormData) {
     include: {
       client: { select: { driveFolderId: true } },
       attachments: { select: { blobUrl: true } },
+      _count: { select: { remittanceLines: true, payRunLines: true } },
     },
   });
   if (!invoice) throw new Error("Invoice not found.");
+
+  assertAdminCanDeleteInvoice({
+    status: invoice.status,
+    billedAt: invoice.billedAt,
+    payPeriodId: invoice.payPeriodId,
+    remittanceLineCount: invoice._count.remittanceLines,
+    payRunLineCount: invoice._count.payRunLines,
+  });
 
   await removeInvoiceDriveAttachments(invoice, session.user.id);
   await prisma.invoice.delete({ where: { id: invoiceId } });
@@ -880,7 +942,8 @@ export async function assignInvoicesToPayPeriodAction(formData: FormData) {
   await requireAdmin();
   const payPeriodIdRaw = String(formData.get("payPeriodId") ?? "").trim();
   const payPeriodId = payPeriodIdRaw || null;
-  const returnTo = String(formData.get("returnTo") ?? "").trim() || "/portal/admin/invoices";
+  const returnToRaw = String(formData.get("returnTo") ?? "").trim();
+  const returnTo = parseAdminInvoiceListReturnTo(returnToRaw);
   const invoiceIds = formData
     .getAll("invoiceIds")
     .map((id) => String(id).trim())
@@ -917,7 +980,7 @@ export async function assignInvoicesToPayPeriodAction(formData: FormData) {
 
   revalidatePath("/portal/admin/invoices");
   revalidatePath("/portal/admin/billing");
-  redirect(`${returnTo}${returnTo.includes("?") ? "&" : "?"}assigned=${invoiceIds.length}`);
+  redirect(appendQueryParam(returnTo, `assigned=${invoiceIds.length}`));
 }
 
 export async function emailVrcsForPayPeriodAction(formData: FormData) {
@@ -1017,7 +1080,7 @@ export async function adminRejectReferralAction(formData: FormData) {
   const session = await requireAdmin();
   const clientId = String(formData.get("clientId") ?? "").trim();
   const reason = requireStatusChangeReason(formData);
-  const returnTo = String(formData.get("returnTo") ?? "").trim();
+  const returnToRaw = String(formData.get("returnTo") ?? "").trim();
   const client = await prisma.client.findUnique({ where: { id: clientId } });
   if (!client) throw new Error("Client not found.");
   if (client.assignmentStatus !== "UNASSIGNED") {
@@ -1046,12 +1109,10 @@ export async function adminRejectReferralAction(formData: FormData) {
 
   revalidatePath("/portal/admin/clients");
   revalidatePath(`/portal/admin/clients/${clientId}`);
-  if (returnTo) {
-    revalidateClientNotePaths(clientId, returnTo);
-  }
 
-  if (returnTo) {
-    redirectWithQuery(returnTo, { rejected: "1" });
+  if (returnToRaw) {
+    revalidateClientNotePaths(clientId, returnToRaw);
+    redirectWithReturnQuery(returnToRaw, { rejected: "1" }, ADMIN_CLIENT_RETURN);
   }
   redirect("/portal/admin/clients?rejected=1");
 }
@@ -1141,12 +1202,29 @@ async function requireClientManager(clientId: string): Promise<ClientManagerCont
   throw new Error("You do not have permission to manage this client.");
 }
 
-function redirectWithQuery(destination: string, query: Record<string, string>): never {
-  const url = new URL(destination, "http://local");
+function redirectWithQuery(
+  destination: string,
+  query: Record<string, string>,
+  sanitize: { fallback: string; allowedPrefixes?: readonly string[] },
+): never {
+  const safe = sanitizePortalReturnTo(destination, sanitize);
+  const url = new URL(safe, "http://local");
   for (const [key, value] of Object.entries(query)) {
     url.searchParams.set(key, value);
   }
   redirect(`${url.pathname}${url.search}`);
+}
+
+function redirectWithReturnQuery(
+  returnToRaw: string,
+  query: Record<string, string>,
+  sanitize: { fallback: string; allowedPrefixes?: readonly string[] },
+): never {
+  redirectWithQuery(returnToRaw, query, sanitize);
+}
+
+function appendQueryParam(destination: string, param: string): string {
+  return destination.includes("?") ? `${destination}&${param}` : `${destination}?${param}`;
 }
 
 export async function updateOutboundVrcEmailRouteAction(route: OutboundEmailRoute) {
@@ -1354,14 +1432,12 @@ export async function faxClientDocumentsToLniAction(formData: FormData) {
 
   revalidatePath(`/portal/admin/clients/${clientId}`);
   revalidatePath(`/portal/therapist/clients/${clientId}`);
-  revalidateClientNotePaths(clientId, returnTo || `/portal/admin/clients/${clientId}`);
+  revalidateClientNotePaths(clientId, returnTo);
 
-  const destination =
-    returnTo ||
-    (role === "ADMIN"
-      ? `/portal/admin/clients/${clientId}`
-      : `/portal/therapist/clients/${clientId}`);
-  redirectWithQuery(destination, { faxed: "1" });
+  redirectWithQuery(returnTo, { faxed: "1" }, {
+    fallback: clientDetailReturnFallback(clientId, role),
+    allowedPrefixes: PORTAL_CLIENT_RETURN_PREFIXES,
+  });
 }
 
 export async function closeClientAction(formData: FormData) {
@@ -1406,9 +1482,12 @@ export async function closeClientAction(formData: FormData) {
   revalidatePath("/portal/therapist/clients");
   revalidatePath(`/portal/therapist/clients/${clientId}`);
 
-  const destination = returnTo || `/portal/admin/clients/${clientId}`;
-  revalidateClientNotePaths(clientId, destination);
-  redirectWithQuery(destination, { closed: "1" });
+  const destination = parseClientReturnTo(returnTo, clientId, role);
+  revalidateClientNotePaths(clientId, returnTo);
+  redirectWithQuery(returnTo, { closed: "1" }, {
+    fallback: destination,
+    allowedPrefixes: PORTAL_CLIENT_RETURN_PREFIXES,
+  });
 }
 
 export async function reopenClientAction(formData: FormData) {
@@ -1460,9 +1539,12 @@ export async function reopenClientAction(formData: FormData) {
   revalidatePath("/portal/therapist/clients");
   revalidatePath(`/portal/therapist/clients/${clientId}`);
 
-  const destination = returnTo || `/portal/admin/clients/${clientId}`;
-  revalidateClientNotePaths(clientId, destination);
-  redirectWithQuery(destination, { reactivated: "1" });
+  const destination = parseClientReturnTo(returnTo, clientId, role);
+  revalidateClientNotePaths(clientId, returnTo);
+  redirectWithQuery(returnTo, { reactivated: "1" }, {
+    fallback: destination,
+    allowedPrefixes: PORTAL_CLIENT_RETURN_PREFIXES,
+  });
 }
 
 export async function therapistAcceptReferralAction(formData: FormData) {
@@ -1546,7 +1628,7 @@ export async function therapistRejectReferralAction(formData: FormData) {
 
   if (returnTo) {
     revalidateClientNotePaths(clientId, returnTo);
-    redirectWithQuery(returnTo, { rejected: "1" });
+    redirectWithReturnQuery(returnTo, { rejected: "1" }, CLIENT_RETURN);
   }
   redirect("/portal/therapist/dashboard?referralDeclined=1");
 }
@@ -1989,7 +2071,7 @@ export async function resetAdminPasswordAction(formData: FormData) {
 export async function addClientNoteAction(formData: FormData) {
   const session = await requireSession();
   const clientId = String(formData.get("clientId") ?? "").trim();
-  const returnTo = String(formData.get("returnTo") ?? "").trim() || "/portal/admin/clients";
+  const returnToRaw = String(formData.get("returnTo") ?? "").trim();
   const body = String(formData.get("body") ?? "").trim();
 
   if (!clientId) throw new Error("Client is required.");
@@ -2048,24 +2130,32 @@ export async function addClientNoteAction(formData: FormData) {
     console.error("Client note notification email failed:", e);
   }
 
-  revalidateClientNotePaths(clientId, returnTo);
+  revalidateClientNotePaths(clientId, returnToRaw);
 
-  const separator = returnTo.includes("?") ? "&" : "?";
-  redirect(`${returnTo}${separator}noted=1`);
+  const returnTo = parseClientReturnTo(returnToRaw, clientId);
+  redirect(appendQueryParam(returnTo, "noted=1"));
 }
 
-function revalidateClientNotePaths(clientId: string, returnTo: string) {
-  revalidatePath(returnTo);
+function revalidateClientNotePaths(clientId: string, returnToRaw: string) {
+  const safe = parseClientReturnTo(returnToRaw, clientId);
+  revalidatePath(safe);
   revalidatePath(`/portal/admin/clients/${clientId}`);
   revalidatePath(`/portal/therapist/clients/${clientId}`);
   revalidatePath(`/portal/therapist/referrals/${clientId}`);
+}
+
+function revalidateInvoiceNotePaths(invoiceId: string, returnToRaw: string) {
+  const safe = parseInvoiceReturnTo(returnToRaw, invoiceId);
+  revalidatePath(safe);
+  revalidatePath(`/portal/admin/invoices/${invoiceId}`);
+  revalidatePath(`/portal/therapist/invoices/${invoiceId}`);
 }
 
 export async function updateClientNoteAction(formData: FormData) {
   const session = await requireSession();
   const noteId = String(formData.get("noteId") ?? "").trim();
   const clientId = String(formData.get("clientId") ?? "").trim();
-  const returnTo = String(formData.get("returnTo") ?? "").trim() || "/portal/admin/clients";
+  const returnToRaw = String(formData.get("returnTo") ?? "").trim();
   const body = String(formData.get("body") ?? "").trim();
 
   if (!noteId || !clientId) throw new Error("Note is required.");
@@ -2080,17 +2170,17 @@ export async function updateClientNoteAction(formData: FormData) {
     data: { body },
   });
 
-  revalidateClientNotePaths(clientId, returnTo);
+  revalidateClientNotePaths(clientId, returnToRaw);
 
-  const separator = returnTo.includes("?") ? "&" : "?";
-  redirect(`${returnTo}${separator}noteUpdated=1`);
+  const returnTo = parseClientReturnTo(returnToRaw, clientId);
+  redirect(appendQueryParam(returnTo, "noteUpdated=1"));
 }
 
 export async function deleteClientNoteAction(formData: FormData) {
   const session = await requireSession();
   const noteId = String(formData.get("noteId") ?? "").trim();
   const clientId = String(formData.get("clientId") ?? "").trim();
-  const returnTo = String(formData.get("returnTo") ?? "").trim() || "/portal/admin/clients";
+  const returnToRaw = String(formData.get("returnTo") ?? "").trim();
 
   if (!noteId || !clientId) throw new Error("Note is required.");
 
@@ -2100,17 +2190,16 @@ export async function deleteClientNoteAction(formData: FormData) {
 
   await prisma.clientNote.delete({ where: { id: noteId } });
 
-  revalidateClientNotePaths(clientId, returnTo);
+  revalidateClientNotePaths(clientId, returnToRaw);
 
-  const separator = returnTo.includes("?") ? "&" : "?";
-  redirect(`${returnTo}${separator}noteDeleted=1`);
+  const returnTo = parseClientReturnTo(returnToRaw, clientId);
+  redirect(appendQueryParam(returnTo, "noteDeleted=1"));
 }
 
 export async function addInvoiceNoteAction(formData: FormData) {
   const session = await requireSession();
   const invoiceId = String(formData.get("invoiceId") ?? "").trim();
-  const returnTo =
-    String(formData.get("returnTo") ?? "").trim() || `/portal/admin/invoices/${invoiceId}`;
+  const returnToRaw = String(formData.get("returnTo") ?? "").trim();
   const body = String(formData.get("body") ?? "").trim();
 
   if (!invoiceId) throw new Error("Invoice is required.");
@@ -2172,24 +2261,17 @@ export async function addInvoiceNoteAction(formData: FormData) {
     console.error("Invoice note notification email failed:", e);
   }
 
-  revalidateInvoiceNotePaths(invoiceId, returnTo);
+  revalidateInvoiceNotePaths(invoiceId, returnToRaw);
 
-  const separator = returnTo.includes("?") ? "&" : "?";
-  redirect(`${returnTo}${separator}noted=1`);
-}
-
-function revalidateInvoiceNotePaths(invoiceId: string, returnTo: string) {
-  revalidatePath(returnTo);
-  revalidatePath(`/portal/admin/invoices/${invoiceId}`);
-  revalidatePath(`/portal/therapist/invoices/${invoiceId}`);
+  const returnTo = parseInvoiceReturnTo(returnToRaw, invoiceId);
+  redirect(appendQueryParam(returnTo, "noted=1"));
 }
 
 export async function updateInvoiceNoteAction(formData: FormData) {
   const session = await requireSession();
   const noteId = String(formData.get("noteId") ?? "").trim();
   const invoiceId = String(formData.get("invoiceId") ?? "").trim();
-  const returnTo =
-    String(formData.get("returnTo") ?? "").trim() || `/portal/admin/invoices/${invoiceId}`;
+  const returnToRaw = String(formData.get("returnTo") ?? "").trim();
   const body = String(formData.get("body") ?? "").trim();
 
   if (!noteId || !invoiceId) throw new Error("Note is required.");
@@ -2204,18 +2286,17 @@ export async function updateInvoiceNoteAction(formData: FormData) {
     data: { body },
   });
 
-  revalidateInvoiceNotePaths(invoiceId, returnTo);
+  revalidateInvoiceNotePaths(invoiceId, returnToRaw);
 
-  const separator = returnTo.includes("?") ? "&" : "?";
-  redirect(`${returnTo}${separator}noteUpdated=1`);
+  const returnTo = parseInvoiceReturnTo(returnToRaw, invoiceId);
+  redirect(appendQueryParam(returnTo, "noteUpdated=1"));
 }
 
 export async function deleteInvoiceNoteAction(formData: FormData) {
   const session = await requireSession();
   const noteId = String(formData.get("noteId") ?? "").trim();
   const invoiceId = String(formData.get("invoiceId") ?? "").trim();
-  const returnTo =
-    String(formData.get("returnTo") ?? "").trim() || `/portal/admin/invoices/${invoiceId}`;
+  const returnToRaw = String(formData.get("returnTo") ?? "").trim();
 
   if (!noteId || !invoiceId) throw new Error("Note is required.");
 
@@ -2225,10 +2306,10 @@ export async function deleteInvoiceNoteAction(formData: FormData) {
 
   await prisma.invoiceNote.delete({ where: { id: noteId } });
 
-  revalidateInvoiceNotePaths(invoiceId, returnTo);
+  revalidateInvoiceNotePaths(invoiceId, returnToRaw);
 
-  const separator = returnTo.includes("?") ? "&" : "?";
-  redirect(`${returnTo}${separator}noteDeleted=1`);
+  const returnTo = parseInvoiceReturnTo(returnToRaw, invoiceId);
+  redirect(appendQueryParam(returnTo, "noteDeleted=1"));
 }
 
 export type ApplyRemittanceState = { error?: string };

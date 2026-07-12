@@ -18,6 +18,7 @@ import {
 import { formatCurrency, formatDate } from "@/lib/constants";
 import { groupInvoicesByPayPeriod } from "@/lib/invoice-pay-period-grouping";
 import { assignInvoicesToPayPeriodAction, deleteAdminInvoiceAction } from "@/lib/portal-actions";
+import { canDeleteAdminInvoice } from "@/lib/invoice-delete-policy";
 
 export type AdminInvoiceRow = {
   id: string;
@@ -189,15 +190,17 @@ export function AdminInvoicesTable({ invoices, payPeriods, returnTo }: Props) {
                     </label>
                   }
                   actions={
-                    <form action={deleteAdminInvoiceAction}>
-                      <input type="hidden" name="invoiceId" value={inv.id} />
-                      <ConfirmSubmitButton
-                        confirmMessage={`Delete invoice #${inv.invoiceNumber}?`}
-                        className={`${portalButtonSecondaryClass} border-red-200 px-3 py-1 text-xs text-red-700 hover:bg-red-50`}
-                      >
-                        Delete
-                      </ConfirmSubmitButton>
-                    </form>
+                    canDeleteAdminInvoice(inv) ? (
+                      <form action={deleteAdminInvoiceAction}>
+                        <input type="hidden" name="invoiceId" value={inv.id} />
+                        <ConfirmSubmitButton
+                          confirmMessage={`Delete draft invoice #${inv.invoiceNumber}?`}
+                          className={`${portalButtonSecondaryClass} border-red-200 px-3 py-1 text-xs text-red-700 hover:bg-red-50`}
+                        >
+                          Delete
+                        </ConfirmSubmitButton>
+                      </form>
+                    ) : null
                   }
                 >
                   <td className="py-3 pr-4">
