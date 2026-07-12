@@ -84,3 +84,23 @@ Set `GOOGLE_CLOUD_VISION_API_KEY` (Cloud Vision API enabled in your Google Cloud
 ### 837 generation
 
 Admin selects a pay period cutoff → **Generate 837** combines all submitted invoices (on or before cutoff) into one L&I upload file modeled on your Team Vocational sample. Invoices are marked **Billed** and locked.
+
+### Critical-fix smoke tests
+
+After deploying security/billing fixes, run:
+
+```bash
+# Local logic only (no production HTTP / DB)
+AUTH_SECRET=... DRIVE_TOKEN_ENCRYPTION_KEY=... npm run smoke:critical-fixes
+
+# Include production HTTP checks (default base https://www.gvcounseling.com)
+npm run smoke:critical-fixes -- --remote
+
+# Include DB checks (rate limit table, Drive token encryption, BILLED+CLM)
+DATABASE_URL=... npm run smoke:critical-fixes -- --db
+
+# Full suite
+AUTH_SECRET=... DRIVE_TOKEN_ENCRYPTION_KEY=... DATABASE_URL=... npm run smoke:critical-fixes -- --all
+```
+
+Exits non-zero if any test fails.
