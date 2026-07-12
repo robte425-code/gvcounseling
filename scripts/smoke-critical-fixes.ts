@@ -275,7 +275,7 @@ async function testRemoteReferValidation() {
 
 async function testRemoteContact() {
   if (!hasSmokeSecret()) {
-    record("remote/contact-accepts-json", "SKIP", "set SMOKE_TEST_SECRET to avoid sending contact emails");
+    record("remote/contact-smoke-bypass", "SKIP", "set SMOKE_TEST_SECRET to avoid sending contact emails");
     return;
   }
 
