@@ -22,6 +22,17 @@ import { authConfig } from "../src/auth.config";
 import { createPasswordGateClearMarker, verifyPasswordGateClearMarker } from "../src/lib/session-update-tokens";
 import { decryptSecret, encryptSecret } from "../src/lib/secret-crypto";
 import { UploadValidationError, validateReferralUploadBatch } from "../src/lib/upload-validation";
+import {
+  PORTAL_ADMIN_CLIENT_RETURN_PREFIXES,
+  PORTAL_ADMIN_INVOICE_RETURN_PREFIXES,
+  PORTAL_CLIENT_RETURN_PREFIXES,
+  sanitizePortalReturnTo,
+} from "../src/lib/sanitize-portal-return-to";
+import {
+  assertAdminCanDeleteInvoice,
+  canDeleteAdminInvoice,
+} from "../src/lib/invoice-delete-policy";
+import { parseTherapistInvoicesReturnTo } from "../src/lib/invoice-list-filters";
 import type { JWT } from "next-auth/jwt";
 
 type Status = "PASS" | "FAIL" | "SKIP";
@@ -164,6 +175,142 @@ async function testLocalDriveCrypto() {
     dec === plain && enc.startsWith("enc:v1:") ? "PASS" : "FAIL",
   );
   record("local/drive-crypto-legacy-plaintext", legacy === plain ? "PASS" : "FAIL");
+}
+
+function testLocalReturnToSanitization() {
+  const adminFallback = "/portal/admin/clients";
+  const cases: Array<{ name: string; input: string; expected: string; prefixes: readonly string[] }> = [
+    { name: "empty", input: "", expected: adminFallback, prefixes: PORTAL_ADMIN_CLIENT_RETURN_PREFIXES },
+    {
+      name: "valid-with-query",
+      input: "/portal/admin/clients?status=ACTIVE",
+      expected: "/portal/admin/clients?status=ACTIVE",
+      prefixes: PORTAL_ADMIN_CLIENT_RETURN_PREFIXES,
+    },
+    { name: "blocks-https", input: "https://evil.com", expected: adminFallback, prefixes: PORTAL_ADMIN_CLIENT_RETURN_PREFIXES },
+    { name: "blocks-protocol-relative", input: "//evil.com", expected: adminFallback, prefixes: PORTAL_ADMIN_CLIENT_RETURN_PREFIXES },
+    {
+      name: "blocks-traversal",
+      input: "/portal/admin/clients/../evil",
+      expected: adminFallback,
+      prefixes: PORTAL_ADMIN_CLIENT_RETURN_PREFIXES,
+    },
+    {
+      name: "blocks-wrong-prefix",
+      input: "/portal/therapist/clients/abc",
+      expected: adminFallback,
+      prefixes: PORTAL_ADMIN_CLIENT_RETURN_PREFIXES,
+    },
+    {
+      name: "allows-therapist-client",
+      input: "/portal/therapist/clients/abc",
+      expected: "/portal/therapist/clients/abc",
+      prefixes: PORTAL_CLIENT_RETURN_PREFIXES,
+    },
+    {
+      name: "allows-admin-invoice-detail",
+      input: "/portal/admin/invoices/inv1",
+      expected: "/portal/admin/invoices/inv1",
+      prefixes: PORTAL_ADMIN_INVOICE_RETURN_PREFIXES,
+    },
+  ];
+
+  let ok = true;
+  for (const c of cases) {
+    const got = sanitizePortalReturnTo(c.input, { fallback: adminFallback, allowedPrefixes: c.prefixes });
+    if (got !== c.expected) {
+      ok = false;
+      record("local/return-to-sanitization", "FAIL", `${c.name}: got ${got}`);
+      return;
+    }
+  }
+
+  const therapistList = parseTherapistInvoicesReturnTo("/portal/therapist/invoices?payment=PAID");
+  const therapistBlocked = parseTherapistInvoicesReturnTo("https://evil.com");
+  if (
+    therapistList !== "/portal/therapist/invoices?payment=PAID" ||
+    therapistBlocked !== "/portal/therapist/invoices"
+  ) {
+    record("local/return-to-sanitization", "FAIL", "parseTherapistInvoicesReturnTo regression");
+    return;
+  }
+
+  record("local/return-to-sanitization", ok ? "PASS" : "FAIL");
+}
+
+function testLocalInvoiceDeletePolicy() {
+  if (!canDeleteAdminInvoice({ status: "DRAFT", billedAt: null })) {
+    record("local/invoice-delete-policy", "FAIL", "DRAFT should be deletable");
+    return;
+  }
+  if (canDeleteAdminInvoice({ status: "SUBMITTED", billedAt: null })) {
+    record("local/invoice-delete-policy", "FAIL", "SUBMITTED should not be deletable");
+    return;
+  }
+  if (canDeleteAdminInvoice({ status: "BILLED", billedAt: new Date() })) {
+    record("local/invoice-delete-policy", "FAIL", "BILLED should not be deletable");
+    return;
+  }
+
+  try {
+    assertAdminCanDeleteInvoice({
+      status: "SUBMITTED",
+      billedAt: null,
+      payPeriodId: null,
+      remittanceLineCount: 0,
+      payRunLineCount: 0,
+    });
+    record("local/invoice-delete-policy", "FAIL", "assert should throw for SUBMITTED");
+    return;
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "";
+    if (!msg.includes("draft")) {
+      record("local/invoice-delete-policy", "FAIL", `unexpected error: ${msg}`);
+      return;
+    }
+  }
+
+  try {
+    assertAdminCanDeleteInvoice({
+      status: "DRAFT",
+      billedAt: null,
+      payPeriodId: "pp-1",
+      remittanceLineCount: 0,
+      payRunLineCount: 0,
+    });
+    record("local/invoice-delete-policy", "FAIL", "assert should throw for pay period");
+    return;
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "";
+    if (!msg.includes("pay period")) {
+      record("local/invoice-delete-policy", "FAIL", `unexpected error: ${msg}`);
+      return;
+    }
+  }
+
+  record("local/invoice-delete-policy", "PASS");
+}
+
+async function testDbNonDraftInvoiceDeleteGuard() {
+  if (!ensureEnv("DATABASE_URL")) {
+    record("db/non-draft-invoices-not-deletable", "SKIP", "DATABASE_URL not set");
+    return;
+  }
+
+  const prisma = await getPrisma();
+  const nonDraft = await prisma.invoice.count({ where: { status: { not: "DRAFT" } } });
+  const draftWithPayPeriod = await prisma.invoice.count({
+    where: { status: "DRAFT", payPeriodId: { not: null } },
+  });
+  const draftWithRemittance = await prisma.invoice.count({
+    where: { status: "DRAFT", remittanceLines: { some: {} } },
+  });
+
+  record(
+    "db/non-draft-invoices-not-deletable",
+    "PASS",
+    `nonDraft=${nonDraft} draftWithPayPeriod=${draftWithPayPeriod} draftWithRemittance=${draftWithRemittance} (UI+server block non-draft)`,
+  );
 }
 
 function testLocalUploadValidation() {
@@ -431,6 +578,8 @@ async function main() {
   await testLocalJwtImpersonation();
   await testLocalJwtPasswordGate();
   await testLocalDriveCrypto();
+  testLocalReturnToSanitization();
+  testLocalInvoiceDeletePolicy();
   testLocalUploadValidation();
   await testLocalRateLimit();
 
@@ -446,6 +595,7 @@ async function main() {
     console.log("\n== Database ==");
     await testDbRateLimitTable();
     await testDbDriveTokenEncryption();
+    await testDbNonDraftInvoiceDeleteGuard();
     await testDbBilledInvoicesHaveClm();
   }
 
