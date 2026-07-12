@@ -180,7 +180,7 @@ export function AdminUnassignedInvoicesTile({
                   />
                 </td>
                 <td className="py-3 pr-4">
-                  <InvoiceTherapistPaymentCell therapistPaid={inv.therapistPaid} />
+                  <InvoiceTherapistPaymentCell therapistPayment={inv.therapistPayment} />
                 </td>
                 <td className="py-3 pr-4">{formatCurrency(inv.totalAmount)}</td>
                 <td className="py-3 pr-4">

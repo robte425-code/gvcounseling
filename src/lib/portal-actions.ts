@@ -68,7 +68,7 @@ import {
 import { emailVrcsForPayPeriod } from "@/lib/vrc-billing-emails";
 import { faxClientDocumentsToLni } from "@/lib/client-lni-fax";
 import { faxLniForPayPeriod } from "@/lib/lni-billing-faxes";
-import { applyRemittanceAdvice, deleteRemittancePreview, importRemittanceFromUpload } from "@/lib/remittance-advice";
+import { applyRemittanceAdvice, deleteRemittancePreview, importRemittanceFromUpload, manualMatchRemittanceLine, rematchRemittanceAdvice, revertAppliedRemittance, unmatchRemittanceLine } from "@/lib/remittance-advice";
 import {
   createWrongYearRebillFromLine,
   createWrongYearRebillsForRemittance,
@@ -2312,6 +2312,107 @@ export async function deleteInvoiceNoteAction(formData: FormData) {
   redirect(appendQueryParam(returnTo, "noteDeleted=1"));
 }
 
+export type RematchRemittanceState = { error?: string };
+
+export async function rematchRemittanceAdviceAction(
+  _prevState: RematchRemittanceState,
+  formData: FormData,
+): Promise<RematchRemittanceState> {
+  await requireAdmin();
+  const remittanceAdviceId = String(formData.get("remittanceAdviceId") ?? "").trim();
+  if (!remittanceAdviceId) return { error: "Remittance is required." };
+
+  try {
+    await rematchRemittanceAdvice(remittanceAdviceId);
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : "Could not rematch remittance.",
+    };
+  }
+
+  revalidatePath("/portal/admin/pay");
+  revalidatePath(`/portal/admin/pay/${remittanceAdviceId}`);
+  revalidatePath("/portal/admin/invoices");
+  redirect(`/portal/admin/pay/${remittanceAdviceId}?rematched=1`);
+}
+
+export type UnmatchRemittanceState = { error?: string };
+
+export async function unmatchRemittanceLineAction(
+  _prevState: UnmatchRemittanceState,
+  formData: FormData,
+): Promise<UnmatchRemittanceState> {
+  await requireAdmin();
+  const remittanceAdviceId = String(formData.get("remittanceAdviceId") ?? "").trim();
+  const lineId = String(formData.get("lineId") ?? "").trim();
+  if (!remittanceAdviceId || !lineId) return { error: "Remittance line is required." };
+
+  try {
+    await unmatchRemittanceLine(remittanceAdviceId, lineId);
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : "Could not unmatch line.",
+    };
+  }
+
+  revalidatePath(`/portal/admin/pay/${remittanceAdviceId}`);
+  revalidatePath("/portal/admin/invoices");
+  redirect(`/portal/admin/pay/${remittanceAdviceId}?unmatched=1`);
+}
+
+export type ManualMatchRemittanceState = { error?: string };
+
+export async function manualMatchRemittanceLineAction(
+  _prevState: ManualMatchRemittanceState,
+  formData: FormData,
+): Promise<ManualMatchRemittanceState> {
+  await requireAdmin();
+  const remittanceAdviceId = String(formData.get("remittanceAdviceId") ?? "").trim();
+  const lineId = String(formData.get("lineId") ?? "").trim();
+  const invoiceNumberRaw = String(formData.get("invoiceNumber") ?? "").trim();
+  const invoiceNumber = Number.parseInt(invoiceNumberRaw, 10);
+  if (!remittanceAdviceId || !lineId) return { error: "Remittance line is required." };
+  if (!Number.isFinite(invoiceNumber) || invoiceNumber <= 0) {
+    return { error: "Enter a valid invoice number." };
+  }
+
+  try {
+    await manualMatchRemittanceLine({ remittanceAdviceId, lineId, invoiceNumber });
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : "Could not match invoice.",
+    };
+  }
+
+  revalidatePath(`/portal/admin/pay/${remittanceAdviceId}`);
+  revalidatePath("/portal/admin/invoices");
+  redirect(`/portal/admin/pay/${remittanceAdviceId}?matched=1`);
+}
+
+export type RevertAppliedRemittanceState = { error?: string };
+
+export async function revertAppliedRemittanceAction(
+  _prevState: RevertAppliedRemittanceState,
+  formData: FormData,
+): Promise<RevertAppliedRemittanceState> {
+  await requireAdmin();
+  const remittanceAdviceId = String(formData.get("remittanceAdviceId") ?? "").trim();
+  if (!remittanceAdviceId) return { error: "Remittance is required." };
+
+  try {
+    await revertAppliedRemittance(remittanceAdviceId);
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : "Could not revert remittance.",
+    };
+  }
+
+  revalidatePath("/portal/admin/pay");
+  revalidatePath("/portal/admin/invoices");
+  revalidatePath("/portal/therapist/invoices");
+  redirect("/portal/admin/pay?reverted=1");
+}
+
 export type ApplyRemittanceState = { error?: string };
 
 export type DeleteRemittancePreviewState = { error?: string };
@@ -2333,6 +2434,8 @@ export async function deleteRemittancePreviewAction(
   }
 
   revalidatePath("/portal/admin/pay");
+  revalidatePath("/portal/admin/invoices");
+  revalidatePath("/portal/therapist/invoices");
   redirect("/portal/admin/pay?deleted=1");
 }
 
@@ -2398,6 +2501,7 @@ export async function finalizeTherapistPayRunAction(
   revalidatePath(`/portal/admin/pay/${remittanceAdviceId}`);
   revalidatePath("/portal/admin/invoices");
   revalidatePath("/portal/therapist/invoices");
+  revalidatePath("/portal/therapist/paychecks");
   redirect(`/portal/admin/pay/${remittanceAdviceId}?finalized=1`);
 }
 

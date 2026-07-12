@@ -52,7 +52,10 @@ export async function loadPaycheckSummaries(options?: {
     prisma.therapistPayRunPayout.findMany({
       where: {
         ...(options?.therapistId ? { therapistId: options.therapistId } : {}),
-        payRun: { remittanceAdvice: excludeSyntheticSpreadsheetRemittancesWhere },
+        payRun: {
+          status: "FINALIZED",
+          remittanceAdvice: excludeSyntheticSpreadsheetRemittancesWhere,
+        },
       },
       include: {
         therapist: { select: { id: true, firstName: true, lastName: true } },
@@ -155,7 +158,10 @@ export async function loadPaycheckDetail(options: {
   const payouts = await prisma.therapistPayRunPayout.findMany({
     where: {
       therapistId: options.therapistId,
-      payRun: { remittanceAdvice: excludeSyntheticSpreadsheetRemittancesWhere },
+      payRun: {
+        status: "FINALIZED",
+        remittanceAdvice: excludeSyntheticSpreadsheetRemittancesWhere,
+      },
     },
     include: {
       therapist: { select: { firstName: true, lastName: true } },

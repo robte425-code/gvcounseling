@@ -8,19 +8,28 @@ import {
   createWrongYearRebillAction,
   createWrongYearRebillsAction,
   finalizeTherapistPayRunAction,
+  manualMatchRemittanceLineAction,
+  rematchRemittanceAdviceAction,
+  revertAppliedRemittanceAction,
   supersedeRemittanceLineAction,
   supersedeWrongYearStaleLinesAction,
+  unmatchRemittanceLineAction,
   unsupersedeRemittanceLineAction,
   type ApplyRemittanceState,
   type CreateWrongYearRebillState,
   type DeleteRemittancePreviewState,
   type FinalizeTherapistPayRunState,
+  type ManualMatchRemittanceState,
+  type RematchRemittanceState,
+  type RevertAppliedRemittanceState,
   type SupersedeRemittanceState,
+  type UnmatchRemittanceState,
 } from "@/lib/portal-actions";
 import { ConfirmSubmitButton } from "@/components/portal/ConfirmSubmitButton";
 import {
   portalButtonClass,
   portalButtonSecondaryClass,
+  portalInputCompactClass,
   portalLabelCompactClass,
 } from "@/components/portal/ui";
 import { formatCalendarIso } from "@/lib/constants";
@@ -636,7 +645,7 @@ export function DeleteRemittancePreviewForm({
         </p>
       )}
       <ConfirmSubmitButton
-        confirmMessage={`Delete preview for remittance ${remittanceNumber} (warrant ${warrantRegister})?\n\nYou can import the same PDF again afterward.`}
+        confirmMessage={`Delete preview for remittance ${remittanceNumber} (warrant ${warrantRegister})?\n\nMatched invoice EOB previews will be cleared or restored. You can import the same PDF again afterward.`}
         className={
           compact
             ? `${portalButtonSecondaryClass} border-red-200 px-3 py-1.5 text-xs text-red-700 hover:bg-red-50`
@@ -645,6 +654,166 @@ export function DeleteRemittancePreviewForm({
         disabled={pending}
       >
         {pending ? "Deleting…" : compact ? "Delete" : "Delete preview"}
+      </ConfirmSubmitButton>
+    </form>
+  );
+}
+
+const rematchInitialState: RematchRemittanceState = {};
+
+export function RematchRemittanceForm({
+  remittanceAdviceId,
+  matchedCount,
+  unresolvedCount,
+}: {
+  remittanceAdviceId: string;
+  matchedCount: number;
+  unresolvedCount: number;
+}) {
+  const [state, formAction, pending] = useActionState(
+    rematchRemittanceAdviceAction,
+    rematchInitialState,
+  );
+
+  return (
+    <form action={formAction}>
+      <input type="hidden" name="remittanceAdviceId" value={remittanceAdviceId} />
+      {state.error && (
+        <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800" role="alert">
+          {state.error}
+        </p>
+      )}
+      <p className="text-sm text-muted">
+        Re-run automatic matching for all active lines ({matchedCount} matched, {unresolvedCount}{" "}
+        unresolved). Invoice EOB previews update for affected matches.
+      </p>
+      <ConfirmSubmitButton
+        confirmMessage="Re-match all bills on this remittance?\n\nExisting manual matches may change."
+        className={`${portalButtonSecondaryClass} mt-3`}
+        disabled={pending}
+      >
+        {pending ? "Re-matching…" : "Re-match all bills"}
+      </ConfirmSubmitButton>
+    </form>
+  );
+}
+
+const unmatchInitialState: UnmatchRemittanceState = {};
+
+export function UnmatchRemittanceLineForm({
+  remittanceAdviceId,
+  lineId,
+  invoiceNumber,
+}: {
+  remittanceAdviceId: string;
+  lineId: string;
+  invoiceNumber: number;
+}) {
+  const [state, formAction, pending] = useActionState(
+    unmatchRemittanceLineAction,
+    unmatchInitialState,
+  );
+
+  return (
+    <form action={formAction} className="mt-2">
+      <input type="hidden" name="remittanceAdviceId" value={remittanceAdviceId} />
+      <input type="hidden" name="lineId" value={lineId} />
+      {state.error && (
+        <p className="mb-2 rounded-lg bg-red-50 px-2 py-1 text-xs text-red-800" role="alert">
+          {state.error}
+        </p>
+      )}
+      <ConfirmSubmitButton
+        confirmMessage={`Unmatch invoice #${invoiceNumber} from this bill?\n\nEOB preview on the invoice will be updated.`}
+        className={`${portalButtonSecondaryClass} px-2 py-1 text-xs`}
+        disabled={pending}
+      >
+        {pending ? "…" : "Unmatch"}
+      </ConfirmSubmitButton>
+    </form>
+  );
+}
+
+const manualMatchInitialState: ManualMatchRemittanceState = {};
+
+export function ManualMatchRemittanceLineForm({
+  remittanceAdviceId,
+  lineId,
+  claimNumber,
+}: {
+  remittanceAdviceId: string;
+  lineId: string;
+  claimNumber: string;
+}) {
+  const [state, formAction, pending] = useActionState(
+    manualMatchRemittanceLineAction,
+    manualMatchInitialState,
+  );
+
+  return (
+    <form action={formAction} className="mt-2 flex flex-wrap items-end gap-2">
+      <input type="hidden" name="remittanceAdviceId" value={remittanceAdviceId} />
+      <input type="hidden" name="lineId" value={lineId} />
+      <div>
+        <label className={portalLabelCompactClass} htmlFor={`invoice-${lineId}`}>
+          Invoice # (claim {claimNumber})
+        </label>
+        <input
+          id={`invoice-${lineId}`}
+          name="invoiceNumber"
+          type="number"
+          min={1}
+          required
+          className={portalInputCompactClass}
+          placeholder="e.g. 1042"
+        />
+      </div>
+      {state.error && (
+        <p className="w-full rounded-lg bg-red-50 px-2 py-1 text-xs text-red-800" role="alert">
+          {state.error}
+        </p>
+      )}
+      <button
+        type="submit"
+        disabled={pending}
+        className={`${portalButtonSecondaryClass} px-2 py-1 text-xs disabled:opacity-50`}
+      >
+        {pending ? "Matching…" : "Match invoice"}
+      </button>
+    </form>
+  );
+}
+
+const revertInitialState: RevertAppliedRemittanceState = {};
+
+export function RevertAppliedRemittanceForm({
+  remittanceAdviceId,
+  remittanceNumber,
+  warrantRegister,
+}: {
+  remittanceAdviceId: string;
+  remittanceNumber: string;
+  warrantRegister: string;
+}) {
+  const [state, formAction, pending] = useActionState(
+    revertAppliedRemittanceAction,
+    revertInitialState,
+  );
+
+  return (
+    <form action={formAction}>
+      <input type="hidden" name="remittanceAdviceId" value={remittanceAdviceId} />
+      {state.error && (
+        <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800" role="alert">
+          {state.error}
+        </p>
+      )}
+      <ConfirmSubmitButton
+        confirmMessage={`Revert applied remittance ${remittanceNumber} (warrant ${warrantRegister})?\n\nThis deletes the pay run draft and recomputes L&I payment on affected invoices.`}
+        className={`${portalButtonSecondaryClass} border-red-200 text-red-700 hover:bg-red-50`}
+        disabled={pending}
+      >
+        {pending ? "Reverting…" : "Revert applied remittance"}
       </ConfirmSubmitButton>
     </form>
   );

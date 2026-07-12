@@ -19,6 +19,7 @@ import { formatCurrency, formatDate } from "@/lib/constants";
 import { groupInvoicesByPayPeriod } from "@/lib/invoice-pay-period-grouping";
 import { assignInvoicesToPayPeriodAction, deleteAdminInvoiceAction } from "@/lib/portal-actions";
 import { canDeleteAdminInvoice } from "@/lib/invoice-delete-policy";
+import type { TherapistPaymentDisplay } from "@/lib/invoice-therapist-payment";
 
 export type AdminInvoiceRow = {
   id: string;
@@ -28,7 +29,7 @@ export type AdminInvoiceRow = {
   lniPaidAt: string | null;
   lniEobCodes: string[];
   lniEobCodeDescriptions: unknown;
-  therapistPaid: boolean;
+  therapistPayment: TherapistPaymentDisplay;
   totalAmount: number;
   submittedAt: string | null;
   therapistName: string;
@@ -223,7 +224,7 @@ export function AdminInvoicesTable({ invoices, payPeriods, returnTo }: Props) {
                     />
                   </td>
                   <td className="py-3 pr-4">
-                    <InvoiceTherapistPaymentCell therapistPaid={inv.therapistPaid} />
+                    <InvoiceTherapistPaymentCell therapistPayment={inv.therapistPayment} />
                   </td>
                   <td className="py-3 pr-4">{formatCurrency(inv.totalAmount)}</td>
                   <td className="py-3 pr-4">

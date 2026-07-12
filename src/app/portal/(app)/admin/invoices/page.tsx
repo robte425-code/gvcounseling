@@ -25,7 +25,10 @@ import {
   type AdminInvoiceFilterValues,
   parseInvoiceNumberFilter,
 } from "@/lib/invoice-list-filters";
-import { isTherapistPaidForInvoice } from "@/lib/invoice-therapist-payment";
+import {
+  invoiceTherapistPayRunLinesInclude,
+  therapistPaymentFromPayRunLines,
+} from "@/lib/invoice-therapist-payment";
 import { prisma } from "@/lib/prisma";
 import type { InvoiceStatus, Prisma } from "@/generated/prisma/client";
 
@@ -37,7 +40,7 @@ type InvoiceWithRelations = Prisma.InvoiceGetPayload<{
     therapist: { select: { firstName: true; lastName: true } };
     lineItems: { select: { serviceDate: true } };
     payPeriod: { select: { label: true; cutoffDate: true } };
-    _count: { select: { payRunLines: true } };
+    payRunLines: { select: { id: true; payout: { select: { payRun: { select: { status: true } } } } } };
   };
 }>;
 
@@ -110,7 +113,7 @@ function toAdminInvoiceRow(inv: InvoiceWithRelations): AdminInvoiceRow {
     lniPaidAt: inv.lniPaidAt?.toISOString() ?? null,
     lniEobCodes: inv.lniEobCodes,
     lniEobCodeDescriptions: inv.lniEobCodeDescriptions,
-    therapistPaid: isTherapistPaidForInvoice(inv._count.payRunLines),
+    therapistPayment: therapistPaymentFromPayRunLines(inv.payRunLines),
     totalAmount: Number(inv.totalAmount),
     submittedAt: inv.submittedAt?.toISOString() ?? null,
     therapistName: `${inv.therapist.firstName} ${inv.therapist.lastName}`,
@@ -129,7 +132,7 @@ const invoiceInclude = {
   therapist: { select: { firstName: true, lastName: true } },
   lineItems: { select: { serviceDate: true }, orderBy: { sortOrder: "asc" as const } },
   payPeriod: { select: { label: true, cutoffDate: true } },
-  _count: { select: { payRunLines: true } },
+  ...invoiceTherapistPayRunLinesInclude,
 };
 
 export default async function AdminInvoicesPage({

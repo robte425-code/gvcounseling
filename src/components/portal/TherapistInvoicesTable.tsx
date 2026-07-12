@@ -7,6 +7,7 @@ import { portalButtonSecondaryClass, portalTableClass, portalTableScrollClass } 
 import { formatCurrency, formatDate } from "@/lib/constants";
 import { groupInvoicesByPayPeriod } from "@/lib/invoice-pay-period-grouping";
 import { deleteInvoiceAction } from "@/lib/portal-actions";
+import type { TherapistPaymentDisplay } from "@/lib/invoice-therapist-payment";
 
 export type TherapistInvoiceRow = {
   id: string;
@@ -16,7 +17,7 @@ export type TherapistInvoiceRow = {
   lniPaidAt: string | null;
   lniEobCodes: string[];
   lniEobCodeDescriptions: unknown;
-  therapistPaid: boolean;
+  therapistPayment: TherapistPaymentDisplay;
   clientLabel: string;
   serviceDates: string;
   totalAmount: number;
@@ -97,7 +98,7 @@ export function TherapistInvoicesTable({
                   />
                 </td>
                 <td className="py-3 pr-4">
-                  <InvoiceTherapistPaymentCell therapistPaid={inv.therapistPaid} />
+                  <InvoiceTherapistPaymentCell therapistPayment={inv.therapistPayment} />
                 </td>
                 <td className="py-3 pr-4">{formatCurrency(inv.totalAmount)}</td>
                 <td className="py-3 pr-4">{formatDate(new Date(inv.updatedAt))}</td>

@@ -33,6 +33,10 @@ import {
   canDeleteAdminInvoice,
 } from "../src/lib/invoice-delete-policy";
 import { parseTherapistInvoicesReturnTo } from "../src/lib/invoice-list-filters";
+import {
+  resolveTherapistPaymentDisplay,
+  type InvoiceTherapistPayRunLine,
+} from "../src/lib/invoice-therapist-payment";
 import type { JWT } from "next-auth/jwt";
 
 type Status = "PASS" | "FAIL" | "SKIP";
@@ -236,6 +240,23 @@ function testLocalReturnToSanitization() {
   }
 
   record("local/return-to-sanitization", ok ? "PASS" : "FAIL");
+}
+
+function testLocalTherapistPaymentDisplay() {
+  const finalized = [{ payout: { payRun: { status: "FINALIZED" as const } } }];
+  const draft = [{ payout: { payRun: { status: "DRAFT" as const } } }];
+  const mixed: InvoiceTherapistPayRunLine[] = [
+    { payout: { payRun: { status: "DRAFT" } } },
+    { payout: { payRun: { status: "FINALIZED" } } },
+  ];
+
+  const ok =
+    resolveTherapistPaymentDisplay([]) === "none" &&
+    resolveTherapistPaymentDisplay(draft) === "pending" &&
+    resolveTherapistPaymentDisplay(finalized) === "paid" &&
+    resolveTherapistPaymentDisplay(mixed) === "paid";
+
+  record("local/therapist-payment-display", ok ? "PASS" : "FAIL");
 }
 
 function testLocalInvoiceDeletePolicy() {
@@ -579,6 +600,7 @@ async function main() {
   await testLocalJwtPasswordGate();
   await testLocalDriveCrypto();
   testLocalReturnToSanitization();
+  testLocalTherapistPaymentDisplay();
   testLocalInvoiceDeletePolicy();
   testLocalUploadValidation();
   await testLocalRateLimit();

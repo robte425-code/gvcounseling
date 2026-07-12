@@ -257,10 +257,70 @@ async function syncInvoiceEobFromLine(options: {
   });
 }
 
+type RemittanceDb = Pick<typeof prisma, "remittanceAdviceLine" | "invoice" | "remittanceAdvice">;
+
+/** After a preview/applied line is removed or rematched, fix L&I payment + preview EOB on the invoice. */
+export async function reconcileInvoiceAfterRemittanceUnmatch(
+  invoiceId: string,
+  tx?: RemittanceDb,
+): Promise<void> {
+  const db = tx ?? prisma;
+
+  const hasAppliedLine = await db.remittanceAdviceLine.findFirst({
+    where: {
+      matchedInvoiceId: invoiceId,
+      supersededAt: null,
+      remittanceAdvice: { status: "APPLIED" },
+    },
+    select: { id: true },
+  });
+
+  if (hasAppliedLine) {
+    await reconcileInvoicePaymentStatus(invoiceId, tx);
+  } else {
+    await db.invoice.update({
+      where: { id: invoiceId },
+      data: {
+        paymentStatus: "UNPAID",
+        lniPaidAt: null,
+      },
+    });
+  }
+
+  const previewLine = await db.remittanceAdviceLine.findFirst({
+    where: {
+      matchedInvoiceId: invoiceId,
+      supersededAt: null,
+      remittanceAdvice: { status: "PREVIEW" },
+    },
+    orderBy: { remittanceAdvice: { invoiceDate: "desc" } },
+    select: { eobCodes: true, eobCodeDescriptions: true },
+  });
+
+  if (previewLine) {
+    await syncInvoiceEobFromLine({
+      matchedInvoiceId: invoiceId,
+      eobCodes: previewLine.eobCodes,
+      eobCodeDescriptions: parseLineEobDescriptions(previewLine.eobCodeDescriptions),
+    });
+    return;
+  }
+
+  if (!hasAppliedLine) {
+    await db.invoice.update({
+      where: { id: invoiceId },
+      data: {
+        lniEobCodes: [],
+        lniEobCodeDescriptions: {},
+      },
+    });
+  }
+}
+
 export async function deleteRemittancePreview(remittanceAdviceId: string): Promise<void> {
   const remittance = await prisma.remittanceAdvice.findUnique({
     where: { id: remittanceAdviceId },
-    select: { id: true, status: true, remittanceNumber: true, warrantRegister: true },
+    include: { lines: { select: { matchedInvoiceId: true } } },
   });
 
   if (!remittance) throw new Error("Remittance advice not found.");
@@ -268,36 +328,55 @@ export async function deleteRemittancePreview(remittanceAdviceId: string): Promi
     throw new Error("Only preview remittances can be deleted.");
   }
 
-  await prisma.remittanceAdvice.delete({ where: { id: remittanceAdviceId } });
+  const invoiceIds = [
+    ...new Set(
+      remittance.lines
+        .map((line) => line.matchedInvoiceId)
+        .filter((id): id is string => Boolean(id)),
+    ),
+  ];
+
+  await prisma.$transaction(async (tx) => {
+    await tx.remittanceAdvice.delete({ where: { id: remittanceAdviceId } });
+    for (const invoiceId of invoiceIds) {
+      await reconcileInvoiceAfterRemittanceUnmatch(invoiceId, tx);
+    }
+  });
 }
 
 /** Undo an applied remittance: reset matched invoices and delete RA + pay run. */
 export async function revertAppliedRemittance(remittanceAdviceId: string): Promise<void> {
   const remittance = await prisma.remittanceAdvice.findUnique({
     where: { id: remittanceAdviceId },
-    include: { lines: { select: { matchedInvoiceId: true } } },
+    include: {
+      lines: { select: { matchedInvoiceId: true } },
+      payRun: { select: { status: true } },
+    },
   });
 
   if (!remittance) throw new Error("Remittance advice not found.");
   if (remittance.status !== "APPLIED") {
     throw new Error("Only applied remittances can be reverted.");
   }
+  if (remittance.payRun?.status === "FINALIZED") {
+    throw new Error(
+      "Cannot revert a remittance with finalized therapist pay. Unfinalize is not supported.",
+    );
+  }
+
+  const invoiceIds = [
+    ...new Set(
+      remittance.lines
+        .map((line) => line.matchedInvoiceId)
+        .filter((id): id is string => Boolean(id)),
+    ),
+  ];
 
   await prisma.$transaction(async (tx) => {
-    for (const line of remittance.lines) {
-      if (!line.matchedInvoiceId) continue;
-      await tx.invoice.update({
-        where: { id: line.matchedInvoiceId },
-        data: {
-          paymentStatus: "UNPAID",
-          lniPaidAt: null,
-          lniEobCodes: [],
-          lniEobCodeDescriptions: {},
-        },
-      });
-    }
-
     await tx.remittanceAdvice.delete({ where: { id: remittanceAdviceId } });
+    for (const invoiceId of invoiceIds) {
+      await reconcileInvoiceAfterRemittanceUnmatch(invoiceId, tx);
+    }
   });
 }
 
@@ -519,28 +598,126 @@ export async function rematchRemittanceAdvice(remittanceAdviceId: string): Promi
 
   const bills = remittance.lines.map(lineToRemittanceBill);
   const matches = await matchRemittanceBills(bills);
+  const affectedInvoiceIds = new Set<string>();
 
   for (let index = 0; index < remittance.lines.length; index++) {
     const line = remittance.lines[index]!;
     if (line.supersededAt) continue;
 
+    if (line.matchedInvoiceId) {
+      affectedInvoiceIds.add(line.matchedInvoiceId);
+    }
+
     const match = matches[index];
+    const nextMatchedId = match?.matchedInvoiceId ?? null;
+    if (nextMatchedId) {
+      affectedInvoiceIds.add(nextMatchedId);
+    }
+
     await prisma.remittanceAdviceLine.update({
       where: { id: line.id },
       data: {
-        matchedInvoiceId: match?.matchedInvoiceId ?? null,
+        matchedInvoiceId: nextMatchedId,
         matchNote: match?.matchNote ?? null,
       },
     });
 
-    if (match?.matchedInvoiceId) {
+    if (nextMatchedId) {
       const eobCodeDescriptions = parseLineEobDescriptions(line.eobCodeDescriptions);
       await syncInvoiceEobFromLine({
-        matchedInvoiceId: match.matchedInvoiceId,
+        matchedInvoiceId: nextMatchedId,
         eobCodes: line.eobCodes,
         eobCodeDescriptions,
       });
     }
+  }
+
+  for (const invoiceId of affectedInvoiceIds) {
+    await reconcileInvoiceAfterRemittanceUnmatch(invoiceId);
+  }
+}
+
+export async function unmatchRemittanceLine(
+  remittanceAdviceId: string,
+  lineId: string,
+): Promise<void> {
+  const line = await prisma.remittanceAdviceLine.findFirst({
+    where: { id: lineId, remittanceAdviceId },
+    include: { remittanceAdvice: { select: { status: true } } },
+  });
+
+  if (!line) throw new Error("Remittance line not found.");
+  if (line.remittanceAdvice.status !== "PREVIEW") {
+    throw new Error("Only preview remittance lines can be unmatched.");
+  }
+  if (line.supersededAt) {
+    throw new Error("Superseded lines cannot be unmatched.");
+  }
+  if (!line.matchedInvoiceId) {
+    throw new Error("This line is not matched to an invoice.");
+  }
+
+  const previousInvoiceId = line.matchedInvoiceId;
+  await prisma.remittanceAdviceLine.update({
+    where: { id: lineId },
+    data: { matchedInvoiceId: null, matchNote: null },
+  });
+  await reconcileInvoiceAfterRemittanceUnmatch(previousInvoiceId);
+}
+
+export async function manualMatchRemittanceLine(options: {
+  remittanceAdviceId: string;
+  lineId: string;
+  invoiceNumber: number;
+}): Promise<void> {
+  const line = await prisma.remittanceAdviceLine.findFirst({
+    where: { id: options.lineId, remittanceAdviceId: options.remittanceAdviceId },
+    include: { remittanceAdvice: { select: { status: true } } },
+  });
+
+  if (!line) throw new Error("Remittance line not found.");
+  if (line.remittanceAdvice.status !== "PREVIEW") {
+    throw new Error("Only preview remittance lines can be manually matched.");
+  }
+  if (line.supersededAt) {
+    throw new Error("Superseded lines cannot be matched.");
+  }
+
+  const invoice = await prisma.invoice.findFirst({
+    where: {
+      invoiceNumber: options.invoiceNumber,
+      status: "BILLED",
+      client: { lniClaimNumber: line.claimNumber },
+    },
+    select: { id: true },
+  });
+
+  if (!invoice) {
+    throw new Error(
+      `No billed invoice #${options.invoiceNumber} found for claim ${line.claimNumber}.`,
+    );
+  }
+
+  const previousInvoiceId = line.matchedInvoiceId;
+  const affected = new Set<string>([invoice.id]);
+  if (previousInvoiceId) affected.add(previousInvoiceId);
+
+  await prisma.remittanceAdviceLine.update({
+    where: { id: line.id },
+    data: {
+      matchedInvoiceId: invoice.id,
+      matchNote: `Manually matched to invoice #${options.invoiceNumber}.`,
+    },
+  });
+
+  await syncInvoiceEobFromLine({
+    matchedInvoiceId: invoice.id,
+    eobCodes: line.eobCodes,
+    eobCodeDescriptions: parseLineEobDescriptions(line.eobCodeDescriptions),
+  });
+
+  for (const invoiceId of affected) {
+    await reconcileInvoiceAfterRemittanceUnmatch(invoiceId);
   }
 }
 
