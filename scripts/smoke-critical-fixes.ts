@@ -1,6 +1,6 @@
 #!/usr/bin/env tsx
 /**
- * Smoke tests for the four critical portal security/billing fixes.
+ * Smoke tests for portal security, billing, and remittance fixes.
  *
  * Usage:
  *   npm run smoke:critical-fixes
@@ -37,6 +37,12 @@ import {
   resolveTherapistPaymentDisplay,
   type InvoiceTherapistPayRunLine,
 } from "../src/lib/invoice-therapist-payment";
+import {
+  testDbRemittancePreviewRollback,
+  testDbRemittanceRevertBlocksFinalized,
+  testDbTherapistPaymentPayRunSplit,
+  testLocalRemittanceGuardsAsync,
+} from "./smoke-remittance-fixes";
 import type { JWT } from "next-auth/jwt";
 
 type Status = "PASS" | "FAIL" | "SKIP";
@@ -602,6 +608,7 @@ async function main() {
   testLocalReturnToSanitization();
   testLocalTherapistPaymentDisplay();
   testLocalInvoiceDeletePolicy();
+  await testLocalRemittanceGuardsAsync(record);
   testLocalUploadValidation();
   await testLocalRateLimit();
 
@@ -618,6 +625,9 @@ async function main() {
     await testDbRateLimitTable();
     await testDbDriveTokenEncryption();
     await testDbNonDraftInvoiceDeleteGuard();
+    await testDbTherapistPaymentPayRunSplit(record, getPrisma);
+    await testDbRemittanceRevertBlocksFinalized(record, getPrisma);
+    await testDbRemittancePreviewRollback(record, getPrisma);
     await testDbBilledInvoicesHaveClm();
   }
 
