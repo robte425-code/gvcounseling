@@ -13,7 +13,10 @@ import {
   paymentStatusLabel,
   remittanceSectionToPaymentStatus,
 } from "@/lib/invoice-payment-status";
+import { RemittanceCrossVerifyPanel } from "@/components/portal/RemittanceCrossVerifyPanel";
 import { buildTherapistPayPreview } from "@/lib/remittance-advice";
+import { verifyRemittanceAgainstCounterpart } from "@/lib/remittance-cross-verify";
+import { remittanceSourceFormatLabel } from "@/lib/remittance-file-format";
 import {
   countUnresolvedRemittanceLines,
   listWrongYearSupersedeSuggestions,
@@ -239,6 +242,9 @@ export default async function PayRemittanceDetailPage({
     paidToDeniedWarnings.map((warning) => [warning.lineId, warning]),
   );
 
+  const crossVerify = await verifyRemittanceAgainstCounterpart(remittance.id);
+  const sourceLabel = remittanceSourceFormatLabel(remittance.sourceFormat);
+
   return (
     <div className="space-y-8">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -250,8 +256,8 @@ export default async function PayRemittanceDetailPage({
             RA {remittance.remittanceNumber}
           </h1>
           <p className="mt-2 text-sm text-muted">
-            Payment date {formatDate(remittance.invoiceDate)} · Warrant {remittance.warrantRegister}{" "}
-            · {remittance.status === "APPLIED" ? "Applied" : "Preview"}
+            {sourceLabel} · Payment date {formatDate(remittance.invoiceDate)} · Warrant{" "}
+            {remittance.warrantRegister} · {remittance.status === "APPLIED" ? "Applied" : "Preview"}
           </p>
         </div>
         <div className={`${portalCardClass} min-w-[10rem] px-4 py-3 shadow-none`}>
@@ -261,6 +267,8 @@ export default async function PayRemittanceDetailPage({
           </p>
         </div>
       </div>
+
+      <RemittanceCrossVerifyPanel verify={crossVerify} currentSourceLabel={sourceLabel} />
 
       {query.applied === "1" && (
         <p className="rounded-xl bg-primary/10 px-4 py-3 text-sm text-primary-dark" role="status">
@@ -616,6 +624,8 @@ export default async function PayRemittanceDetailPage({
                 unmatchedCount={unresolvedCount}
                 therapistTotal={therapistTotal}
                 paidToDeniedWarnings={paidToDeniedWarnings}
+                crossVerify={crossVerify}
+                sourceFormat={remittance.sourceFormat}
               />
               <DeleteRemittancePreviewForm
                 remittanceAdviceId={remittance.id}

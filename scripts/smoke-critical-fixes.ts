@@ -40,6 +40,16 @@ import {
   type InvoiceTherapistPayRunLine,
 } from "../src/lib/invoice-therapist-payment";
 import {
+  SAMPLE_LNI_835,
+  SAMPLE_LNI_835_MISMATCH,
+} from "../src/lib/__fixtures__/sample-lni-835";
+import { parseLniRemittance835Text } from "../src/lib/parse-lni-remittance-835";
+import {
+  compareRemittanceAdvices,
+  type RemittanceAdviceForCompare,
+} from "../src/lib/remittance-cross-verify";
+import { detectRemittanceSourceFormat } from "../src/lib/remittance-file-format";
+import {
   testDbRemittanceApplyAndRevert,
   testDbRemittanceMultiApplyRevert,
   testDbRemittancePreviewRollback,
@@ -310,6 +320,97 @@ function testLocalTherapistPayFromInvoiceAmounts() {
     paidInfo.payRunAmount === 85;
 
   record("local/therapist-pay-from-invoice-amounts", ok ? "PASS" : "FAIL");
+}
+
+function testLocal835Parse() {
+  const buffer = Buffer.from(SAMPLE_LNI_835, "utf8");
+  const format = detectRemittanceSourceFormat(buffer, "RemittanceAdvice_0479998_4282026.835");
+  if (format !== "ERA_835") {
+    record("local/835-parse", "FAIL", `detected ${format}`);
+    return;
+  }
+
+  const parsed = parseLniRemittance835Text(SAMPLE_LNI_835, {
+    sourceFilename: "RemittanceAdvice_0479998_4282026.835",
+  });
+
+  const ok =
+    parsed.remittanceNumber === "12345" &&
+    parsed.warrantRegister === "4282026" &&
+    parsed.totalPaid === 150 &&
+    parsed.bills.length === 1 &&
+    parsed.bills[0]!.claimNumber === "BJ87697" &&
+    parsed.bills[0]!.section === "PAID" &&
+    parsed.bills[0]!.billTotalPayable === 150 &&
+    parsed.bills[0]!.serviceLines[0]!.procedureCode === "96158";
+
+  record("local/835-parse", ok ? "PASS" : "FAIL");
+}
+
+function testLocalRemittanceCrossVerify() {
+  const baseLine = {
+    section: "PAID" as const,
+    claimNumber: "BJ87697",
+    icn: "ICN123456",
+    serviceProviderId: "0480003",
+    billTotalPayable: 150,
+    eobCodes: ["45"],
+    serviceLines: [
+      {
+        serviceDateFrom: "2024-06-01",
+        serviceDateTo: "2024-06-01",
+        units: 2,
+        procedureCode: "96158",
+        billed: 200,
+        allowed: 200,
+        nonCovered: 50,
+        payable: 150,
+      },
+    ],
+    matchedInvoiceId: "inv-1",
+  };
+
+  const pdf: RemittanceAdviceForCompare = {
+    id: "pdf-1",
+    remittanceNumber: "12345",
+    warrantRegister: "4282026",
+    sourceFormat: "PDF_RA",
+    totalPaid: 150,
+    lines: [baseLine],
+  };
+
+  const era: RemittanceAdviceForCompare = {
+    id: "era-1",
+    remittanceNumber: "12345",
+    warrantRegister: "4282026",
+    sourceFormat: "ERA_835",
+    totalPaid: 150,
+    lines: [baseLine],
+  };
+
+  const matched = compareRemittanceAdvices(pdf, era);
+  const mismatched = compareRemittanceAdvices(pdf, {
+    ...era,
+    totalPaid: 149.98,
+  });
+
+  const ok =
+    matched.status === "matched" &&
+    matched.issues.length === 0 &&
+    mismatched.status === "mismatched" &&
+    mismatched.issues.some((issue) => issue.kind === "total_paid");
+
+  record("local/remittance-cross-verify", ok ? "PASS" : "FAIL");
+}
+
+function testLocal835MismatchFixture() {
+  const mismatch = parseLniRemittance835Text(SAMPLE_LNI_835_MISMATCH, {
+    sourceFilename: "RemittanceAdvice_0479998_4282026.835",
+  });
+  record(
+    "local/835-mismatch-detect",
+    mismatch.totalPaid === 149.98 ? "PASS" : "FAIL",
+  );
 }
 
 function testLocalInvoiceDeletePolicy() {
@@ -655,6 +756,9 @@ async function main() {
   testLocalReturnToSanitization();
   testLocalTherapistPaymentDisplay();
   testLocalTherapistPayFromInvoiceAmounts();
+  testLocal835Parse();
+  testLocal835MismatchFixture();
+  testLocalRemittanceCrossVerify();
   testLocalInvoiceDeletePolicy();
   await testLocalRemittanceGuardsAsync(record);
   testLocalUploadValidation();

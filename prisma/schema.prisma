@@ -42,6 +42,11 @@ enum RemittanceAdviceStatus {
   APPLIED
 }
 
+enum RemittanceSourceFormat {
+  PDF_RA
+  ERA_835
+}
+
 enum Gender {
   M
   F
@@ -297,6 +302,7 @@ model RemittanceAdvice {
   totalPaid        Decimal  @db.Decimal(10, 2)
   eobCodeDescriptions Json  @default("{}")
   status           RemittanceAdviceStatus @default(PREVIEW)
+  sourceFormat     RemittanceSourceFormat @default(PDF_RA)
   appliedAt        DateTime?
   sourceFilename   String?
   importedAt       DateTime @default(now())
@@ -305,7 +311,7 @@ model RemittanceAdvice {
   lines            RemittanceAdviceLine[]
   payRun           TherapistPayRun?
 
-  @@unique([remittanceNumber, warrantRegister])
+  @@unique([remittanceNumber, warrantRegister, sourceFormat])
   @@index([invoiceDate])
 }
 

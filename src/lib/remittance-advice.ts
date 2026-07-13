@@ -1,10 +1,12 @@
-import type { Prisma } from "@/generated/prisma/client";
+import type { Prisma, RemittanceSourceFormat } from "@/generated/prisma/client";
 import { remittanceSectionToPaymentStatus, resolvePaymentFromRemittanceLines, parseInvoiceEobDescriptions, mapRemittanceLinesForResolution } from "@/lib/invoice-payment-status";
 import { matchRemittanceBills } from "@/lib/match-remittance-to-invoices";
 import type { MatchedRemittanceBill } from "@/lib/match-remittance-to-invoices";
 import { countUnresolvedRemittanceLines } from "@/lib/remittance-line-supersede";
+import { parseLniRemittance835 } from "@/lib/parse-lni-remittance-835";
 import { parseLniRemittancePdf } from "@/lib/parse-lni-remittance-pdf";
 import type { ParsedRemittanceAdvice, RemittanceBill, RemittanceServiceLine } from "@/lib/parse-lni-remittance-pdf";
+import { detectRemittanceSourceFormat } from "@/lib/remittance-file-format";
 import { resolveEobDescriptions } from "@/lib/parse-lni-remittance-pdf";
 import { computeTherapistPayAmountForInvoice } from "@/lib/invoice-therapist-payment";
 import { prisma } from "@/lib/prisma";
@@ -155,13 +157,34 @@ export async function importRemittanceFromUpload(options: {
   sourceFilename: string;
   importedById: string;
 }): Promise<{ remittanceAdviceId: string }> {
-  const parsed = await parseLniRemittancePdf(options.buffer);
+  const sourceFormat = detectRemittanceSourceFormat(options.buffer, options.sourceFilename);
+  const parsed =
+    sourceFormat === "ERA_835"
+      ? parseLniRemittance835(options.buffer, { sourceFilename: options.sourceFilename })
+      : await parseLniRemittancePdf(options.buffer);
   const matches = await matchRemittanceBills(parsed.bills);
   return importRemittancePreview({
     parsed,
     matches,
     sourceFilename: options.sourceFilename,
     importedById: options.importedById,
+    sourceFormat,
+  });
+}
+
+export async function importRemittanceFromEra835(options: {
+  buffer: Buffer;
+  sourceFilename: string;
+  importedById: string;
+}): Promise<{ remittanceAdviceId: string }> {
+  const parsed = parseLniRemittance835(options.buffer, { sourceFilename: options.sourceFilename });
+  const matches = await matchRemittanceBills(parsed.bills);
+  return importRemittancePreview({
+    parsed,
+    matches,
+    sourceFilename: options.sourceFilename,
+    importedById: options.importedById,
+    sourceFormat: "ERA_835",
   });
 }
 
@@ -170,18 +193,22 @@ export async function importRemittancePreview(options: {
   matches: MatchedRemittanceBill[];
   sourceFilename?: string;
   importedById: string;
+  sourceFormat?: RemittanceSourceFormat;
 }): Promise<{ remittanceAdviceId: string }> {
+  const sourceFormat = options.sourceFormat ?? "PDF_RA";
   const existing = await prisma.remittanceAdvice.findUnique({
     where: {
-      remittanceNumber_warrantRegister: {
+      remittanceNumber_warrantRegister_sourceFormat: {
         remittanceNumber: options.parsed.remittanceNumber,
         warrantRegister: options.parsed.warrantRegister,
+        sourceFormat,
       },
     },
   });
   if (existing) {
+    const label = sourceFormat === "ERA_835" ? "835 ERA" : "PDF RA";
     throw new Error(
-      `Remittance ${options.parsed.remittanceNumber} (warrant ${options.parsed.warrantRegister}) was already imported.`,
+      `Remittance ${options.parsed.remittanceNumber} (warrant ${options.parsed.warrantRegister}) was already imported as ${label}.`,
     );
   }
 
@@ -196,6 +223,7 @@ export async function importRemittancePreview(options: {
       totalPaid: options.parsed.totalPaid,
       eobCodeDescriptions: options.parsed.eobCodeDescriptions,
       sourceFilename: options.sourceFilename ?? null,
+      sourceFormat,
       importedById: options.importedById,
       status: "PREVIEW",
       lines: {
@@ -744,6 +772,22 @@ export async function applyRemittanceAdvice(remittanceAdviceId: string): Promise
 
   if (!remittance) throw new Error("Remittance advice not found.");
   if (remittance.status === "APPLIED") throw new Error("This remittance has already been applied.");
+
+  const siblingApplied = await prisma.remittanceAdvice.findFirst({
+    where: {
+      remittanceNumber: remittance.remittanceNumber,
+      warrantRegister: remittance.warrantRegister,
+      status: "APPLIED",
+      sourceFormat: { not: remittance.sourceFormat },
+    },
+    select: { id: true, sourceFormat: true },
+  });
+  if (siblingApplied) {
+    const appliedLabel = siblingApplied.sourceFormat === "ERA_835" ? "835 ERA" : "PDF RA";
+    throw new Error(
+      `Cannot apply: the ${appliedLabel} for this remittance is already applied. Revert it first if you need to switch sources.`,
+    );
+  }
 
   const unmatchedCount = countUnresolvedRemittanceLines(remittance.lines);
   if (unmatchedCount > 0) {

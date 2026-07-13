@@ -35,6 +35,8 @@ import {
 import { formatCalendarIso } from "@/lib/constants";
 import type { PaidToDeniedWarning } from "@/lib/remittance-paid-to-denied-warnings";
 import { paidToDeniedWarningSummary } from "@/lib/remittance-paid-to-denied-warnings";
+import type { RemittanceCrossVerifyResult } from "@/lib/remittance-cross-verify";
+import { remittanceUploadAcceptAttribute } from "@/lib/remittance-file-format";
 
 type DriveRemittanceFile = {
   id: string;
@@ -125,7 +127,7 @@ export function RemittanceImportForm() {
     setError(null);
 
     if (selectedDriveIds.size === 0 && localFiles.length === 0) {
-      setError("Select at least one remittance PDF from LNI RAs or upload files.");
+      setError("Select at least one remittance PDF or 835 ERA from LNI RAs or upload files.");
       return;
     }
 
@@ -262,14 +264,14 @@ export function RemittanceImportForm() {
       </div>
 
       <div>
-        <label htmlFor="remittance-pdf" className={portalLabelCompactClass}>
-          Or upload PDFs
+        <label htmlFor="remittance-upload" className={portalLabelCompactClass}>
+          Or upload PDF / 835 ERA
         </label>
         <input
-          id="remittance-pdf"
+          id="remittance-upload"
           name="file"
           type="file"
-          accept="application/pdf,.pdf"
+          accept={remittanceUploadAcceptAttribute()}
           multiple
           disabled={loading}
           onChange={(event) => setLocalFiles(Array.from(event.target.files ?? []))}
@@ -305,6 +307,8 @@ type ApplyProps = {
   unmatchedCount: number;
   therapistTotal: number;
   paidToDeniedWarnings?: PaidToDeniedWarning[];
+  crossVerify?: RemittanceCrossVerifyResult;
+  sourceFormat?: "PDF_RA" | "ERA_835";
 };
 
 const applyInitialState: ApplyRemittanceState = {};
@@ -315,16 +319,47 @@ export function ApplyRemittanceForm({
   unmatchedCount,
   therapistTotal,
   paidToDeniedWarnings = [],
+  crossVerify,
+  sourceFormat = "PDF_RA",
 }: ApplyProps) {
   const [state, formAction, pending] = useActionState(applyRemittanceAdviceAction, applyInitialState);
   const hasUnmatched = unmatchedCount > 0;
   const flipDeniedWarnings = paidToDeniedWarnings.filter((warning) => !warning.willRemainPaid);
   const remainPaidWarnings = paidToDeniedWarnings.filter((warning) => warning.willRemainPaid);
   const warningSummary = paidToDeniedWarningSummary(paidToDeniedWarnings);
+  const crossVerifyBlocked =
+    crossVerify?.status === "mismatched" ||
+    (sourceFormat === "ERA_835" && crossVerify?.status === "missing_counterpart");
 
   return (
     <form action={formAction}>
       <input type="hidden" name="remittanceAdviceId" value={remittanceAdviceId} />
+      {sourceFormat === "PDF_RA" && crossVerify?.status === "missing_counterpart" && (
+        <p className="mb-3 rounded-xl border border-border bg-primary/[0.03] px-4 py-3 text-sm text-muted" role="status">
+          No 835 ERA imported for this payment yet. You can apply from the PDF RA; import the 835
+          later to cross-verify.
+        </p>
+      )}
+      {crossVerifyBlocked && (
+        <p className="mb-3 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-950" role="alert">
+          {crossVerify?.status === "mismatched" ? (
+            <>
+              <span className="font-semibold">PDF ↔ 835 mismatch.</span> Resolve differences or
+              import the matching PDF RA before applying. Applying a mismatched source is blocked.
+            </>
+          ) : (
+            <>
+              <span className="font-semibold">No PDF RA imported yet.</span> Import the PDF
+              remittance and verify it matches this 835 before applying payments.
+            </>
+          )}
+        </p>
+      )}
+      {sourceFormat === "ERA_835" && crossVerify?.status === "matched" && (
+        <p className="mb-3 rounded-xl bg-primary/10 px-4 py-3 text-sm text-primary-dark" role="status">
+          PDF and 835 match. You can apply from either source; only one can be applied per payment.
+        </p>
+      )}
       {paidToDeniedWarnings.length > 0 && (
         <div className="mb-3 space-y-2 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-950" role="status">
           <p className="font-semibold">Previously paid invoices on this remittance</p>
@@ -375,7 +410,7 @@ export function ApplyRemittanceForm({
             : ""
         }`}
         className={portalButtonClass}
-        disabled={pending || hasUnmatched}
+        disabled={pending || hasUnmatched || crossVerifyBlocked}
       >
         {pending ? "Applying…" : "Apply remittance & create pay run"}
       </ConfirmSubmitButton>
