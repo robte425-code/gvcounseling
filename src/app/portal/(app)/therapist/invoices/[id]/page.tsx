@@ -9,7 +9,7 @@ import { StatusBadge, portalButtonClass } from "@/components/portal/ui";
 import { formatCurrency, formatDate, calendarIsoFromDate } from "@/lib/constants";
 import {
   invoiceTherapistPayRunLinesInclude,
-  therapistPaymentFromPayRunLines,
+  resolveTherapistPaymentInfo,
 } from "@/lib/invoice-therapist-payment";
 import {
   deleteInvoiceAction,
@@ -110,7 +110,8 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
           lniEobCodeDescriptions={invoice.lniEobCodeDescriptions}
         />
         <InvoiceTherapistPaymentSection
-          therapistPayment={therapistPaymentFromPayRunLines(invoice.payRunLines)}
+          therapistPayment={resolveTherapistPaymentInfo(invoice.payRunLines)}
+          invoiceTotalAmount={Number(invoice.totalAmount)}
         />
       </div>
 

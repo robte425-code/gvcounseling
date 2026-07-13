@@ -34,7 +34,9 @@ import {
 } from "../src/lib/invoice-delete-policy";
 import { parseTherapistInvoicesReturnTo } from "../src/lib/invoice-list-filters";
 import {
+  computeTherapistPayAmountForInvoice,
   resolveTherapistPaymentDisplay,
+  resolveTherapistPaymentInfo,
   type InvoiceTherapistPayRunLine,
 } from "../src/lib/invoice-therapist-payment";
 import {
@@ -265,6 +267,49 @@ function testLocalTherapistPaymentDisplay() {
     resolveTherapistPaymentDisplay(mixed) === "paid";
 
   record("local/therapist-payment-display", ok ? "PASS" : "FAIL");
+}
+
+function testLocalTherapistPayFromInvoiceAmounts() {
+  const serviceDate = new Date("2024-06-01T00:00:00.000Z");
+  const feeRows = [{ procedureCode: "97110", amount: 50, effectiveFrom: serviceDate, effectiveTo: null }];
+
+  const fromLines = computeTherapistPayAmountForInvoice(
+    {
+      lineItems: [
+        { procedureCode: "97110", serviceDate, units: 2, amount: 45 },
+        { procedureCode: "97110", serviceDate, units: 1, amount: 40 },
+      ],
+    },
+    feeRows,
+  );
+
+  const fromFees = computeTherapistPayAmountForInvoice(
+    {
+      lineItems: [{ procedureCode: "97110", serviceDate, units: 2 }],
+    },
+    feeRows,
+  );
+
+  const fromTotal = computeTherapistPayAmountForInvoice(
+    { lineItems: [], totalAmount: 125.5 },
+    feeRows,
+  );
+
+  const paidInfo = resolveTherapistPaymentInfo([
+    {
+      therapistAmount: 85,
+      payout: { payRun: { status: "FINALIZED" } },
+    },
+  ]);
+
+  const ok =
+    fromLines === 85 &&
+    fromFees === 100 &&
+    fromTotal === 125.5 &&
+    paidInfo.display === "paid" &&
+    paidInfo.payRunAmount === 85;
+
+  record("local/therapist-pay-from-invoice-amounts", ok ? "PASS" : "FAIL");
 }
 
 function testLocalInvoiceDeletePolicy() {
@@ -609,6 +654,7 @@ async function main() {
   await testLocalDriveCrypto();
   testLocalReturnToSanitization();
   testLocalTherapistPaymentDisplay();
+  testLocalTherapistPayFromInvoiceAmounts();
   testLocalInvoiceDeletePolicy();
   await testLocalRemittanceGuardsAsync(record);
   testLocalUploadValidation();

@@ -9,7 +9,7 @@ import { StatusBadge } from "@/components/portal/ui";
 import { formatCurrency, formatDate, calendarIsoFromDate } from "@/lib/constants";
 import {
   invoiceTherapistPayRunLinesInclude,
-  therapistPaymentFromPayRunLines,
+  resolveTherapistPaymentInfo,
 } from "@/lib/invoice-therapist-payment";
 import { prisma } from "@/lib/prisma";
 
@@ -82,7 +82,8 @@ export default async function AdminInvoiceDetailPage({
           lniEobCodeDescriptions={invoice.lniEobCodeDescriptions}
         />
         <InvoiceTherapistPaymentSection
-          therapistPayment={therapistPaymentFromPayRunLines(invoice.payRunLines)}
+          therapistPayment={resolveTherapistPaymentInfo(invoice.payRunLines)}
+          invoiceTotalAmount={Number(invoice.totalAmount)}
         />
         {invoice.status === "SUBMITTED" && invoice.payPeriod && (
           <p className="mt-2 text-sm text-muted">

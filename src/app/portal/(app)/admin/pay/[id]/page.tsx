@@ -569,10 +569,10 @@ export default async function PayRemittanceDetailPage({
         <section className={`${portalCardClass} lg:col-span-4`}>
           <p className={portalSectionHeadingClass}>Therapist pay</p>
           <h2 className="mt-1 font-serif text-lg font-semibold text-primary-dark">
-            {formatCurrency(therapistTotal)}
+            {formatCurrency(finalizeTherapistTotal)}
           </h2>
           <p className="mt-1 text-xs text-muted">
-            Based on therapist fee schedules for L&I-paid invoices only.
+            Based on invoice line amounts (therapist fee schedule at submit) for L&I-paid invoices.
           </p>
           {therapistPayPreviewError && (
             <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900" role="alert">

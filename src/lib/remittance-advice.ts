@@ -6,7 +6,7 @@ import { countUnresolvedRemittanceLines } from "@/lib/remittance-line-supersede"
 import { parseLniRemittancePdf } from "@/lib/parse-lni-remittance-pdf";
 import type { ParsedRemittanceAdvice, RemittanceBill, RemittanceServiceLine } from "@/lib/parse-lni-remittance-pdf";
 import { resolveEobDescriptions } from "@/lib/parse-lni-remittance-pdf";
-import { resolveFeeAmount } from "@/lib/procedure-fee-schedule";
+import { computeTherapistPayAmountForInvoice } from "@/lib/invoice-therapist-payment";
 import { prisma } from "@/lib/prisma";
 
 /** Synthetic remittances created by spreadsheet migration scripts (no real L&I RA PDF). */
@@ -41,7 +41,13 @@ export type TherapistPayPreview = {
 export async function computeTherapistAmountForInvoice(
   invoice: {
     therapistId: string;
-    lineItems: Array<{ procedureCode: string; serviceDate: Date; units: number }>;
+    lineItems: Array<{
+      procedureCode: string;
+      serviceDate: Date;
+      units: number;
+      amount?: unknown;
+    }>;
+    totalAmount?: unknown;
   },
   feeRows: Array<{
     procedureCode: string;
@@ -50,15 +56,7 @@ export async function computeTherapistAmountForInvoice(
     effectiveTo: Date | string | null;
   }>,
 ): Promise<number> {
-  let total = 0;
-  for (const line of invoice.lineItems) {
-    const unitFee = resolveFeeAmount(feeRows, line.procedureCode, line.serviceDate);
-    if (unitFee === null) {
-      throw new Error(`Missing therapist fee for ${line.procedureCode}.`);
-    }
-    total += unitFee * line.units;
-  }
-  return Math.round(total * 100) / 100;
+  return computeTherapistPayAmountForInvoice(invoice, feeRows);
 }
 
 export async function buildTherapistPayPreview(
@@ -75,7 +73,9 @@ export async function buildTherapistPayPreview(
     include: {
       therapist: { select: { id: true, firstName: true, lastName: true } },
       client: { select: { lniClaimNumber: true } },
-      lineItems: { select: { procedureCode: true, serviceDate: true, units: true } },
+      lineItems: {
+        select: { procedureCode: true, serviceDate: true, units: true, amount: true },
+      },
     },
   });
   const invoiceById = new Map(invoices.map((invoice) => [invoice.id, invoice]));
@@ -731,7 +731,9 @@ export async function applyRemittanceAdvice(remittanceAdviceId: string): Promise
             include: {
               therapist: { select: { id: true, firstName: true, lastName: true } },
               client: { select: { lniClaimNumber: true } },
-              lineItems: { select: { procedureCode: true, serviceDate: true, units: true } },
+              lineItems: {
+                select: { procedureCode: true, serviceDate: true, units: true, amount: true },
+              },
             },
           },
         },
