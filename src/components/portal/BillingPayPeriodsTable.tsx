@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { ConfirmSubmitButton } from "@/components/portal/ConfirmSubmitButton";
 import { Generate837Form } from "@/components/portal/Generate837Form";
+import { Review837BatchButton } from "@/components/portal/Review837BatchButton";
 import { portalButtonSecondaryClass } from "@/components/portal/ui";
 import type { IsaUsageIndicator } from "@/lib/edi837";
 import {
@@ -84,6 +85,11 @@ export function BillingPayPeriodsTable({
               </div>
 
               <div className="flex flex-wrap gap-2">
+                <Review837BatchButton
+                  payPeriodId={row.id}
+                  periodLabel={row.periodLabel}
+                  usageIndicator={usageIndicator}
+                />
                 <Generate837Form
                   payPeriodId={row.id}
                   periodLabel={row.periodLabel}

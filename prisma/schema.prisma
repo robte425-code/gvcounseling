@@ -84,6 +84,7 @@ model User {
   invoiceNotes        InvoiceNote[]
   importedRemittances RemittanceAdvice[] @relation("RemittanceImportedBy")
   therapistPayPayouts TherapistPayRunPayout[]
+  edi837Submissions   Edi837Submission[]
   passwordResetTokens PasswordResetToken[]
 }
 
@@ -106,6 +107,27 @@ model PayPeriod {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   invoices    Invoice[]
+  edi837Submissions Edi837Submission[]
+}
+
+model Edi837Submission {
+  id                String   @id @default(cuid())
+  payPeriodId       String
+  payPeriod         PayPeriod @relation(fields: [payPeriodId], references: [id], onDelete: Cascade)
+  generatedById     String
+  generatedBy       User     @relation(fields: [generatedById], references: [id])
+  isaUsageIndicator String
+  filename          String
+  isaControl        String
+  gsControl         String
+  claimCount        Int
+  totalAmount       Decimal  @db.Decimal(12, 2)
+  contentSha256     String
+  invoiceSnapshot   Json
+  generatedAt       DateTime @default(now())
+
+  @@index([payPeriodId, generatedAt])
+  @@index([generatedAt])
 }
 
 model Client {

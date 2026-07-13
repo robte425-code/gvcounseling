@@ -49,6 +49,8 @@ import {
   type RemittanceAdviceForCompare,
 } from "../src/lib/remittance-cross-verify";
 import { detectRemittanceSourceFormat } from "../src/lib/remittance-file-format";
+import { hashEdi837Content } from "../src/lib/edi837-submission";
+import { buildInvoiceSnapshotFromBatchRows } from "../src/lib/edi837-batch-report";
 import {
   testDbRemittanceApplyAndRevert,
   testDbRemittanceMultiApplyRevert,
@@ -413,6 +415,42 @@ function testLocal835MismatchFixture() {
   );
 }
 
+function testLocalEdi837SubmissionAudit() {
+  const content = "ISA*00*TEST~";
+  const hash = hashEdi837Content(content);
+  const hashAgain = hashEdi837Content(content);
+  const snapshot = buildInvoiceSnapshotFromBatchRows(
+    [
+      {
+        invoiceId: "inv-1",
+        invoiceNumber: 100,
+        status: "SUBMITTED",
+        claimNumber: "BJ87697",
+        clientName: "Doe, John",
+        therapistName: "Castro, Steven",
+        clmControlNumber: null,
+        clmNote: "Assigned when you generate 837",
+        invoiceTotalAmount: 150,
+        lniBillAmount: 150,
+        blockers: [],
+        warnings: [],
+        lineIssues: [],
+        ready: true,
+      },
+    ],
+    new Map([["inv-1", "CLMNEW12345678901234"]]),
+  );
+
+  const ok =
+    hash.length === 64 &&
+    hash === hashAgain &&
+    snapshot.length === 1 &&
+    snapshot[0]!.clmControlNumber === "CLMNEW12345678901234" &&
+    snapshot[0]!.statusBefore === "SUBMITTED";
+
+  record("local/edi837-submission-audit", ok ? "PASS" : "FAIL");
+}
+
 function testLocalInvoiceDeletePolicy() {
   if (!canDeleteAdminInvoice({ status: "DRAFT", billedAt: null })) {
     record("local/invoice-delete-policy", "FAIL", "DRAFT should be deletable");
@@ -758,6 +796,7 @@ async function main() {
   testLocalTherapistPayFromInvoiceAmounts();
   testLocal835Parse();
   testLocal835MismatchFixture();
+  testLocalEdi837SubmissionAudit();
   testLocalRemittanceCrossVerify();
   testLocalInvoiceDeletePolicy();
   await testLocalRemittanceGuardsAsync(record);

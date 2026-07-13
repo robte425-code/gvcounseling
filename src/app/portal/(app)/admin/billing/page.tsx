@@ -19,6 +19,7 @@ import {
 import { formatDate } from "@/lib/constants";
 import { prisma } from "@/lib/prisma";
 import { LniFeesSection } from "@/components/portal/LniFeesSection";
+import { Billing837SubmissionHistory } from "@/components/portal/Billing837SubmissionHistory";
 
 export default async function BillingPage({
   searchParams,
@@ -117,9 +118,9 @@ export default async function BillingPage({
         <div>
           <h1 className="font-serif text-3xl font-semibold text-primary-dark">Bill L&I</h1>
           <p className="mt-2 max-w-2xl text-sm text-muted">
-            Sync pay periods, generate 837 files for L&I upload, email VRCs session documentation,
-            and fax session documentation to L&I (excluding invoice PDFs). Generated files download
-            immediately and are not stored.
+            Sync pay periods, review 837 batches before generate, download files for L&I upload,
+            email VRCs session documentation, and fax session documentation to L&I (excluding
+            invoice PDFs). Each generate is logged with control numbers and a file hash.
           </p>
         </div>
         <div className="flex flex-wrap gap-3">
@@ -262,6 +263,8 @@ export default async function BillingPage({
       <section>
         <LniFeesSection />
       </section>
+
+      <Billing837SubmissionHistory />
     </div>
   );
 }

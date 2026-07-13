@@ -144,8 +144,8 @@ export function BillingWorkspace({
           Generate & notify
         </h2>
         <p className="mt-1 text-xs text-muted">
-          Only pay periods with assigned invoices appear here. VRC email and L&I fax routing are
-          configured on the Admin page.
+          Only pay periods with assigned invoices appear here. Review batch before generating. VRC
+          email and L&I fax routing are configured on the Admin page.
         </p>
 
         <div className="mt-5">
