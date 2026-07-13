@@ -38,6 +38,7 @@ import {
   type InvoiceTherapistPayRunLine,
 } from "../src/lib/invoice-therapist-payment";
 import {
+  testDbRemittanceApplyAndRevert,
   testDbRemittancePreviewRollback,
   testDbRemittanceRevertBlocksFinalized,
   testDbTherapistPaymentPayRunSplit,
@@ -628,6 +629,7 @@ async function main() {
     await testDbTherapistPaymentPayRunSplit(record, getPrisma);
     await testDbRemittanceRevertBlocksFinalized(record, getPrisma);
     await testDbRemittancePreviewRollback(record, getPrisma);
+    await testDbRemittanceApplyAndRevert(record, getPrisma);
     await testDbBilledInvoicesHaveClm();
   }
 

@@ -3,7 +3,10 @@
  */
 
 import { calendarIsoFromDate } from "../src/lib/constants";
+import { resolveTherapistPaymentDisplay } from "../src/lib/invoice-therapist-payment";
+import { resolveFeeAmount } from "../src/lib/procedure-fee-schedule";
 import {
+  applyRemittanceAdvice,
   deleteRemittancePreview,
   manualMatchRemittanceLine,
   rematchRemittanceAdvice,
@@ -301,4 +304,320 @@ export async function testDbTherapistPaymentPayRunSplit(
     "PASS",
     `draftOnly=${withDraftOnly} finalized=${withFinalized} (Pending vs Paid source)`,
   );
+}
+
+type SmokeInvoiceCandidate = {
+  id: string;
+  invoiceNumber: number;
+  therapistId: string;
+  paymentStatus: string | null;
+  lniPaidAt: Date | null;
+  lniEobCodes: string[];
+  lniEobCodeDescriptions: unknown;
+  client: { lniClaimNumber: string };
+  lineItems: Array<{ procedureCode: string; serviceDate: Date; units: number }>;
+};
+
+async function findSmokeApplyInvoice(prisma: SmokePrisma): Promise<SmokeInvoiceCandidate | null> {
+  const candidates = await prisma.invoice.findMany({
+    where: {
+      status: "BILLED",
+      client: { lniClaimNumber: { not: "" } },
+      OR: [{ paymentStatus: null }, { paymentStatus: "UNPAID" }],
+      remittanceLines: {
+        none: {
+          supersededAt: null,
+          remittanceAdvice: { status: "APPLIED" },
+        },
+      },
+      lineItems: { some: {} },
+    },
+    include: {
+      client: { select: { lniClaimNumber: true } },
+      lineItems: { orderBy: { sortOrder: "asc" }, take: 3 },
+    },
+    orderBy: { updatedAt: "desc" },
+    take: 40,
+  });
+
+  for (const inv of candidates) {
+    const line = inv.lineItems[0];
+    if (!line || !inv.client.lniClaimNumber) continue;
+
+    const fees = await prisma.therapistProcedureCodeFee.findMany({
+      where: { therapistId: inv.therapistId },
+    });
+    if (resolveFeeAmount(fees, line.procedureCode, line.serviceDate) === null) continue;
+
+    return {
+      id: inv.id,
+      invoiceNumber: inv.invoiceNumber,
+      therapistId: inv.therapistId,
+      paymentStatus: inv.paymentStatus,
+      lniPaidAt: inv.lniPaidAt,
+      lniEobCodes: [...inv.lniEobCodes],
+      lniEobCodeDescriptions: inv.lniEobCodeDescriptions,
+      client: { lniClaimNumber: inv.client.lniClaimNumber },
+      lineItems: inv.lineItems.map((item) => ({
+        procedureCode: item.procedureCode,
+        serviceDate: item.serviceDate,
+        units: item.units,
+      })),
+    };
+  }
+
+  return null;
+}
+
+async function createSmokePreviewRemittance(
+  prisma: SmokePrisma,
+  options: {
+    adminId: string;
+    smokeKey: string;
+    invoice: SmokeInvoiceCandidate;
+  },
+) {
+  const line = options.invoice.lineItems[0]!;
+  const serviceDate = calendarIsoFromDate(line.serviceDate);
+
+  return prisma.remittanceAdvice.create({
+    data: {
+      remittanceNumber: options.smokeKey,
+      warrantRegister: `W-${options.smokeKey}`,
+      invoiceDate: new Date(),
+      payeeNumber: "SMOKE",
+      payeeName: "Smoke Test Payee",
+      totalPaid: 1,
+      status: "PREVIEW",
+      importedById: options.adminId,
+      lines: {
+        create: {
+          section: "PAID",
+          claimNumber: options.invoice.client.lniClaimNumber,
+          icn: `ICN-${options.smokeKey}`,
+          patientName: "Smoke Patient",
+          serviceProviderId: "SMOKE-PROV",
+          billTotalPayable: 1,
+          eobCodes: [SMOKE_EOB_CODE],
+          eobCodeDescriptions: { [SMOKE_EOB_CODE]: "Smoke apply test EOB" },
+          serviceLines: [
+            {
+              procedureCode: line.procedureCode,
+              serviceDateFrom: serviceDate,
+              serviceDateTo: serviceDate,
+              units: line.units,
+              amount: 1,
+            },
+          ],
+          matchedInvoiceId: options.invoice.id,
+          matchNote: "Smoke apply test match",
+        },
+      },
+    },
+    include: { lines: true },
+  });
+}
+
+/** Apply preview remittance, assert draft pay + pending therapist payment, then revert and restore. */
+export async function testDbRemittanceApplyAndRevert(
+  record: RecordFn,
+  getPrisma: () => Promise<SmokePrisma>,
+) {
+  const prisma = await getPrisma();
+
+  const admin = await prisma.user.findFirst({
+    where: { role: "ADMIN" },
+    select: { id: true },
+  });
+  if (!admin) {
+    record("db/remittance-apply-and-revert", "SKIP", "no admin user");
+    return;
+  }
+
+  const invoice = await findSmokeApplyInvoice(prisma);
+  if (!invoice) {
+    record(
+      "db/remittance-apply-and-revert",
+      "SKIP",
+      "no BILLED UNPAID invoice with therapist fee schedule for line item",
+    );
+    return;
+  }
+
+  const invoiceSnapshot = {
+    paymentStatus: invoice.paymentStatus,
+    lniPaidAt: invoice.lniPaidAt,
+    lniEobCodes: [...invoice.lniEobCodes],
+    lniEobCodeDescriptions: invoice.lniEobCodeDescriptions,
+  };
+
+  const smokeKey = `SMOKE-APPLY-${Date.now()}`;
+  let remittanceId: string | null = null;
+  let applied = false;
+
+  try {
+    const remittance = await createSmokePreviewRemittance(prisma, {
+      adminId: admin.id,
+      smokeKey,
+      invoice,
+    });
+    remittanceId = remittance.id;
+
+    await applyRemittanceAdvice(remittanceId);
+    applied = true;
+
+    const appliedRa = await prisma.remittanceAdvice.findUnique({
+      where: { id: remittanceId },
+      include: {
+        payRun: {
+          include: {
+            payouts: {
+              include: {
+                lines: { where: { invoiceId: invoice.id } },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (appliedRa?.status !== "APPLIED") {
+      record("db/remittance-apply-and-revert", "FAIL", "remittance not APPLIED after apply");
+      return;
+    }
+    if (appliedRa.payRun?.status !== "DRAFT") {
+      record("db/remittance-apply-and-revert", "FAIL", "pay run not DRAFT after apply");
+      return;
+    }
+
+    const payRunLine = appliedRa.payRun.payouts.flatMap((p) => p.lines)[0];
+    if (!payRunLine) {
+      record("db/remittance-apply-and-revert", "FAIL", "no TherapistPayRunLine for invoice");
+      return;
+    }
+
+    const invoiceAfterApply = await prisma.invoice.findUnique({
+      where: { id: invoice.id },
+      select: {
+        paymentStatus: true,
+        payRunLines: {
+          select: {
+            payout: { select: { payRun: { select: { status: true } } } },
+          },
+        },
+      },
+    });
+
+    if (invoiceAfterApply?.paymentStatus !== "PAID") {
+      record(
+        "db/remittance-apply-and-revert",
+        "FAIL",
+        `expected PAID after apply, got ${invoiceAfterApply?.paymentStatus ?? "null"}`,
+      );
+      return;
+    }
+
+    const therapistDisplay = resolveTherapistPaymentDisplay(invoiceAfterApply.payRunLines);
+    if (therapistDisplay !== "pending") {
+      record(
+        "db/remittance-apply-and-revert",
+        "FAIL",
+        `expected therapist payment pending, got ${therapistDisplay}`,
+      );
+      return;
+    }
+
+    await revertAppliedRemittance(remittanceId);
+    applied = false;
+    remittanceId = null;
+
+    const raGone = await prisma.remittanceAdvice.findUnique({ where: { id: remittance.id } });
+    if (raGone) {
+      record("db/remittance-apply-and-revert", "FAIL", "remittance still exists after revert");
+      return;
+    }
+
+    const payRunLinesLeft = await prisma.therapistPayRunLine.count({
+      where: { invoiceId: invoice.id, payout: { payRun: { remittanceAdviceId: remittance.id } } },
+    });
+    if (payRunLinesLeft > 0) {
+      record("db/remittance-apply-and-revert", "FAIL", "pay run lines remain after revert");
+      return;
+    }
+
+    const invoiceAfterRevert = await prisma.invoice.findUnique({
+      where: { id: invoice.id },
+      select: {
+        paymentStatus: true,
+        lniPaidAt: true,
+        lniEobCodes: true,
+        payRunLines: { select: { id: true } },
+      },
+    });
+
+    if (invoiceAfterRevert?.paymentStatus !== invoiceSnapshot.paymentStatus) {
+      record(
+        "db/remittance-apply-and-revert",
+        "FAIL",
+        `paymentStatus after revert: ${invoiceAfterRevert?.paymentStatus} expected ${invoiceSnapshot.paymentStatus}`,
+      );
+      return;
+    }
+
+    if (invoiceAfterRevert.payRunLines.length > 0) {
+      const stillPending = await prisma.invoice.findUnique({
+        where: { id: invoice.id },
+        select: {
+          payRunLines: {
+            select: { payout: { select: { payRun: { select: { status: true } } } } },
+          },
+        },
+      });
+      const display = resolveTherapistPaymentDisplay(stillPending?.payRunLines ?? []);
+      if (display === "pending") {
+        record(
+          "db/remittance-apply-and-revert",
+          "FAIL",
+          "invoice still has draft pay run lines from smoke remittance after revert",
+        );
+        return;
+      }
+    }
+
+    record(
+      "db/remittance-apply-and-revert",
+      "PASS",
+      `invoice=#${invoice.invoiceNumber} apply→DRAFT+pending→revert`,
+    );
+  } catch (e) {
+    record(
+      "db/remittance-apply-and-revert",
+      "FAIL",
+      e instanceof Error ? e.message : String(e),
+    );
+  } finally {
+    if (remittanceId) {
+      try {
+        if (applied) {
+          await revertAppliedRemittance(remittanceId);
+        } else {
+          await deleteRemittancePreview(remittanceId);
+        }
+      } catch {
+        await prisma.remittanceAdvice.delete({ where: { id: remittanceId } }).catch(() => undefined);
+      }
+    }
+
+    await prisma.invoice
+      .update({
+        where: { id: invoice.id },
+        data: {
+          paymentStatus: invoiceSnapshot.paymentStatus,
+          lniPaidAt: invoiceSnapshot.lniPaidAt,
+          lniEobCodes: invoiceSnapshot.lniEobCodes,
+          lniEobCodeDescriptions: invoiceSnapshot.lniEobCodeDescriptions,
+        },
+      })
+      .catch(() => undefined);
+  }
 }
