@@ -621,3 +621,208 @@ export async function testDbRemittanceApplyAndRevert(
       .catch(() => undefined);
   }
 }
+
+async function countAppliedRemittanceMatches(
+  prisma: SmokePrisma,
+  invoiceId: string,
+): Promise<number> {
+  return prisma.remittanceAdviceLine.count({
+    where: {
+      matchedInvoiceId: invoiceId,
+      supersededAt: null,
+      remittanceAdvice: { status: "APPLIED" },
+    },
+  });
+}
+
+async function cleanupSmokeRemittance(
+  prisma: SmokePrisma,
+  remittanceId: string,
+  applied: boolean,
+): Promise<void> {
+  try {
+    if (applied) {
+      await revertAppliedRemittance(remittanceId);
+      return;
+    }
+    const ra = await prisma.remittanceAdvice.findUnique({
+      where: { id: remittanceId },
+      select: { status: true },
+    });
+    if (ra?.status === "PREVIEW") {
+      await deleteRemittancePreview(remittanceId);
+    } else if (ra?.status === "APPLIED") {
+      await revertAppliedRemittance(remittanceId);
+    }
+  } catch {
+    await prisma.remittanceAdvice.delete({ where: { id: remittanceId } }).catch(() => undefined);
+  }
+}
+
+/**
+ * Two applied remittances on one invoice: reverting one leaves L&I PAID from the other.
+ */
+export async function testDbRemittanceMultiApplyRevert(
+  record: RecordFn,
+  getPrisma: () => Promise<SmokePrisma>,
+) {
+  const prisma = await getPrisma();
+
+  const admin = await prisma.user.findFirst({
+    where: { role: "ADMIN" },
+    select: { id: true },
+  });
+  if (!admin) {
+    record("db/remittance-multi-apply-revert", "SKIP", "no admin user");
+    return;
+  }
+
+  const invoice = await findSmokeApplyInvoice(prisma);
+  if (!invoice) {
+    record(
+      "db/remittance-multi-apply-revert",
+      "SKIP",
+      "no BILLED UNPAID invoice with therapist fee schedule for line item",
+    );
+    return;
+  }
+
+  const invoiceSnapshot = {
+    paymentStatus: invoice.paymentStatus,
+    lniPaidAt: invoice.lniPaidAt,
+    lniEobCodes: [...invoice.lniEobCodes],
+    lniEobCodeDescriptions: invoice.lniEobCodeDescriptions,
+  };
+
+  const ts = Date.now();
+  const smokeKeyA = `SMOKE-MULTI-A-${ts}`;
+  const smokeKeyB = `SMOKE-MULTI-B-${ts}`;
+  let remittanceIdA: string | null = null;
+  let remittanceIdB: string | null = null;
+  let appliedA = false;
+  let appliedB = false;
+
+  try {
+    const remittanceA = await createSmokePreviewRemittance(prisma, {
+      adminId: admin.id,
+      smokeKey: smokeKeyA,
+      invoice,
+    });
+    remittanceIdA = remittanceA.id;
+    await applyRemittanceAdvice(remittanceIdA);
+    appliedA = true;
+
+    const remittanceB = await createSmokePreviewRemittance(prisma, {
+      adminId: admin.id,
+      smokeKey: smokeKeyB,
+      invoice,
+    });
+    remittanceIdB = remittanceB.id;
+    await applyRemittanceAdvice(remittanceIdB);
+    appliedB = true;
+
+    const matchesAfterBoth = await countAppliedRemittanceMatches(prisma, invoice.id);
+    if (matchesAfterBoth !== 2) {
+      record(
+        "db/remittance-multi-apply-revert",
+        "FAIL",
+        `expected 2 applied matches, got ${matchesAfterBoth}`,
+      );
+      return;
+    }
+
+    const paidAfterBoth = await prisma.invoice.findUnique({
+      where: { id: invoice.id },
+      select: { paymentStatus: true },
+    });
+    if (paidAfterBoth?.paymentStatus !== "PAID") {
+      record(
+        "db/remittance-multi-apply-revert",
+        "FAIL",
+        `expected PAID after both applies, got ${paidAfterBoth?.paymentStatus ?? "null"}`,
+      );
+      return;
+    }
+
+    await revertAppliedRemittance(remittanceIdB);
+    appliedB = false;
+    remittanceIdB = null;
+
+    const matchesAfterRevertB = await countAppliedRemittanceMatches(prisma, invoice.id);
+    if (matchesAfterRevertB !== 1) {
+      record(
+        "db/remittance-multi-apply-revert",
+        "FAIL",
+        `expected 1 applied match after revert B, got ${matchesAfterRevertB}`,
+      );
+      return;
+    }
+
+    const paidAfterRevertB = await prisma.invoice.findUnique({
+      where: { id: invoice.id },
+      select: { paymentStatus: true },
+    });
+    if (paidAfterRevertB?.paymentStatus !== "PAID") {
+      record(
+        "db/remittance-multi-apply-revert",
+        "FAIL",
+        `invoice should stay PAID after revert B (A still applied), got ${paidAfterRevertB?.paymentStatus ?? "null"}`,
+      );
+      return;
+    }
+
+    await revertAppliedRemittance(remittanceIdA);
+    appliedA = false;
+    remittanceIdA = null;
+
+    const matchesAfterRevertA = await countAppliedRemittanceMatches(prisma, invoice.id);
+    if (matchesAfterRevertA !== 0) {
+      record(
+        "db/remittance-multi-apply-revert",
+        "FAIL",
+        `expected 0 applied matches after revert A, got ${matchesAfterRevertA}`,
+      );
+      return;
+    }
+
+    const paidAfterRevertA = await prisma.invoice.findUnique({
+      where: { id: invoice.id },
+      select: { paymentStatus: true },
+    });
+    if (paidAfterRevertA?.paymentStatus !== invoiceSnapshot.paymentStatus) {
+      record(
+        "db/remittance-multi-apply-revert",
+        "FAIL",
+        `after revert A: ${paidAfterRevertA?.paymentStatus} expected ${invoiceSnapshot.paymentStatus}`,
+      );
+      return;
+    }
+
+    record(
+      "db/remittance-multi-apply-revert",
+      "PASS",
+      `invoice=#${invoice.invoiceNumber} dual-apply→revert-B-stays-PAID→revert-A-restores`,
+    );
+  } catch (e) {
+    record(
+      "db/remittance-multi-apply-revert",
+      "FAIL",
+      e instanceof Error ? e.message : String(e),
+    );
+  } finally {
+    if (remittanceIdB) await cleanupSmokeRemittance(prisma, remittanceIdB, appliedB);
+    if (remittanceIdA) await cleanupSmokeRemittance(prisma, remittanceIdA, appliedA);
+
+    await prisma.invoice
+      .update({
+        where: { id: invoice.id },
+        data: {
+          paymentStatus: invoiceSnapshot.paymentStatus,
+          lniPaidAt: invoiceSnapshot.lniPaidAt,
+          lniEobCodes: invoiceSnapshot.lniEobCodes,
+          lniEobCodeDescriptions: invoiceSnapshot.lniEobCodeDescriptions,
+        },
+      })
+      .catch(() => undefined);
+  }
+}
