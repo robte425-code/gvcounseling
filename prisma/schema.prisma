@@ -72,7 +72,8 @@ model User {
   active             Boolean   @default(true)
   lniProviderId      String?
   npi                String?
-  melioVendorName    String?
+  stripeConnectAccountId String?  @unique
+  stripeConnectReady Boolean  @default(false)
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
   clients            Client[]
@@ -370,22 +371,25 @@ model TherapistPayRun {
   remittanceAdvice   RemittanceAdvice      @relation(fields: [remittanceAdviceId], references: [id], onDelete: Cascade)
   status             TherapistPayRunStatus @default(DRAFT)
   finalizedAt        DateTime?
-  melioExportedAt    DateTime?
+  stripePaidAt       DateTime?
   payouts            TherapistPayRunPayout[]
   createdAt          DateTime              @default(now())
   updatedAt          DateTime              @updatedAt
 }
 
 model TherapistPayRunPayout {
-  id              String              @id @default(cuid())
-  payRunId        String
-  payRun          TherapistPayRun     @relation(fields: [payRunId], references: [id], onDelete: Cascade)
-  therapistId     String
-  therapist       User                @relation(fields: [therapistId], references: [id])
-  therapistAmount Decimal             @db.Decimal(10, 2)
-  lniPaidAmount   Decimal             @db.Decimal(10, 2)
-  invoiceCount    Int
-  lines           TherapistPayRunLine[]
+  id                   String              @id @default(cuid())
+  payRunId             String
+  payRun               TherapistPayRun     @relation(fields: [payRunId], references: [id], onDelete: Cascade)
+  therapistId          String
+  therapist            User                @relation(fields: [therapistId], references: [id])
+  therapistAmount      Decimal             @db.Decimal(10, 2)
+  lniPaidAmount        Decimal             @db.Decimal(10, 2)
+  invoiceCount         Int
+  stripeTransferId     String?             @unique
+  stripeTransferStatus String?
+  stripePaidAt         DateTime?
+  lines                TherapistPayRunLine[]
 
   @@unique([payRunId, therapistId])
 }

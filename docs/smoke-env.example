@@ -9,3 +9,8 @@
 # Generate with: openssl rand -base64 32 — add to Vercel Production, then redeploy:
 # DRIVE_TOKEN_ENCRYPTION_KEY=
 # SMOKE_TEST_SECRET=
+
+# Stripe Connect (therapist ACH payouts):
+# STRIPE_SECRET_KEY=
+# NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=
+# STRIPE_WEBHOOK_SECRET=

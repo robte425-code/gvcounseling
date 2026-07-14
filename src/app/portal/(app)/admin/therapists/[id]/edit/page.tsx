@@ -4,6 +4,7 @@ import { requireAdmin } from "@/auth";
 import { ConfirmSubmitButton } from "@/components/portal/ConfirmSubmitButton";
 import { TherapistForm } from "@/components/portal/TherapistForm";
 import { TherapistFeesSection } from "@/components/portal/TherapistFeesSection";
+import { TherapistStripeConnectPanel } from "@/components/portal/TherapistStripeConnectPanel";
 import {
   portalButtonClass,
   portalButtonSecondaryClass,
@@ -17,6 +18,8 @@ import {
   reactivateTherapistAction,
   resetTherapistPasswordAction,
 } from "@/lib/portal-actions";
+import { isStripeConfigured } from "@/lib/stripe";
+import { syncTherapistStripeConnectStatus } from "@/lib/stripe-connect";
 import { prisma } from "@/lib/prisma";
 
 export default async function EditTherapistPage({
@@ -24,20 +27,44 @@ export default async function EditTherapistPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ saved?: string; passwordReset?: string; deactivated?: string; reactivated?: string }>;
+  searchParams: Promise<{
+    saved?: string;
+    passwordReset?: string;
+    deactivated?: string;
+    reactivated?: string;
+    stripe?: string;
+  }>;
 }) {
   await requireAdmin();
   const { id } = await params;
-  const { saved, passwordReset, deactivated, reactivated } = await searchParams;
+  const { saved, passwordReset, deactivated, reactivated, stripe: stripeFlash } = await searchParams;
 
-  const therapist = await prisma.user.findFirst({
+  const therapistRow = await prisma.user.findFirst({
     where: { id, role: "THERAPIST" },
     include: {
       googleDriveConnection: { select: { googleEmail: true } },
       _count: { select: { clients: true, invoices: true } },
     },
   });
-  if (!therapist) notFound();
+  if (!therapistRow) notFound();
+  let therapist = therapistRow;
+
+  const stripeConfigured = isStripeConfigured();
+  if (stripeConfigured && therapist.stripeConnectAccountId && stripeFlash === "return") {
+    try {
+      await syncTherapistStripeConnectStatus(therapist.id);
+      const refreshed = await prisma.user.findFirst({
+        where: { id, role: "THERAPIST" },
+        include: {
+          googleDriveConnection: { select: { googleEmail: true } },
+          _count: { select: { clients: true, invoices: true } },
+        },
+      });
+      if (refreshed) therapist = refreshed;
+    } catch {
+      // Keep stored status; panel allows manual refresh.
+    }
+  }
 
   const canDelete = therapist._count.invoices === 0;
   const deleteBlockedReason =
@@ -86,6 +113,14 @@ export default async function EditTherapistPage({
         mode="edit"
         therapist={therapist}
         cancelHref="/portal/admin/therapists"
+      />
+
+      <TherapistStripeConnectPanel
+        therapistId={therapist.id}
+        stripeConfigured={stripeConfigured}
+        accountId={therapist.stripeConnectAccountId}
+        ready={therapist.stripeConnectReady}
+        flash={stripeFlash === "return" || stripeFlash === "refresh" ? stripeFlash : null}
       />
 
       <TherapistFeesSection therapistId={therapist.id} />

@@ -2,14 +2,11 @@ import Link from "next/link";
 import { requireAdmin } from "@/auth";
 import { AdminForm } from "@/components/portal/AdminForm";
 import { CutoffReminderSettings } from "@/components/portal/CutoffReminderSettings";
-import { MelioSettings } from "@/components/portal/MelioSettings";
 import { OutboundEmailTestingToggles } from "@/components/portal/OutboundEmailTestingToggles";
+import { StripeSettings } from "@/components/portal/StripeSettings";
 import { portalCardClass, portalTableNarrowClass, portalTableScrollClass } from "@/components/portal/ui";
-import {
-  getCutoffReminderDays,
-  getMelioBillsInboxEmail,
-  getOutboundTestingSettings,
-} from "@/lib/portal-settings";
+import { getCutoffReminderDays, getOutboundTestingSettings } from "@/lib/portal-settings";
+import { isStripeConfigured } from "@/lib/stripe";
 import { prisma } from "@/lib/prisma";
 
 export default async function AdminAdminsPage({
@@ -20,7 +17,7 @@ export default async function AdminAdminsPage({
   await requireAdmin();
   const { created, deleted, emailWarning } = await searchParams;
 
-  const [admins, outboundEmailSettings, cutoffReminderDays, melioInboxEmail] = await Promise.all([
+  const [admins, outboundEmailSettings, cutoffReminderDays] = await Promise.all([
     prisma.user.findMany({
       where: { role: "ADMIN" },
       orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
@@ -28,7 +25,6 @@ export default async function AdminAdminsPage({
     }),
     getOutboundTestingSettings(),
     getCutoffReminderDays(),
-    getMelioBillsInboxEmail(),
   ]);
 
   return (
@@ -64,7 +60,7 @@ export default async function AdminAdminsPage({
         laterDays={cutoffReminderDays.laterDays}
       />
 
-      <MelioSettings inboxEmail={melioInboxEmail} />
+      <StripeSettings configured={isStripeConfigured()} />
 
       <section className="space-y-4">
         <h2 className="font-serif text-xl font-semibold text-primary-dark">Current admins</h2>

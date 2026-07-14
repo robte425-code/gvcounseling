@@ -51,14 +51,18 @@ import {
   parseOutboundLniFaxRoute,
   setCutoffReminderDays,
   setLniOutboundFaxRoute,
-  setMelioBillsInboxEmail,
   setTherapistOutboundEmailRoute,
   setVrcOutboundEmailRoute,
   type CutoffReminderDays,
   type OutboundEmailRoute,
   type OutboundLniFaxRoute,
 } from "@/lib/portal-settings";
-import { markMelioExported, sendPayRunBillsToMelioInbox, buildMelioExportForRemittance } from "@/lib/melio-export";
+import {
+  createTherapistStripeOnboardingLink,
+  payTherapistPayRunWithStripe,
+  syncTherapistStripeConnectStatus,
+} from "@/lib/stripe-connect";
+import { isStripeConfigured } from "@/lib/stripe";
 import { getNextInvoiceNumber } from "@/lib/invoice-numbers";
 import { parseTherapistInvoicesReturnTo } from "@/lib/invoice-list-filters";
 import { assertAdminCanDeleteInvoice } from "@/lib/invoice-delete-policy";
@@ -1274,69 +1278,83 @@ export async function updateCutoffReminderDaysAction(
   }
 }
 
-export type UpdateMelioBillsInboxState = { error?: string; email?: string | null };
+export type StripeOnboardTherapistState = { error?: string };
 
-export async function updateMelioBillsInboxAction(
-  email: string,
-): Promise<UpdateMelioBillsInboxState> {
+export async function startTherapistStripeOnboardingAction(
+  _prevState: StripeOnboardTherapistState,
+  formData: FormData,
+): Promise<StripeOnboardTherapistState> {
   await requireAdmin();
+  const therapistId = String(formData.get("therapistId") ?? "").trim();
+  if (!therapistId) return { error: "Therapist is required." };
+  if (!isStripeConfigured()) {
+    return { error: "Stripe is not configured. Set STRIPE_SECRET_KEY in Vercel." };
+  }
+
   try {
-    const saved = await setMelioBillsInboxEmail(email);
-    revalidatePath("/portal/admin", "layout");
-    return { email: saved };
+    const { url } = await createTherapistStripeOnboardingLink(therapistId);
+    redirect(url);
   } catch (error) {
+    if (isNextRedirectError(error)) throw error;
     return {
-      error: error instanceof Error ? error.message : "Could not save Melio inbox email.",
+      error: error instanceof Error ? error.message : "Could not start Stripe onboarding.",
     };
   }
 }
 
-export type SendMelioBillsState = { error?: string; success?: string };
+export type SyncStripeConnectState = { error?: string; ready?: boolean };
 
-export async function sendMelioBillsAction(
-  _prevState: SendMelioBillsState,
+export async function syncTherapistStripeConnectAction(
+  _prevState: SyncStripeConnectState,
   formData: FormData,
-): Promise<SendMelioBillsState> {
+): Promise<SyncStripeConnectState> {
+  await requireAdmin();
+  const therapistId = String(formData.get("therapistId") ?? "").trim();
+  if (!therapistId) return { error: "Therapist is required." };
+  if (!isStripeConfigured()) {
+    return { error: "Stripe is not configured. Set STRIPE_SECRET_KEY in Vercel." };
+  }
+
+  try {
+    const status = await syncTherapistStripeConnectStatus(therapistId);
+    revalidatePath(`/portal/admin/therapists/${therapistId}/edit`);
+    revalidatePath("/portal/admin/therapists");
+    return { ready: status.ready };
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : "Could not refresh Stripe status.",
+    };
+  }
+}
+
+export type PayStripePayRunState = { error?: string; success?: string };
+
+export async function payTherapistPayRunWithStripeAction(
+  _prevState: PayStripePayRunState,
+  formData: FormData,
+): Promise<PayStripePayRunState> {
   await requireAdmin();
   const remittanceAdviceId = String(formData.get("remittanceAdviceId") ?? "").trim();
   if (!remittanceAdviceId) return { error: "Remittance is required." };
+  if (!isStripeConfigured()) {
+    return { error: "Stripe is not configured. Set STRIPE_SECRET_KEY in Vercel." };
+  }
 
   try {
-    const result = await sendPayRunBillsToMelioInbox(remittanceAdviceId);
+    const result = await payTherapistPayRunWithStripe(remittanceAdviceId);
     revalidatePath("/portal/admin/pay");
     revalidatePath(`/portal/admin/pay/${remittanceAdviceId}`);
+    revalidatePath("/portal/admin/invoices");
+    revalidatePath("/portal/therapist/paychecks");
+    const dollars = (result.totalCents / 100).toFixed(2);
     return {
-      success: `Sent ${result.sentCount} bill PDF${result.sentCount === 1 ? "" : "s"} to ${result.inboxEmail}. Review and pay in Melio.`,
+      success: `Paid ${result.transferredCount} therapist${result.transferredCount === 1 ? "" : "s"} via Stripe ($${dollars}). Funds go to their bank on Stripe’s payout schedule.`,
     };
   } catch (error) {
     return {
-      error: error instanceof Error ? error.message : "Could not send bills to Melio.",
+      error: error instanceof Error ? error.message : "Could not pay with Stripe.",
     };
   }
-}
-
-export type MarkMelioExportedState = { error?: string };
-
-export async function markMelioExportedAction(
-  _prevState: MarkMelioExportedState,
-  formData: FormData,
-): Promise<MarkMelioExportedState> {
-  await requireAdmin();
-  const remittanceAdviceId = String(formData.get("remittanceAdviceId") ?? "").trim();
-  if (!remittanceAdviceId) return { error: "Remittance is required." };
-
-  try {
-    const exportData = await buildMelioExportForRemittance(remittanceAdviceId);
-    await markMelioExported(exportData.payRunId);
-  } catch (error) {
-    return {
-      error: error instanceof Error ? error.message : "Could not mark Melio export.",
-    };
-  }
-
-  revalidatePath("/portal/admin/pay");
-  revalidatePath(`/portal/admin/pay/${remittanceAdviceId}`);
-  redirect(`/portal/admin/pay/${remittanceAdviceId}?melioExported=1`);
 }
 
 export async function acceptUnassignedClientAction(formData: FormData) {
@@ -1727,13 +1745,12 @@ function parseTherapistFields(formData: FormData) {
   const email = normalizeEmail(String(formData.get("email") ?? ""));
   const lniProviderId = String(formData.get("lniProviderId") ?? "").trim() || null;
   const npi = String(formData.get("npi") ?? "").trim() || null;
-  const melioVendorName = String(formData.get("melioVendorName") ?? "").trim() || null;
 
   if (!firstName || !lastName) {
     throw new Error("First and last name are required.");
   }
 
-  return { firstName, lastName, email, lniProviderId, npi, melioVendorName };
+  return { firstName, lastName, email, lniProviderId, npi };
 }
 
 async function setupTherapistWelcomeAndDrive(

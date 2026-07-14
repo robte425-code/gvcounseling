@@ -23,7 +23,6 @@ export type TherapistFormTherapist = {
   lastName: string;
   lniProviderId: string | null;
   npi: string | null;
-  melioVendorName: string | null;
 };
 
 type TherapistFormProps = {
@@ -116,19 +115,6 @@ function TherapistFields({
           defaultValue={therapist?.npi ?? ""}
           className={portalInputCompactClass}
         />
-      </div>
-      <div className="sm:col-span-2 lg:col-span-3">
-        <label className={portalLabelCompactClass}>Melio vendor name</label>
-        <input
-          name="melioVendorName"
-          defaultValue={therapist?.melioVendorName ?? ""}
-          placeholder="Defaults to first + last name"
-          className={portalInputCompactClass}
-        />
-        <p className="mt-1 text-xs text-muted">
-          Must match the vendor name in Melio when you import bills. Leave blank to use their
-          portal name.
-        </p>
       </div>
       {mode === "create" && (
         <div className="sm:col-span-2 lg:col-span-3">

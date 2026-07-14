@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireAdmin } from "@/auth";
 import { ApplyRemittanceForm, CreateWrongYearRebillForm, CreateWrongYearRebillsForm, DeleteRemittancePreviewForm, FinalizeTherapistPayRunForm, ManualMatchRemittanceLineForm, RematchRemittanceForm, RevertAppliedRemittanceForm, SupersedeRemittanceLineForm, SupersedeWrongYearStaleLinesForm, UnmatchRemittanceLineForm, UnsupersedeRemittanceLineForm } from "@/components/portal/RemittancePayPanel";
-import { MelioPayRunActions } from "@/components/portal/MelioPayRunActions";
+import { StripePayRunActions } from "@/components/portal/StripePayRunActions";
 import { RemittanceBillRow, RemittanceBillRowActions } from "@/components/portal/RemittanceBillRow";
 import {
   portalCardClass,
@@ -27,7 +27,8 @@ import {
   type PaidToDeniedWarning,
 } from "@/lib/remittance-paid-to-denied-warnings";
 import type { RemittanceServiceLine } from "@/lib/parse-lni-remittance-pdf";
-import { getMelioBillsInboxEmail } from "@/lib/portal-settings";
+import { getStripePlatformBalanceAvailableCents } from "@/lib/stripe-connect";
+import { isStripeConfigured } from "@/lib/stripe";
 import { prisma } from "@/lib/prisma";
 
 function parseEobCodeDescriptions(value: unknown): Record<string, string> {
@@ -80,15 +81,13 @@ export default async function PayRemittanceDetailPage({
     rematched?: string;
     unmatched?: string;
     matched?: string;
-    melioExported?: string;
   }>;
 }) {
   await requireAdmin();
   const { id } = await params;
   const query = await searchParams;
 
-  const [remittance, melioInboxEmail] = await Promise.all([
-    prisma.remittanceAdvice.findUnique({
+  const remittance = await prisma.remittanceAdvice.findUnique({
     where: { id },
     include: {
       lines: {
@@ -109,7 +108,14 @@ export default async function PayRemittanceDetailPage({
         include: {
           payouts: {
             include: {
-              therapist: { select: { firstName: true, lastName: true } },
+              therapist: {
+                select: {
+                  firstName: true,
+                  lastName: true,
+                  stripeConnectAccountId: true,
+                  stripeConnectReady: true,
+                },
+              },
               lines: {
                 include: {
                   invoice: {
@@ -125,11 +131,14 @@ export default async function PayRemittanceDetailPage({
         },
       },
     },
-  }),
-    getMelioBillsInboxEmail(),
-  ]);
+  });
 
   if (!remittance) notFound();
+
+  const stripeConfigured = isStripeConfigured();
+  const platformBalanceCents = stripeConfigured
+    ? await getStripePlatformBalanceAvailableCents()
+    : null;
 
   const matchedCount = remittance.lines.filter((line) => line.matchedInvoiceId).length;
   const supersededCount = remittance.lines.filter((line) => line.supersededAt).length;
@@ -329,12 +338,6 @@ export default async function PayRemittanceDetailPage({
       {query.finalized === "1" && (
         <p className="rounded-xl bg-primary/10 px-4 py-3 text-sm text-primary-dark" role="status">
           Therapist pay finalized. Therapists were emailed and will see invoices as Paid.
-        </p>
-      )}
-
-      {query.melioExported === "1" && (
-        <p className="rounded-xl bg-primary/10 px-4 py-3 text-sm text-primary-dark" role="status">
-          Marked as exported to Melio.
         </p>
       )}
 
@@ -669,15 +672,27 @@ export default async function PayRemittanceDetailPage({
                 .
               </p>
               {remittance.payRun && remittance.payRun.payouts.length > 0 && (
-                <MelioPayRunActions
+                <StripePayRunActions
                   remittanceAdviceId={remittance.id}
-                  billCount={remittance.payRun.payouts.filter((p) => Number(p.therapistAmount) > 0).length}
-                  melioExportedAtLabel={
-                    remittance.payRun.melioExportedAt
-                      ? formatDate(remittance.payRun.melioExportedAt)
+                  payoutSummaries={remittance.payRun.payouts.map((payout) => ({
+                    therapistName: `${payout.therapist.firstName} ${payout.therapist.lastName}`.trim(),
+                    amount: Number(payout.therapistAmount),
+                    ready: Boolean(
+                      payout.therapist.stripeConnectAccountId && payout.therapist.stripeConnectReady,
+                    ),
+                    alreadyPaid: Boolean(payout.stripeTransferId),
+                  }))}
+                  stripeConfigured={stripeConfigured}
+                  stripePaidAtLabel={
+                    remittance.payRun.stripePaidAt
+                      ? formatDate(remittance.payRun.stripePaidAt)
                       : null
                   }
-                  hasMelioInbox={Boolean(melioInboxEmail)}
+                  platformBalanceLabel={
+                    platformBalanceCents == null
+                      ? null
+                      : formatCurrency(platformBalanceCents / 100)
+                  }
                 />
               )}
               {remittance.payRun?.status === "DRAFT" && (
