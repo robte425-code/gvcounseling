@@ -9,6 +9,7 @@ type Props = {
   periodLabel: string;
   usageIndicator: IsaUsageIndicator;
   compact?: boolean;
+  disabled?: boolean;
 };
 
 export function Generate837Form({
@@ -16,6 +17,7 @@ export function Generate837Form({
   periodLabel,
   usageIndicator,
   compact = false,
+  disabled = false,
 }: Props) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -61,7 +63,7 @@ export function Generate837Form({
       <button
         type="button"
         onClick={handleGenerate}
-        disabled={pending}
+        disabled={pending || disabled}
         title={`Generate and download an 837 for invoices assigned to ${periodLabel}`}
         className={`${buttonClass} disabled:cursor-not-allowed`}
       >

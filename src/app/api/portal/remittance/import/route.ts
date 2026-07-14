@@ -27,7 +27,10 @@ export async function POST(request: Request) {
     const driveFileIds = parseDriveFileIds(formData);
 
     if (!files.length && !driveFileIds.length) {
-      return NextResponse.json({ error: "Select at least one remittance PDF." }, { status: 400 });
+      return NextResponse.json(
+        { error: "Select at least one remittance PDF or 835 ERA file." },
+        { status: 400 },
+      );
     }
 
     const results = await importRemittancesFromDriveAndUploads({

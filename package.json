@@ -9,12 +9,13 @@
     "lint": "eslint",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
-    "db:seed": "tsx prisma/seed.ts"
+    "db:seed": "tsx prisma/seed.ts",
+    "smoke:critical-fixes": "tsx scripts/smoke-critical-fixes.ts",
+    "setup:smoke-credentials": "bash scripts/setup-smoke-credentials.sh"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.8.0",
     "@prisma/client": "^7.8.0",
-    "@vercel/blob": "^2.4.1",
     "bcryptjs": "^3.0.3",
     "dotenv": "^17.4.2",
     "mammoth": "^1.12.0",

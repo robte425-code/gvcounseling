@@ -1,0 +1,27 @@
+/** Minimal synthetic 835 for parser/cross-verify smoke tests (not a real L&I file). */
+export const SAMPLE_LNI_835 = [
+  "ISA*00*          *00*          *ZZ*LNI            *ZZ*0479998        *240615*1200*^*00501*000000001*0*P*:~",
+  "GS*HP*LNI*0479998*20240615*1200*1*X*005010X221A1~",
+  "ST*835*0001*005010X221A1~",
+  "BPR*I*150.00*C*CHK************20240615~",
+  "TRN*1*4282026*1916001069~",
+  "REF*EV*12345~",
+  "DTM*405*20240615~",
+  "N1*PE*GRANDVIEW COUNSELING LLC*FI*933096824~",
+  "REF*G2*0479998~",
+  "CLP*AA1B2C3D4E5F67890123*1*200.00*150.00**WC*ICN123456**~",
+  "NM1*QC*1*DOE*JOHN****MI*BJ87697~",
+  "NM1*82*1*CASTRO*STEVEN****XX*1234567893~",
+  "REF*G2*480003~",
+  "SVC*HC:96158*200.00*150.00**2~",
+  "DTM*472*20240601~",
+  "CAS*CO*45*50.00~",
+  "SE*17*0001~",
+  "GE*1*1~",
+  "IEA*1*000000001~",
+].join("");
+
+export const SAMPLE_LNI_835_MISMATCH = SAMPLE_LNI_835.replace(
+  "BPR*I*150.00*",
+  "BPR*I*149.98*",
+);

@@ -40,5 +40,16 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# local one-off script outputs (keep scripts/*.ts in repo when intentionally added)
+scripts/*-results.json
+scripts/*-run*.log
+scripts/*-cache.json
+scripts/*-scan.json
+scripts/*-analysis.json
+scripts/*-classification.json
+scripts/*-crossref.json
+scripts/*-excel-summary.json
+scripts/remittance-extract-*.txt
+
 /src/generated/prisma
 .env*.local

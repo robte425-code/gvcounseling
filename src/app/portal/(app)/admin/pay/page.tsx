@@ -8,6 +8,9 @@ import {
   summarizeRemittanceBillCounts,
 } from "@/lib/remittance-line-supersede";
 import { excludeSyntheticSpreadsheetRemittancesWhere } from "@/lib/remittance-advice";
+import { loadRemittanceCrossVerifySummaries } from "@/lib/remittance-cross-verify";
+import { remittanceSourceFormatLabel } from "@/lib/remittance-file-format";
+import { RemittanceCrossVerifyBadge } from "@/components/portal/RemittanceCrossVerifyPanel";
 import { prisma } from "@/lib/prisma";
 
 function RemittanceBillCountSummary({
@@ -86,7 +89,20 @@ export default async function PayPage({
     orderBy: { invoiceDate: "desc" },
     include: {
       _count: { select: { lines: true } },
-      lines: { select: { matchedInvoiceId: true, supersededAt: true, section: true } },
+      lines: {
+        where: { supersededAt: null },
+        select: {
+          matchedInvoiceId: true,
+          supersededAt: true,
+          section: true,
+          claimNumber: true,
+          icn: true,
+          serviceProviderId: true,
+          billTotalPayable: true,
+          eobCodes: true,
+          serviceLines: true,
+        },
+      },
       payRun: {
         include: {
           payouts: {
@@ -96,6 +112,8 @@ export default async function PayPage({
       },
     },
   });
+
+  const crossVerifyById = await loadRemittanceCrossVerifySummaries(remittances);
 
   const previewUnresolved = remittances.filter(
     (remittance) =>
@@ -108,8 +126,9 @@ export default async function PayPage({
       <div>
         <h1 className="font-serif text-3xl font-semibold text-primary-dark">Process RA</h1>
         <p className="mt-2 max-w-2xl text-sm text-muted">
-          Import L&I Remittance Advice PDFs when payments arrive. Review matches, update invoice
-          L&I status, and calculate therapist pay from fee schedules.
+          Import L&I Remittance Advice PDFs and 835 ERA files when payments arrive. Cross-verify PDF
+          and 835 totals before applying. Review matches, update invoice L&I status, and calculate
+          therapist pay from invoice amounts.
         </p>
       </div>
 
@@ -144,8 +163,8 @@ export default async function PayPage({
         <p className={portalSectionHeadingClass}>Import</p>
         <h2 className="mt-1 font-serif text-lg font-semibold text-primary-dark">New remittance</h2>
         <p className="mt-1 text-xs text-muted">
-          Select remittance PDFs from the LNI RAs Google Drive folder, or upload files directly.
-          Multiple files import oldest-to-newest by filename date.
+          Select remittance PDFs from the LNI RAs Google Drive folder, or upload PDF / 835 ERA files
+          directly. Multiple files import oldest-to-newest by filename date.
         </p>
         <div className="mt-4">
           <RemittanceImportForm />
@@ -168,6 +187,7 @@ export default async function PayPage({
               const billSummary = summarizeRemittanceBillCounts(remittance.lines);
               const hasUnresolvedPreview =
                 remittance.status === "PREVIEW" && unresolvedCount > 0;
+              const crossVerify = crossVerifyById.get(remittance.id);
               return (
                 <li
                   key={remittance.id}
@@ -185,7 +205,8 @@ export default async function PayPage({
                             RA {remittance.remittanceNumber} · {formatDate(remittance.invoiceDate)}
                           </p>
                           <p className="mt-1 text-xs text-muted">
-                            Warrant {remittance.warrantRegister} · {remittance._count.lines} bills ·{" "}
+                            {remittanceSourceFormatLabel(remittance.sourceFormat)} · Warrant{" "}
+                            {remittance.warrantRegister} · {remittance._count.lines} bills ·{" "}
                             {remittance.status === "APPLIED" ? "Applied" : "Preview"}
                             {hasUnresolvedPreview && (
                               <>
@@ -196,6 +217,7 @@ export default async function PayPage({
                               </>
                             )}
                           </p>
+                          {crossVerify && <RemittanceCrossVerifyBadge verify={crossVerify} />}
                           <RemittanceBillCountSummary {...billSummary} />
                         </div>
                         <div className="text-sm">

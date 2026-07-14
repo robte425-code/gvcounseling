@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireAdmin } from "@/auth";
-import { ApplyRemittanceForm, CreateWrongYearRebillForm, CreateWrongYearRebillsForm, DeleteRemittancePreviewForm, FinalizeTherapistPayRunForm, SupersedeRemittanceLineForm, SupersedeWrongYearStaleLinesForm, UnsupersedeRemittanceLineForm } from "@/components/portal/RemittancePayPanel";
+import { ApplyRemittanceForm, CreateWrongYearRebillForm, CreateWrongYearRebillsForm, DeleteRemittancePreviewForm, FinalizeTherapistPayRunForm, ManualMatchRemittanceLineForm, RematchRemittanceForm, RevertAppliedRemittanceForm, SupersedeRemittanceLineForm, SupersedeWrongYearStaleLinesForm, UnmatchRemittanceLineForm, UnsupersedeRemittanceLineForm } from "@/components/portal/RemittancePayPanel";
 import { RemittanceBillRow, RemittanceBillRowActions } from "@/components/portal/RemittanceBillRow";
 import {
   portalCardClass,
@@ -13,7 +13,10 @@ import {
   paymentStatusLabel,
   remittanceSectionToPaymentStatus,
 } from "@/lib/invoice-payment-status";
+import { RemittanceCrossVerifyPanel } from "@/components/portal/RemittanceCrossVerifyPanel";
 import { buildTherapistPayPreview } from "@/lib/remittance-advice";
+import { verifyRemittanceAgainstCounterpart } from "@/lib/remittance-cross-verify";
+import { remittanceSourceFormatLabel } from "@/lib/remittance-file-format";
 import {
   countUnresolvedRemittanceLines,
   listWrongYearSupersedeSuggestions,
@@ -67,7 +70,7 @@ export default async function PayRemittanceDetailPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ applied?: string; superseded?: string; rebilled?: string; finalized?: string }>;
+  searchParams: Promise<{ applied?: string; superseded?: string; rebilled?: string; finalized?: string; rematched?: string; unmatched?: string; matched?: string }>;
 }) {
   await requireAdmin();
   const { id } = await params;
@@ -169,6 +172,11 @@ export default async function PayRemittanceDetailPage({
     (sum, payout) => sum + payout.therapistAmount,
     0,
   );
+  const appliedTherapistTotal =
+    remittance.payRun?.payouts.reduce((sum, payout) => sum + Number(payout.therapistAmount), 0) ??
+    0;
+  const finalizeTherapistTotal =
+    remittance.status === "APPLIED" ? appliedTherapistTotal : therapistTotal;
   const eobCodeDescriptions = parseEobCodeDescriptions(remittance.eobCodeDescriptions);
   const usedEobCodes = [
     ...new Set(remittance.lines.flatMap((line) => line.eobCodes)),
@@ -234,6 +242,9 @@ export default async function PayRemittanceDetailPage({
     paidToDeniedWarnings.map((warning) => [warning.lineId, warning]),
   );
 
+  const crossVerify = await verifyRemittanceAgainstCounterpart(remittance.id);
+  const sourceLabel = remittanceSourceFormatLabel(remittance.sourceFormat);
+
   return (
     <div className="space-y-8">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -245,8 +256,8 @@ export default async function PayRemittanceDetailPage({
             RA {remittance.remittanceNumber}
           </h1>
           <p className="mt-2 text-sm text-muted">
-            Payment date {formatDate(remittance.invoiceDate)} · Warrant {remittance.warrantRegister}{" "}
-            · {remittance.status === "APPLIED" ? "Applied" : "Preview"}
+            {sourceLabel} · Payment date {formatDate(remittance.invoiceDate)} · Warrant{" "}
+            {remittance.warrantRegister} · {remittance.status === "APPLIED" ? "Applied" : "Preview"}
           </p>
         </div>
         <div className={`${portalCardClass} min-w-[10rem] px-4 py-3 shadow-none`}>
@@ -256,6 +267,8 @@ export default async function PayRemittanceDetailPage({
           </p>
         </div>
       </div>
+
+      <RemittanceCrossVerifyPanel verify={crossVerify} currentSourceLabel={sourceLabel} />
 
       {query.applied === "1" && (
         <p className="rounded-xl bg-primary/10 px-4 py-3 text-sm text-primary-dark" role="status">
@@ -301,7 +314,25 @@ export default async function PayRemittanceDetailPage({
 
       {query.finalized === "1" && (
         <p className="rounded-xl bg-primary/10 px-4 py-3 text-sm text-primary-dark" role="status">
-          Therapist pay finalized. Therapists were emailed their payout details.
+          Therapist pay finalized. Therapists were emailed and will see invoices as Paid.
+        </p>
+      )}
+
+      {query.rematched === "1" && (
+        <p className="rounded-xl bg-primary/10 px-4 py-3 text-sm text-primary-dark" role="status">
+          Bills re-matched. Review matches before applying.
+        </p>
+      )}
+
+      {query.unmatched === "1" && (
+        <p className="rounded-xl bg-primary/10 px-4 py-3 text-sm text-primary-dark" role="status">
+          Bill unmatched. Invoice EOB preview updated.
+        </p>
+      )}
+
+      {query.matched === "1" && (
+        <p className="rounded-xl bg-primary/10 px-4 py-3 text-sm text-primary-dark" role="status">
+          Bill manually matched to invoice.
         </p>
       )}
 
@@ -429,6 +460,11 @@ export default async function PayRemittanceDetailPage({
                 {remittance.status === "PREVIEW" && isUnresolved && (
                   <RemittanceBillRowActions>
                     <div className="mt-2 flex flex-wrap items-center gap-3">
+                      <ManualMatchRemittanceLineForm
+                        remittanceAdviceId={remittance.id}
+                        lineId={line.id}
+                        claimNumber={line.claimNumber}
+                      />
                       {wrongYearSuggestion && (
                         <CreateWrongYearRebillForm
                           remittanceAdviceId={remittance.id}
@@ -444,6 +480,22 @@ export default async function PayRemittanceDetailPage({
                       ) : (
                         <SupersedeRemittanceLineForm remittanceAdviceId={remittance.id} lineId={line.id} />
                       )}
+                    </div>
+                  </RemittanceBillRowActions>
+                )}
+                {remittance.status === "PREVIEW" && line.matchedInvoice && !isSuperseded && (
+                  <RemittanceBillRowActions>
+                    <div className="mt-2 flex flex-wrap items-center gap-3">
+                      <UnmatchRemittanceLineForm
+                        remittanceAdviceId={remittance.id}
+                        lineId={line.id}
+                        invoiceNumber={line.matchedInvoice.invoiceNumber}
+                      />
+                      <ManualMatchRemittanceLineForm
+                        remittanceAdviceId={remittance.id}
+                        lineId={line.id}
+                        claimNumber={line.claimNumber}
+                      />
                     </div>
                   </RemittanceBillRowActions>
                 )}
@@ -525,10 +577,10 @@ export default async function PayRemittanceDetailPage({
         <section className={`${portalCardClass} lg:col-span-4`}>
           <p className={portalSectionHeadingClass}>Therapist pay</p>
           <h2 className="mt-1 font-serif text-lg font-semibold text-primary-dark">
-            {formatCurrency(therapistTotal)}
+            {formatCurrency(finalizeTherapistTotal)}
           </h2>
           <p className="mt-1 text-xs text-muted">
-            Based on therapist fee schedules for L&I-paid invoices only.
+            Based on invoice line amounts (therapist fee schedule at submit) for L&I-paid invoices.
           </p>
           {therapistPayPreviewError && (
             <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900" role="alert">
@@ -561,12 +613,19 @@ export default async function PayRemittanceDetailPage({
 
           {remittance.status === "PREVIEW" && (
             <div className="mt-6 space-y-4 border-t border-border pt-6">
+              <RematchRemittanceForm
+                remittanceAdviceId={remittance.id}
+                matchedCount={matchedCount}
+                unresolvedCount={unresolvedCount}
+              />
               <ApplyRemittanceForm
                 remittanceAdviceId={remittance.id}
                 matchedCount={matchedCount}
                 unmatchedCount={unresolvedCount}
                 therapistTotal={therapistTotal}
                 paidToDeniedWarnings={paidToDeniedWarnings}
+                crossVerify={crossVerify}
+                sourceFormat={remittance.sourceFormat}
               />
               <DeleteRemittancePreviewForm
                 remittanceAdviceId={remittance.id}
@@ -586,15 +645,22 @@ export default async function PayRemittanceDetailPage({
                         ? ` ${formatDate(remittance.payRun.finalizedAt)}`
                         : ""
                     }`
-                  : " · therapist pay draft"}
+                  : " · therapist pay draft (therapists see Pending until finalized)"}
                 .
               </p>
               {remittance.payRun?.status === "DRAFT" && (
-                <FinalizeTherapistPayRunForm
-                  remittanceAdviceId={remittance.id}
-                  therapistCount={remittance.payRun.payouts.length}
-                  therapistTotal={therapistTotal}
-                />
+                <>
+                  <FinalizeTherapistPayRunForm
+                    remittanceAdviceId={remittance.id}
+                    therapistCount={remittance.payRun.payouts.length}
+                    therapistTotal={finalizeTherapistTotal}
+                  />
+                  <RevertAppliedRemittanceForm
+                    remittanceAdviceId={remittance.id}
+                    remittanceNumber={remittance.remittanceNumber}
+                    warrantRegister={remittance.warrantRegister}
+                  />
+                </>
               )}
             </div>
           )}

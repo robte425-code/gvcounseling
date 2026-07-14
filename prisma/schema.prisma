@@ -42,6 +42,11 @@ enum RemittanceAdviceStatus {
   APPLIED
 }
 
+enum RemittanceSourceFormat {
+  PDF_RA
+  ERA_835
+}
+
 enum Gender {
   M
   F
@@ -79,6 +84,7 @@ model User {
   invoiceNotes        InvoiceNote[]
   importedRemittances RemittanceAdvice[] @relation("RemittanceImportedBy")
   therapistPayPayouts TherapistPayRunPayout[]
+  edi837Submissions   Edi837Submission[]
   passwordResetTokens PasswordResetToken[]
 }
 
@@ -101,6 +107,27 @@ model PayPeriod {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   invoices    Invoice[]
+  edi837Submissions Edi837Submission[]
+}
+
+model Edi837Submission {
+  id                String   @id @default(cuid())
+  payPeriodId       String
+  payPeriod         PayPeriod @relation(fields: [payPeriodId], references: [id], onDelete: Cascade)
+  generatedById     String
+  generatedBy       User     @relation(fields: [generatedById], references: [id])
+  isaUsageIndicator String
+  filename          String
+  isaControl        String
+  gsControl         String
+  claimCount        Int
+  totalAmount       Decimal  @db.Decimal(12, 2)
+  contentSha256     String
+  invoiceSnapshot   Json
+  generatedAt       DateTime @default(now())
+
+  @@index([payPeriodId, generatedAt])
+  @@index([generatedAt])
 }
 
 model Client {
@@ -297,6 +324,7 @@ model RemittanceAdvice {
   totalPaid        Decimal  @db.Decimal(10, 2)
   eobCodeDescriptions Json  @default("{}")
   status           RemittanceAdviceStatus @default(PREVIEW)
+  sourceFormat     RemittanceSourceFormat @default(PDF_RA)
   appliedAt        DateTime?
   sourceFilename   String?
   importedAt       DateTime @default(now())
@@ -305,7 +333,7 @@ model RemittanceAdvice {
   lines            RemittanceAdviceLine[]
   payRun           TherapistPayRun?
 
-  @@unique([remittanceNumber, warrantRegister])
+  @@unique([remittanceNumber, warrantRegister, sourceFormat])
   @@index([invoiceDate])
 }
 

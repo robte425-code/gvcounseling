@@ -7,7 +7,10 @@ import { InvoiceNotesSection } from "@/components/portal/InvoiceNotesSection";
 import { InvoiceTherapistPaymentSection } from "@/components/portal/InvoiceTherapistPaymentSection";
 import { StatusBadge, portalButtonClass } from "@/components/portal/ui";
 import { formatCurrency, formatDate, calendarIsoFromDate } from "@/lib/constants";
-import { isTherapistPaidForInvoice } from "@/lib/invoice-therapist-payment";
+import {
+  invoiceTherapistPayRunLinesInclude,
+  resolveTherapistPaymentInfo,
+} from "@/lib/invoice-therapist-payment";
 import {
   deleteInvoiceAction,
   unsubmitInvoiceAction,
@@ -27,7 +30,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
       therapist: true,
       lineItems: { orderBy: { sortOrder: "asc" } },
       attachments: { orderBy: { createdAt: "desc" } },
-      _count: { select: { payRunLines: true } },
+      ...invoiceTherapistPayRunLinesInclude,
     },
   });
 
@@ -107,7 +110,8 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
           lniEobCodeDescriptions={invoice.lniEobCodeDescriptions}
         />
         <InvoiceTherapistPaymentSection
-          therapistPaid={isTherapistPaidForInvoice(invoice._count.payRunLines)}
+          therapistPayment={resolveTherapistPaymentInfo(invoice.payRunLines)}
+          invoiceTotalAmount={Number(invoice.totalAmount)}
         />
       </div>
 

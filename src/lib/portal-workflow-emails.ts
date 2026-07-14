@@ -1,5 +1,5 @@
 import { sendEmailTo } from "@/lib/email";
-import { formatCurrency, formatDate } from "@/lib/constants";
+import { formatCurrency, formatDate, calendarIsoFromDate, formatCalendarIso } from "@/lib/constants";
 import {
   outboundEmailRedirectNote,
   resolveTherapistOutboundEmail,
@@ -286,6 +286,137 @@ export async function sendTherapistPendingReferralAgingEmail(options: {
 
   await sendEmailTo(to, {
     subject: `Pending referrals awaiting acceptance (${options.referrals.length})`,
+    text: lines.join("\n"),
+  });
+}
+
+export async function sendTherapistCutoffReminderEmail(options: {
+  therapistEmail: string;
+  therapistName: string;
+  cutoffDate: Date;
+  daysBefore: number;
+  draftInvoiceCount: number;
+  submittedInvoiceCount: number;
+}) {
+  const intendedEmail = options.therapistEmail.trim();
+  if (!intendedEmail) return;
+
+  const { to, redirected } = await resolveTherapistOutboundEmail(intendedEmail);
+  const invoicesUrl = `${getSiteUrl()}/portal/therapist/invoices`;
+  const cutoffLabel = formatCalendarIso(calendarIsoFromDate(options.cutoffDate));
+  const dayWord = options.daysBefore === 1 ? "day" : "days";
+
+  const lines = [
+    `Hello ${options.therapistName},`,
+    "",
+    `This is a reminder that the L&I billing cutoff date is ${cutoffLabel} (${options.daysBefore} ${dayWord} from now).`,
+    "",
+    "Please submit your invoices in the portal before 12:00 PM (noon) on that day so they can be included in this pay period.",
+    "",
+  ];
+
+  if (options.draftInvoiceCount > 0 || options.submittedInvoiceCount > 0) {
+    lines.push("Your current invoice status:");
+    if (options.draftInvoiceCount > 0) {
+      lines.push(
+        `- ${options.draftInvoiceCount} draft invoice${options.draftInvoiceCount === 1 ? "" : "s"} (submit before noon on the cutoff date)`,
+      );
+    }
+    if (options.submittedInvoiceCount > 0) {
+      lines.push(
+        `- ${options.submittedInvoiceCount} submitted invoice${options.submittedInvoiceCount === 1 ? "" : "s"} waiting for admin pay-period assignment`,
+      );
+    }
+    lines.push("");
+  }
+
+  lines.push(
+    "Open your invoices:",
+    invoicesUrl,
+    "",
+    "Grandview Counseling",
+  );
+
+  if (redirected) {
+    lines.push(outboundEmailRedirectNote(options.therapistName, intendedEmail));
+  }
+
+  await sendEmailTo(to, {
+    subject: `Billing cutoff ${cutoffLabel} — submit invoices by noon`,
+    text: lines.join("\n"),
+  });
+}
+
+export type CutoffReminderTherapistSummary = {
+  therapistName: string;
+  draftInvoiceCount: number;
+  submittedInvoiceCount: number;
+};
+
+export async function sendAdminCutoffReminderEmail(options: {
+  cutoffDate: Date;
+  daysBefore: number;
+  therapists: CutoffReminderTherapistSummary[];
+}) {
+  const adminEmails = await getAdminNotificationEmails();
+  if (adminEmails.length === 0) return;
+
+  const cutoffLabel = formatCalendarIso(calendarIsoFromDate(options.cutoffDate));
+  const dayWord = options.daysBefore === 1 ? "day" : "days";
+  const invoicesUrl = `${getSiteUrl()}/portal/admin/invoices?status=SUBMITTED`;
+  const billingUrl = `${getSiteUrl()}/portal/admin/billing`;
+
+  const withWork = options.therapists.filter(
+    (row) => row.draftInvoiceCount > 0 || row.submittedInvoiceCount > 0,
+  );
+  const draftTotal = options.therapists.reduce((sum, row) => sum + row.draftInvoiceCount, 0);
+  const submittedTotal = options.therapists.reduce(
+    (sum, row) => sum + row.submittedInvoiceCount,
+    0,
+  );
+
+  const lines = [
+    `L&I billing cutoff reminder: ${cutoffLabel} is ${options.daysBefore} ${dayWord} away.`,
+    "",
+    "Therapists were asked to submit invoices before 12:00 PM (noon) on the cutoff date.",
+    "",
+    `Active therapists notified: ${options.therapists.length}`,
+    `Draft invoices across therapists: ${draftTotal}`,
+    `Submitted invoices awaiting pay-period assignment: ${submittedTotal}`,
+    "",
+  ];
+
+  if (withWork.length > 0) {
+    lines.push("Therapist invoice status:");
+    for (const therapist of withWork) {
+      const parts: string[] = [];
+      if (therapist.draftInvoiceCount > 0) {
+        parts.push(
+          `${therapist.draftInvoiceCount} draft${therapist.draftInvoiceCount === 1 ? "" : "s"}`,
+        );
+      }
+      if (therapist.submittedInvoiceCount > 0) {
+        parts.push(
+          `${therapist.submittedInvoiceCount} submitted`,
+        );
+      }
+      lines.push(`- ${therapist.therapistName}: ${parts.join(", ")}`);
+    }
+    lines.push("");
+  }
+
+  lines.push(
+    "Submitted invoices:",
+    invoicesUrl,
+    "",
+    "Bill L&I:",
+    billingUrl,
+    "",
+    "Grandview Counseling",
+  );
+
+  await sendEmailTo(adminEmails.join(", "), {
+    subject: `Billing cutoff ${cutoffLabel} — therapist reminders sent`,
     text: lines.join("\n"),
   });
 }

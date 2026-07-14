@@ -7,7 +7,10 @@ import { InvoiceNotesSection } from "@/components/portal/InvoiceNotesSection";
 import { InvoiceTherapistPaymentSection } from "@/components/portal/InvoiceTherapistPaymentSection";
 import { StatusBadge } from "@/components/portal/ui";
 import { formatCurrency, formatDate, calendarIsoFromDate } from "@/lib/constants";
-import { isTherapistPaidForInvoice } from "@/lib/invoice-therapist-payment";
+import {
+  invoiceTherapistPayRunLinesInclude,
+  resolveTherapistPaymentInfo,
+} from "@/lib/invoice-therapist-payment";
 import { prisma } from "@/lib/prisma";
 
 export default async function AdminInvoiceDetailPage({
@@ -27,7 +30,7 @@ export default async function AdminInvoiceDetailPage({
       lineItems: { orderBy: { sortOrder: "asc" } },
       attachments: { orderBy: { createdAt: "desc" } },
       payPeriod: true,
-      _count: { select: { payRunLines: true } },
+      ...invoiceTherapistPayRunLinesInclude,
     },
   });
 
@@ -79,7 +82,8 @@ export default async function AdminInvoiceDetailPage({
           lniEobCodeDescriptions={invoice.lniEobCodeDescriptions}
         />
         <InvoiceTherapistPaymentSection
-          therapistPaid={isTherapistPaidForInvoice(invoice._count.payRunLines)}
+          therapistPayment={resolveTherapistPaymentInfo(invoice.payRunLines)}
+          invoiceTotalAmount={Number(invoice.totalAmount)}
         />
         {invoice.status === "SUBMITTED" && invoice.payPeriod && (
           <p className="mt-2 text-sm text-muted">

@@ -5,60 +5,30 @@ import {
   type Edi837Result,
   type IsaUsageIndicator,
 } from "@/lib/edi837";
-import { client837Ready, resolveClientBirthDate } from "@/lib/constants";
-import { invoice837PayPeriodWhere } from "@/lib/invoice-list-filters";
+import {
+  buildEdi837BatchReport,
+  buildInvoiceSnapshotFromBatchRows,
+  loadInvoicesFor837PayPeriod,
+} from "@/lib/edi837-batch-report";
+import { recordEdi837Submission } from "@/lib/edi837-submission";
+import { resolveClientBirthDate } from "@/lib/constants";
 import { loadAllProcedureCodeFees, resolveFeeAmount } from "@/lib/procedure-fees";
 import { prisma } from "@/lib/prisma";
 
-type InvoiceFor837 = {
-  id: string;
-  status: "DRAFT" | "SUBMITTED" | "BILLED";
-  invoiceNumber: number;
-  clmControlNumber: string | null;
-  client: {
-    lniClaimNumber: string;
-    lastName: string;
-    firstName: string;
-    attendingNpi: string | null;
-    addressLine1: string | null;
-    city: string | null;
-    state: string;
-    zip: string | null;
-    dateOfBirth: Date | null;
-    gender: "M" | "F" | "U" | null;
-    dateOfInjury: Date | null;
-    diagnoses: string[];
-  };
-  therapist: {
-    lastName: string;
-    firstName: string;
-    lniProviderId: string | null;
-    npi: string | null;
-  };
-  lineItems: {
-    procedureCode: string;
-    amount: unknown;
-    serviceDate: Date;
-    units: number;
-  }[];
+type ResolvedInvoice = Awaited<ReturnType<typeof loadInvoicesFor837PayPeriod>>[number] & {
+  resolvedClm: string;
 };
 
-const invoice837Include = {
-  client: true,
-  therapist: true,
-  lineItems: { orderBy: { sortOrder: "asc" as const } },
-};
-
-type ResolvedInvoiceFor837 = InvoiceFor837 & { resolvedClm: string };
-
-function resolveClmsForInvoices(invoices: InvoiceFor837[]): ResolvedInvoiceFor837[] {
+function resolveClmsForInvoices(
+  invoices: Awaited<ReturnType<typeof loadInvoicesFor837PayPeriod>>,
+): ResolvedInvoice[] {
   return invoices.map((inv) => ({
     ...inv,
     resolvedClm: inv.clmControlNumber ?? generateClmControlNumber(),
   }));
 }
 
-async function persistBilledInvoices(invoices: ResolvedInvoiceFor837[]): Promise<void> {
+async function persistBilledInvoices(invoices: ResolvedInvoice[]): Promise<void> {
   const now = new Date();
   await prisma.$transaction(
     invoices.map((inv) =>
@@ -73,30 +43,10 @@ async function persistBilledInvoices(invoices: ResolvedInvoiceFor837[]): Promise
   );
 }
 
-async function buildEdiClaimsForResolvedInvoices(
-  invoices: ResolvedInvoiceFor837[],
-): Promise<Edi837Claim[]> {
-  const blocked: string[] = [];
-  for (const inv of invoices) {
-    const readiness = client837Ready(inv.client);
-    if (!readiness.ready) {
-      blocked.push(`${inv.client.lniClaimNumber} (${readiness.missing.join(", ")})`);
-    }
-    if (!inv.therapist.lniProviderId) {
-      blocked.push(`${inv.client.lniClaimNumber} (therapist L&I ID missing)`);
-    }
-    if (!inv.therapist.npi) {
-      blocked.push(`${inv.client.lniClaimNumber} (therapist NPI missing)`);
-    }
-  }
-  if (blocked.length) {
-    throw new Error(`Cannot generate 837. Missing data: ${blocked.slice(0, 5).join("; ")}`);
-  }
-
+async function buildEdiClaimsForResolvedInvoices(invoices: ResolvedInvoice[]): Promise<Edi837Claim[]> {
   const lniFeeSchedule = await loadAllProcedureCodeFees();
-  const missingFees: string[] = [];
 
-  const claims: Edi837Claim[] = invoices.map((inv) => {
+  return invoices.map((inv) => {
     const dx = inv.client.diagnoses;
     return {
       clmControlNumber: inv.resolvedClm,
@@ -122,11 +72,6 @@ async function buildEdiClaimsForResolvedInvoices(
       },
       lines: inv.lineItems.map((line) => {
         const feeAmount = resolveFeeAmount(lniFeeSchedule, line.procedureCode, line.serviceDate);
-        if (feeAmount === null) {
-          missingFees.push(
-            `${line.procedureCode} on ${line.serviceDate.toISOString().slice(0, 10)} (invoice #${inv.invoiceNumber})`,
-          );
-        }
         return {
           procedureCode: line.procedureCode,
           amount: feeAmount ?? Number(line.amount),
@@ -136,38 +81,46 @@ async function buildEdiClaimsForResolvedInvoices(
       }),
     };
   });
+}
 
-  if (missingFees.length) {
-    throw new Error(
-      `Cannot generate 837. No L&I fee on file for: ${missingFees.slice(0, 5).join("; ")}. Add fees on the Billing page.`,
-    );
-  }
-
-  return claims;
+function formatBatchBlockerError(
+  report: Awaited<ReturnType<typeof buildEdi837BatchReport>>,
+): string {
+  const samples = report.invoices
+    .filter((row) => !row.ready)
+    .slice(0, 5)
+    .map((row) => `#${row.invoiceNumber} ${row.claimNumber}: ${row.blockers.join("; ")}`);
+  return `Cannot generate 837. ${report.blockerCount} invoice(s) have blockers.${samples.length ? ` ${samples.join(" | ")}` : ""}`;
 }
 
 export async function generate837ForPayPeriod(
   payPeriodId: string,
-  options?: { usageIndicator?: IsaUsageIndicator },
+  options?: { usageIndicator?: IsaUsageIndicator; generatedById?: string },
 ): Promise<Edi837Result> {
   const payPeriod = await prisma.payPeriod.findUnique({ where: { id: payPeriodId } });
   if (!payPeriod) throw new Error("Pay period not found.");
 
-  const invoices = await prisma.invoice.findMany({
-    where: invoice837PayPeriodWhere(payPeriodId),
-    include: invoice837Include,
-    orderBy: [{ therapist: { lastName: "asc" } }, { invoiceNumber: "asc" }],
-  });
-
-  if (!invoices.length) {
-    throw new Error(
-      "No invoices are assigned to this pay period. Assign submitted invoices on the Invoices page first.",
-    );
+  const report = await buildEdi837BatchReport(payPeriodId);
+  if (!report.canGenerate) {
+    throw new Error(formatBatchBlockerError(report));
   }
 
+  const invoices = await loadInvoicesFor837PayPeriod(payPeriodId);
   const resolved = resolveClmsForInvoices(invoices);
   const claims = await buildEdiClaimsForResolvedInvoices(resolved);
   const result = buildEdi837(claims, { usageIndicator: options?.usageIndicator });
   await persistBilledInvoices(resolved);
+
+  if (options?.generatedById) {
+    const clmByInvoiceId = new Map(resolved.map((inv) => [inv.id, inv.resolvedClm]));
+    await recordEdi837Submission({
+      payPeriodId,
+      generatedById: options.generatedById,
+      usageIndicator: options?.usageIndicator ?? "T",
+      edi: result,
+      invoiceSnapshot: buildInvoiceSnapshotFromBatchRows(report.invoices, clmByInvoiceId),
+    });
+  }
+
   return result;
 }

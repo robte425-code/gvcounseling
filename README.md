@@ -54,8 +54,7 @@ Therapists and admin sign in at **`/portal/login`**.
 |----------|-------------|
 | `DATABASE_URL` | PostgreSQL connection string |
 | `AUTH_SECRET` | Random secret (`openssl rand -base64 32`) |
-| `BLOB_READ_WRITE_TOKEN` | Vercel Blob token for invoice PDF attachments |
-| `GOOGLE_OAUTH_CLIENT_ID` | Google OAuth client ID (Drive import) |
+| `GOOGLE_OAUTH_CLIENT_ID` | Google OAuth client ID (Drive import and invoice attachments) |
 | `GOOGLE_OAUTH_CLIENT_SECRET` | Google OAuth client secret |
 | `GOOGLE_OAUTH_REDIRECT_URI` | OAuth callback URL (must match Google Cloud console) |
 | `DRIVE_TOKEN_ENCRYPTION_KEY` | 32-byte key for encrypting Drive OAuth tokens at rest (`openssl rand -base64 32`) |
@@ -72,7 +71,7 @@ The seed script prints one-time passwords for `ghim@gvcounseling.com`, `maria@gv
 ### Portal features
 
 - **Admin:** pay periods, client registry, Referral Submission (.docx) import, CSV import, invoice queue, generate consolidated **837 EDI** bill, bill history
-- **Therapists:** create/edit/submit invoices, un-submit before billing, attach PDFs, view billed invoices
+- **Therapists:** create/edit/submit invoices, un-submit before billing, attach PDFs to the client’s Google Drive folder, view billed invoices
 
 ### Referral Submission import
 
@@ -85,3 +84,42 @@ Set `GOOGLE_CLOUD_VISION_API_KEY` (Cloud Vision API enabled in your Google Cloud
 ### 837 generation
 
 Admin selects a pay period cutoff → **Generate 837** combines all submitted invoices (on or before cutoff) into one L&I upload file modeled on your Team Vocational sample. Invoices are marked **Billed** and locked.
+
+### Critical-fix smoke tests
+
+After deploying security/billing fixes, run:
+
+```bash
+# Local logic only (no production HTTP / DB)
+AUTH_SECRET=... DRIVE_TOKEN_ENCRYPTION_KEY=... npm run smoke:critical-fixes
+
+# Production HTTP checks (validation only — no intake emails)
+npm run smoke:critical-fixes -- --remote
+
+# Rate-limit checks against production (no emails) — requires shared secret:
+#   1. openssl rand -base64 32  → add as SMOKE_TEST_SECRET in Vercel (Production)
+#   2. export SMOKE_TEST_SECRET=... locally, then:
+SMOKE_TEST_SECRET=... npm run smoke:critical-fixes -- --remote
+
+# DB checks (rate limit table, Drive token encryption, BILLED+CLM)
+DATABASE_URL=... npm run smoke:critical-fixes -- --db
+
+# Full suite
+AUTH_SECRET=... DRIVE_TOKEN_ENCRYPTION_KEY=... DATABASE_URL=... SMOKE_TEST_SECRET=... \
+  npm run smoke:critical-fixes -- --all
+```
+
+Exits non-zero if any test fails.
+
+#### Pulling credentials from Vercel
+
+**Automated (recommended):**
+
+```bash
+vercel login
+npm run setup:smoke-credentials
+```
+
+This pulls `DATABASE_URL` and `AUTH_SECRET`, generates `DRIVE_TOKEN_ENCRYPTION_KEY` and `SMOKE_TEST_SECRET` if missing, adds them to Vercel Production, and writes `.env.smoke.local`.
+
+**Manual:** copy from **Vercel → gvcounseling → Settings → Environment Variables** (see `docs/smoke-env.example`).

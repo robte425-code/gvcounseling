@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { requireAdmin } from "@/auth";
 import { AdminForm } from "@/components/portal/AdminForm";
+import { CutoffReminderSettings } from "@/components/portal/CutoffReminderSettings";
 import { OutboundEmailTestingToggles } from "@/components/portal/OutboundEmailTestingToggles";
 import { portalCardClass, portalTableNarrowClass, portalTableScrollClass } from "@/components/portal/ui";
-import { getOutboundTestingSettings } from "@/lib/portal-settings";
+import { getCutoffReminderDays, getOutboundTestingSettings } from "@/lib/portal-settings";
 import { prisma } from "@/lib/prisma";
 
 export default async function AdminAdminsPage({
@@ -14,13 +15,14 @@ export default async function AdminAdminsPage({
   await requireAdmin();
   const { created, deleted, emailWarning } = await searchParams;
 
-  const [admins, outboundEmailSettings] = await Promise.all([
+  const [admins, outboundEmailSettings, cutoffReminderDays] = await Promise.all([
     prisma.user.findMany({
       where: { role: "ADMIN" },
       orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
       select: { id: true, firstName: true, lastName: true, email: true },
     }),
     getOutboundTestingSettings(),
+    getCutoffReminderDays(),
   ]);
 
   return (
@@ -49,6 +51,11 @@ export default async function AdminAdminsPage({
         therapistRoute={outboundEmailSettings.therapistRoute}
         lniFaxRoute={outboundEmailSettings.lniFaxRoute}
         adminEmails={outboundEmailSettings.adminEmails}
+      />
+
+      <CutoffReminderSettings
+        earlierDays={cutoffReminderDays.earlierDays}
+        laterDays={cutoffReminderDays.laterDays}
       />
 
       <section className="space-y-4">

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sendEmail } from "@/lib/email";
 import { clientIpFromRequest, enforceRateLimit, RateLimitError } from "@/lib/rate-limit";
+import { isSmokeTestRequest } from "@/lib/smoke-test";
 
 const CONTACT_RATE_LIMIT = 20;
 const CONTACT_RATE_WINDOW_MS = 15 * 60 * 1000;
@@ -12,6 +13,10 @@ export async function POST(request: NextRequest) {
       CONTACT_RATE_LIMIT,
       CONTACT_RATE_WINDOW_MS,
     );
+
+    if (isSmokeTestRequest(request)) {
+      return NextResponse.json({ ok: true, smoke: true });
+    }
 
     const body = await request.json();
     const { firstName, lastName, email, message } = body;

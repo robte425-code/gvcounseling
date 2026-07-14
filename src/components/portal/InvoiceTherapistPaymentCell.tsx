@@ -1,15 +1,26 @@
-import { therapistPaymentLabel } from "@/lib/invoice-therapist-payment";
+import {
+  therapistPaymentLabel,
+  type TherapistPaymentDisplay,
+} from "@/lib/invoice-therapist-payment";
 
 type Props = {
-  therapistPaid: boolean;
+  therapistPayment: TherapistPaymentDisplay;
 };
 
-export function InvoiceTherapistPaymentCell({ therapistPaid }: Props) {
-  if (!therapistPaid) return <>—</>;
+export function InvoiceTherapistPaymentCell({ therapistPayment }: Props) {
+  if (therapistPayment === "none") return <>—</>;
+
+  if (therapistPayment === "pending") {
+    return (
+      <span className="inline-flex rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold tracking-wide text-amber-950">
+        {therapistPaymentLabel("pending")}
+      </span>
+    );
+  }
 
   return (
     <span className="inline-flex rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold tracking-wide text-emerald-900">
-      {therapistPaymentLabel(true)}
+      {therapistPaymentLabel("paid")}
     </span>
   );
 }
