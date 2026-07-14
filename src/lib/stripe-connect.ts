@@ -51,7 +51,10 @@ export async function syncTherapistStripeConnectStatus(therapistId: string): Pro
 }
 
 /** Create (or reuse) an Express connected account and return a Stripe-hosted onboarding URL. */
-export async function createTherapistStripeOnboardingLink(therapistId: string): Promise<{
+export async function createTherapistStripeOnboardingLink(
+  therapistId: string,
+  options?: { returnAudience?: "admin" | "therapist" },
+): Promise<{
   url: string;
   accountId: string;
 }> {
@@ -100,10 +103,15 @@ export async function createTherapistStripeOnboardingLink(therapistId: string): 
   }
 
   const siteUrl = getSiteUrl();
+  const audience = options?.returnAudience ?? "admin";
+  const basePath =
+    audience === "therapist"
+      ? `${siteUrl}/portal/therapist/account`
+      : `${siteUrl}/portal/admin/therapists/${therapist.id}/edit`;
   const link = await stripe.accountLinks.create({
     account: accountId,
-    refresh_url: `${siteUrl}/portal/admin/therapists/${therapist.id}/edit?stripe=refresh`,
-    return_url: `${siteUrl}/portal/admin/therapists/${therapist.id}/edit?stripe=return`,
+    refresh_url: `${basePath}?stripe=refresh`,
+    return_url: `${basePath}?stripe=return`,
     type: "account_onboarding",
   });
 

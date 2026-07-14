@@ -1292,7 +1292,34 @@ export async function startTherapistStripeOnboardingAction(
   }
 
   try {
-    const { url } = await createTherapistStripeOnboardingLink(therapistId);
+    const { url } = await createTherapistStripeOnboardingLink(therapistId, {
+      returnAudience: "admin",
+    });
+    redirect(url);
+  } catch (error) {
+    if (isNextRedirectError(error)) throw error;
+    return {
+      error: error instanceof Error ? error.message : "Could not start Stripe onboarding.",
+    };
+  }
+}
+
+/** Therapist self-serve Connect onboarding (also works while admin is “viewing as” them). */
+export async function startSelfStripeOnboardingAction(
+  _prevState: StripeOnboardTherapistState,
+  formData: FormData,
+): Promise<StripeOnboardTherapistState> {
+  const session = await requireTherapist();
+  const therapistId = session.user.id;
+  void formData;
+  if (!isStripeConfigured()) {
+    return { error: "Stripe payouts are not available yet. Ask your admin." };
+  }
+
+  try {
+    const { url } = await createTherapistStripeOnboardingLink(therapistId, {
+      returnAudience: "therapist",
+    });
     redirect(url);
   } catch (error) {
     if (isNextRedirectError(error)) throw error;
@@ -1319,6 +1346,26 @@ export async function syncTherapistStripeConnectAction(
     const status = await syncTherapistStripeConnectStatus(therapistId);
     revalidatePath(`/portal/admin/therapists/${therapistId}/edit`);
     revalidatePath("/portal/admin/therapists");
+    return { ready: status.ready };
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : "Could not refresh Stripe status.",
+    };
+  }
+}
+
+export async function syncSelfStripeConnectAction(
+  _prevState: SyncStripeConnectState,
+  _formData: FormData,
+): Promise<SyncStripeConnectState> {
+  const session = await requireTherapist();
+  if (!isStripeConfigured()) {
+    return { error: "Stripe payouts are not available yet. Ask your admin." };
+  }
+
+  try {
+    const status = await syncTherapistStripeConnectStatus(session.user.id);
+    revalidatePath("/portal/therapist/account");
     return { ready: status.ready };
   } catch (error) {
     return {
