@@ -1,4 +1,7 @@
-import { sendTherapistCutoffReminderEmail } from "@/lib/portal-workflow-emails";
+import {
+  sendAdminCutoffReminderEmail,
+  sendTherapistCutoffReminderEmail,
+} from "@/lib/portal-workflow-emails";
 import { startOfUtcDay } from "@/lib/invoice-pay-period-grouping";
 import {
   getCutoffReminderDays,
@@ -12,6 +15,7 @@ export type CutoffReminderSendResult = {
   cutoffDate: string;
   daysBefore: number;
   therapistCount: number;
+  adminCount: number;
   skippedAlreadySent: boolean;
 };
 
@@ -76,14 +80,16 @@ export async function sendCutoffReminderEmails(options?: {
 }): Promise<{
   reminderCount: number;
   therapistEmails: number;
+  adminEmails: number;
   results: CutoffReminderSendResult[];
 }> {
   const due = await findPayPeriodsDueForCutoffReminder(options);
   const results: CutoffReminderSendResult[] = [];
   let therapistEmails = 0;
+  let adminEmails = 0;
 
   if (due.length === 0) {
-    return { reminderCount: 0, therapistEmails: 0, results };
+    return { reminderCount: 0, therapistEmails: 0, adminEmails: 0, results };
   }
 
   const therapists = await prisma.user.findMany({
@@ -92,24 +98,33 @@ export async function sendCutoffReminderEmails(options?: {
     orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
   });
 
-  if (therapists.length === 0) {
-    return { reminderCount: 0, therapistEmails: 0, results };
-  }
-
-  const draftCounts = await prisma.invoice.groupBy({
-    by: ["therapistId"],
-    where: { status: "DRAFT", therapistId: { in: therapists.map((t) => t.id) } },
-    _count: true,
-  });
-  const submittedCounts = await prisma.invoice.groupBy({
-    by: ["therapistId"],
-    where: { status: "SUBMITTED", therapistId: { in: therapists.map((t) => t.id) } },
-    _count: true,
-  });
+  const therapistIds = therapists.map((t) => t.id);
+  const draftCounts =
+    therapistIds.length > 0
+      ? await prisma.invoice.groupBy({
+          by: ["therapistId"],
+          where: { status: "DRAFT", therapistId: { in: therapistIds } },
+          _count: true,
+        })
+      : [];
+  const submittedCounts =
+    therapistIds.length > 0
+      ? await prisma.invoice.groupBy({
+          by: ["therapistId"],
+          where: { status: "SUBMITTED", therapistId: { in: therapistIds } },
+          _count: true,
+        })
+      : [];
   const draftByTherapist = new Map(draftCounts.map((row) => [row.therapistId, row._count]));
   const submittedByTherapist = new Map(
     submittedCounts.map((row) => [row.therapistId, row._count]),
   );
+
+  const therapistSummaries = therapists.map((therapist) => ({
+    therapistName: `${therapist.firstName} ${therapist.lastName}`.trim(),
+    draftInvoiceCount: draftByTherapist.get(therapist.id) ?? 0,
+    submittedInvoiceCount: submittedByTherapist.get(therapist.id) ?? 0,
+  }));
 
   for (const entry of due) {
     if (!options?.force && (await wasCutoffReminderSent(entry.payPeriodId, entry.daysBefore))) {
@@ -118,6 +133,7 @@ export async function sendCutoffReminderEmails(options?: {
         cutoffDate: entry.cutoffDate.toISOString().slice(0, 10),
         daysBefore: entry.daysBefore,
         therapistCount: 0,
+        adminCount: 0,
         skippedAlreadySent: true,
       });
       continue;
@@ -144,12 +160,29 @@ export async function sendCutoffReminderEmails(options?: {
       }
     }
 
+    let adminCount = 0;
+    try {
+      await sendAdminCutoffReminderEmail({
+        cutoffDate: entry.cutoffDate,
+        daysBefore: entry.daysBefore,
+        therapists: therapistSummaries,
+      });
+      adminCount = 1;
+      adminEmails += 1;
+    } catch (error) {
+      console.error(
+        `Cutoff reminder failed for admins (payPeriod ${entry.payPeriodId}):`,
+        error,
+      );
+    }
+
     await markCutoffReminderSent(entry.payPeriodId, entry.daysBefore, options?.now ?? new Date());
     results.push({
       payPeriodId: entry.payPeriodId,
       cutoffDate: entry.cutoffDate.toISOString().slice(0, 10),
       daysBefore: entry.daysBefore,
       therapistCount: sentForPeriod,
+      adminCount,
       skippedAlreadySent: false,
     });
   }
@@ -157,6 +190,7 @@ export async function sendCutoffReminderEmails(options?: {
   return {
     reminderCount: results.filter((row) => !row.skippedAlreadySent).length,
     therapistEmails,
+    adminEmails,
     results,
   };
 }

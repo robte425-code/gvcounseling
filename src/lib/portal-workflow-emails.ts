@@ -346,3 +346,77 @@ export async function sendTherapistCutoffReminderEmail(options: {
     text: lines.join("\n"),
   });
 }
+
+export type CutoffReminderTherapistSummary = {
+  therapistName: string;
+  draftInvoiceCount: number;
+  submittedInvoiceCount: number;
+};
+
+export async function sendAdminCutoffReminderEmail(options: {
+  cutoffDate: Date;
+  daysBefore: number;
+  therapists: CutoffReminderTherapistSummary[];
+}) {
+  const adminEmails = await getAdminNotificationEmails();
+  if (adminEmails.length === 0) return;
+
+  const cutoffLabel = formatCalendarIso(calendarIsoFromDate(options.cutoffDate));
+  const dayWord = options.daysBefore === 1 ? "day" : "days";
+  const invoicesUrl = `${getSiteUrl()}/portal/admin/invoices?status=SUBMITTED`;
+  const billingUrl = `${getSiteUrl()}/portal/admin/billing`;
+
+  const withWork = options.therapists.filter(
+    (row) => row.draftInvoiceCount > 0 || row.submittedInvoiceCount > 0,
+  );
+  const draftTotal = options.therapists.reduce((sum, row) => sum + row.draftInvoiceCount, 0);
+  const submittedTotal = options.therapists.reduce(
+    (sum, row) => sum + row.submittedInvoiceCount,
+    0,
+  );
+
+  const lines = [
+    `L&I billing cutoff reminder: ${cutoffLabel} is ${options.daysBefore} ${dayWord} away.`,
+    "",
+    "Therapists were asked to submit invoices before 12:00 PM (noon) on the cutoff date.",
+    "",
+    `Active therapists notified: ${options.therapists.length}`,
+    `Draft invoices across therapists: ${draftTotal}`,
+    `Submitted invoices awaiting pay-period assignment: ${submittedTotal}`,
+    "",
+  ];
+
+  if (withWork.length > 0) {
+    lines.push("Therapist invoice status:");
+    for (const therapist of withWork) {
+      const parts: string[] = [];
+      if (therapist.draftInvoiceCount > 0) {
+        parts.push(
+          `${therapist.draftInvoiceCount} draft${therapist.draftInvoiceCount === 1 ? "" : "s"}`,
+        );
+      }
+      if (therapist.submittedInvoiceCount > 0) {
+        parts.push(
+          `${therapist.submittedInvoiceCount} submitted`,
+        );
+      }
+      lines.push(`- ${therapist.therapistName}: ${parts.join(", ")}`);
+    }
+    lines.push("");
+  }
+
+  lines.push(
+    "Submitted invoices:",
+    invoicesUrl,
+    "",
+    "Bill L&I:",
+    billingUrl,
+    "",
+    "Grandview Counseling",
+  );
+
+  await sendEmailTo(adminEmails.join(", "), {
+    subject: `Billing cutoff ${cutoffLabel} — therapist reminders sent`,
+    text: lines.join("\n"),
+  });
+}
