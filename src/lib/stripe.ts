@@ -1,12 +1,29 @@
 import Stripe from "stripe";
 
 let stripeClient: Stripe | null = null;
+let stripeClientOverride: Stripe | null | undefined;
 
 export function isStripeConfigured(): boolean {
+  if (stripeClientOverride !== undefined) return stripeClientOverride != null;
   return Boolean(process.env.STRIPE_SECRET_KEY?.trim());
 }
 
+/** Test-only: inject a Stripe client (or null to simulate unconfigured). Pass `undefined` to clear. */
+export function setStripeClientForTests(client: Stripe | null | undefined): void {
+  stripeClientOverride = client;
+  stripeClient = null;
+}
+
 export function getStripe(): Stripe {
+  if (stripeClientOverride !== undefined) {
+    if (!stripeClientOverride) {
+      throw new Error(
+        "Stripe is not configured. Set STRIPE_SECRET_KEY in the environment (Vercel).",
+      );
+    }
+    return stripeClientOverride;
+  }
+
   const key = process.env.STRIPE_SECRET_KEY?.trim();
   if (!key) {
     throw new Error(
