@@ -139,13 +139,13 @@ export function BillingWorkspace({
       </section>
 
       <section className={`${portalCardClass} lg:col-span-8`}>
-        <p className={portalSectionHeadingClass}>837, VRC & L&I fax</p>
+        <p className={portalSectionHeadingClass}>Pay periods</p>
         <h2 className="mt-1 font-serif text-lg font-semibold text-primary-dark">
           Generate & notify
         </h2>
         <p className="mt-1 text-xs text-muted">
-          Only pay periods with assigned invoices appear here. Review batch before generating. VRC
-          email and L&I fax routing are configured on the Admin page.
+          Each cutoff lists invoice counts, then Generate 837, then VRC email / L&I fax. Review
+          batch before generating. Notify routing is set on the Admin page.
         </p>
 
         <div className="mt-5">
