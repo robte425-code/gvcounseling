@@ -46,7 +46,8 @@ export function StripePayRunActions({
         <p className="text-sm font-medium text-primary-dark">Stripe ACH payout</p>
         <p className="mt-1 text-xs text-muted">
           Sends each therapist’s amount from your Stripe platform balance to their Connect account.
-          Stripe then deposits to their bank.{" "}
+          Stripe then deposits to their bank. On success, therapist pay is finalized automatically
+          (Paid in the portal + payout emails).{" "}
           {platformBalanceLabel
             ? `Available balance: ${platformBalanceLabel}.`
             : "Add funds in Stripe Dashboard → Balances if transfers fail for insufficient balance."}

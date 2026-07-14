@@ -1,5 +1,6 @@
 import { getSiteUrl } from "@/lib/site-url";
 import { dollarsToStripeCents, getStripe } from "@/lib/stripe";
+import { finalizeTherapistPayRun } from "@/lib/therapist-pay-notifications";
 import { prisma } from "@/lib/prisma";
 
 export type StripeConnectStatus = {
@@ -123,6 +124,7 @@ export type StripePayRunResult = {
   transferredCount: number;
   skippedCount: number;
   totalCents: number;
+  finalized: boolean;
   transfers: Array<{
     payoutId: string;
     therapistName: string;
@@ -266,7 +268,23 @@ export async function payTherapistPayRunWithStripe(remittanceAdviceId: string): 
     });
   }
 
-  return { transferredCount, skippedCount, totalCents, transfers };
+  const paidPayoutIds = new Set([
+    ...payRun.payouts.filter((p) => p.stripeTransferId).map((p) => p.id),
+    ...transfers.map((t) => t.payoutId),
+  ]);
+  const allPositivePaid = payRun.payouts.every((payout) => {
+    const amount = Number(payout.therapistAmount);
+    if (!Number.isFinite(amount) || amount <= 0) return true;
+    return paidPayoutIds.has(payout.id);
+  });
+
+  let finalized = payRun.status === "FINALIZED";
+  if (transferredCount > 0 && allPositivePaid && payRun.status !== "FINALIZED") {
+    await finalizeTherapistPayRun(remittanceAdviceId);
+    finalized = true;
+  }
+
+  return { transferredCount, skippedCount, totalCents, transfers, finalized };
 }
 
 export async function getStripePlatformBalanceAvailableCents(): Promise<number | null> {
