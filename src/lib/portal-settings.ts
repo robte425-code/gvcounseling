@@ -9,12 +9,14 @@ import {
   parseCutoffReminderDays,
   type CutoffReminderDays,
 } from "@/lib/cutoff-reminder-settings";
+import { normalizeMelioBillsInboxEmail } from "@/lib/melio";
 
 export const OUTBOUND_VRC_EMAIL_KEY = "outbound_vrc_email_destination";
 export const OUTBOUND_THERAPIST_EMAIL_KEY = "outbound_therapist_email_destination";
 export const OUTBOUND_LNI_FAX_KEY = "outbound_lni_fax_destination";
 export const CUTOFF_REMINDER_DAYS_EARLIER_KEY = "cutoff_reminder_days_earlier";
 export const CUTOFF_REMINDER_DAYS_LATER_KEY = "cutoff_reminder_days_later";
+export const MELIO_BILLS_INBOX_EMAIL_KEY = "melio_bills_inbox_email";
 /** @deprecated Legacy key — read as fallback for VRC routing only. */
 export const VRC_REFERRAL_EMAIL_DESTINATION_KEY = "vrc_referral_email_destination";
 
@@ -213,4 +215,27 @@ export async function markCutoffReminderSent(
     create: { key, value },
     update: { value },
   });
+}
+
+export async function getMelioBillsInboxEmail(): Promise<string | null> {
+  const raw = await readPortalSetting(MELIO_BILLS_INBOX_EMAIL_KEY);
+  try {
+    return normalizeMelioBillsInboxEmail(raw);
+  } catch {
+    return null;
+  }
+}
+
+export async function setMelioBillsInboxEmail(email: string): Promise<string | null> {
+  const normalized = normalizeMelioBillsInboxEmail(email === "" ? null : email);
+  if (!normalized) {
+    await prisma.portalSetting.deleteMany({ where: { key: MELIO_BILLS_INBOX_EMAIL_KEY } });
+    return null;
+  }
+  await prisma.portalSetting.upsert({
+    where: { key: MELIO_BILLS_INBOX_EMAIL_KEY },
+    create: { key: MELIO_BILLS_INBOX_EMAIL_KEY, value: normalized },
+    update: { value: normalized },
+  });
+  return normalized;
 }

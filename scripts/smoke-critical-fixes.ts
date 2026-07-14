@@ -58,6 +58,14 @@ import {
   DEFAULT_CUTOFF_REMINDER_DAYS_LATER,
 } from "../src/lib/cutoff-reminder-settings";
 import {
+  buildMelioBillsCsv,
+  buildMelioVendorsCsv,
+  formatMelioDueDate,
+  melioInvoiceNumberForPayout,
+  melioVendorDisplayName,
+  normalizeMelioBillsInboxEmail,
+} from "../src/lib/melio";
+import {
   testDbRemittanceApplyAndRevert,
   testDbRemittanceMultiApplyRevert,
   testDbRemittancePreviewRollback,
@@ -477,6 +485,52 @@ function testLocalCutoffReminderSettings() {
   record("local/cutoff-reminder-settings", ok ? "PASS" : "FAIL");
 }
 
+function testLocalMelioCsvExport() {
+  const csv = buildMelioBillsCsv([
+    {
+      companyName: "Maria Lopez",
+      amount: 1234.5,
+      invoiceNumber: "GVC-12345-ABCD1234",
+      dueDate: "07/17/2026",
+      note: 'Pay run "RA"',
+    },
+  ]);
+  const vendorCsv = buildMelioVendorsCsv([
+    { companyName: "Steven Castro", email: "steven@example.com" },
+  ]);
+  const invoiceNo = melioInvoiceNumberForPayout({
+    remittanceNumber: "0479998",
+    payoutId: "clxyzABCDEFGH",
+  });
+  const due = formatMelioDueDate(new Date(2026, 6, 17));
+  const vendorName = melioVendorDisplayName({
+    melioVendorName: "  Maria Lopez Psychotherapy  ",
+    firstName: "Maria",
+    lastName: "Lopez",
+  });
+  const inboxOk = normalizeMelioBillsInboxEmail("Biz@InvoicesMelio.com") === "biz@invoicesmelio.com";
+  let inboxBad = false;
+  try {
+    normalizeMelioBillsInboxEmail("not-melio@example.com");
+  } catch {
+    inboxBad = true;
+  }
+
+  const ok =
+    csv.includes("Company name,Amount,Invoice #,Due date,Note") &&
+    csv.includes("Maria Lopez") &&
+    csv.includes("1234.50") &&
+    csv.includes('"Pay run ""RA"""') &&
+    vendorCsv.includes("Steven Castro,steven@example.com") &&
+    invoiceNo.startsWith("GVC-0479998-") &&
+    due === "07/17/2026" &&
+    vendorName === "Maria Lopez Psychotherapy" &&
+    inboxOk &&
+    inboxBad;
+
+  record("local/melio-csv-export", ok ? "PASS" : "FAIL");
+}
+
 function testLocalInvoiceDeletePolicy() {
   if (!canDeleteAdminInvoice({ status: "DRAFT", billedAt: null })) {
     record("local/invoice-delete-policy", "FAIL", "DRAFT should be deletable");
@@ -824,6 +878,7 @@ async function main() {
   testLocal835MismatchFixture();
   testLocalEdi837SubmissionAudit();
   testLocalCutoffReminderSettings();
+  testLocalMelioCsvExport();
   testLocalRemittanceCrossVerify();
   testLocalInvoiceDeletePolicy();
   await testLocalRemittanceGuardsAsync(record);

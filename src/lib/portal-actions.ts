@@ -51,12 +51,14 @@ import {
   parseOutboundLniFaxRoute,
   setCutoffReminderDays,
   setLniOutboundFaxRoute,
+  setMelioBillsInboxEmail,
   setTherapistOutboundEmailRoute,
   setVrcOutboundEmailRoute,
   type CutoffReminderDays,
   type OutboundEmailRoute,
   type OutboundLniFaxRoute,
 } from "@/lib/portal-settings";
+import { markMelioExported, sendPayRunBillsToMelioInbox, buildMelioExportForRemittance } from "@/lib/melio-export";
 import { getNextInvoiceNumber } from "@/lib/invoice-numbers";
 import { parseTherapistInvoicesReturnTo } from "@/lib/invoice-list-filters";
 import { assertAdminCanDeleteInvoice } from "@/lib/invoice-delete-policy";
@@ -1272,6 +1274,71 @@ export async function updateCutoffReminderDaysAction(
   }
 }
 
+export type UpdateMelioBillsInboxState = { error?: string; email?: string | null };
+
+export async function updateMelioBillsInboxAction(
+  email: string,
+): Promise<UpdateMelioBillsInboxState> {
+  await requireAdmin();
+  try {
+    const saved = await setMelioBillsInboxEmail(email);
+    revalidatePath("/portal/admin", "layout");
+    return { email: saved };
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : "Could not save Melio inbox email.",
+    };
+  }
+}
+
+export type SendMelioBillsState = { error?: string; success?: string };
+
+export async function sendMelioBillsAction(
+  _prevState: SendMelioBillsState,
+  formData: FormData,
+): Promise<SendMelioBillsState> {
+  await requireAdmin();
+  const remittanceAdviceId = String(formData.get("remittanceAdviceId") ?? "").trim();
+  if (!remittanceAdviceId) return { error: "Remittance is required." };
+
+  try {
+    const result = await sendPayRunBillsToMelioInbox(remittanceAdviceId);
+    revalidatePath("/portal/admin/pay");
+    revalidatePath(`/portal/admin/pay/${remittanceAdviceId}`);
+    return {
+      success: `Sent ${result.sentCount} bill PDF${result.sentCount === 1 ? "" : "s"} to ${result.inboxEmail}. Review and pay in Melio.`,
+    };
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : "Could not send bills to Melio.",
+    };
+  }
+}
+
+export type MarkMelioExportedState = { error?: string };
+
+export async function markMelioExportedAction(
+  _prevState: MarkMelioExportedState,
+  formData: FormData,
+): Promise<MarkMelioExportedState> {
+  await requireAdmin();
+  const remittanceAdviceId = String(formData.get("remittanceAdviceId") ?? "").trim();
+  if (!remittanceAdviceId) return { error: "Remittance is required." };
+
+  try {
+    const exportData = await buildMelioExportForRemittance(remittanceAdviceId);
+    await markMelioExported(exportData.payRunId);
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : "Could not mark Melio export.",
+    };
+  }
+
+  revalidatePath("/portal/admin/pay");
+  revalidatePath(`/portal/admin/pay/${remittanceAdviceId}`);
+  redirect(`/portal/admin/pay/${remittanceAdviceId}?melioExported=1`);
+}
+
 export async function acceptUnassignedClientAction(formData: FormData) {
   const session = await requireAdmin();
   const clientId = String(formData.get("clientId") ?? "").trim();
@@ -1660,12 +1727,13 @@ function parseTherapistFields(formData: FormData) {
   const email = normalizeEmail(String(formData.get("email") ?? ""));
   const lniProviderId = String(formData.get("lniProviderId") ?? "").trim() || null;
   const npi = String(formData.get("npi") ?? "").trim() || null;
+  const melioVendorName = String(formData.get("melioVendorName") ?? "").trim() || null;
 
   if (!firstName || !lastName) {
     throw new Error("First and last name are required.");
   }
 
-  return { firstName, lastName, email, lniProviderId, npi };
+  return { firstName, lastName, email, lniProviderId, npi, melioVendorName };
 }
 
 async function setupTherapistWelcomeAndDrive(

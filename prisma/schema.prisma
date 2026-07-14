@@ -72,6 +72,7 @@ model User {
   active             Boolean   @default(true)
   lniProviderId      String?
   npi                String?
+  melioVendorName    String?
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
   clients            Client[]
@@ -369,6 +370,7 @@ model TherapistPayRun {
   remittanceAdvice   RemittanceAdvice      @relation(fields: [remittanceAdviceId], references: [id], onDelete: Cascade)
   status             TherapistPayRunStatus @default(DRAFT)
   finalizedAt        DateTime?
+  melioExportedAt    DateTime?
   payouts            TherapistPayRunPayout[]
   createdAt          DateTime              @default(now())
   updatedAt          DateTime              @updatedAt

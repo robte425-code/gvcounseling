@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireAdmin } from "@/auth";
 import { ApplyRemittanceForm, CreateWrongYearRebillForm, CreateWrongYearRebillsForm, DeleteRemittancePreviewForm, FinalizeTherapistPayRunForm, ManualMatchRemittanceLineForm, RematchRemittanceForm, RevertAppliedRemittanceForm, SupersedeRemittanceLineForm, SupersedeWrongYearStaleLinesForm, UnmatchRemittanceLineForm, UnsupersedeRemittanceLineForm } from "@/components/portal/RemittancePayPanel";
+import { MelioPayRunActions } from "@/components/portal/MelioPayRunActions";
 import { RemittanceBillRow, RemittanceBillRowActions } from "@/components/portal/RemittanceBillRow";
 import {
   portalCardClass,
@@ -26,6 +27,7 @@ import {
   type PaidToDeniedWarning,
 } from "@/lib/remittance-paid-to-denied-warnings";
 import type { RemittanceServiceLine } from "@/lib/parse-lni-remittance-pdf";
+import { getMelioBillsInboxEmail } from "@/lib/portal-settings";
 import { prisma } from "@/lib/prisma";
 
 function parseEobCodeDescriptions(value: unknown): Record<string, string> {
@@ -70,13 +72,23 @@ export default async function PayRemittanceDetailPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ applied?: string; superseded?: string; rebilled?: string; finalized?: string; rematched?: string; unmatched?: string; matched?: string }>;
+  searchParams: Promise<{
+    applied?: string;
+    superseded?: string;
+    rebilled?: string;
+    finalized?: string;
+    rematched?: string;
+    unmatched?: string;
+    matched?: string;
+    melioExported?: string;
+  }>;
 }) {
   await requireAdmin();
   const { id } = await params;
   const query = await searchParams;
 
-  const remittance = await prisma.remittanceAdvice.findUnique({
+  const [remittance, melioInboxEmail] = await Promise.all([
+    prisma.remittanceAdvice.findUnique({
     where: { id },
     include: {
       lines: {
@@ -113,7 +125,9 @@ export default async function PayRemittanceDetailPage({
         },
       },
     },
-  });
+  }),
+    getMelioBillsInboxEmail(),
+  ]);
 
   if (!remittance) notFound();
 
@@ -315,6 +329,12 @@ export default async function PayRemittanceDetailPage({
       {query.finalized === "1" && (
         <p className="rounded-xl bg-primary/10 px-4 py-3 text-sm text-primary-dark" role="status">
           Therapist pay finalized. Therapists were emailed and will see invoices as Paid.
+        </p>
+      )}
+
+      {query.melioExported === "1" && (
+        <p className="rounded-xl bg-primary/10 px-4 py-3 text-sm text-primary-dark" role="status">
+          Marked as exported to Melio.
         </p>
       )}
 
@@ -648,6 +668,18 @@ export default async function PayRemittanceDetailPage({
                   : " · therapist pay draft (therapists see Pending until finalized)"}
                 .
               </p>
+              {remittance.payRun && remittance.payRun.payouts.length > 0 && (
+                <MelioPayRunActions
+                  remittanceAdviceId={remittance.id}
+                  billCount={remittance.payRun.payouts.filter((p) => Number(p.therapistAmount) > 0).length}
+                  melioExportedAtLabel={
+                    remittance.payRun.melioExportedAt
+                      ? formatDate(remittance.payRun.melioExportedAt)
+                      : null
+                  }
+                  hasMelioInbox={Boolean(melioInboxEmail)}
+                />
+              )}
               {remittance.payRun?.status === "DRAFT" && (
                 <>
                   <FinalizeTherapistPayRunForm
