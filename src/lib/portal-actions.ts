@@ -49,9 +49,11 @@ import {
   getVrcOutboundEmailRoute,
   parseOutboundEmailRoute,
   parseOutboundLniFaxRoute,
+  setCutoffReminderDays,
   setLniOutboundFaxRoute,
   setTherapistOutboundEmailRoute,
   setVrcOutboundEmailRoute,
+  type CutoffReminderDays,
   type OutboundEmailRoute,
   type OutboundLniFaxRoute,
 } from "@/lib/portal-settings";
@@ -1249,6 +1251,25 @@ export async function updateOutboundLniFaxRouteAction(route: OutboundLniFaxRoute
   if (!parsed) throw new Error("Invalid L&I fax route.");
   await setLniOutboundFaxRoute(parsed);
   revalidatePath("/portal/admin", "layout");
+}
+
+export type UpdateCutoffReminderDaysState = {
+  error?: string;
+  days?: CutoffReminderDays;
+};
+
+export async function updateCutoffReminderDaysAction(
+  earlierDays: string,
+  laterDays: string,
+): Promise<UpdateCutoffReminderDaysState> {
+  await requireAdmin();
+  try {
+    const days = await setCutoffReminderDays(Number(earlierDays), Number(laterDays));
+    revalidatePath("/portal/admin", "layout");
+    return { days };
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "Could not save reminder days." };
+  }
 }
 
 export async function acceptUnassignedClientAction(formData: FormData) {

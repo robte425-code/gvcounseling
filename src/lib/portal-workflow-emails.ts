@@ -1,5 +1,5 @@
 import { sendEmailTo } from "@/lib/email";
-import { formatCurrency, formatDate } from "@/lib/constants";
+import { formatCurrency, formatDate, calendarIsoFromDate, formatCalendarIso } from "@/lib/constants";
 import {
   outboundEmailRedirectNote,
   resolveTherapistOutboundEmail,
@@ -286,6 +286,63 @@ export async function sendTherapistPendingReferralAgingEmail(options: {
 
   await sendEmailTo(to, {
     subject: `Pending referrals awaiting acceptance (${options.referrals.length})`,
+    text: lines.join("\n"),
+  });
+}
+
+export async function sendTherapistCutoffReminderEmail(options: {
+  therapistEmail: string;
+  therapistName: string;
+  cutoffDate: Date;
+  daysBefore: number;
+  draftInvoiceCount: number;
+  submittedInvoiceCount: number;
+}) {
+  const intendedEmail = options.therapistEmail.trim();
+  if (!intendedEmail) return;
+
+  const { to, redirected } = await resolveTherapistOutboundEmail(intendedEmail);
+  const invoicesUrl = `${getSiteUrl()}/portal/therapist/invoices`;
+  const cutoffLabel = formatCalendarIso(calendarIsoFromDate(options.cutoffDate));
+  const dayWord = options.daysBefore === 1 ? "day" : "days";
+
+  const lines = [
+    `Hello ${options.therapistName},`,
+    "",
+    `This is a reminder that the L&I billing cutoff date is ${cutoffLabel} (${options.daysBefore} ${dayWord} from now).`,
+    "",
+    "Please submit your invoices in the portal before 12:00 PM (noon) on that day so they can be included in this pay period.",
+    "",
+  ];
+
+  if (options.draftInvoiceCount > 0 || options.submittedInvoiceCount > 0) {
+    lines.push("Your current invoice status:");
+    if (options.draftInvoiceCount > 0) {
+      lines.push(
+        `- ${options.draftInvoiceCount} draft invoice${options.draftInvoiceCount === 1 ? "" : "s"} (submit before noon on the cutoff date)`,
+      );
+    }
+    if (options.submittedInvoiceCount > 0) {
+      lines.push(
+        `- ${options.submittedInvoiceCount} submitted invoice${options.submittedInvoiceCount === 1 ? "" : "s"} waiting for admin pay-period assignment`,
+      );
+    }
+    lines.push("");
+  }
+
+  lines.push(
+    "Open your invoices:",
+    invoicesUrl,
+    "",
+    "Grandview Counseling",
+  );
+
+  if (redirected) {
+    lines.push(outboundEmailRedirectNote(options.therapistName, intendedEmail));
+  }
+
+  await sendEmailTo(to, {
+    subject: `Billing cutoff ${cutoffLabel} — submit invoices by noon`,
     text: lines.join("\n"),
   });
 }

@@ -52,6 +52,12 @@ import { detectRemittanceSourceFormat } from "../src/lib/remittance-file-format"
 import { hashEdi837Content } from "../src/lib/edi837-submission";
 import { buildInvoiceSnapshotFromBatchRows } from "../src/lib/edi837-batch-report";
 import {
+  normalizeCutoffReminderDays,
+  parseCutoffReminderDays,
+  DEFAULT_CUTOFF_REMINDER_DAYS_EARLIER,
+  DEFAULT_CUTOFF_REMINDER_DAYS_LATER,
+} from "../src/lib/cutoff-reminder-settings";
+import {
   testDbRemittanceApplyAndRevert,
   testDbRemittanceMultiApplyRevert,
   testDbRemittancePreviewRollback,
@@ -451,6 +457,26 @@ function testLocalEdi837SubmissionAudit() {
   record("local/edi837-submission-audit", ok ? "PASS" : "FAIL");
 }
 
+function testLocalCutoffReminderSettings() {
+  const parsedOk = parseCutoffReminderDays("7") === 7;
+  const parsedBad = parseCutoffReminderDays("0") === undefined;
+  const normalized = normalizeCutoffReminderDays(2, 7);
+  const swappedDefaults = normalizeCutoffReminderDays(
+    DEFAULT_CUTOFF_REMINDER_DAYS_LATER,
+    DEFAULT_CUTOFF_REMINDER_DAYS_EARLIER,
+  );
+
+  const ok =
+    parsedOk &&
+    parsedBad &&
+    normalized.earlierDays === 7 &&
+    normalized.laterDays === 2 &&
+    swappedDefaults.earlierDays === DEFAULT_CUTOFF_REMINDER_DAYS_EARLIER &&
+    swappedDefaults.laterDays === DEFAULT_CUTOFF_REMINDER_DAYS_LATER;
+
+  record("local/cutoff-reminder-settings", ok ? "PASS" : "FAIL");
+}
+
 function testLocalInvoiceDeletePolicy() {
   if (!canDeleteAdminInvoice({ status: "DRAFT", billedAt: null })) {
     record("local/invoice-delete-policy", "FAIL", "DRAFT should be deletable");
@@ -797,6 +823,7 @@ async function main() {
   testLocal835Parse();
   testLocal835MismatchFixture();
   testLocalEdi837SubmissionAudit();
+  testLocalCutoffReminderSettings();
   testLocalRemittanceCrossVerify();
   testLocalInvoiceDeletePolicy();
   await testLocalRemittanceGuardsAsync(record);
