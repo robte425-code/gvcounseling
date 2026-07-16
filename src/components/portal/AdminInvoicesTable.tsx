@@ -7,6 +7,7 @@ import { InvoiceTableRow } from "@/components/portal/InvoiceTableRow";
 import { InvoicePaymentStatusCell } from "@/components/portal/InvoicePaymentStatusCell";
 import { InvoiceTherapistPaymentCell } from "@/components/portal/InvoiceTherapistPaymentCell";
 import {
+  StatusBadge,
   portalButtonClass,
   portalButtonSecondaryClass,
   portalInputCompactClass,
@@ -16,7 +17,7 @@ import {
   portalTableWideClass,
 } from "@/components/portal/ui";
 import { formatCurrency, formatDate } from "@/lib/constants";
-import { groupInvoicesByPayPeriod } from "@/lib/invoice-pay-period-grouping";
+import { groupInvoicesByPayPeriod, UNASSIGNED_GROUP_KEY } from "@/lib/invoice-pay-period-grouping";
 import { assignInvoicesToPayPeriodAction, deleteAdminInvoiceAction } from "@/lib/portal-actions";
 import { canDeleteAdminInvoice } from "@/lib/invoice-delete-policy";
 import type { TherapistPaymentDisplay } from "@/lib/invoice-therapist-payment";
@@ -149,6 +150,7 @@ export function AdminInvoicesTable({ invoices, payPeriods, returnTo }: Props) {
               />
             </th>
             <th className="py-2 pr-4">#</th>
+            <th className="py-2 pr-4">Status</th>
             <th className="py-2 pr-4">Therapist</th>
             <th className="py-2 pr-4">Client</th>
             <th className="py-2 pr-4">Service date</th>
@@ -163,11 +165,18 @@ export function AdminInvoicesTable({ invoices, payPeriods, returnTo }: Props) {
           {groups.map((group) => (
             <Fragment key={group.key}>
               <tr key={group.key} className="border-b border-border bg-primary/5">
-                <td colSpan={10} className="py-2.5 pr-4 text-sm font-semibold text-primary-dark">
+                <td colSpan={11} className="py-2.5 pr-4 text-sm font-semibold text-primary-dark">
                   {group.label}
                   <span className="ml-2 font-normal text-muted">
                     ({group.invoices.length} invoice{group.invoices.length === 1 ? "" : "s"})
                   </span>
+                  {group.key === UNASSIGNED_GROUP_KEY &&
+                    group.invoices.some((inv) => !inv.assignable) && (
+                      <span className="mt-1 block text-xs font-normal text-muted">
+                        Only submitted invoices can be assigned. Drafts must be submitted by the
+                        therapist first; billed invoices without a period are historical.
+                      </span>
+                    )}
                 </td>
               </tr>
               {group.invoices.map((inv) => (
@@ -184,7 +193,9 @@ export function AdminInvoicesTable({ invoices, payPeriods, returnTo }: Props) {
                         title={
                           inv.assignable
                             ? `Select invoice #${inv.invoiceNumber}`
-                            : "Only submitted invoices can be assigned to a pay period"
+                            : inv.status === "DRAFT"
+                              ? "Draft — therapist must submit before assign"
+                              : "Only submitted invoices can be assigned to a pay period"
                         }
                         onChange={(e) => toggleOne(inv.id, e.target.checked)}
                       />
@@ -211,6 +222,9 @@ export function AdminInvoicesTable({ invoices, payPeriods, returnTo }: Props) {
                     >
                       {inv.invoiceNumber}
                     </Link>
+                  </td>
+                  <td className="py-3 pr-4">
+                    <StatusBadge status={inv.status} />
                   </td>
                   <td className="py-3 pr-4">{inv.therapistName}</td>
                   <td className="py-3 pr-4">{inv.clientLabel}</td>

@@ -16,6 +16,8 @@ export type InvoicePayPeriodGroup<T extends PayPeriodGroupableInvoice> = {
 
 const UNASSIGNED_GROUP_KEY = "__unassigned__";
 
+export { UNASSIGNED_GROUP_KEY };
+
 export function startOfUtcDay(date = new Date()): Date {
   return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
 }
