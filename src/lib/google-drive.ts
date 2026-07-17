@@ -672,6 +672,18 @@ export async function getOrCreateDriveSubfolder(
   return createDriveFolder(accessToken, name, parentFolderId);
 }
 
+/** Root Drive folder used to archive generated 837 billing files. */
+export const EDI837_FILES_FOLDER_NAME = "837 Files";
+
+export async function resolveEdi837FilesFolderId(accessToken: string): Promise<string> {
+  const configuredId = process.env.GOOGLE_DRIVE_837_FOLDER_ID?.trim();
+  if (configuredId) return configuredId;
+
+  const configuredName =
+    process.env.GOOGLE_DRIVE_837_FOLDER_NAME?.trim() || EDI837_FILES_FOLDER_NAME;
+  return getOrCreateDriveSubfolder(accessToken, "root", configuredName);
+}
+
 export async function uploadDriveFile(
   accessToken: string,
   parentFolderId: string,
