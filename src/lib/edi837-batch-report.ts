@@ -94,26 +94,13 @@ function evaluateInvoiceRow(
       continue;
     }
 
+    // 837 bills L&I fee schedule amounts. Therapist invoice line amounts are often
+    // lower (margin) — that difference is expected and is not a batch issue.
     lniBillAmount += feeAmount * line.units;
-
-    if (
-      Number.isFinite(invoiceLineAmount) &&
-      Math.abs(feeAmount * line.units - invoiceLineAmount) > 0.01
-    ) {
-      const message = `${line.procedureCode} on ${serviceDateLabel}: invoice ${invoiceLineAmount.toFixed(2)} vs L&I fee ${(feeAmount * line.units).toFixed(2)}`;
-      warnings.push(message);
-      lineIssues.push({ kind: "amount_mismatch", message });
-    }
   }
 
   lniBillAmount = Math.round(lniBillAmount * 100) / 100;
   const invoiceTotalAmount = Math.round(Number(invoice.totalAmount) * 100) / 100;
-
-  if (Math.abs(lniBillAmount - invoiceTotalAmount) > 0.01 && invoice.lineItems.length > 0) {
-    warnings.push(
-      `Invoice total ${invoiceTotalAmount.toFixed(2)} vs L&I bill amount ${lniBillAmount.toFixed(2)}`,
-    );
-  }
 
   const clmNote = invoice.clmControlNumber ? null : "Assigned when you generate 837";
 
