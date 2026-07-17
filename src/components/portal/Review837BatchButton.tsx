@@ -83,6 +83,7 @@ export function Review837BatchButton({ payPeriodId, periodLabel, usageIndicator 
                   {report.skippedBilledCount > 0
                     ? ` · ${report.skippedBilledCount} billed skipped`
                     : ""}
+                  . Amounts use the L&I fee schedule (not therapist invoice rates).
                 </p>
               </div>
               <button

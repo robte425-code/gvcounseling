@@ -5,7 +5,7 @@ import { loadAllProcedureCodeFees, resolveFeeAmount } from "@/lib/procedure-fees
 import { prisma } from "@/lib/prisma";
 
 export type Edi837BatchLineIssue = {
-  kind: "missing_fee" | "amount_mismatch";
+  kind: "missing_fee";
   message: string;
 };
 
