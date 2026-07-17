@@ -126,6 +126,12 @@ export function InvoiceDetailClient({
         }}
       />
 
+      {draftSaveError && !readOnly && (
+        <p className="rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-900" role="status">
+          {draftSaveError}
+        </p>
+      )}
+
       {!readOnly && usesTherapistFees && lines.some((line) => !line.amount) && (
         <p className="text-sm text-amber-900">
           One or more lines have no fee on file for the selected date. Ask admin to update your
