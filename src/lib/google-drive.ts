@@ -675,13 +675,79 @@ export async function getOrCreateDriveSubfolder(
 /** Root Drive folder used to archive generated 837 billing files. */
 export const EDI837_FILES_FOLDER_NAME = "837 Files";
 
+type DriveFolderMatch = {
+  id: string;
+  parents: string[];
+  createdTime: string | null;
+};
+
+async function listDriveFoldersNamed(
+  accessToken: string,
+  name: string,
+): Promise<DriveFolderMatch[]> {
+  const folders: DriveFolderMatch[] = [];
+  let pageToken: string | undefined;
+
+  do {
+    const params = new URLSearchParams({
+      q: [
+        `mimeType='${FOLDER_MIME}'`,
+        "trashed=false",
+        `name='${escapeDriveQuery(name)}'`,
+      ].join(" and "),
+      fields: "nextPageToken,files(id,parents,createdTime)",
+      pageSize: "100",
+      supportsAllDrives: "true",
+      includeItemsFromAllDrives: "true",
+      orderBy: "createdTime",
+    });
+    if (pageToken) params.set("pageToken", pageToken);
+
+    const data = await driveFetch<{
+      files?: Array<{ id: string; parents?: string[]; createdTime?: string }>;
+      nextPageToken?: string;
+    }>(accessToken, `/files?${params.toString()}`);
+
+    for (const file of data.files ?? []) {
+      folders.push({
+        id: file.id,
+        parents: file.parents ?? [],
+        createdTime: file.createdTime ?? null,
+      });
+    }
+    pageToken = data.nextPageToken;
+  } while (pageToken);
+
+  return folders;
+}
+
+/**
+ * Reuse a single Drive folder for all archived 837 files.
+ * Prefer GOOGLE_DRIVE_837_FOLDER_ID, else an existing folder named "837 Files"
+ * (root-parent first, then oldest), else create one under My Drive root.
+ */
 export async function resolveEdi837FilesFolderId(accessToken: string): Promise<string> {
   const configuredId = process.env.GOOGLE_DRIVE_837_FOLDER_ID?.trim();
   if (configuredId) return configuredId;
 
   const configuredName =
     process.env.GOOGLE_DRIVE_837_FOLDER_NAME?.trim() || EDI837_FILES_FOLDER_NAME;
-  return getOrCreateDriveSubfolder(accessToken, "root", configuredName);
+
+  const matches = await listDriveFoldersNamed(accessToken, configuredName);
+  if (matches.length === 1) {
+    return matches[0]!.id;
+  }
+  if (matches.length > 1) {
+    const underRoot = matches.find((folder) => folder.parents.includes("root"));
+    const chosen = underRoot ?? matches[0]!;
+    console.warn(
+      `Multiple Drive folders named "${configuredName}" found (${matches.length}). ` +
+        `Reusing ${chosen.id}. Set GOOGLE_DRIVE_837_FOLDER_ID to pin one folder.`,
+    );
+    return chosen.id;
+  }
+
+  return createDriveFolder(accessToken, configuredName, "root");
 }
 
 export async function uploadDriveFile(
