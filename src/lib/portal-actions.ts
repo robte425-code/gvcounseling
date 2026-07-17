@@ -49,6 +49,8 @@ import {
   getVrcOutboundEmailRoute,
   parseOutboundEmailRoute,
   parseOutboundLniFaxRoute,
+  parseIsaUsageIndicatorSetting,
+  setBillingIsaUsageIndicator,
   setCutoffReminderDays,
   setLniOutboundFaxRoute,
   setTherapistOutboundEmailRoute,
@@ -57,6 +59,7 @@ import {
   type OutboundEmailRoute,
   type OutboundLniFaxRoute,
 } from "@/lib/portal-settings";
+import type { IsaUsageIndicator } from "@/lib/edi837";
 import {
   createTherapistStripeOnboardingLink,
   payTherapistPayRunWithStripe,
@@ -1276,6 +1279,14 @@ export async function updateOutboundLniFaxRouteAction(route: OutboundLniFaxRoute
   if (!parsed) throw new Error("Invalid L&I fax route.");
   await setLniOutboundFaxRoute(parsed);
   revalidatePath("/portal/admin", "layout");
+}
+
+export async function updateBillingIsaUsageIndicatorAction(value: IsaUsageIndicator) {
+  await requireAdmin();
+  const parsed = parseIsaUsageIndicatorSetting(value);
+  if (!parsed) throw new Error("Invalid 837 usage indicator.");
+  await setBillingIsaUsageIndicator(parsed);
+  revalidatePath("/portal/admin/billing");
 }
 
 export type UpdateCutoffReminderDaysState = {

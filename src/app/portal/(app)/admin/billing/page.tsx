@@ -6,8 +6,7 @@ import {
   syncPayPeriodsFromLniAction,
 } from "@/lib/portal-actions";
 import { LNI_PAYMENT_STATUS_URL } from "@/lib/lni-pay-periods";
-import { getIsaUsageIndicator } from "@/lib/edi837";
-import { getOutboundTestingSettings } from "@/lib/portal-settings";
+import { getBillingIsaUsageIndicator, getOutboundTestingSettings } from "@/lib/portal-settings";
 import {
   portalButtonClass,
   portalButtonSecondaryClass,
@@ -41,7 +40,7 @@ export default async function BillingPage({
 }) {
   await requireAdmin();
   const params = await searchParams;
-  const [periods, outboundEmailSettings] = await Promise.all([
+  const [periods, outboundEmailSettings, billingIsaUsageIndicator] = await Promise.all([
     prisma.payPeriod.findMany({
       where: { invoices: { some: {} } },
       orderBy: { cutoffDate: "desc" },
@@ -54,6 +53,7 @@ export default async function BillingPage({
       },
     }),
     getOutboundTestingSettings(),
+    getBillingIsaUsageIndicator(),
   ]);
 
   const billedByPeriod = await prisma.invoice.groupBy({
@@ -181,7 +181,7 @@ export default async function BillingPage({
 
       <BillingWorkspace
         rows={periodRows}
-        defaultUsageIndicator={getIsaUsageIndicator()}
+        defaultUsageIndicator={billingIsaUsageIndicator}
         vrcRoute={outboundEmailSettings.vrcRoute}
         lniFaxRoute={outboundEmailSettings.lniFaxRoute}
         adminEmails={outboundEmailSettings.adminEmails}

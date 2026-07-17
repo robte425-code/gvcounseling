@@ -47,6 +47,7 @@ export type Edi837Result = {
   gsControl: string;
   claimCount: number;
   totalAmount: number;
+  usageIndicator: IsaUsageIndicator;
 };
 
 function padLeft(value: string | number, length: number, char = "0"): string {
@@ -282,6 +283,7 @@ export function buildEdi837(
     gsControl,
     claimCount: claims.length,
     totalAmount,
+    usageIndicator,
   };
 }
 

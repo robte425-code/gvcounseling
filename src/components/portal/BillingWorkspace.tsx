@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useState, useTransition, type ReactNode } from "react";
 import { BillingPayPeriodsTable, type BillingPayPeriodRow } from "@/components/portal/BillingPayPeriodsTable";
 import { portalCardClass, portalSectionHeadingClass } from "@/components/portal/ui";
 import type { IsaUsageIndicator } from "@/lib/edi837";
 import type { OutboundEmailRoute, OutboundLniFaxRoute } from "@/lib/portal-settings";
+import { updateBillingIsaUsageIndicatorAction } from "@/lib/portal-actions";
 
 type Props = {
   rows: BillingPayPeriodRow[];
@@ -33,16 +34,21 @@ function BillingModeToggles({
   usageIndicator,
   onUsageIndicatorChange,
   onBillingEnvironmentChange,
+  saving,
 }: {
   usageIndicator: IsaUsageIndicator;
   onUsageIndicatorChange: (value: IsaUsageIndicator) => void;
   onBillingEnvironmentChange: (value: BillingEnvironment) => void;
+  saving: boolean;
 }) {
   const billingEnvironment = deriveBillingEnvironment(usageIndicator);
 
   return (
     <div className="mt-6 space-y-3 border-t border-border pt-6">
-      <p className="text-xs font-semibold uppercase tracking-wide text-muted">Modes</p>
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-xs font-semibold uppercase tracking-wide text-muted">Modes</p>
+        {saving ? <p className="text-xs text-muted">Saving…</p> : null}
+      </div>
 
       <div className="space-y-2 rounded-xl border border-primary/20 bg-primary/[0.06] p-3">
         <div>
@@ -82,7 +88,7 @@ function BillingModeToggles({
       <div className="space-y-2 rounded-xl border border-border bg-primary/[0.03] p-3">
         <div>
           <p className="text-sm font-medium text-primary-dark">837 file</p>
-          <p className="mt-0.5 text-xs text-muted">ISA15 usage indicator for downloads</p>
+          <p className="mt-0.5 text-xs text-muted">ISA15 usage indicator for downloads (saved)</p>
         </div>
         <div
           className="inline-flex w-full rounded-full border border-border bg-surface p-1 shadow-sm"
@@ -121,9 +127,21 @@ export function BillingWorkspace({
   addPayPeriod,
 }: Props) {
   const [usageIndicator, setUsageIndicator] = useState<IsaUsageIndicator>(defaultUsageIndicator);
+  const [saving, startSave] = useTransition();
+
+  function persistUsageIndicator(value: IsaUsageIndicator) {
+    setUsageIndicator(value);
+    startSave(async () => {
+      try {
+        await updateBillingIsaUsageIndicatorAction(value);
+      } catch (error) {
+        console.error("Could not save billing mode:", error);
+      }
+    });
+  }
 
   function setBillingEnvironment(environment: BillingEnvironment) {
-    setUsageIndicator(environment === "test" ? "T" : "P");
+    persistUsageIndicator(environment === "test" ? "T" : "P");
   }
 
   return (
@@ -132,8 +150,9 @@ export function BillingWorkspace({
         {setup}
         <BillingModeToggles
           usageIndicator={usageIndicator}
-          onUsageIndicatorChange={setUsageIndicator}
+          onUsageIndicatorChange={persistUsageIndicator}
           onBillingEnvironmentChange={setBillingEnvironment}
+          saving={saving}
         />
         {addPayPeriod}
       </section>

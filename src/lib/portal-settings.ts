@@ -9,12 +9,16 @@ import {
   parseCutoffReminderDays,
   type CutoffReminderDays,
 } from "@/lib/cutoff-reminder-settings";
+import { getIsaUsageIndicator, type IsaUsageIndicator } from "@/lib/edi837";
 
 export const OUTBOUND_VRC_EMAIL_KEY = "outbound_vrc_email_destination";
 export const OUTBOUND_THERAPIST_EMAIL_KEY = "outbound_therapist_email_destination";
 export const OUTBOUND_LNI_FAX_KEY = "outbound_lni_fax_destination";
 export const CUTOFF_REMINDER_DAYS_EARLIER_KEY = "cutoff_reminder_days_earlier";
 export const CUTOFF_REMINDER_DAYS_LATER_KEY = "cutoff_reminder_days_later";
+export const BILLING_ISA_USAGE_INDICATOR_KEY = "billing_isa_usage_indicator";
+export const PENDING_837_ARCHIVE_CUTOFF_KEY = "pending_837_archive_cutoff";
+export const PENDING_837_ARCHIVE_USAGE_KEY = "pending_837_archive_usage";
 /** @deprecated Legacy key — read as fallback for VRC routing only. */
 export const VRC_REFERRAL_EMAIL_DESTINATION_KEY = "vrc_referral_email_destination";
 
@@ -104,6 +108,29 @@ export async function setLniOutboundFaxRoute(route: OutboundLniFaxRoute): Promis
     where: { key: OUTBOUND_LNI_FAX_KEY },
     create: { key: OUTBOUND_LNI_FAX_KEY, value: route },
     update: { value: route },
+  });
+}
+
+export function parseIsaUsageIndicatorSetting(
+  value: string | null | undefined,
+): IsaUsageIndicator | undefined {
+  const normalized = value?.trim().toUpperCase();
+  return normalized === "T" || normalized === "P" ? normalized : undefined;
+}
+
+/** Sticky Bill L&I Test/Production mode (ISA15). Falls back to env default. */
+export async function getBillingIsaUsageIndicator(): Promise<IsaUsageIndicator> {
+  const current = await readPortalSetting(BILLING_ISA_USAGE_INDICATOR_KEY);
+  return parseIsaUsageIndicatorSetting(current) ?? getIsaUsageIndicator();
+}
+
+export async function setBillingIsaUsageIndicator(value: IsaUsageIndicator): Promise<void> {
+  const parsed = parseIsaUsageIndicatorSetting(value);
+  if (!parsed) throw new Error("Invalid 837 usage indicator.");
+  await prisma.portalSetting.upsert({
+    where: { key: BILLING_ISA_USAGE_INDICATOR_KEY },
+    create: { key: BILLING_ISA_USAGE_INDICATOR_KEY, value: parsed },
+    update: { value: parsed },
   });
 }
 

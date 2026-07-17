@@ -1,23 +1,28 @@
-import type { Edi837Result } from "@/lib/edi837";
+import type { Edi837Result, IsaUsageIndicator } from "@/lib/edi837";
 import { getDriveAccessTokenForClient } from "@/lib/google-drive-access";
 import { resolveEdi837FilesFolderId, uploadDriveFile } from "@/lib/google-drive";
 
 function driveArchiveFilename(edi: Edi837Result): string {
   const base = edi.filename.replace(/\.(txt|edi)$/i, "");
-  return `${base}_${edi.isaControl}.TXT`;
+  const usage = edi.usageIndicator === "P" ? "P" : "T";
+  return `${base}_${usage}_${edi.isaControl}.TXT`;
 }
 
 /** Save a copy of the generated 837 under Drive root "837 Files". */
 export async function archiveEdi837ToDrive(options: {
   edi: Edi837Result;
   initiatorUserId?: string;
+  usageIndicator?: IsaUsageIndicator;
 }): Promise<{ id: string; webViewLink: string; filename: string } | null> {
   try {
     const accessToken = await getDriveAccessTokenForClient({
       initiatorUserId: options.initiatorUserId,
     });
     const folderId = await resolveEdi837FilesFolderId(accessToken);
-    const filename = driveArchiveFilename(options.edi);
+    const filename = driveArchiveFilename({
+      ...options.edi,
+      usageIndicator: options.usageIndicator ?? options.edi.usageIndicator,
+    });
     const uploaded = await uploadDriveFile(
       accessToken,
       folderId,

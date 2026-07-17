@@ -5,7 +5,7 @@
  *
  * Triggered from production build when PortalSetting pending_837_archive_cutoff is set.
  * Also runnable manually:
- *   PENDING_837_ARCHIVE_CUTOFF=2026-07-17 npx tsx scripts/run-pending-837-archive.ts
+ *   PENDING_837_ARCHIVE_CUTOFF=2026-07-17 PENDING_837_ARCHIVE_USAGE=P npx tsx scripts/run-pending-837-archive.ts
  */
 
 import "dotenv/config";
@@ -34,7 +34,13 @@ function loadSmokeEnv() {
 
 loadSmokeEnv();
 
-export const PENDING_837_ARCHIVE_CUTOFF_KEY = "pending_837_archive_cutoff";
+const PENDING_837_ARCHIVE_CUTOFF_KEY = "pending_837_archive_cutoff";
+const PENDING_837_ARCHIVE_USAGE_KEY = "pending_837_archive_usage";
+
+function parseUsage(value: string | null | undefined): "T" | "P" | undefined {
+  const normalized = value?.trim().toUpperCase();
+  return normalized === "T" || normalized === "P" ? normalized : undefined;
+}
 
 async function main() {
   if (!process.env.DATABASE_URL?.trim()) {
@@ -48,11 +54,20 @@ async function main() {
   const { getIsaUsageIndicator } = await import("../src/lib/edi837");
 
   const envCutoff = process.env.PENDING_837_ARCHIVE_CUTOFF?.trim();
-  const setting = await prisma.portalSetting.findUnique({
-    where: { key: PENDING_837_ARCHIVE_CUTOFF_KEY },
-    select: { value: true },
-  });
-  const cutoffIso = envCutoff || setting?.value?.trim() || "";
+  const envUsage = process.env.PENDING_837_ARCHIVE_USAGE?.trim();
+  const [cutoffSetting, usageSetting] = await Promise.all([
+    prisma.portalSetting.findUnique({
+      where: { key: PENDING_837_ARCHIVE_CUTOFF_KEY },
+      select: { value: true },
+    }),
+    prisma.portalSetting.findUnique({
+      where: { key: PENDING_837_ARCHIVE_USAGE_KEY },
+      select: { value: true },
+    }),
+  ]);
+  const cutoffIso = envCutoff || cutoffSetting?.value?.trim() || "";
+  const usageIndicator =
+    parseUsage(envUsage) ?? parseUsage(usageSetting?.value) ?? getIsaUsageIndicator();
 
   if (!/^\d{4}-\d{2}-\d{2}$/.test(cutoffIso)) {
     console.log("run-pending-837-archive: no pending cutoff — skipping");
@@ -60,7 +75,9 @@ async function main() {
     return;
   }
 
-  console.log(`run-pending-837-archive: regenerating 837 for cutoff ${cutoffIso}`);
+  console.log(
+    `run-pending-837-archive: regenerating 837 for cutoff ${cutoffIso} usage=${usageIndicator}`,
+  );
 
   const periods = await prisma.payPeriod.findMany({
     orderBy: { cutoffDate: "desc" },
@@ -68,7 +85,9 @@ async function main() {
   const payPeriod = periods.find((period) => calendarIsoFromDate(period.cutoffDate) === cutoffIso);
   if (!payPeriod) {
     console.error(`run-pending-837-archive: no pay period with cutoff ${cutoffIso}`);
-    await prisma.portalSetting.deleteMany({ where: { key: PENDING_837_ARCHIVE_CUTOFF_KEY } });
+    await prisma.portalSetting.deleteMany({
+      where: { key: { in: [PENDING_837_ARCHIVE_CUTOFF_KEY, PENDING_837_ARCHIVE_USAGE_KEY] } },
+    });
     await prisma.$disconnect();
     process.exitCode = 1;
     return;
@@ -88,7 +107,7 @@ async function main() {
     const result = await generate837ForPayPeriod(payPeriod.id, {
       includeBilled: true,
       archiveToDrive: true,
-      usageIndicator: getIsaUsageIndicator(),
+      usageIndicator,
       generatedById: admin?.id,
     });
     console.log(
@@ -96,9 +115,10 @@ async function main() {
         (result.driveArchiveFilename ? ` drive=${result.driveArchiveFilename}` : " drive=FAILED"),
     );
     if (result.driveArchiveFilename) {
-      await prisma.portalSetting.deleteMany({ where: { key: PENDING_837_ARCHIVE_CUTOFF_KEY } });
+      await prisma.portalSetting.deleteMany({
+        where: { key: { in: [PENDING_837_ARCHIVE_CUTOFF_KEY, PENDING_837_ARCHIVE_USAGE_KEY] } },
+      });
     } else {
-      // Keep pending flag so the next deploy retries Drive archive.
       console.error(
         "run-pending-837-archive: Drive archive failed; will retry on next deploy (build continues).",
       );

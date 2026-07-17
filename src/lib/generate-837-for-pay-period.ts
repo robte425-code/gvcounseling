@@ -125,6 +125,7 @@ export async function generate837ForPayPeriod(
     const archived = await archiveEdi837ToDrive({
       edi: result,
       initiatorUserId: options?.generatedById,
+      usageIndicator: options?.usageIndicator ?? result.usageIndicator,
     });
     if (!archived) {
       console.warn(
