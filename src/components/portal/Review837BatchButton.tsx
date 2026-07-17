@@ -77,9 +77,12 @@ export function Review837BatchButton({ payPeriodId, periodLabel, usageIndicator 
                   837 batch report
                 </h2>
                 <p className="mt-1 text-sm text-muted">
-                  {periodLabel} · {report.invoiceCount} invoice
+                  {periodLabel} · {report.invoiceCount} submitted invoice
                   {report.invoiceCount === 1 ? "" : "s"} · L&I bill total{" "}
                   {formatCurrency(report.totalLniBillAmount)}
+                  {report.skippedBilledCount > 0
+                    ? ` · ${report.skippedBilledCount} billed skipped`
+                    : ""}
                 </p>
               </div>
               <button
@@ -111,12 +114,17 @@ export function Review837BatchButton({ payPeriodId, periodLabel, usageIndicator 
                   {report.submittedCount} will become Billed
                 </span>
               )}
+              {report.skippedBilledCount > 0 && (
+                <span className="inline-flex rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-800">
+                  {report.skippedBilledCount} already billed (excluded)
+                </span>
+              )}
             </div>
 
             {!report.canGenerate && (
               <p className="mt-3 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-900" role="alert">
-                Fix blockers before generating. Generating marks matched invoices Billed and assigns
-                CLM numbers.
+                Fix blockers before generating. Generating marks submitted invoices Billed and
+                assigns CLM numbers. Already-billed invoices are never included.
               </p>
             )}
 

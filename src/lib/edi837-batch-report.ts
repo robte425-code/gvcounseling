@@ -36,7 +36,8 @@ export type Edi837BatchReport = {
   warningCount: number;
   totalLniBillAmount: number;
   submittedCount: number;
-  billedCount: number;
+  /** Already-billed invoices on this period (excluded from the 837). */
+  skippedBilledCount: number;
   canGenerate: boolean;
   invoices: Edi837BatchInvoiceRow[];
 };
@@ -138,10 +139,21 @@ export async function buildEdi837BatchReport(payPeriodId: string): Promise<Edi83
   const payPeriod = await prisma.payPeriod.findUnique({ where: { id: payPeriodId } });
   if (!payPeriod) throw new Error("Pay period not found.");
 
-  const invoices = await loadInvoicesFor837PayPeriod(payPeriodId);
+  const [invoices, skippedBilledCount] = await Promise.all([
+    loadInvoicesFor837PayPeriod(payPeriodId),
+    prisma.invoice.count({
+      where: { payPeriodId, status: "BILLED" },
+    }),
+  ]);
+
   if (!invoices.length) {
+    if (skippedBilledCount > 0) {
+      throw new Error(
+        `No submitted invoices to include in the 837. ${skippedBilledCount} billed invoice${skippedBilledCount === 1 ? "" : "s"} on this period ${skippedBilledCount === 1 ? "was" : "were"} skipped to avoid duplicate L&I billing.`,
+      );
+    }
     throw new Error(
-      "No invoices are assigned to this pay period. Assign submitted invoices on the Invoices page first.",
+      "No submitted invoices are assigned to this pay period. Assign submitted invoices on the Invoices page first.",
     );
   }
 
@@ -164,8 +176,8 @@ export async function buildEdi837BatchReport(payPeriodId: string): Promise<Edi83
     blockerCount,
     warningCount,
     totalLniBillAmount,
-    submittedCount: rows.filter((row) => row.status === "SUBMITTED").length,
-    billedCount: rows.filter((row) => row.status === "BILLED").length,
+    submittedCount: rows.length,
+    skippedBilledCount,
     canGenerate: blockerCount === 0,
     invoices: rows,
   };

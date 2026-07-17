@@ -51,6 +51,7 @@ import {
 import { detectRemittanceSourceFormat } from "../src/lib/remittance-file-format";
 import { hashEdi837Content } from "../src/lib/edi837-submission";
 import { buildInvoiceSnapshotFromBatchRows } from "../src/lib/edi837-batch-report";
+import { invoice837PayPeriodWhere } from "../src/lib/invoice-list-filters";
 import {
   normalizeCutoffReminderDays,
   parseCutoffReminderDays,
@@ -448,12 +449,16 @@ function testLocalEdi837SubmissionAudit() {
     new Map([["inv-1", "CLMNEW12345678901234"]]),
   );
 
+  const where = invoice837PayPeriodWhere("period-1");
+  const excludesBilled = where.status === "SUBMITTED";
+
   const ok =
     hash.length === 64 &&
     hash === hashAgain &&
     snapshot.length === 1 &&
     snapshot[0]!.clmControlNumber === "CLMNEW12345678901234" &&
-    snapshot[0]!.statusBefore === "SUBMITTED";
+    snapshot[0]!.statusBefore === "SUBMITTED" &&
+    excludesBilled;
 
   record("local/edi837-submission-audit", ok ? "PASS" : "FAIL");
 }
