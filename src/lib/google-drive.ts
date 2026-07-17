@@ -646,6 +646,8 @@ function mimeTypeForFilename(filename: string): string {
     jpg: "image/jpeg",
     jpeg: "image/jpeg",
     png: "image/png",
+    txt: "text/plain",
+    edi: "text/plain",
   };
   return types[ext ?? ""] ?? "application/octet-stream";
 }

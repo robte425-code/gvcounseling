@@ -10,6 +10,7 @@ import {
   buildInvoiceSnapshotFromBatchRows,
   loadInvoicesFor837PayPeriod,
 } from "@/lib/edi837-batch-report";
+import { archiveEdi837ToDrive } from "@/lib/edi837-drive-archive";
 import { recordEdi837Submission } from "@/lib/edi837-submission";
 import { resolveClientBirthDate } from "@/lib/constants";
 import { loadAllProcedureCodeFees, resolveFeeAmount } from "@/lib/procedure-fees";
@@ -110,6 +111,16 @@ export async function generate837ForPayPeriod(
   const claims = await buildEdiClaimsForResolvedInvoices(resolved);
   const result = buildEdi837(claims, { usageIndicator: options?.usageIndicator });
   await persistBilledInvoices(resolved);
+
+  const archived = await archiveEdi837ToDrive({
+    edi: result,
+    initiatorUserId: options?.generatedById,
+  });
+  if (!archived) {
+    console.warn(
+      "837 was generated for download, but a Drive copy was not saved under root folder \"837 Files\".",
+    );
+  }
 
   if (options?.generatedById) {
     const clmByInvoiceId = new Map(resolved.map((inv) => [inv.id, inv.resolvedClm]));

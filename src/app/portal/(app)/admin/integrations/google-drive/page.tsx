@@ -85,6 +85,7 @@ export default async function GoogleDriveIntegrationPage({
         <ul className="list-disc space-y-1 pl-5">
           <li>Importing client folders from Maria and Steven Drive directories</li>
           <li>Listing and importing LNI remittance advice PDFs on the Pay page</li>
+          <li>Saving a copy of each generated 837 under the Drive root folder “837 Files”</li>
           <li>Server-side scripts that rescan remittances and link invoice attachments</li>
         </ul>
         <p>
