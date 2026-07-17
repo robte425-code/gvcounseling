@@ -235,6 +235,12 @@ export function InvoiceAttachments({
               </div>
             )}
             {error && <p className="text-sm text-red-800">{error}</p>}
+            {!canUpload && (
+              <p className="text-sm text-amber-900">
+                Waiting for service lines to finish saving. If this message stays, change a line
+                slightly or refresh the page, then try uploading again.
+              </p>
+            )}
             <button
               type="submit"
               disabled={uploading || !canUpload || selectedFiles.length === 0}

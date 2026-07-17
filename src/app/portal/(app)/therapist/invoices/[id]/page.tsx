@@ -18,9 +18,16 @@ import {
 import { loadTherapistProcedureCodeFees, serializeFeeSchedule } from "@/lib/procedure-fees";
 import { prisma } from "@/lib/prisma";
 
-export default async function InvoiceDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function InvoiceDetailPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ unsubmitted?: string }>;
+}) {
   const session = await requireSession();
   const { id } = await params;
+  const { unsubmitted } = await searchParams;
   const invoiceDetailPath = `/portal/therapist/invoices/${id}`;
 
   const invoice = await prisma.invoice.findUnique({
@@ -87,6 +94,11 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
         <Link href="/portal/therapist/invoices" className="text-sm text-primary hover:underline">
           ← Invoices
         </Link>
+        {unsubmitted === "1" && invoice.status === "DRAFT" && (
+          <p className="mt-3 rounded-lg bg-primary/10 px-3 py-2 text-sm text-primary-dark" role="status">
+            Invoice returned to draft. You can attach files and submit again when ready.
+          </p>
+        )}
         <div className="mt-4 flex flex-wrap items-center gap-3">
           <h1 className="font-serif text-3xl font-semibold text-primary-dark">
             Invoice #{invoice.invoiceNumber}
@@ -116,6 +128,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
       </div>
 
       <InvoiceDetailClient
+        key={`${invoice.id}-${invoice.status}`}
         invoiceId={invoice.id}
         readOnly={readOnly}
         initialLines={lines}

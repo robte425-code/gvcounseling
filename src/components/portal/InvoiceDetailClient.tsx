@@ -47,6 +47,7 @@ export function InvoiceDetailClient({
   const [persistedServiceDates, setPersistedServiceDates] = useState(savedServiceDates);
   const [submitError, setSubmitError] = useState("");
   const [submitPending, setSubmitPending] = useState(false);
+  const [draftSaveError, setDraftSaveError] = useState("");
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lineServiceDates = useMemo(() => uniqueServiceDates(lines), [lines]);
 
@@ -78,9 +79,14 @@ export function InvoiceDetailClient({
       try {
         await saveInvoiceDraftAction(buildInvoiceFormData(lines, { invoiceId }));
         setPersistedServiceDates(uniqueServiceDates(lines));
+        setDraftSaveError("");
         router.refresh();
-      } catch {
-        // Draft auto-save failed silently; attachments stay disabled until submit or retry.
+      } catch (error) {
+        setDraftSaveError(
+          error instanceof Error
+            ? error.message
+            : "Could not save draft. Attachments stay disabled until lines save.",
+        );
       }
     }, 800);
 

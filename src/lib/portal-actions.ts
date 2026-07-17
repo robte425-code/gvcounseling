@@ -860,17 +860,25 @@ export async function submitInvoiceAction(
 
 export async function unsubmitInvoiceAction(formData: FormData) {
   const session = await requireTherapist();
-  const invoiceId = String(formData.get("invoiceId") ?? "");
+  const invoiceId = String(formData.get("invoiceId") ?? "").trim();
+  if (!invoiceId) throw new Error("Invoice is required.");
+
   const invoice = await prisma.invoice.findFirst({
     where: { id: invoiceId, therapistId: session.user.id },
   });
-  if (!invoice || invoice.status !== "SUBMITTED") throw new Error("Invoice cannot be un-submitted.");
+  if (!invoice || invoice.status !== "SUBMITTED") {
+    throw new Error("Invoice cannot be un-submitted.");
+  }
 
   await prisma.invoice.update({
     where: { id: invoiceId },
     data: { status: "DRAFT", submittedAt: null, payPeriodId: null },
   });
+
   revalidatePath(`/portal/therapist/invoices/${invoiceId}`);
+  revalidatePath("/portal/therapist/invoices");
+  revalidatePath("/portal/admin/invoices");
+  redirect(`/portal/therapist/invoices/${invoiceId}?unsubmitted=1`);
 }
 
 async function removeInvoiceDriveAttachments(
