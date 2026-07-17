@@ -67,7 +67,9 @@ export function InvoiceDetailClient({
   }, [savedServiceDates]);
 
   useEffect(() => {
-    setAttachmentItems(attachments);
+    // Merge instead of replace: a stale router.refresh() must not erase uploads
+    // that already succeeded client-side (and are in the DB) before cache catches up.
+    setAttachmentItems((prev) => mergeUniqueAttachments(prev, attachments));
     // eslint-disable-next-line react-hooks/exhaustive-deps -- sync when server attachment ids change, not array reference
   }, [serverAttachmentIds]);
 

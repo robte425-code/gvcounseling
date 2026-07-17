@@ -8,24 +8,13 @@ import {
   portalInputClass,
   portalLabelClass,
 } from "@/components/portal/ui";
+import {
+  mergeUniqueAttachments,
+  type InvoiceAttachmentView,
+} from "@/lib/invoice-attachments";
 
-export type InvoiceAttachmentItem = {
-  id: string;
-  filename: string;
-  blobUrl: string;
-};
-
-export function mergeUniqueAttachments(
-  ...lists: InvoiceAttachmentItem[][]
-): InvoiceAttachmentItem[] {
-  const byId = new Map<string, InvoiceAttachmentItem>();
-  for (const list of lists) {
-    for (const item of list) {
-      byId.set(item.id, item);
-    }
-  }
-  return Array.from(byId.values());
-}
+export type InvoiceAttachmentItem = InvoiceAttachmentView;
+export { mergeUniqueAttachments };
 
 export function InvoiceAttachments({
   invoiceId,

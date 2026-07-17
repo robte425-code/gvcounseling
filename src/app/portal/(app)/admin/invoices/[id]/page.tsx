@@ -7,11 +7,14 @@ import { InvoiceNotesSection } from "@/components/portal/InvoiceNotesSection";
 import { InvoiceTherapistPaymentSection } from "@/components/portal/InvoiceTherapistPaymentSection";
 import { StatusBadge } from "@/components/portal/ui";
 import { formatCurrency, formatDate, calendarIsoFromDate } from "@/lib/constants";
+import { toInvoiceAttachmentViews } from "@/lib/invoice-attachments";
 import {
   invoiceTherapistPayRunLinesInclude,
   resolveTherapistPaymentInfo,
 } from "@/lib/invoice-therapist-payment";
 import { prisma } from "@/lib/prisma";
+
+export const dynamic = "force-dynamic";
 
 export default async function AdminInvoiceDetailPage({
   params,
@@ -97,7 +100,7 @@ export default async function AdminInvoiceDetailPage({
         invoiceId={invoice.id}
         readOnly
         initialLines={lines}
-        attachments={invoice.attachments}
+        attachments={toInvoiceAttachmentViews(invoice.attachments)}
         savedServiceDates={serviceDates}
       />
 

@@ -7,6 +7,7 @@ import { InvoiceNotesSection } from "@/components/portal/InvoiceNotesSection";
 import { InvoiceTherapistPaymentSection } from "@/components/portal/InvoiceTherapistPaymentSection";
 import { StatusBadge, portalButtonClass } from "@/components/portal/ui";
 import { formatCurrency, formatDate, calendarIsoFromDate } from "@/lib/constants";
+import { toInvoiceAttachmentViews } from "@/lib/invoice-attachments";
 import {
   invoiceTherapistPayRunLinesInclude,
   resolveTherapistPaymentInfo,
@@ -18,16 +19,18 @@ import {
 import { loadTherapistProcedureCodeFees, serializeFeeSchedule } from "@/lib/procedure-fees";
 import { prisma } from "@/lib/prisma";
 
+export const dynamic = "force-dynamic";
+
 export default async function InvoiceDetailPage({
   params,
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ unsubmitted?: string }>;
+  searchParams: Promise<{ unsubmitted?: string; submitted?: string }>;
 }) {
   const session = await requireSession();
   const { id } = await params;
-  const { unsubmitted } = await searchParams;
+  const { unsubmitted, submitted } = await searchParams;
   const invoiceDetailPath = `/portal/therapist/invoices/${id}`;
 
   const invoice = await prisma.invoice.findUnique({
@@ -99,6 +102,14 @@ export default async function InvoiceDetailPage({
             Invoice returned to draft. You can attach files and submit again when ready.
           </p>
         )}
+        {submitted === "1" && invoice.status === "SUBMITTED" && (
+          <p className="mt-3 rounded-lg bg-primary/10 px-3 py-2 text-sm text-primary-dark" role="status">
+            Invoice submitted
+            {invoice.attachments.length > 0
+              ? ` with ${invoice.attachments.length} attachment${invoice.attachments.length === 1 ? "" : "s"}.`
+              : "."}
+          </p>
+        )}
         <div className="mt-4 flex flex-wrap items-center gap-3">
           <h1 className="font-serif text-3xl font-semibold text-primary-dark">
             Invoice #{invoice.invoiceNumber}
@@ -133,7 +144,7 @@ export default async function InvoiceDetailPage({
         readOnly={readOnly}
         initialLines={lines}
         therapistFeeSchedule={therapistFees}
-        attachments={invoice.attachments}
+        attachments={toInvoiceAttachmentViews(invoice.attachments)}
         savedServiceDates={serviceDates}
         footerActions={footerActions}
       />

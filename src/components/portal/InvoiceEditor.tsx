@@ -204,7 +204,9 @@ export function InvoiceEditor({
 
   return (
     <form id={formId} action={submitAction} className="space-y-4">
-      {invoiceId ? <input type="hidden" name="invoiceId" value={invoiceId} /> : null}
+      {/* Always emit the field when editing an existing draft so submit cannot
+          accidentally create a second invoice and orphan attachments. */}
+      <input type="hidden" name="invoiceId" value={invoiceId ?? ""} />
       {clients ? (
         <div>
           <label className={portalLabelClass}>Client</label>

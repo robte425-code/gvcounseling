@@ -804,11 +804,19 @@ export async function submitInvoiceAction(
   formData: FormData,
 ): Promise<SubmitInvoiceState> {
   const session = await requireTherapist();
+  const invoiceId = String(formData.get("invoiceId") ?? "").trim();
+  if (!invoiceId) {
+    return {
+      error: "Invoice draft is missing. Refresh the page, then submit again.",
+    };
+  }
 
   let invoice;
   try {
+    // Never create-on-submit: a missing invoiceId used to mint a new invoice and
+    // leave uploaded attachments on the orphaned draft.
     ({ invoice } = await persistInvoiceFromFormData(session, formData, {
-      allowCreate: true,
+      allowCreate: false,
     }));
   } catch (error) {
     return {
@@ -854,8 +862,11 @@ export async function submitInvoiceAction(
   revalidatePath("/portal/therapist/invoices");
   revalidatePath("/portal/therapist/invoices/new");
   revalidatePath("/portal/admin/invoices");
+  revalidatePath(`/portal/admin/invoices/${invoice.id}`);
 
-  redirect(`/portal/therapist/invoices/${invoice.id}`);
+  // Cache-bust query so the post-submit view cannot reuse a stale RSC payload
+  // from an earlier SUBMITTED visit that had no attachments yet.
+  redirect(`/portal/therapist/invoices/${invoice.id}?submitted=1`);
 }
 
 export async function unsubmitInvoiceAction(formData: FormData) {

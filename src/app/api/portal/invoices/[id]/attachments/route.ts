@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { requireSession } from "@/auth";
 import { formatServiceDateFolderName, calendarIsoFromDate } from "@/lib/constants";
 import { getDriveAccessTokenForClient } from "@/lib/google-drive-access";
@@ -96,6 +97,11 @@ export async function POST(
         size: file.size,
       },
     });
+
+    revalidatePath(`/portal/therapist/invoices/${id}`);
+    revalidatePath("/portal/therapist/invoices/new");
+    revalidatePath(`/portal/admin/invoices/${id}`);
+    revalidatePath("/portal/admin/invoices");
 
     return NextResponse.json({
       attachment: {
