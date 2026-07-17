@@ -53,9 +53,12 @@ type InvoiceFor837Batch = Awaited<
   ReturnType<typeof loadInvoicesFor837PayPeriod>
 >[number];
 
-export async function loadInvoicesFor837PayPeriod(payPeriodId: string) {
+export async function loadInvoicesFor837PayPeriod(
+  payPeriodId: string,
+  options?: { includeBilled?: boolean },
+) {
   return prisma.invoice.findMany({
-    where: invoice837PayPeriodWhere(payPeriodId),
+    where: invoice837PayPeriodWhere(payPeriodId, options),
     include: invoice837Include,
     orderBy: [{ therapist: { lastName: "asc" } }, { invoiceNumber: "asc" }],
   });
@@ -122,16 +125,21 @@ function evaluateInvoiceRow(
   };
 }
 
-export async function buildEdi837BatchReport(payPeriodId: string): Promise<Edi837BatchReport> {
+export async function buildEdi837BatchReport(
+  payPeriodId: string,
+  options?: { includeBilled?: boolean },
+): Promise<Edi837BatchReport> {
   const payPeriod = await prisma.payPeriod.findUnique({ where: { id: payPeriodId } });
   if (!payPeriod) throw new Error("Pay period not found.");
 
-  const [invoices, skippedBilledCount] = await Promise.all([
-    loadInvoicesFor837PayPeriod(payPeriodId),
+  const includeBilled = Boolean(options?.includeBilled);
+  const [invoices, billedOnPeriodCount] = await Promise.all([
+    loadInvoicesFor837PayPeriod(payPeriodId, { includeBilled }),
     prisma.invoice.count({
       where: { payPeriodId, status: "BILLED" },
     }),
   ]);
+  const skippedBilledCount = includeBilled ? 0 : billedOnPeriodCount;
 
   if (!invoices.length) {
     if (skippedBilledCount > 0) {
@@ -163,7 +171,7 @@ export async function buildEdi837BatchReport(payPeriodId: string): Promise<Edi83
     blockerCount,
     warningCount,
     totalLniBillAmount,
-    submittedCount: rows.length,
+    submittedCount: rows.filter((row) => row.status === "SUBMITTED").length,
     skippedBilledCount,
     canGenerate: blockerCount === 0,
     invoices: rows,

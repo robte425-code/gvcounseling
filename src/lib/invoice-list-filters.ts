@@ -119,9 +119,14 @@ export function mergeInvoiceWhere(
 }
 
 /** Invoices on a pay period eligible for 837 generation (submitted only — not already billed). */
-export function invoice837PayPeriodWhere(payPeriodId: string): Prisma.InvoiceWhereInput {
+export function invoice837PayPeriodWhere(
+  payPeriodId: string,
+  options?: { includeBilled?: boolean },
+): Prisma.InvoiceWhereInput {
   return {
     payPeriodId,
-    status: "SUBMITTED",
+    status: options?.includeBilled
+      ? { in: ["SUBMITTED", "BILLED"] }
+      : "SUBMITTED",
   };
 }

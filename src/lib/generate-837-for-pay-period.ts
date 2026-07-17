@@ -96,30 +96,43 @@ function formatBatchBlockerError(
 
 export async function generate837ForPayPeriod(
   payPeriodId: string,
-  options?: { usageIndicator?: IsaUsageIndicator; generatedById?: string },
-): Promise<Edi837Result> {
+  options?: {
+    usageIndicator?: IsaUsageIndicator;
+    generatedById?: string;
+    /** Include already-billed invoices (re-download / Drive archive only). */
+    includeBilled?: boolean;
+    /** When false, skip writing the Drive archive copy. Default true. */
+    archiveToDrive?: boolean;
+  },
+): Promise<Edi837Result & { driveArchiveFilename?: string }> {
   const payPeriod = await prisma.payPeriod.findUnique({ where: { id: payPeriodId } });
   if (!payPeriod) throw new Error("Pay period not found.");
 
-  const report = await buildEdi837BatchReport(payPeriodId);
+  const includeBilled = Boolean(options?.includeBilled);
+  const report = await buildEdi837BatchReport(payPeriodId, { includeBilled });
   if (!report.canGenerate) {
     throw new Error(formatBatchBlockerError(report));
   }
 
-  const invoices = await loadInvoicesFor837PayPeriod(payPeriodId);
+  const invoices = await loadInvoicesFor837PayPeriod(payPeriodId, { includeBilled });
   const resolved = resolveClmsForInvoices(invoices);
   const claims = await buildEdiClaimsForResolvedInvoices(resolved);
   const result = buildEdi837(claims, { usageIndicator: options?.usageIndicator });
   await persistBilledInvoices(resolved);
 
-  const archived = await archiveEdi837ToDrive({
-    edi: result,
-    initiatorUserId: options?.generatedById,
-  });
-  if (!archived) {
-    console.warn(
-      "837 was generated for download, but a Drive copy was not saved under root folder \"837 Files\".",
-    );
+  let driveArchiveFilename: string | undefined;
+  if (options?.archiveToDrive !== false) {
+    const archived = await archiveEdi837ToDrive({
+      edi: result,
+      initiatorUserId: options?.generatedById,
+    });
+    if (!archived) {
+      console.warn(
+        "837 was generated for download, but a Drive copy was not saved under root folder \"837 Files\".",
+      );
+    } else {
+      driveArchiveFilename = archived.filename;
+    }
   }
 
   if (options?.generatedById) {
@@ -133,5 +146,5 @@ export async function generate837ForPayPeriod(
     });
   }
 
-  return result;
+  return { ...result, driveArchiveFilename };
 }
