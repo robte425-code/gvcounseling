@@ -67,6 +67,7 @@ import {
 } from "@/lib/stripe-connect";
 import { isStripeConfigured } from "@/lib/stripe";
 import { getNextInvoiceNumber } from "@/lib/invoice-numbers";
+import { INVOICE_SUBMIT_REQUIRES_ATTACHMENT_MESSAGE } from "@/lib/invoice-form-data";
 import { parseTherapistInvoicesReturnTo } from "@/lib/invoice-list-filters";
 import { assertAdminCanDeleteInvoice } from "@/lib/invoice-delete-policy";
 import {
