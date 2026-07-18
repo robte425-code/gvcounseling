@@ -483,11 +483,26 @@ export async function resyncClientFromDrive(
     errors = [...errors, ...scan.errors];
   }
 
-  const folder = findDriveFolderForClaim(
-    folders,
-    client.lniClaimNumber,
-    client.driveFolderId,
-  );
+  let preferredFolderId = client.driveFolderId;
+  if (preferredFolderId) {
+    try {
+      const probeToken = await getDriveAccessTokenForClient({
+        therapistId: client.therapistId,
+        initiatorUserId,
+      });
+      const meta = await getDriveFileMeta(probeToken, preferredFolderId);
+      if (meta.trashed) {
+        errors.push(
+          `Stored Drive folder for claim ${client.lniClaimNumber} is in Trash; using live folder under therapist client files.`,
+        );
+        preferredFolderId = null;
+      }
+    } catch {
+      // Ignore probe failures; claim scan below is authoritative.
+    }
+  }
+
+  const folder = findDriveFolderForClaim(folders, client.lniClaimNumber, preferredFolderId);
 
   if (!folder) {
     return {
@@ -524,6 +539,7 @@ export async function ensureClientDriveFolderMatchesClaim(options: {
 }): Promise<{ driveFolderId: string | null; relinked: boolean; warning?: string }> {
   const claim = options.claimNumber.trim().toUpperCase();
 
+  let storedIsTrashed = false;
   if (options.driveFolderId) {
     try {
       const accessToken = await getDriveAccessTokenForClient({
@@ -531,8 +547,11 @@ export async function ensureClientDriveFolderMatchesClaim(options: {
         initiatorUserId: options.initiatorUserId,
       });
       const meta = await getDriveFileMeta(accessToken, options.driveFolderId);
+      storedIsTrashed = meta.trashed;
       const parsed = parseClientFolderName(meta.name);
-      if (parsed?.claimNumber === claim) {
+      // Accept only a live (non-trashed) folder whose name matches the claim.
+      // Trashed duplicates often keep the same claim name and must be ignored.
+      if (!meta.trashed && parsed?.claimNumber === claim) {
         return { driveFolderId: options.driveFolderId, relinked: false };
       }
     } catch {
@@ -543,7 +562,13 @@ export async function ensureClientDriveFolderMatchesClaim(options: {
   const { folders, errors } = await scanDriveClientFolders(options.initiatorUserId, {
     includeClosedCases: true,
   });
-  const folder = findDriveFolderForClaim(folders, claim, null);
+  // Never prefer the stored id when it is in Trash — scan only returns live folders
+  // under therapist trees (e.g. "Maria: Client files").
+  const folder = findDriveFolderForClaim(
+    folders,
+    claim,
+    storedIsTrashed ? null : options.driveFolderId,
+  );
   if (!folder) {
     return {
       driveFolderId: options.driveFolderId,
@@ -551,7 +576,9 @@ export async function ensureClientDriveFolderMatchesClaim(options: {
       warning:
         errors[0] ??
         (options.driveFolderId
-          ? `Stored Drive folder does not match claim ${claim}, and no matching folder was found.`
+          ? storedIsTrashed
+            ? `Stored Drive folder for claim ${claim} is in Trash, and no live folder was found under therapist client files.`
+            : `Stored Drive folder does not match claim ${claim}, and no matching folder was found.`
           : `No Drive folder found for claim ${claim}.`),
     };
   }
@@ -567,7 +594,9 @@ export async function ensureClientDriveFolderMatchesClaim(options: {
   return {
     driveFolderId: folder.folderId,
     relinked: true,
-    warning: `Relinked claim ${claim} to "${folder.folderName}".`,
+    warning: storedIsTrashed
+      ? `Relinked claim ${claim} from Trash to live folder "${folder.folderName}".`
+      : `Relinked claim ${claim} to "${folder.folderName}".`,
   };
 }
 

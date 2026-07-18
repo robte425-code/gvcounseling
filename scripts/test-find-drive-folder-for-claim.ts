@@ -63,4 +63,10 @@ assert.equal(
   "orphan",
 );
 
+// A preferred id that is not in the live scan (e.g. Trash) must not win over a claim match
+assert.equal(
+  findDriveFolderForClaim(folders, "BM47751", "trashed-duplicate-id")?.folderId,
+  "correct",
+);
+
 console.log("test-find-drive-folder-for-claim: all assertions passed");

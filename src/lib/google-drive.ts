@@ -35,6 +35,7 @@ type DriveFileMeta = {
   name: string;
   mimeType: string;
   webViewLink?: string | null;
+  trashed?: boolean | null;
 };
 
 export function driveViewLink(
@@ -111,14 +112,15 @@ function sortDriveItems<T extends { name: string; mimeType: string }>(items: T[]
 export async function getDriveFileMeta(
   accessToken: string,
   fileId: string,
-): Promise<DriveFileMeta & { webViewLink: string }> {
+): Promise<DriveFileMeta & { webViewLink: string; trashed: boolean }> {
   const params = new URLSearchParams({
-    fields: "id,name,mimeType,webViewLink",
+    fields: "id,name,mimeType,webViewLink,trashed",
     supportsAllDrives: "true",
   });
   const data = await driveFetch<DriveFileMeta>(accessToken, `/files/${fileId}?${params.toString()}`);
   return {
     ...data,
+    trashed: Boolean(data.trashed),
     webViewLink: driveViewLink(data.id, data.mimeType, data.webViewLink),
   };
 }
@@ -156,6 +158,11 @@ export async function listClientDriveContents(
   clientFolderId: string,
 ): Promise<ClientDriveFolderContents> {
   const folder = await getDriveFileMeta(accessToken, clientFolderId);
+  if (folder.trashed) {
+    throw new Error(
+      `Linked Drive folder "${folder.name}" is in Trash. Re-sync from Drive to use the live client folder.`,
+    );
+  }
   const items = await listFolderTree(accessToken, clientFolderId, 0);
   return {
     folderName: folder.name,
