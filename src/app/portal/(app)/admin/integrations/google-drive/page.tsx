@@ -2,6 +2,10 @@ import Link from "next/link";
 import { getRealUserId, requireAdmin } from "@/auth";
 import { GoogleDriveConnectionPanel } from "@/components/portal/GoogleDriveConnectionPanel";
 import { portalCardClass } from "@/components/portal/ui";
+import {
+  DRIVE_FOLDER_AUDIT_LAST_KEY,
+  type DriveFolderAuditReport,
+} from "@/lib/drive-folder-audit";
 import { prisma } from "@/lib/prisma";
 
 function safeDecodeParam(value: string): string {
@@ -25,6 +29,7 @@ export default async function GoogleDriveIntegrationPage({
   const adminUserId = getRealUserId(session);
 
   let driveConnection: { googleEmail: string | null } | null = null;
+  let lastAudit: DriveFolderAuditReport | null = null;
   try {
     driveConnection = await prisma.googleDriveConnection.findUnique({
       where: { userId: adminUserId },
@@ -32,6 +37,17 @@ export default async function GoogleDriveIntegrationPage({
     });
   } catch (e) {
     console.error("GoogleDriveConnection lookup failed:", e);
+  }
+  try {
+    const auditSetting = await prisma.portalSetting.findUnique({
+      where: { key: DRIVE_FOLDER_AUDIT_LAST_KEY },
+      select: { value: true },
+    });
+    if (auditSetting?.value) {
+      lastAudit = JSON.parse(auditSetting.value) as DriveFolderAuditReport;
+    }
+  } catch (e) {
+    console.error("Drive folder audit lookup failed:", e);
   }
 
   const driveMessage =
@@ -87,6 +103,10 @@ export default async function GoogleDriveIntegrationPage({
           <li>Listing and importing LNI remittance advice PDFs on the Pay page</li>
           <li>Saving a copy of each generated 837 under the Drive root folder “837 Files”</li>
           <li>Server-side scripts that rescan remittances and link invoice attachments</li>
+          <li>
+            Production builds audit every client’s Drive folder link against live folders under Maria
+            / Steven client files (ignoring Trash) and relink mismatches
+          </li>
         </ul>
         <p>
           Client import with sync is still available on{" "}
@@ -96,6 +116,45 @@ export default async function GoogleDriveIntegrationPage({
           .
         </p>
       </div>
+
+      {lastAudit && (
+        <div className={`${portalCardClass} space-y-3 text-sm`}>
+          <h2 className="font-serif text-lg font-semibold text-primary-dark">
+            Last client Drive folder audit
+          </h2>
+          <p className="text-muted">
+            Ran {new Date(lastAudit.ranAt).toLocaleString()} —{" "}
+            <span className="text-primary-dark">
+              {lastAudit.ok} ok, {lastAudit.relinked} relinked, {lastAudit.issues} issues
+            </span>
+          </p>
+          {lastAudit.errors.length > 0 && (
+            <ul className="list-disc space-y-1 pl-5 text-red-800">
+              {lastAudit.errors.map((err) => (
+                <li key={err}>{err}</li>
+              ))}
+            </ul>
+          )}
+          {lastAudit.rows.some((r) => r.status !== "ok" && r.status !== "no_live_folder") ? (
+            <ul className="max-h-80 space-y-1.5 overflow-y-auto font-mono text-xs">
+              {lastAudit.rows
+                .filter((r) => r.status !== "ok" && r.status !== "no_live_folder")
+                .map((row) => (
+                  <li key={`${row.claimNumber}-${row.status}`}>
+                    <span className="font-sans font-medium text-primary-dark">{row.status}</span>{" "}
+                    {row.claimNumber} ({row.clientName})
+                    {row.folderName
+                      ? ` → ${row.therapistFolder ?? "?"}/${row.folderName}`
+                      : ""}
+                    {row.detail ? ` — ${row.detail}` : ""}
+                  </li>
+                ))}
+            </ul>
+          ) : (
+            <p className="text-muted">No trash/wrong-folder problems in the last audit.</p>
+          )}
+        </div>
+      )}
     </div>
   );
 }

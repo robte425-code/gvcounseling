@@ -1,15 +1,19 @@
 #!/usr/bin/env tsx
 /**
- * Relink clients whose stored Drive folder name does not match their L&I claim.
+ * Audit every client's driveFolderId against live folders under therapist
+ * client trees (Maria: Client files / Steven: Client files). Relinks trash,
+ * wrong-claim, and missing links.
  *
- * Default (production build): only BM47751 (known mis-link).
+ * Production build runs with --all --fix (default when no args).
+ *
  * Manual:
  *   npx tsx scripts/relink-mismatched-drive-folders.ts
- *   npx tsx scripts/relink-mismatched-drive-folders.ts BM47751
  *   npx tsx scripts/relink-mismatched-drive-folders.ts --all
+ *   npx tsx scripts/relink-mismatched-drive-folders.ts BM47751
+ *   npx tsx scripts/relink-mismatched-drive-folders.ts --all --dry-run
  */
 import "dotenv/config";
-import { existsSync, readFileSync } from "fs";
+import { existsSync, readFileSync, writeFileSync, mkdirSync } from "fs";
 import path from "path";
 
 function loadSmokeEnv() {
@@ -34,8 +38,6 @@ function loadSmokeEnv() {
 
 loadSmokeEnv();
 
-const DEFAULT_CLAIMS = ["BM47751"];
-
 async function main() {
   if (!process.env.DATABASE_URL?.trim()) {
     console.log("relink-mismatched-drive-folders: DATABASE_URL not set — skipping");
@@ -43,15 +45,18 @@ async function main() {
   }
 
   const args = process.argv.slice(2).map((a) => a.trim()).filter(Boolean);
-  const all = args.includes("--all");
+  const dryRun = args.includes("--dry-run");
+  const all = args.includes("--all") || args.every((a) => a.startsWith("--"));
   const claimArgs = args
-    .filter((a) => a !== "--all")
+    .filter((a) => !a.startsWith("--"))
     .map((a) => a.toUpperCase());
 
   const { prisma } = await import("../src/lib/prisma");
-  const { ensureClientDriveFolderMatchesClaim } = await import(
-    "../src/lib/drive-client-import"
-  );
+  const {
+    auditAndRelinkClientDriveFolders,
+    formatDriveFolderAuditReport,
+  } = await import("../src/lib/drive-folder-audit");
+  const { sendEmailTo } = await import("../src/lib/email");
 
   const adminEmail =
     process.env.GOOGLE_DRIVE_SYSTEM_USER_EMAIL?.trim() || "ghim@gvcounseling.com";
@@ -67,63 +72,48 @@ async function main() {
     return;
   }
 
-  const clients = await prisma.client.findMany({
-    where: all
-      ? { driveFolderId: { not: null } }
-      : { lniClaimNumber: { in: claimArgs.length ? claimArgs : DEFAULT_CLAIMS } },
-    select: {
-      id: true,
-      lniClaimNumber: true,
-      driveFolderId: true,
-      therapistId: true,
-      firstName: true,
-      lastName: true,
-    },
-    orderBy: { lniClaimNumber: "asc" },
-  });
-
   console.log(
-    `relink-mismatched-drive-folders: checking ${clients.length} client(s) as ${admin.email}`,
+    `relink-mismatched-drive-folders: auditing ${
+      claimArgs.length ? claimArgs.join(",") : "ALL clients"
+    } as ${admin.email}${dryRun ? " (dry-run)" : ""}`,
   );
 
-  let relinked = 0;
-  let ok = 0;
-  let warnings = 0;
+  const report = await auditAndRelinkClientDriveFolders({
+    initiatorUserId: admin.id,
+    fix: !dryRun,
+    claimNumbers: claimArgs.length && !all ? claimArgs : undefined,
+  });
 
-  for (const client of clients) {
+  const text = formatDriveFolderAuditReport(report);
+  console.log(text);
+
+  try {
+    const outDir = path.join(process.cwd(), "artifacts");
+    mkdirSync(outDir, { recursive: true });
+    const outFile = path.join(outDir, "drive-folder-audit-latest.txt");
+    writeFileSync(outFile, text, "utf8");
+    console.log(`Wrote ${outFile}`);
+  } catch (e) {
+    console.log(
+      `Could not write local audit artifact: ${e instanceof Error ? e.message : String(e)}`,
+    );
+  }
+
+  // Email when anything was relinked or still problematic (skip pure all-ok noise).
+  if (report.relinked > 0 || report.issues > 0) {
     try {
-      const result = await ensureClientDriveFolderMatchesClaim({
-        initiatorUserId: admin.id,
-        clientId: client.id,
-        claimNumber: client.lniClaimNumber,
-        driveFolderId: client.driveFolderId,
-        therapistId: client.therapistId,
+      await sendEmailTo(adminEmail, {
+        subject: `[GV Counseling] Drive folder audit: ${report.relinked} relinked, ${report.issues} issues`,
+        text,
       });
-      if (result.relinked) {
-        relinked++;
-        console.log(
-          `  RELINKED ${client.lniClaimNumber} (${client.lastName}, ${client.firstName}) → ${result.driveFolderId}${
-            result.warning ? ` (${result.warning})` : ""
-          }`,
-        );
-      } else if (result.warning) {
-        warnings++;
-        console.log(`  WARN ${client.lniClaimNumber}: ${result.warning}`);
-      } else {
-        ok++;
-        console.log(`  OK ${client.lniClaimNumber}`);
-      }
+      console.log(`Emailed audit summary to ${adminEmail}`);
     } catch (e) {
-      warnings++;
       console.log(
-        `  ERROR ${client.lniClaimNumber}: ${e instanceof Error ? e.message : String(e)}`,
+        `Could not email audit summary: ${e instanceof Error ? e.message : String(e)}`,
       );
     }
   }
 
-  console.log(
-    `relink-mismatched-drive-folders: done ok=${ok} relinked=${relinked} warnings=${warnings}`,
-  );
   await prisma.$disconnect();
 }
 
