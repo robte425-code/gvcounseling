@@ -1,5 +1,8 @@
 import type { InvoiceLineItem } from "@/components/portal/InvoiceEditor";
 
+export const INVOICE_SUBMIT_REQUIRES_ATTACHMENT_MESSAGE =
+  "Please attach at least one SOAP note to this invoice before submitting.";
+
 export function buildInvoiceFormData(
   lines: InvoiceLineItem[],
   options: { invoiceId?: string; clientId?: string },

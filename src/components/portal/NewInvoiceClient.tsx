@@ -9,7 +9,11 @@ import {
 } from "@/components/portal/InvoiceAttachments";
 import { InvoiceEditor, emptyInvoiceLine, type InvoiceLineItem } from "@/components/portal/InvoiceEditor";
 import { buildInvoiceFormData, linesArePersistable } from "@/lib/invoice-form-data";
-import { createInvoiceDraftAction, saveInvoiceDraftAction } from "@/lib/portal-actions";
+import {
+  createInvoiceDraftAction,
+  INVOICE_SUBMIT_REQUIRES_ATTACHMENT_MESSAGE,
+  saveInvoiceDraftAction,
+} from "@/lib/portal-actions";
 import { portalButtonClass, portalCardClass } from "@/components/portal/ui";
 import type { FeeScheduleRow } from "@/lib/procedure-fee-schedule";
 
@@ -55,9 +59,11 @@ export function NewInvoiceClient({
 
   const usesTherapistFees = therapistFeeSchedule !== undefined;
   const lineServiceDates = useMemo(() => uniqueServiceDates(lines), [lines]);
+  const hasAttachment = attachments.length > 0;
   const canSubmit =
     Boolean(invoiceId) &&
     linesArePersistable(lines) &&
+    hasAttachment &&
     (!usesTherapistFees || !lines.some((line) => !line.amount));
 
   useEffect(() => {
@@ -164,6 +170,12 @@ export function NewInvoiceClient({
         <p className="text-sm text-amber-900">
           One or more lines have no fee on file for the selected date. Ask admin to update your
           procedure code fees before submitting.
+        </p>
+      )}
+
+      {!hasAttachment && (
+        <p className="rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-900" role="status">
+          {INVOICE_SUBMIT_REQUIRES_ATTACHMENT_MESSAGE}
         </p>
       )}
 

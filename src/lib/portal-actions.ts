@@ -831,6 +831,13 @@ export async function submitInvoiceAction(
     return { error: "Invoice cannot be submitted." };
   }
 
+  const attachmentCount = await prisma.invoiceAttachment.count({
+    where: { invoiceId: invoice.id },
+  });
+  if (attachmentCount < 1) {
+    return { error: INVOICE_SUBMIT_REQUIRES_ATTACHMENT_MESSAGE };
+  }
+
   await prisma.invoice.update({
     where: { id: invoice.id },
     data: { status: "SUBMITTED", submittedAt: new Date() },
