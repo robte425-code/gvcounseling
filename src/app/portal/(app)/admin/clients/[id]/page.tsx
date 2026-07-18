@@ -174,6 +174,8 @@ export default async function AdminClientDetailPage({
           driveFolderId={client.driveFolderId}
           therapistId={client.therapistId}
           initiatorUserId={getRealUserId(session)}
+          clientId={client.id}
+          claimNumber={client.lniClaimNumber}
         />
       </Suspense>
       <ClientNotesSection

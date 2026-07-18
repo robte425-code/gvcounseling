@@ -2,14 +2,19 @@ import {
   downloadReferralDocx,
   findDriveSubfolder,
   findReferralSubmissionFile,
+  getDriveFileMeta,
   listClientFolders,
   parseClientFolderName,
   resolveTherapistFolderId,
   resolveTherapistFolderInParent,
   resolveTherapistParentFolderId,
 } from "@/lib/google-drive";
-import { resolveOAuthUserIdForTherapist } from "@/lib/google-drive-access";
+import {
+  getDriveAccessTokenForClient,
+  resolveOAuthUserIdForTherapist,
+} from "@/lib/google-drive-access";
 import { resolveImportClaimNumber } from "@/lib/constants";
+import { findDriveFolderForClaim } from "@/lib/drive-folder-match";
 import { getValidGoogleAccessToken } from "@/lib/google-oauth";
 import { importClientDocumentsFromFolderDetailed } from "@/lib/client-document-import";
 import { upsertClientFromReferral } from "@/lib/import-referral-client";
@@ -20,6 +25,8 @@ import {
   type TherapistDriveSource,
 } from "@/lib/therapist-drive";
 import { prisma } from "@/lib/prisma";
+
+export { findDriveFolderForClaim } from "@/lib/drive-folder-match";
 
 export type DriveImportResult = {
   created: number;
@@ -372,20 +379,23 @@ async function syncDriveFolders(
     }
 
     if (existing) {
-      if (!existing.driveFolderId) {
-        await prisma.client.update({
-          where: { id: existing.id },
-          data: { driveFolderId: folder.folderId },
-        });
-        existing.driveFolderId = folder.folderId;
-        result.unchanged++;
-        continue;
+      // Claim-named folder is source of truth — relink when missing or pointing elsewhere.
+      const previousFolderId = existing.driveFolderId;
+      if (previousFolderId && previousFolderId !== folder.folderId) {
+        result.warnings.push(
+          `${folder.folderName}: relinked claim ${parsedFolder.claimNumber} from a different Drive folder.`,
+        );
       }
-
-      result.skipped++;
-      result.warnings.push(
-        `${folder.folderName}: claim ${parsedFolder.claimNumber} is linked to a different Drive folder; skipped.`,
-      );
+      await prisma.client.update({
+        where: { id: existing.id },
+        data: { driveFolderId: folder.folderId },
+      });
+      existing.driveFolderId = folder.folderId;
+      if (previousFolderId && previousFolderId !== folder.folderId) {
+        result.updated++;
+      } else {
+        result.unchanged++;
+      }
       continue;
     }
 
@@ -459,21 +469,25 @@ export async function resyncClientFromDrive(
         client.therapistId,
         initiatorUserId,
       );
-      const scan = await scanTherapistDriveSource(source, oauthUserId);
+      const scan = await scanTherapistDriveSource(source, oauthUserId, {
+        includeClosedCases: true,
+      });
       folders = scan.folders;
       errors = scan.errors;
     }
   }
 
   if (!folders.length) {
-    const scan = await scanDriveClientFolders(initiatorUserId);
+    const scan = await scanDriveClientFolders(initiatorUserId, { includeClosedCases: true });
     folders = scan.folders;
     errors = [...errors, ...scan.errors];
   }
 
-  const folder =
-    (client.driveFolderId && folders.find((f) => f.folderId === client.driveFolderId)) ??
-    folders.find((f) => f.folderName.startsWith(`${client.lniClaimNumber} `));
+  const folder = findDriveFolderForClaim(
+    folders,
+    client.lniClaimNumber,
+    client.driveFolderId,
+  );
 
   if (!folder) {
     return {
@@ -485,10 +499,76 @@ export async function resyncClientFromDrive(
     };
   }
 
+  if (client.driveFolderId && client.driveFolderId !== folder.folderId) {
+    errors.push(
+      `Relinked claim ${client.lniClaimNumber} from stored folder to "${folder.folderName}".`,
+    );
+  }
+
   const oauthUserId = await resolveOAuthUserIdForTherapist(folder.therapistId, initiatorUserId);
   const result = emptyDriveImportResult([...errors]);
   mergeResults(result, await importDriveClientFolder(oauthUserId, folder));
   return result;
+}
+
+/**
+ * If the client's stored Drive folder id does not match their claim number,
+ * find the claim-named folder and update driveFolderId. Returns the folder id to use.
+ */
+export async function ensureClientDriveFolderMatchesClaim(options: {
+  initiatorUserId: string;
+  clientId: string;
+  claimNumber: string;
+  driveFolderId: string | null;
+  therapistId?: string | null;
+}): Promise<{ driveFolderId: string | null; relinked: boolean; warning?: string }> {
+  const claim = options.claimNumber.trim().toUpperCase();
+
+  if (options.driveFolderId) {
+    try {
+      const accessToken = await getDriveAccessTokenForClient({
+        therapistId: options.therapistId,
+        initiatorUserId: options.initiatorUserId,
+      });
+      const meta = await getDriveFileMeta(accessToken, options.driveFolderId);
+      const parsed = parseClientFolderName(meta.name);
+      if (parsed?.claimNumber === claim) {
+        return { driveFolderId: options.driveFolderId, relinked: false };
+      }
+    } catch {
+      // Stored folder unreadable — fall through to claim scan.
+    }
+  }
+
+  const { folders, errors } = await scanDriveClientFolders(options.initiatorUserId, {
+    includeClosedCases: true,
+  });
+  const folder = findDriveFolderForClaim(folders, claim, null);
+  if (!folder) {
+    return {
+      driveFolderId: options.driveFolderId,
+      relinked: false,
+      warning:
+        errors[0] ??
+        (options.driveFolderId
+          ? `Stored Drive folder does not match claim ${claim}, and no matching folder was found.`
+          : `No Drive folder found for claim ${claim}.`),
+    };
+  }
+
+  if (folder.folderId === options.driveFolderId) {
+    return { driveFolderId: options.driveFolderId, relinked: false };
+  }
+
+  await prisma.client.update({
+    where: { id: options.clientId },
+    data: { driveFolderId: folder.folderId },
+  });
+  return {
+    driveFolderId: folder.folderId,
+    relinked: true,
+    warning: `Relinked claim ${claim} to "${folder.folderName}".`,
+  };
 }
 
 export async function importClientsFromGoogleDrive(userId: string): Promise<DriveImportResult> {

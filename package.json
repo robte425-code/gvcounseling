@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && node scripts/prisma-migrate-deploy.mjs && npx tsx scripts/run-pending-837-archive.ts && next build",
+    "build": "prisma generate && node scripts/prisma-migrate-deploy.mjs && npx tsx scripts/run-pending-837-archive.ts && npx tsx scripts/relink-mismatched-drive-folders.ts && next build",
     "archive:837": "tsx scripts/run-pending-837-archive.ts",
     "start": "next start",
     "lint": "eslint",

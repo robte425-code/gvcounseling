@@ -135,6 +135,8 @@ export default async function TherapistClientDetailPage({
           driveFolderId={client.driveFolderId}
           therapistId={session.user.id}
           initiatorUserId={session.user.id}
+          clientId={client.id}
+          claimNumber={client.lniClaimNumber}
         />
       </Suspense>
       <ClientNotesSection clientId={client.id} returnTo={clientDetailPath} />

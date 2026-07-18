@@ -48,6 +48,8 @@ export default async function TherapistReferralReviewPage({
           driveFolderId={client.driveFolderId}
           therapistId={session.user.id}
           initiatorUserId={session.user.id}
+          clientId={client.id}
+          claimNumber={client.lniClaimNumber}
         />
       </Suspense>
 

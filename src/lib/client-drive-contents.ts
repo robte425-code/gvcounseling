@@ -1,5 +1,6 @@
 import { getDriveAccessTokenForClient } from "@/lib/google-drive-access";
 import { ensureClientDriveFolderSharedWithTherapist } from "@/lib/client-drive-move";
+import { ensureClientDriveFolderMatchesClaim } from "@/lib/drive-client-import";
 import type { ClientDriveFolderContents, DriveItemLink } from "@/lib/google-drive";
 import { listClientDriveContents } from "@/lib/google-drive";
 import { prisma } from "@/lib/prisma";
@@ -16,9 +17,45 @@ export type ClientDriveContentsResult =
 
 export async function loadClientDriveContents(
   driveFolderId: string | null,
-  options?: { therapistId?: string | null; initiatorUserId?: string },
+  options?: {
+    therapistId?: string | null;
+    initiatorUserId?: string;
+    clientId?: string;
+    claimNumber?: string;
+  },
 ): Promise<ClientDriveContentsResult> {
-  if (!driveFolderId) {
+  let folderId = driveFolderId;
+
+  if (options?.clientId && options.claimNumber && options.initiatorUserId) {
+    const healed = await ensureClientDriveFolderMatchesClaim({
+      initiatorUserId: options.initiatorUserId,
+      clientId: options.clientId,
+      claimNumber: options.claimNumber,
+      driveFolderId,
+      therapistId: options.therapistId,
+    });
+    folderId = healed.driveFolderId;
+    if (healed.warning && !folderId) {
+      if (driveFolderId) {
+        return {
+          linked: true,
+          folderName: null,
+          folderLink: null,
+          items: [],
+          error: healed.warning,
+        };
+      }
+      return {
+        linked: false,
+        folderName: null,
+        folderLink: null,
+        items: [],
+        error: null,
+      };
+    }
+  }
+
+  if (!folderId) {
     return { linked: false, folderName: null, folderLink: null, items: [], error: null };
   }
 
@@ -28,7 +65,7 @@ export async function loadClientDriveContents(
       select: { email: true, firstName: true, lastName: true },
     });
     if (therapist) {
-      await ensureClientDriveFolderSharedWithTherapist(driveFolderId, therapist);
+      await ensureClientDriveFolderSharedWithTherapist(folderId, therapist);
     }
   }
 
@@ -39,7 +76,7 @@ export async function loadClientDriveContents(
     });
     const contents: ClientDriveFolderContents = await listClientDriveContents(
       accessToken,
-      driveFolderId,
+      folderId,
     );
     return {
       linked: true,
