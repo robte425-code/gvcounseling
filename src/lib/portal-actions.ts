@@ -1414,6 +1414,79 @@ export async function syncSelfStripeConnectAction(
 
 export type PayStripePayRunState = { error?: string; success?: string };
 
+export type UpdateTherapistPayoutAdjustmentState = { error?: string; success?: string };
+
+export async function updateTherapistPayRunPayoutAdjustmentAction(
+  _prevState: UpdateTherapistPayoutAdjustmentState,
+  formData: FormData,
+): Promise<UpdateTherapistPayoutAdjustmentState> {
+  await requireAdmin();
+  const payoutId = String(formData.get("payoutId") ?? "").trim();
+  const remittanceAdviceId = String(formData.get("remittanceAdviceId") ?? "").trim();
+  const amountRaw = String(formData.get("therapistAmount") ?? "").trim();
+  const adjustmentNote = String(formData.get("adjustmentNote") ?? "").trim();
+
+  if (!payoutId) return { error: "Payout is required." };
+  if (!remittanceAdviceId) return { error: "Remittance is required." };
+
+  const amount = Number(amountRaw);
+  if (!Number.isFinite(amount) || amount < 0) {
+    return { error: "Enter a valid paycheck amount (0 or greater)." };
+  }
+  // Store cents-safe money: max 2 decimal places
+  const rounded = Math.round(amount * 100) / 100;
+
+  const payout = await prisma.therapistPayRunPayout.findUnique({
+    where: { id: payoutId },
+    include: {
+      payRun: {
+        select: {
+          id: true,
+          status: true,
+          remittanceAdviceId: true,
+        },
+      },
+      therapist: { select: { firstName: true, lastName: true } },
+    },
+  });
+  if (!payout || payout.payRun.remittanceAdviceId !== remittanceAdviceId) {
+    return { error: "Payout not found for this remittance." };
+  }
+  if (payout.payRun.status !== "DRAFT") {
+    return { error: "Paycheck amounts can only be adjusted before therapist pay is finalized." };
+  }
+  if (payout.stripeTransferId) {
+    return { error: "This paycheck was already sent via Stripe and cannot be changed." };
+  }
+
+  const computed = Number(payout.computedTherapistAmount);
+  const changed = Math.abs(rounded - computed) > 0.001;
+  if (changed && !adjustmentNote) {
+    return { error: "Add a note explaining why the final amount differs from the computed total." };
+  }
+
+  await prisma.therapistPayRunPayout.update({
+    where: { id: payout.id },
+    data: {
+      therapistAmount: rounded,
+      adjustmentNote: adjustmentNote || null,
+      adjustedAt: changed || adjustmentNote ? new Date() : null,
+    },
+  });
+
+  revalidatePath("/portal/admin/pay");
+  revalidatePath(`/portal/admin/pay/${remittanceAdviceId}`);
+  revalidatePath("/portal/admin/paychecks");
+  revalidatePath("/portal/therapist/paychecks");
+
+  const name = `${payout.therapist.firstName} ${payout.therapist.lastName}`.trim();
+  return {
+    success: changed
+      ? `Updated ${name} to $${rounded.toFixed(2)} (computed $${computed.toFixed(2)}).`
+      : `Saved ${name} at computed amount $${rounded.toFixed(2)}.`,
+  };
+}
+
 export async function payTherapistPayRunWithStripeAction(
   _prevState: PayStripePayRunState,
   formData: FormData,

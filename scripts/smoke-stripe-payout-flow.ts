@@ -173,6 +173,7 @@ async function runMockedPayAndFinalizeFlow() {
           create: therapists.map((t, i) => ({
             therapistId: t.id,
             therapistAmount: i === 0 ? 25.5 : 10,
+            computedTherapistAmount: i === 0 ? 25.5 : 10,
             lniPaidAmount: i === 0 ? 50 : 20,
             invoiceCount: 1,
           })),
@@ -284,6 +285,7 @@ async function runInsufficientBalanceGuard() {
               create: {
                 therapistId: therapist.id,
                 therapistAmount: 12.34,
+                computedTherapistAmount: 12.34,
                 lniPaidAmount: 12.34,
                 invoiceCount: 1,
               },
@@ -378,6 +380,7 @@ async function runNotReadyGuard() {
               create: {
                 therapistId: therapist.id,
                 therapistAmount: 5,
+                computedTherapistAmount: 5,
                 lniPaidAmount: 5,
                 invoiceCount: 1,
               },

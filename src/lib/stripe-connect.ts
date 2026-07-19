@@ -212,6 +212,10 @@ export async function payTherapistPayRunWithStripe(remittanceAdviceId: string): 
             payRunId: payRun.id,
             payoutId: payout.id,
             therapistId: therapist.id,
+            computedAmount: Number(payout.computedTherapistAmount).toFixed(2),
+            ...(payout.adjustmentNote
+              ? { adjustmentNote: payout.adjustmentNote.slice(0, 500) }
+              : {}),
           },
         },
         { idempotencyKey: `therapist-payout-${payout.id}` },

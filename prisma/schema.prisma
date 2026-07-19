@@ -378,18 +378,24 @@ model TherapistPayRun {
 }
 
 model TherapistPayRunPayout {
-  id                   String              @id @default(cuid())
-  payRunId             String
-  payRun               TherapistPayRun     @relation(fields: [payRunId], references: [id], onDelete: Cascade)
-  therapistId          String
-  therapist            User                @relation(fields: [therapistId], references: [id])
-  therapistAmount      Decimal             @db.Decimal(10, 2)
-  lniPaidAmount        Decimal             @db.Decimal(10, 2)
-  invoiceCount         Int
-  stripeTransferId     String?             @unique
-  stripeTransferStatus String?
-  stripePaidAt         DateTime?
-  lines                TherapistPayRunLine[]
+  id                       String              @id @default(cuid())
+  payRunId                 String
+  payRun                   TherapistPayRun     @relation(fields: [payRunId], references: [id], onDelete: Cascade)
+  therapistId              String
+  therapist                User                @relation(fields: [therapistId], references: [id])
+  /** Amount sent / shown for this therapist (may be admin-adjusted). */
+  therapistAmount          Decimal             @db.Decimal(10, 2)
+  /** Original computed total from invoice fees at apply time. */
+  computedTherapistAmount  Decimal             @db.Decimal(10, 2)
+  lniPaidAmount            Decimal             @db.Decimal(10, 2)
+  invoiceCount             Int
+  /** Required when therapistAmount differs from computedTherapistAmount. */
+  adjustmentNote           String?             @db.Text
+  adjustedAt               DateTime?
+  stripeTransferId         String?             @unique
+  stripeTransferStatus     String?
+  stripePaidAt             DateTime?
+  lines                    TherapistPayRunLine[]
 
   @@unique([payRunId, therapistId])
 }

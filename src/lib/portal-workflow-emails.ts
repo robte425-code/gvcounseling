@@ -161,18 +161,29 @@ export async function sendTherapistPayRunFinalizedEmail(options: {
   therapistAmount: number;
   lniPaidAmount: number;
   invoices: PayRunFinalizedInvoice[];
+  adjustmentNote?: string | null;
+  computedTherapistAmount?: number | null;
 }) {
   const intendedEmail = options.therapistEmail.trim();
   if (!intendedEmail) return;
 
   const { to, redirected } = await resolveTherapistOutboundEmail(intendedEmail);
   const payUrl = `${getSiteUrl()}/portal/therapist/invoices`;
+  const computed = options.computedTherapistAmount;
+  const adjusted =
+    computed != null && Math.abs(options.therapistAmount - computed) > 0.001;
   const lines = [
     `Hello ${options.therapistName},`,
     "",
     `Your therapist pay for remittance ${options.remittanceNumber} has been finalized.`,
     "",
     `Therapist pay: ${formatCurrency(options.therapistAmount)}`,
+    ...(adjusted && computed != null
+      ? [`Computed from invoices: ${formatCurrency(computed)}`]
+      : []),
+    ...(options.adjustmentNote?.trim()
+      ? [`Adjustment note: ${options.adjustmentNote.trim()}`]
+      : []),
     `L&I paid amount: ${formatCurrency(options.lniPaidAmount)}`,
     `Invoices: ${options.invoices.length}`,
     "",

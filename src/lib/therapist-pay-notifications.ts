@@ -221,6 +221,8 @@ export async function finalizeTherapistPayRun(remittanceAdviceId: string): Promi
         remittanceNumber: remittance.remittanceNumber,
         remittanceAdviceId: remittance.id,
         therapistAmount: Number(payout.therapistAmount),
+        computedTherapistAmount: Number(payout.computedTherapistAmount),
+        adjustmentNote: payout.adjustmentNote,
         lniPaidAmount: Number(payout.lniPaidAmount),
         invoices: payout.lines.map((line) => ({
           invoiceNumber: line.invoice.invoiceNumber,

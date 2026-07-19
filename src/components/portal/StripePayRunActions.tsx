@@ -22,6 +22,8 @@ export function StripePayRunActions({
   payoutSummaries: Array<{
     therapistName: string;
     amount: number;
+    computedAmount: number;
+    adjustmentNote: string | null;
     ready: boolean;
     alreadyPaid: boolean;
   }>;
@@ -39,15 +41,19 @@ export function StripePayRunActions({
   const total = pendingPay.reduce((sum, p) => sum + p.amount, 0);
   const canPay =
     stripeConfigured && pendingPay.length > 0 && notReady.length === 0 && !pending;
+  const hasAdjustments = pendingPay.some(
+    (p) => Math.abs(p.amount - p.computedAmount) > 0.001,
+  );
 
   return (
     <div className="space-y-3 rounded-xl border border-primary/20 bg-primary/[0.03] px-4 py-3">
       <div>
         <p className="text-sm font-medium text-primary-dark">Stripe ACH payout</p>
         <p className="mt-1 text-xs text-muted">
-          Sends each therapist’s amount from your Stripe platform balance to their Connect account.
-          Stripe then deposits to their bank. On success, therapist pay is finalized automatically
-          (Paid in the portal + payout emails).{" "}
+          Sends each therapist’s final paycheck amount from your Stripe platform balance to their
+          Connect account. Adjust amounts above (with a note) before paying. Stripe then deposits to
+          their bank. On success, therapist pay is finalized automatically (Paid in the portal +
+          payout emails).{" "}
           {platformBalanceLabel
             ? `Available balance: ${platformBalanceLabel}.`
             : "Add funds in Stripe Dashboard → Balances if transfers fail for insufficient balance."}
@@ -56,17 +62,29 @@ export function StripePayRunActions({
       </div>
 
       <ul className="space-y-1 text-xs text-muted">
-        {payoutSummaries.map((p) => (
-          <li key={p.therapistName}>
-            {p.therapistName}: {formatCurrency(p.amount)}
-            {p.alreadyPaid
-              ? " · paid"
-              : p.ready
-                ? " · ready"
-                : " · Connect onboarding needed"}
-          </li>
-        ))}
+        {payoutSummaries.map((p) => {
+          const adjusted = Math.abs(p.amount - p.computedAmount) > 0.001;
+          return (
+            <li key={p.therapistName}>
+              {p.therapistName}: {formatCurrency(p.amount)}
+              {adjusted ? ` (computed ${formatCurrency(p.computedAmount)})` : ""}
+              {p.alreadyPaid
+                ? " · paid"
+                : p.ready
+                  ? " · ready"
+                  : " · Connect onboarding needed"}
+              {p.adjustmentNote ? ` · note: ${p.adjustmentNote}` : ""}
+            </li>
+          );
+        })}
       </ul>
+
+      {hasAdjustments && (
+        <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-950" role="status">
+          One or more paycheck amounts were adjusted from the computed totals. Confirm the notes
+          above before sending to Stripe.
+        </p>
+      )}
 
       {!stripeConfigured && (
         <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900" role="status">

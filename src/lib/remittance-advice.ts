@@ -851,6 +851,7 @@ export async function applyRemittanceAdvice(remittanceAdviceId: string): Promise
             create: therapistPayPreview.map((payout) => ({
               therapistId: payout.therapistId,
               therapistAmount: payout.therapistAmount,
+              computedTherapistAmount: payout.therapistAmount,
               lniPaidAmount: payout.lniPaidAmount,
               invoiceCount: payout.invoiceCount,
               lines: {

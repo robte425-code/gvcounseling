@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { requireAdmin } from "@/auth";
 import { ApplyRemittanceForm, CreateWrongYearRebillForm, CreateWrongYearRebillsForm, DeleteRemittancePreviewForm, FinalizeTherapistPayRunForm, ManualMatchRemittanceLineForm, RematchRemittanceForm, RevertAppliedRemittanceForm, SupersedeRemittanceLineForm, SupersedeWrongYearStaleLinesForm, UnmatchRemittanceLineForm, UnsupersedeRemittanceLineForm } from "@/components/portal/RemittancePayPanel";
 import { StripePayRunActions } from "@/components/portal/StripePayRunActions";
+import { TherapistPayoutAdjustForm } from "@/components/portal/TherapistPayoutAdjustForm";
 import { RemittanceBillRow, RemittanceBillRowActions } from "@/components/portal/RemittanceBillRow";
 import {
   portalCardClass,
@@ -604,6 +605,8 @@ export default async function PayRemittanceDetailPage({
           </h2>
           <p className="mt-1 text-xs text-muted">
             Based on invoice line amounts (therapist fee schedule at submit) for L&I-paid invoices.
+            After apply, you can adjust each therapist’s final paycheck amount and add a note before
+            paying with Stripe.
           </p>
           {therapistPayPreviewError && (
             <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900" role="alert">
@@ -614,24 +617,62 @@ export default async function PayRemittanceDetailPage({
           <ul className="mt-4 space-y-3">
             {(remittance.status === "APPLIED"
               ? remittance.payRun?.payouts.map((payout) => ({
+                  payoutId: payout.id,
                   therapistName: `${payout.therapist.firstName} ${payout.therapist.lastName}`,
                   therapistAmount: Number(payout.therapistAmount),
+                  computedTherapistAmount: Number(payout.computedTherapistAmount),
+                  adjustmentNote: payout.adjustmentNote,
+                  stripeTransferId: payout.stripeTransferId,
                   lniPaidAmount: Number(payout.lniPaidAmount),
                   invoiceCount: payout.invoiceCount,
                 }))
-              : therapistPayPreview
-            )?.map((payout) => (
+              : therapistPayPreview?.map((payout) => ({
+                  payoutId: null as string | null,
+                  therapistName: payout.therapistName,
+                  therapistAmount: payout.therapistAmount,
+                  computedTherapistAmount: payout.therapistAmount,
+                  adjustmentNote: null as string | null,
+                  stripeTransferId: null as string | null,
+                  lniPaidAmount: payout.lniPaidAmount,
+                  invoiceCount: payout.invoiceCount,
+                }))
+            )?.map((payout) => {
+              const adjusted =
+                Math.abs(payout.therapistAmount - payout.computedTherapistAmount) > 0.001;
+              const canEdit =
+                remittance.status === "APPLIED" &&
+                remittance.payRun?.status === "DRAFT" &&
+                !payout.stripeTransferId &&
+                Boolean(payout.payoutId);
+              return (
               <li key={payout.therapistName} className="rounded-lg bg-primary/[0.03] px-3 py-2">
                 <p className="font-medium text-primary-dark">{payout.therapistName}</p>
                 <p className="mt-1 text-sm tabular-nums">
                   {formatCurrency(payout.therapistAmount)}
+                  {adjusted && (
+                    <span className="ml-2 text-xs font-normal text-muted">
+                      (computed {formatCurrency(payout.computedTherapistAmount)})
+                    </span>
+                  )}
                 </p>
                 <p className="text-xs text-muted">
                   {payout.invoiceCount} invoice{payout.invoiceCount === 1 ? "" : "s"} · L&I{" "}
                   {formatCurrency(payout.lniPaidAmount)}
                 </p>
+                {payout.payoutId && (
+                  <TherapistPayoutAdjustForm
+                    payoutId={payout.payoutId}
+                    remittanceAdviceId={remittance.id}
+                    therapistName={payout.therapistName}
+                    computedAmount={payout.computedTherapistAmount}
+                    amount={payout.therapistAmount}
+                    adjustmentNote={payout.adjustmentNote}
+                    canEdit={canEdit}
+                  />
+                )}
               </li>
-            ))}
+              );
+            })}
           </ul>
 
           {remittance.status === "PREVIEW" && (
@@ -677,6 +718,8 @@ export default async function PayRemittanceDetailPage({
                   payoutSummaries={remittance.payRun.payouts.map((payout) => ({
                     therapistName: `${payout.therapist.firstName} ${payout.therapist.lastName}`.trim(),
                     amount: Number(payout.therapistAmount),
+                    computedAmount: Number(payout.computedTherapistAmount),
+                    adjustmentNote: payout.adjustmentNote,
                     ready: Boolean(
                       payout.therapist.stripeConnectAccountId && payout.therapist.stripeConnectReady,
                     ),
