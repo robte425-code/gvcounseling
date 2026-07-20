@@ -431,3 +431,52 @@ export async function sendAdminCutoffReminderEmail(options: {
     text: lines.join("\n"),
   });
 }
+
+/** Day-before expected L&I payment reminder for admins. */
+export async function sendAdminPaymentDueReminderEmail(options: {
+  paymentDate: Date;
+  cutoffDate: Date;
+  label: string | null;
+  invoiceCount: number;
+  remittanceCount: number;
+  daysBefore?: number;
+}) {
+  const adminEmails = await getAdminNotificationEmails();
+  if (adminEmails.length === 0) return;
+
+  const daysBefore = options.daysBefore ?? 1;
+  const paymentLabel = formatCalendarIso(calendarIsoFromDate(options.paymentDate));
+  const cutoffLabel = formatCalendarIso(calendarIsoFromDate(options.cutoffDate));
+  const periodLabel = options.label?.trim() || cutoffLabel;
+  const dayWord = daysBefore === 1 ? "day" : "days";
+  const payUrl = `${getSiteUrl()}/portal/admin/pay`;
+  const paychecksUrl = `${getSiteUrl()}/portal/admin/paychecks`;
+  const billingUrl = `${getSiteUrl()}/portal/admin/billing`;
+
+  const lines = [
+    `Expected L&I payment reminder: ${paymentLabel} is ${daysBefore} ${dayWord} away.`,
+    "",
+    `Pay period: ${periodLabel}`,
+    `Billing cutoff: ${cutoffLabel}`,
+    `Expected L&I payment: ${paymentLabel}`,
+    "",
+    `Invoices on this pay period: ${options.invoiceCount}`,
+    `Remittance advices with this payment date: ${options.remittanceCount}`,
+    "",
+    "Process remittance advice (RA):",
+    payUrl,
+    "",
+    "Paychecks:",
+    paychecksUrl,
+    "",
+    "Billing:",
+    billingUrl,
+    "",
+    "Grandview Counseling",
+  ];
+
+  await sendEmailTo(adminEmails.join(", "), {
+    subject: `L&I payment expected ${paymentLabel} — tomorrow`,
+    text: lines.join("\n"),
+  });
+}

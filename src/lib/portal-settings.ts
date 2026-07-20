@@ -241,3 +241,30 @@ export async function markCutoffReminderSent(
     update: { value },
   });
 }
+
+/** Idempotency key for the day-before L&I payment-due admin reminder. */
+export function paymentDueReminderSentKey(payPeriodId: string, daysBefore: number): string {
+  return `payment_due_reminder_sent:${payPeriodId}:${daysBefore}`;
+}
+
+export async function wasPaymentDueReminderSent(
+  payPeriodId: string,
+  daysBefore: number,
+): Promise<boolean> {
+  const value = await readPortalSetting(paymentDueReminderSentKey(payPeriodId, daysBefore));
+  return Boolean(value);
+}
+
+export async function markPaymentDueReminderSent(
+  payPeriodId: string,
+  daysBefore: number,
+  sentAt = new Date(),
+): Promise<void> {
+  const key = paymentDueReminderSentKey(payPeriodId, daysBefore);
+  const value = sentAt.toISOString();
+  await prisma.portalSetting.upsert({
+    where: { key },
+    create: { key, value },
+    update: { value },
+  });
+}
