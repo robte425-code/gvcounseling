@@ -61,6 +61,10 @@ export function CutoffReminderSettings({ earlierDays, laterDays }: Props) {
         Active therapists and admins receive two emails before each upcoming L&I cutoff, reminding
         therapists to submit invoices before noon on the cutoff date. Runs daily at 8:00 AM Pacific.
       </p>
+      <p className="mt-2 text-sm text-muted">
+        Separately, admins are emailed the day before each pay period’s expected L&I payment date
+        (same daily schedule).
+      </p>
 
       <div className="mt-4 grid gap-4 sm:grid-cols-2">
         <div>
