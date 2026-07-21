@@ -4,10 +4,11 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && node scripts/prisma-migrate-deploy.mjs && npx tsx scripts/run-pending-837-archive.ts && npx tsx scripts/reset-rejected-837-invoices-20260717.ts && npx tsx scripts/restore-invoice-263-billed.ts && npx tsx scripts/restore-ra721-claim-invoices-billed.ts && npx tsx scripts/relink-mismatched-drive-folders.ts --all && next build",
+    "build": "prisma generate && node scripts/prisma-migrate-deploy.mjs && npx tsx scripts/run-pending-837-archive.ts && npx tsx scripts/reset-rejected-837-invoices-20260717.ts && npx tsx scripts/restore-invoice-263-billed.ts && npx tsx scripts/restore-ra721-claim-invoices-billed.ts && npx tsx scripts/reset-rejected-837-resubmit-20260717.ts && npx tsx scripts/relink-mismatched-drive-folders.ts --all && next build",
     "audit:drive-folders": "tsx scripts/relink-mismatched-drive-folders.ts --all",
     "analyze:837-ra-7212026": "tsx scripts/analyze-837-vs-ra-7212026.ts",
     "reset:rejected-837-20260717": "tsx scripts/reset-rejected-837-invoices-20260717.ts",
+    "reset:rejected-837-resubmit-20260717": "tsx scripts/reset-rejected-837-resubmit-20260717.ts",
     "restore:invoice-263-billed": "tsx scripts/restore-invoice-263-billed.ts",
     "restore:ra721-claim-invoices-billed": "tsx scripts/restore-ra721-claim-invoices-billed.ts",
     "archive:837": "tsx scripts/run-pending-837-archive.ts",
