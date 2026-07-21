@@ -94,6 +94,15 @@ assertIncludes(
 // Rendering provider: NM108=XX
 assertIncludes(content, "NM1*82*1*SMITH*PAT****XX*1619499308~", "NM1*82 element layout");
 
+// L&I 999 rejects REF*G2 in loop 2310 when NM1*82 already has NPI (IK4 I12).
+if (content.includes("REF*G2*1234567~")) {
+  fail("REF*G2 for rendering provider must not be emitted when NPI is present");
+}
+console.log("OK: no rendering-provider REF*G2");
+
+// Payer secondary ID REF*G2 (org payee) is still allowed.
+assertIncludes(content, "REF*G2*0479998~", "payer/payee REF*G2 present");
+
 // Structural checks via element indices (1-based X12 positions)
 const nm41 = elementsOf(findSegment(content, "NM1*41"));
 if (nm41[7] !== "" || nm41[8] !== "46" || nm41[9] !== "0479998") {

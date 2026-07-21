@@ -157,8 +157,8 @@ function buildClaim(hlNumber: number, claim: Edi837Claim): string {
     "XX",
     therapist.npi,
   );
-  out += seg("REF", "G2", lniProviderIdForEdi(therapist.lniProviderId));
-
+  // Do not emit REF*G2 here: L&I 999 rejects it (IK4 I12) when NM1*82 already
+  // carries NPI in NM108/NM109 (situational “not used” in loop 2310).
   lines.forEach((line, idx) => {
     out += seg("LX", String(idx + 1));
     out += seg(
