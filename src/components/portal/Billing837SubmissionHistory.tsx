@@ -17,7 +17,7 @@ export async function Billing837SubmissionHistory() {
       {submissions.length === 0 ? (
         <p className="mt-4 text-sm text-muted">No 837 files generated yet.</p>
       ) : (
-        <ul className="mt-4 space-y-3">
+        <ul className="mt-4 max-h-80 space-y-3 overflow-y-auto overscroll-contain pr-1">
           {submissions.map((submission) => {
             const periodLabel =
               submission.payPeriod.label ?? formatDate(submission.payPeriod.cutoffDate);
