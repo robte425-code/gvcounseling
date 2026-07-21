@@ -4,8 +4,9 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && node scripts/prisma-migrate-deploy.mjs && npx tsx scripts/run-pending-837-archive.ts && npx tsx scripts/relink-mismatched-drive-folders.ts --all && next build",
+    "build": "prisma generate && node scripts/prisma-migrate-deploy.mjs && npx tsx scripts/run-pending-837-archive.ts && npx tsx scripts/relink-mismatched-drive-folders.ts --all && npx tsx scripts/analyze-837-vs-ra-7212026.ts && next build",
     "audit:drive-folders": "tsx scripts/relink-mismatched-drive-folders.ts --all",
+    "analyze:837-ra-7212026": "tsx scripts/analyze-837-vs-ra-7212026.ts",
     "archive:837": "tsx scripts/run-pending-837-archive.ts",
     "start": "next start",
     "lint": "eslint",
