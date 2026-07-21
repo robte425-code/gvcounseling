@@ -33,7 +33,10 @@ function detectSeparators(content: string): {
   return { elementSeparator, componentSeparator, segmentTerminator };
 }
 
-export function parseX12(content: string): ParsedX12 {
+export function parseX12(
+  content: string,
+  options?: { requireTransactionSet?: string },
+): ParsedX12 {
   const trimmed = content.replace(/\r\n/g, "\n").trim();
   const { elementSeparator, componentSeparator, segmentTerminator } = detectSeparators(trimmed);
 
@@ -50,8 +53,12 @@ export function parseX12(content: string): ParsedX12 {
     segments.push({ id, elements: parts.slice(1) });
   }
 
-  if (!segments.some((segment) => segment.id === "ST" && segment.elements[0] === "835")) {
-    throw new Error("X12 file is not an 835 remittance (ST*835 not found).");
+  const requireSt = options?.requireTransactionSet ?? "835";
+  if (
+    requireSt &&
+    !segments.some((segment) => segment.id === "ST" && segment.elements[0] === requireSt)
+  ) {
+    throw new Error(`X12 file is not a ${requireSt} transaction (ST*${requireSt} not found).`);
   }
 
   return { elementSeparator, componentSeparator, segmentTerminator, segments };

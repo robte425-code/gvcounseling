@@ -19,6 +19,7 @@
     "db:seed": "tsx prisma/seed.ts",
     "smoke:critical-fixes": "tsx scripts/smoke-critical-fixes.ts",
     "smoke:edi837-nm1-sbr": "tsx scripts/smoke-edi837-nm1-sbr.ts",
+    "smoke:edi999-validate": "tsx scripts/smoke-edi999-validate.ts",
     "smoke:invoice-attachments": "tsx scripts/smoke-invoice-attachments.ts",
     "finalize:historical-therapist-pay": "tsx scripts/finalize-historical-therapist-pay.ts",
     "smoke:stripe-payout": "tsx scripts/smoke-stripe-payout-flow.ts",
