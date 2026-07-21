@@ -17,6 +17,7 @@ import {
 } from "@/components/portal/ui";
 import { formatDate } from "@/lib/constants";
 import { prisma } from "@/lib/prisma";
+import { BillingJumpNav } from "@/components/portal/BillingJumpNav";
 import { LniFeesSection } from "@/components/portal/LniFeesSection";
 import { Billing837SubmissionHistory } from "@/components/portal/Billing837SubmissionHistory";
 import { Validate999AckPanel } from "@/components/portal/Validate999AckPanel";
@@ -114,15 +115,13 @@ export default async function BillingPage({
   );
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="font-serif text-3xl font-semibold text-primary-dark">Bill L&I</h1>
           <p className="mt-2 max-w-2xl text-sm text-muted">
-            Sync pay periods, review 837 batches before generate, download files for L&I upload,
-            validate 999 acknowledgements, email VRCs session documentation, and fax session
-            documentation to L&I (excluding invoice PDFs). Each generate is logged with control
-            numbers and a file hash.
+            Generate 837s, validate 999 acknowledgements, sync pay periods, and notify VRCs / L&I.
+            Use the jump links to move between sections without scrolling the full period list.
           </p>
         </div>
         <div className="flex flex-wrap gap-3">
@@ -140,6 +139,8 @@ export default async function BillingPage({
           </div>
         </div>
       </div>
+
+      <BillingJumpNav />
 
       {hasAlerts && (
         <div className="space-y-2">
@@ -180,6 +181,8 @@ export default async function BillingPage({
           )}
         </div>
       )}
+
+      <Validate999AckPanel />
 
       <BillingWorkspace
         rows={periodRows}
@@ -265,8 +268,6 @@ export default async function BillingPage({
       <section>
         <LniFeesSection />
       </section>
-
-      <Validate999AckPanel />
 
       <Billing837SubmissionHistory />
     </div>

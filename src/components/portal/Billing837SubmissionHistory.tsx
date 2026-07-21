@@ -6,7 +6,7 @@ export async function Billing837SubmissionHistory() {
   const submissions = await listRecentEdi837Submissions(20);
 
   return (
-    <section className={portalCardClass}>
+    <section id="billing-history" className={`${portalCardClass} scroll-mt-16`}>
       <p className={portalSectionHeadingClass}>Submission history</p>
       <h2 className="mt-1 font-serif text-lg font-semibold text-primary-dark">837 audit log</h2>
       <p className="mt-1 text-xs text-muted">

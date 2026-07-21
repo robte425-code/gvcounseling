@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { ConfirmSubmitButton } from "@/components/portal/ConfirmSubmitButton";
 import { Generate837Form } from "@/components/portal/Generate837Form";
@@ -31,6 +32,19 @@ type Props = {
   adminEmails: string[];
 };
 
+type PeriodFilter = "awaiting" | "recent" | "all";
+
+const RECENT_COUNT = 4;
+
+const filterClass = (active: boolean) =>
+  `rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+    active ? "bg-primary text-white shadow-sm" : "text-muted hover:bg-primary/5 hover:text-foreground"
+  }`;
+
+function awaitingCount(row: BillingPayPeriodRow): number {
+  return Math.max(0, row.assignedInvoices - row.billedInvoices);
+}
+
 function PayPeriodRow({
   row,
   usageIndicator,
@@ -44,7 +58,7 @@ function PayPeriodRow({
   lniFaxRoute: OutboundLniFaxRoute;
   adminList: string;
 }) {
-  const unbilled = Math.max(0, row.assignedInvoices - row.billedInvoices);
+  const unbilled = awaitingCount(row);
   const notifyReady = row.billedInvoices > 0;
   const statusLabel =
     row.billedInvoices === 0
@@ -174,6 +188,10 @@ export function BillingPayPeriodsTable({
   lniFaxRoute,
   adminEmails,
 }: Props) {
+  const awaitingRows = useMemo(() => rows.filter((row) => awaitingCount(row) > 0), [rows]);
+  const defaultFilter: PeriodFilter = awaitingRows.length > 0 ? "awaiting" : "recent";
+  const [filter, setFilter] = useState<PeriodFilter>(defaultFilter);
+
   if (rows.length === 0) {
     return (
       <div className="rounded-xl border border-dashed border-border bg-primary/[0.02] px-6 py-10 text-center">
@@ -186,19 +204,69 @@ export function BillingPayPeriodsTable({
   }
 
   const adminList = adminEmails.join(", ");
+  const visibleRows =
+    filter === "awaiting"
+      ? awaitingRows
+      : filter === "recent"
+        ? rows.slice(0, RECENT_COUNT)
+        : rows;
 
   return (
-    <ul className="space-y-4">
-      {rows.map((row) => (
-        <PayPeriodRow
-          key={row.id}
-          row={row}
-          usageIndicator={usageIndicator}
-          vrcRoute={vrcRoute}
-          lniFaxRoute={lniFaxRoute}
-          adminList={adminList}
-        />
-      ))}
-    </ul>
+    <div className="space-y-3">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div
+          className="inline-flex rounded-full border border-border bg-surface p-1 shadow-sm"
+          role="group"
+          aria-label="Pay period filter"
+        >
+          <button
+            type="button"
+            className={filterClass(filter === "awaiting")}
+            aria-pressed={filter === "awaiting"}
+            onClick={() => setFilter("awaiting")}
+          >
+            Awaiting ({awaitingRows.length})
+          </button>
+          <button
+            type="button"
+            className={filterClass(filter === "recent")}
+            aria-pressed={filter === "recent"}
+            onClick={() => setFilter("recent")}
+          >
+            Recent ({Math.min(RECENT_COUNT, rows.length)})
+          </button>
+          <button
+            type="button"
+            className={filterClass(filter === "all")}
+            aria-pressed={filter === "all"}
+            onClick={() => setFilter("all")}
+          >
+            All ({rows.length})
+          </button>
+        </div>
+        <p className="text-xs text-muted">
+          Showing {visibleRows.length} of {rows.length}
+        </p>
+      </div>
+
+      {filter === "awaiting" && awaitingRows.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-border bg-primary/[0.02] px-4 py-6 text-center text-sm text-muted">
+          No cutoffs currently awaiting an 837. Switch to Recent or All to browse older periods.
+        </div>
+      ) : (
+        <ul className="max-h-[min(70vh,40rem)] space-y-4 overflow-y-auto overscroll-contain pr-1">
+          {visibleRows.map((row) => (
+            <PayPeriodRow
+              key={row.id}
+              row={row}
+              usageIndicator={usageIndicator}
+              vrcRoute={vrcRoute}
+              lniFaxRoute={lniFaxRoute}
+              adminList={adminList}
+            />
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }

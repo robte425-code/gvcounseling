@@ -54,7 +54,7 @@ export function Validate999AckPanel() {
   }
 
   return (
-    <section className={portalCardClass}>
+    <section id="billing-validate-999" className={`${portalCardClass} scroll-mt-16`}>
       <p className={portalSectionHeadingClass}>Acknowledgements</p>
       <h2 className="mt-1 font-serif text-lg font-semibold text-primary-dark">
         Validate 999 ACK

@@ -146,7 +146,7 @@ export function BillingWorkspace({
 
   return (
     <div className="grid gap-6 lg:grid-cols-12">
-      <section className={`${portalCardClass} lg:col-span-4`}>
+      <section id="billing-setup" className={`${portalCardClass} scroll-mt-16 lg:col-span-4`}>
         {setup}
         <BillingModeToggles
           usageIndicator={usageIndicator}
@@ -157,14 +157,14 @@ export function BillingWorkspace({
         {addPayPeriod}
       </section>
 
-      <section className={`${portalCardClass} lg:col-span-8`}>
+      <section id="billing-generate" className={`${portalCardClass} scroll-mt-16 lg:col-span-8`}>
         <p className={portalSectionHeadingClass}>Pay periods</p>
         <h2 className="mt-1 font-serif text-lg font-semibold text-primary-dark">
           Generate & notify
         </h2>
         <p className="mt-1 text-xs text-muted">
-          Each cutoff lists invoice counts, then Generate 837, then VRC email / L&I fax. Review
-          batch before generating. Notify routing is set on the Admin page.
+          Filter to cutoffs awaiting an 837, or browse recent/all. Review batch before generating.
+          Notify routing is set on the Admin page.
         </p>
 
         <div className="mt-5">

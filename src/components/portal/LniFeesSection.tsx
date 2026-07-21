@@ -21,7 +21,7 @@ export async function LniFeesSection() {
   }));
 
   return (
-    <div className={portalCardClass}>
+    <div id="billing-fees" className={`${portalCardClass} scroll-mt-16`}>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <p className={portalSectionHeadingClass}>Fee schedule</p>
