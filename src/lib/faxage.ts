@@ -41,6 +41,11 @@ export type SendFaxOptions = {
   recipname: string;
   filenames: string[];
   fileDataBase64: string[];
+  /**
+   * When true (default), Faxage emails final job status (success/failure) to the
+   * email address on the API user account (`em_notify=1`).
+   */
+  emailStatusNotify?: boolean;
 };
 
 export type SendFaxResult = {
@@ -109,6 +114,10 @@ export async function sendFax(options: SendFaxOptions): Promise<SendFaxResult> {
   body.append("faxno", faxno);
   body.append("tagname", config.tagname);
   body.append("tagnumber", normalizeFaxageTagNumber(config.tagnumber));
+  // Email final success/failure to the Faxage user's account email.
+  if (options.emailStatusNotify !== false) {
+    body.append("em_notify", "1");
+  }
 
   for (let i = 0; i < options.filenames.length; i++) {
     body.append("faxfilenames[]", options.filenames[i]!);
