@@ -108,7 +108,9 @@ function buildClaim(hlNumber: number, claim: Edi837Claim): string {
 
   let out = "";
   out += seg("HL", String(hlNumber), "1", "22", "0");
-  out += seg("SBR", "P", "18", client.claimNumber, "", "", "", "", "WC");
+  // SBR09 = Claim Filing Indicator (WC). Elements 04–08 must be present-but-empty.
+  out += seg("SBR", "P", "18", client.claimNumber, "", "", "", "", "", "WC");
+  // NM108/NM109 = ID qualifier/ID. NM106–NM107 (prefix/suffix) must be empty.
   out += seg(
     "NM1",
     "IL",
@@ -117,13 +119,14 @@ function buildClaim(hlNumber: number, claim: Edi837Claim): string {
     client.firstName.toUpperCase(),
     "",
     "",
+    "",
     "MI",
     client.claimNumber,
   );
   out += seg("N3", client.addressLine1.toUpperCase());
   out += seg("N4", client.city.toUpperCase(), client.state.toUpperCase(), client.zip.replace(/\D/g, ""));
   out += seg("DMG", "D8", formatDate(demographicDate), client.gender);
-  out += seg("NM1", "PR", "2", ORG.receiverName, "", "", "", "PI", ORG.receiverId);
+  out += seg("NM1", "PR", "2", ORG.receiverName, "", "", "", "", "PI", ORG.receiverId);
   out += seg("N4", ORG.receiverCity, ORG.receiverState, ORG.receiverZip);
   out += seg("REF", "G2", lniProviderIdForEdi(ORG.lniProviderId));
   out += seg(
@@ -148,6 +151,7 @@ function buildClaim(hlNumber: number, claim: Edi837Claim): string {
     "1",
     therapist.lastName.toUpperCase(),
     therapist.firstName.toUpperCase(),
+    "",
     "",
     "",
     "XX",
@@ -219,7 +223,7 @@ export function buildEdi837(
   let body = "";
   body += seg("ST", "837", stControl, "005010X222A1");
   body += seg("BHT", "0019", "00", "0001", date, time, "CH");
-  body += seg("NM1", "41", "2", ORG.name, "", "", "", "46", orgProviderId);
+  body += seg("NM1", "41", "2", ORG.name, "", "", "", "", "46", orgProviderId);
   body += seg(
     "PER",
     "IC",
@@ -229,9 +233,9 @@ export function buildEdi837(
     "EM",
     ORG.contactEmail,
   );
-  body += seg("NM1", "40", "2", ORG.receiverName, "", "", "", "46", ORG.receiverId);
+  body += seg("NM1", "40", "2", ORG.receiverName, "", "", "", "", "46", ORG.receiverId);
   body += seg("HL", "1", "", "20", "1");
-  body += seg("NM1", "85", "2", ORG.name, "", "", "", "XX", ORG.npi);
+  body += seg("NM1", "85", "2", ORG.name, "", "", "", "", "XX", ORG.npi);
   body += seg("N3", ORG.addressLine1);
   body += seg("N4", ORG.city, ORG.state, ORG.zip);
   body += seg("REF", "EI", ORG.taxId);
