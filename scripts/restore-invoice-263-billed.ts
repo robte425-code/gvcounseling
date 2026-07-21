@@ -141,11 +141,15 @@ async function main() {
       : []),
   ]);
 
+  const { rematchUnresolvedOnOpenPreviews } = await import("../src/lib/remittance-advice");
+  const rematched = await rematchUnresolvedOnOpenPreviews();
+
   lines.push("");
   lines.push(
     `Updated id=${invoice.id} #${invoice.invoiceNumber} ${invoice.client.lniClaimNumber}` +
       ` (${invoice.therapist.firstName} ${invoice.therapist.lastName}): ${before} → status=BILLED billedAt=${billedAt.toISOString()}`,
   );
+  lines.push(`Rematched unresolved preview lines updated: ${rematched}`);
 
   const report = lines.join("\n");
   console.log(report);

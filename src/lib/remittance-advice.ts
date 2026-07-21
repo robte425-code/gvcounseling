@@ -613,7 +613,10 @@ function lineToRemittanceBill(line: {
   };
 }
 
-export async function rematchRemittanceAdvice(remittanceAdviceId: string): Promise<void> {
+export async function rematchRemittanceAdvice(
+  remittanceAdviceId: string,
+  options?: { onlyUnresolved?: boolean },
+): Promise<{ updatedLineCount: number }> {
   const remittance = await prisma.remittanceAdvice.findUnique({
     where: { id: remittanceAdviceId },
     include: { lines: { orderBy: { claimNumber: "asc" } } },
@@ -624,13 +627,21 @@ export async function rematchRemittanceAdvice(remittanceAdviceId: string): Promi
     throw new Error("Only preview remittances can be re-matched.");
   }
 
+  const onlyUnresolved = Boolean(options?.onlyUnresolved);
+  const reservedInvoiceIds = onlyUnresolved
+    ? remittance.lines
+        .filter((line) => !line.supersededAt && line.matchedInvoiceId)
+        .map((line) => line.matchedInvoiceId!)
+    : [];
   const bills = remittance.lines.map(lineToRemittanceBill);
-  const matches = await matchRemittanceBills(bills);
+  const matches = await matchRemittanceBills(bills, { reservedInvoiceIds });
   const affectedInvoiceIds = new Set<string>();
+  let updatedLineCount = 0;
 
   for (let index = 0; index < remittance.lines.length; index++) {
     const line = remittance.lines[index]!;
     if (line.supersededAt) continue;
+    if (onlyUnresolved && line.matchedInvoiceId) continue;
 
     if (line.matchedInvoiceId) {
       affectedInvoiceIds.add(line.matchedInvoiceId);
@@ -642,13 +653,19 @@ export async function rematchRemittanceAdvice(remittanceAdviceId: string): Promi
       affectedInvoiceIds.add(nextMatchedId);
     }
 
+    const nextNote = match?.matchNote ?? null;
+    if (line.matchedInvoiceId === nextMatchedId && line.matchNote === nextNote) {
+      continue;
+    }
+
     await prisma.remittanceAdviceLine.update({
       where: { id: line.id },
       data: {
         matchedInvoiceId: nextMatchedId,
-        matchNote: match?.matchNote ?? null,
+        matchNote: nextNote,
       },
     });
+    updatedLineCount += 1;
 
     if (nextMatchedId) {
       const eobCodeDescriptions = parseLineEobDescriptions(line.eobCodeDescriptions);
@@ -663,6 +680,34 @@ export async function rematchRemittanceAdvice(remittanceAdviceId: string): Promi
   for (const invoiceId of affectedInvoiceIds) {
     await reconcileInvoiceAfterRemittanceUnmatch(invoiceId);
   }
+
+  return { updatedLineCount };
+}
+
+/** Auto-rematch only unmatched preview lines (keeps existing matches intact). */
+export async function rematchUnresolvedRemittanceLines(
+  remittanceAdviceId: string,
+): Promise<number> {
+  const result = await rematchRemittanceAdvice(remittanceAdviceId, { onlyUnresolved: true });
+  return result.updatedLineCount;
+}
+
+/** Rematch unresolved lines on every open PREVIEW remittance (e.g. after invoices become Billed). */
+export async function rematchUnresolvedOnOpenPreviews(): Promise<number> {
+  const previews = await prisma.remittanceAdvice.findMany({
+    where: { status: "PREVIEW" },
+    select: {
+      id: true,
+      lines: { select: { matchedInvoiceId: true, supersededAt: true } },
+    },
+  });
+
+  let updated = 0;
+  for (const preview of previews) {
+    if (countUnresolvedRemittanceLines(preview.lines) === 0) continue;
+    updated += await rematchUnresolvedRemittanceLines(preview.id);
+  }
+  return updated;
 }
 
 export async function unmatchRemittanceLine(

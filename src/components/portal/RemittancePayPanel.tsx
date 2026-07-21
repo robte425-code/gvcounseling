@@ -585,10 +585,12 @@ export function SupersedeRemittanceLineForm({
   remittanceAdviceId,
   lineId,
   defaultNote,
+  label = "Discard unmatched bill",
 }: {
   remittanceAdviceId: string;
   lineId: string;
   defaultNote?: string;
+  label?: string;
 }) {
   const [state, formAction, pending] = useActionState(
     supersedeRemittanceLineAction,
@@ -606,11 +608,11 @@ export function SupersedeRemittanceLineForm({
         </p>
       )}
       <ConfirmSubmitButton
-        confirmMessage="Supersede this stale line? It will no longer block applying this remittance."
+        confirmMessage="Discard this unmatched bill from the remittance?\n\nIt will no longer block applying. You can undo discard later if needed."
         className={`${portalButtonSecondaryClass} px-2 py-1 text-xs`}
         disabled={pending}
       >
-        {pending ? "…" : "Supersede stale line"}
+        {pending ? "…" : label}
       </ConfirmSubmitButton>
     </form>
   );
@@ -642,7 +644,7 @@ export function UnsupersedeRemittanceLineForm({
         disabled={pending}
         className="text-xs text-primary hover:underline disabled:opacity-50"
       >
-        {pending ? "Undoing…" : "Undo supersede"}
+        {pending ? "Undoing…" : "Undo discard"}
       </button>
     </form>
   );

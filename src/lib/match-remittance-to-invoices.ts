@@ -123,6 +123,7 @@ function matchScore(
 
 export async function matchRemittanceBills(
   bills: RemittanceBill[],
+  options?: { reservedInvoiceIds?: Iterable<string> },
 ): Promise<MatchedRemittanceBill[]> {
   const claimNumbers = [...new Set(bills.map((bill) => bill.claimNumber))];
   const invoices = await prisma.invoice.findMany({
@@ -137,7 +138,7 @@ export async function matchRemittanceBills(
     },
   });
 
-  const usedInvoiceIds = new Set<string>();
+  const usedInvoiceIds = new Set<string>(options?.reservedInvoiceIds ?? []);
 
   return bills.map((bill) => {
     const providerId = bill.serviceProviderId

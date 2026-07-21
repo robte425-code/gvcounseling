@@ -16,7 +16,7 @@ import {
   remittanceSectionToPaymentStatus,
 } from "@/lib/invoice-payment-status";
 import { RemittanceCrossVerifyPanel } from "@/components/portal/RemittanceCrossVerifyPanel";
-import { buildTherapistPayPreview } from "@/lib/remittance-advice";
+import { buildTherapistPayPreview, rematchUnresolvedRemittanceLines } from "@/lib/remittance-advice";
 import { verifyRemittanceAgainstCounterpart } from "@/lib/remittance-cross-verify";
 import { remittanceSourceFormatLabel } from "@/lib/remittance-file-format";
 import {
@@ -88,42 +88,39 @@ export default async function PayRemittanceDetailPage({
   const { id } = await params;
   const query = await searchParams;
 
-  const remittance = await prisma.remittanceAdvice.findUnique({
-    where: { id },
-    include: {
-      lines: {
-        include: {
-          matchedInvoice: {
-            select: {
-              id: true,
-              invoiceNumber: true,
-              paymentStatus: true,
-              therapist: { select: { firstName: true, lastName: true } },
-              client: { select: { firstName: true, lastName: true } },
-            },
+  const remittanceInclude = {
+    lines: {
+      include: {
+        matchedInvoice: {
+          select: {
+            id: true,
+            invoiceNumber: true,
+            paymentStatus: true,
+            therapist: { select: { firstName: true, lastName: true } },
+            client: { select: { firstName: true, lastName: true } },
           },
         },
-        orderBy: [{ section: "asc" }, { claimNumber: "asc" }],
       },
-      payRun: {
-        include: {
-          payouts: {
-            include: {
-              therapist: {
-                select: {
-                  firstName: true,
-                  lastName: true,
-                  stripeConnectAccountId: true,
-                  stripeConnectReady: true,
-                },
+      orderBy: [{ section: "asc" as const }, { claimNumber: "asc" as const }],
+    },
+    payRun: {
+      include: {
+        payouts: {
+          include: {
+            therapist: {
+              select: {
+                firstName: true,
+                lastName: true,
+                stripeConnectAccountId: true,
+                stripeConnectReady: true,
               },
-              lines: {
-                include: {
-                  invoice: {
-                    select: {
-                      invoiceNumber: true,
-                      client: { select: { lniClaimNumber: true } },
-                    },
+            },
+            lines: {
+              include: {
+                invoice: {
+                  select: {
+                    invoiceNumber: true,
+                    client: { select: { lniClaimNumber: true } },
                   },
                 },
               },
@@ -132,9 +129,30 @@ export default async function PayRemittanceDetailPage({
         },
       },
     },
+  };
+
+  let remittance = await prisma.remittanceAdvice.findUnique({
+    where: { id },
+    include: remittanceInclude,
   });
 
   if (!remittance) notFound();
+
+  // When invoices become Billed after import (e.g. after a rejected-837 reset),
+  // pick up new matches automatically — admin should not need a Rematch click.
+  if (
+    remittance.status === "PREVIEW" &&
+    countUnresolvedRemittanceLines(remittance.lines) > 0
+  ) {
+    const updated = await rematchUnresolvedRemittanceLines(remittance.id);
+    if (updated > 0) {
+      remittance = await prisma.remittanceAdvice.findUnique({
+        where: { id },
+        include: remittanceInclude,
+      });
+      if (!remittance) notFound();
+    }
+  }
 
   const stripeConfigured = isStripeConfigured();
   const platformBalanceCents = stripeConfigured
@@ -366,10 +384,12 @@ export default async function PayRemittanceDetailPage({
             {unresolvedCount} unresolved bill{unresolvedCount === 1 ? "" : "s"}
           </span>
           {" — "}
-          every bill must match an invoice or be superseded before this remittance can be applied.
+          every bill must match an invoice or be discarded before this remittance can be applied.
+          For duplicates (e.g. a second BJ04455 denial), match the correct invoice or discard the
+          extra L&I line. Opening this page auto-matches newly billed invoices.
           {wrongYearSuggestions.length > 0
             ? " Use the wrong-year supersede action below for detected stale lines."
-            : " Review each unresolved bill below."}
+            : ""}
         </p>
       )}
 
@@ -483,27 +503,39 @@ export default async function PayRemittanceDetailPage({
                 )}
                 {remittance.status === "PREVIEW" && isUnresolved && (
                   <RemittanceBillRowActions>
-                    <div className="mt-2 flex flex-wrap items-center gap-3">
-                      <ManualMatchRemittanceLineForm
-                        remittanceAdviceId={remittance.id}
-                        lineId={line.id}
-                        claimNumber={line.claimNumber}
-                      />
-                      {wrongYearSuggestion && (
-                        <CreateWrongYearRebillForm
+                    <div className="mt-2 space-y-2">
+                      <p className="text-xs text-muted">
+                        Review: match to the correct billed invoice, or discard this L&I line if it
+                        is a duplicate / not yours to apply.
+                      </p>
+                      <div className="flex flex-wrap items-center gap-3">
+                        <ManualMatchRemittanceLineForm
                           remittanceAdviceId={remittance.id}
                           lineId={line.id}
+                          claimNumber={line.claimNumber}
                         />
-                      )}
-                      {wrongYearSuggestion ? (
-                        <SupersedeRemittanceLineForm
-                          remittanceAdviceId={remittance.id}
-                          lineId={line.id}
-                          defaultNote={wrongYearSuggestion.note}
-                        />
-                      ) : (
-                        <SupersedeRemittanceLineForm remittanceAdviceId={remittance.id} lineId={line.id} />
-                      )}
+                        {wrongYearSuggestion && (
+                          <CreateWrongYearRebillForm
+                            remittanceAdviceId={remittance.id}
+                            lineId={line.id}
+                          />
+                        )}
+                        {wrongYearSuggestion ? (
+                          <SupersedeRemittanceLineForm
+                            remittanceAdviceId={remittance.id}
+                            lineId={line.id}
+                            defaultNote={wrongYearSuggestion.note}
+                            label="Discard unmatched bill"
+                          />
+                        ) : (
+                          <SupersedeRemittanceLineForm
+                            remittanceAdviceId={remittance.id}
+                            lineId={line.id}
+                            label="Discard unmatched bill"
+                            defaultNote="Discarded unmatched remittance line (duplicate or not applicable)."
+                          />
+                        )}
+                      </div>
                     </div>
                   </RemittanceBillRowActions>
                 )}
