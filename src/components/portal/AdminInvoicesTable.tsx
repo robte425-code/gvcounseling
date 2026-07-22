@@ -205,8 +205,9 @@ export function AdminInvoicesTable({ invoices, payPeriods, returnTo }: Props) {
                     canDeleteAdminInvoice(inv) ? (
                       <form action={deleteAdminInvoiceAction}>
                         <input type="hidden" name="invoiceId" value={inv.id} />
+                        <input type="hidden" name="returnTo" value={returnTo} />
                         <ConfirmSubmitButton
-                          confirmMessage={`Delete draft invoice #${inv.invoiceNumber}?`}
+                          confirmMessage={`Delete unassigned invoice #${inv.invoiceNumber}? This cannot be undone.`}
                           className={`${portalButtonSecondaryClass} border-red-200 px-3 py-1 text-xs text-red-700 hover:bg-red-50`}
                         >
                           Delete

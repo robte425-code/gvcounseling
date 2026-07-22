@@ -18,7 +18,12 @@ import {
   portalTableWideClass,
 } from "@/components/portal/ui";
 import { formatCurrency, formatDate } from "@/lib/constants";
-import { assignInvoicesToPayPeriodAction } from "@/lib/portal-actions";
+import { canDeleteAdminInvoice } from "@/lib/invoice-delete-policy";
+import {
+  assignInvoicesToPayPeriodAction,
+  deleteAdminInvoiceAction,
+} from "@/lib/portal-actions";
+import { ConfirmSubmitButton } from "@/components/portal/ConfirmSubmitButton";
 
 type Props = {
   invoices: AdminInvoiceRow[];
@@ -166,6 +171,7 @@ export function AdminUnassignedInvoicesTile({
                 <th className="py-2 pr-4">Payment</th>
                 <th className="py-2 pr-4">Total</th>
                 <th className="py-2 pr-4">Submitted</th>
+                <th className="py-2 pr-4">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -185,6 +191,20 @@ export function AdminUnassignedInvoicesTile({
                         onChange={(e) => toggleOne(inv.id, e.target.checked)}
                       />
                     </label>
+                  }
+                  actions={
+                    canDeleteAdminInvoice(inv) ? (
+                      <form action={deleteAdminInvoiceAction}>
+                        <input type="hidden" name="invoiceId" value={inv.id} />
+                        <input type="hidden" name="returnTo" value={returnTo} />
+                        <ConfirmSubmitButton
+                          confirmMessage={`Delete unassigned invoice #${inv.invoiceNumber}? This cannot be undone.`}
+                          className={`${portalButtonSecondaryClass} border-red-200 px-3 py-1 text-xs text-red-700 hover:bg-red-50`}
+                        >
+                          Delete
+                        </ConfirmSubmitButton>
+                      </form>
+                    ) : null
                   }
                 >
                   <td className="py-3 pr-4">

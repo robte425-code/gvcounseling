@@ -7,17 +7,16 @@ type InvoiceDeleteSnapshot = {
 };
 
 /** Whether admin UI should offer delete for this invoice. */
-export function canDeleteAdminInvoice(invoice: Pick<InvoiceDeleteSnapshot, "status" | "billedAt">): boolean {
-  return invoice.status === "DRAFT" && !invoice.billedAt;
+export function canDeleteAdminInvoice(
+  invoice: Pick<InvoiceDeleteSnapshot, "payPeriodId">,
+): boolean {
+  return invoice.payPeriodId == null;
 }
 
 /** Server-side guard with relation checks before hard delete. */
 export function assertAdminCanDeleteInvoice(invoice: InvoiceDeleteSnapshot): void {
   if (!canDeleteAdminInvoice(invoice)) {
-    throw new Error("Only draft invoices can be deleted.");
-  }
-  if (invoice.payPeriodId) {
-    throw new Error("Cannot delete an invoice assigned to a pay period.");
+    throw new Error("Only unassigned invoices (no pay period) can be deleted.");
   }
   if ((invoice.remittanceLineCount ?? 0) > 0) {
     throw new Error("Cannot delete an invoice linked to remittance advice.");

@@ -973,7 +973,8 @@ export async function deleteAdminInvoiceAction(formData: FormData) {
   revalidatePath(`/portal/admin/invoices/${invoiceId}`);
   revalidatePath("/portal/therapist/invoices");
   revalidatePath(`/portal/therapist/invoices/${invoiceId}`);
-  redirect("/portal/admin/invoices");
+  const returnTo = parseAdminInvoiceListReturnTo(String(formData.get("returnTo") ?? ""));
+  redirect(returnTo);
 }
 
 export async function assignInvoicesToPayPeriodAction(formData: FormData) {

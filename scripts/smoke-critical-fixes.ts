@@ -500,16 +500,12 @@ function testLocalStripeHelpers() {
 }
 
 function testLocalInvoiceDeletePolicy() {
-  if (!canDeleteAdminInvoice({ status: "DRAFT", billedAt: null })) {
-    record("local/invoice-delete-policy", "FAIL", "DRAFT should be deletable");
+  if (!canDeleteAdminInvoice({ payPeriodId: null })) {
+    record("local/invoice-delete-policy", "FAIL", "unassigned should be deletable");
     return;
   }
-  if (canDeleteAdminInvoice({ status: "SUBMITTED", billedAt: null })) {
-    record("local/invoice-delete-policy", "FAIL", "SUBMITTED should not be deletable");
-    return;
-  }
-  if (canDeleteAdminInvoice({ status: "BILLED", billedAt: new Date() })) {
-    record("local/invoice-delete-policy", "FAIL", "BILLED should not be deletable");
+  if (canDeleteAdminInvoice({ payPeriodId: "pp-1" })) {
+    record("local/invoice-delete-policy", "FAIL", "assigned should not be deletable");
     return;
   }
 
@@ -521,14 +517,10 @@ function testLocalInvoiceDeletePolicy() {
       remittanceLineCount: 0,
       payRunLineCount: 0,
     });
-    record("local/invoice-delete-policy", "FAIL", "assert should throw for SUBMITTED");
-    return;
   } catch (e) {
     const msg = e instanceof Error ? e.message : "";
-    if (!msg.includes("draft")) {
-      record("local/invoice-delete-policy", "FAIL", `unexpected error: ${msg}`);
-      return;
-    }
+    record("local/invoice-delete-policy", "FAIL", `unassigned SUBMITTED should pass: ${msg}`);
+    return;
   }
 
   try {
@@ -543,8 +535,26 @@ function testLocalInvoiceDeletePolicy() {
     return;
   } catch (e) {
     const msg = e instanceof Error ? e.message : "";
-    if (!msg.includes("pay period")) {
+    if (!/unassigned|pay period/i.test(msg)) {
       record("local/invoice-delete-policy", "FAIL", `unexpected error: ${msg}`);
+      return;
+    }
+  }
+
+  try {
+    assertAdminCanDeleteInvoice({
+      status: "BILLED",
+      billedAt: new Date(),
+      payPeriodId: null,
+      remittanceLineCount: 1,
+      payRunLineCount: 0,
+    });
+    record("local/invoice-delete-policy", "FAIL", "assert should throw for remittance link");
+    return;
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "";
+    if (!/remittance/i.test(msg)) {
+      record("local/invoice-delete-policy", "FAIL", `unexpected remittance error: ${msg}`);
       return;
     }
   }
@@ -559,18 +569,13 @@ async function testDbNonDraftInvoiceDeleteGuard() {
   }
 
   const prisma = await getPrisma();
-  const nonDraft = await prisma.invoice.count({ where: { status: { not: "DRAFT" } } });
-  const draftWithPayPeriod = await prisma.invoice.count({
-    where: { status: "DRAFT", payPeriodId: { not: null } },
-  });
-  const draftWithRemittance = await prisma.invoice.count({
-    where: { status: "DRAFT", remittanceLines: { some: {} } },
-  });
+  const assigned = await prisma.invoice.count({ where: { payPeriodId: { not: null } } });
+  const unassigned = await prisma.invoice.count({ where: { payPeriodId: null } });
 
   record(
     "db/non-draft-invoices-not-deletable",
     "PASS",
-    `nonDraft=${nonDraft} draftWithPayPeriod=${draftWithPayPeriod} draftWithRemittance=${draftWithRemittance} (UI+server block non-draft)`,
+    `assigned=${assigned} unassigned=${unassigned} (UI+server allow delete only when unassigned)`,
   );
 }
 
