@@ -43,14 +43,21 @@ export function AdminUnassignedInvoicesTile({
       }),
     [invoices],
   );
+  const assignableIds = useMemo(
+    () => new Set(sorted.filter((inv) => inv.assignable).map((inv) => inv.id)),
+    [sorted],
+  );
   const selectedCount = selected.size;
-  const allSelected = sorted.length > 0 && sorted.every((inv) => selected.has(inv.id));
+  const allAssignableSelected =
+    assignableIds.size > 0 && [...assignableIds].every((id) => selected.has(id));
   const nextPayPeriodLabel = payPeriods.find((period) => period.id === nextPayPeriodId)?.label;
   const hasPayPeriods = payPeriods.length > 0;
+  const assignableCount = assignableIds.size;
 
   if (sorted.length === 0) return null;
 
   function toggleOne(id: string, checked: boolean) {
+    if (!assignableIds.has(id)) return;
     setSelected((prev) => {
       const next = new Set(prev);
       if (checked) next.add(id);
@@ -60,7 +67,7 @@ export function AdminUnassignedInvoicesTile({
   }
 
   function selectAll(checked: boolean) {
-    setSelected(checked ? new Set(sorted.map((inv) => inv.id)) : new Set());
+    setSelected(checked ? new Set(assignableIds) : new Set());
   }
 
   return (
@@ -70,8 +77,11 @@ export function AdminUnassignedInvoicesTile({
         {sorted.length} unassigned invoice{sorted.length === 1 ? "" : "s"}
       </h2>
       <p className="mt-1 text-sm text-muted">
-        Submitted invoices without a pay period. Select them below, choose a pay period, then assign
+        Invoices without a pay period. Select submitted ones, choose a pay period, then assign
         before generating an 837 on the Billing page.
+        {assignableCount < sorted.length
+          ? ` ${assignableCount} submitted and ready to assign.`
+          : ""}
       </p>
 
       {!hasPayPeriods && (
@@ -94,7 +104,7 @@ export function AdminUnassignedInvoicesTile({
               className={portalInputCompactClass}
               defaultValue={nextPayPeriodId ?? ""}
               required
-              disabled={!hasPayPeriods}
+              disabled={!hasPayPeriods || assignableCount === 0}
             >
               <option value="" disabled>
                 Select pay period
@@ -118,9 +128,10 @@ export function AdminUnassignedInvoicesTile({
           <button
             type="button"
             onClick={() => selectAll(true)}
+            disabled={assignableCount === 0}
             className={portalButtonSecondaryClass}
           >
-            Select all
+            Select all submitted
           </button>
           {selectedCount > 0 && (
             <button
@@ -140,8 +151,9 @@ export function AdminUnassignedInvoicesTile({
                 <th className="py-2 pr-2">
                   <input
                     type="checkbox"
-                    aria-label="Select all unassigned invoices"
-                    checked={allSelected}
+                    aria-label="Select all submitted unassigned invoices"
+                    checked={allAssignableSelected}
+                    disabled={assignableCount === 0}
                     onChange={(e) => selectAll(e.target.checked)}
                   />
                 </th>
@@ -169,6 +181,7 @@ export function AdminUnassignedInvoicesTile({
                         value={inv.id}
                         aria-label={`Select invoice #${inv.invoiceNumber}`}
                         checked={selected.has(inv.id)}
+                        disabled={!inv.assignable}
                         onChange={(e) => toggleOne(inv.id, e.target.checked)}
                       />
                     </label>

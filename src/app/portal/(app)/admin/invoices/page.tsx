@@ -78,9 +78,18 @@ function buildInvoiceWhere(filters: AdminInvoiceFilterValues): Prisma.InvoiceWhe
     where.therapistId = filters.therapistId;
   }
 
+  // Unassigned invoices belong only in the Needs pay period tile — never the main list.
+  if (filters.payPeriodId === "none") {
+    return { id: { in: [] } };
+  }
+
+  const periodWhere = filters.payPeriodId
+    ? invoicePayPeriodWhere(filters.payPeriodId)
+    : { payPeriodId: { not: null } };
+
   return mergeInvoiceWhere(
     mergeInvoiceWhere(
-      mergeInvoiceWhere(where, invoicePayPeriodWhere(filters.payPeriodId)),
+      mergeInvoiceWhere(where, periodWhere),
       invoicePaymentWhere(filters.paymentStatus),
     ),
     invoiceNumberWhere(filters.invoiceNumber),
@@ -89,9 +98,12 @@ function buildInvoiceWhere(filters: AdminInvoiceFilterValues): Prisma.InvoiceWhe
 
 function buildUnassignedInvoiceWhere(filters: AdminInvoiceFilterValues): Prisma.InvoiceWhereInput {
   const where: Prisma.InvoiceWhereInput = {
-    status: "SUBMITTED",
     payPeriodId: null,
   };
+
+  if (filters.status) {
+    where.status = filters.status;
+  }
 
   if (filters.therapistId) {
     where.therapistId = filters.therapistId;
@@ -179,10 +191,10 @@ export default async function AdminInvoicesPage({
   ]);
 
   const unassignedRows = unassignedInvoices.map(toAdminInvoiceRow);
-  const unassignedIds = new Set(unassignedRows.map((row) => row.id));
+  // Belt-and-suspenders: never list unassigned rows in the main table.
   const invoiceRows = invoices
     .map(toAdminInvoiceRow)
-    .filter((row) => !unassignedIds.has(row.id));
+    .filter((row) => row.payPeriodId != null);
 
   const periodOptions: PayPeriodOption[] = payPeriods.map((period) => ({
     id: period.id,
@@ -202,8 +214,8 @@ export default async function AdminInvoicesPage({
       <div>
         <h1 className="font-serif text-3xl font-semibold text-primary-dark">Invoices</h1>
         <p className="mt-2 text-sm text-muted">
-          Select submitted invoices and assign them to a pay period before generating an 837 on the
-          Billing page.
+          Unassigned invoices appear in Needs pay period above. Assign submitted ones to a pay
+          period before generating an 837 on the Billing page.
         </p>
       </div>
 
