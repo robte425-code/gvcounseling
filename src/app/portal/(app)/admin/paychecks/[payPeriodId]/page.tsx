@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireAdmin } from "@/auth";
 import { PaycheckDetailTable } from "@/components/portal/PaycheckDetailTable";
+import { PaycheckNotesPanel } from "@/components/portal/PaycheckNotesPanel";
 import { portalCardClass } from "@/components/portal/ui";
 import { formatCurrency } from "@/lib/constants";
 import { loadPaycheckDetail } from "@/lib/paychecks";
@@ -50,8 +51,20 @@ export default async function AdminPaycheckDetailPage({
           <p className="mt-1 text-2xl font-semibold text-primary-dark">
             {formatCurrency(detail.therapistAmount)}
           </p>
+          {Math.abs(detail.therapistAmount - detail.computedTherapistAmount) > 0.001 && (
+            <p className="mt-1 text-xs text-muted">
+              Computed {formatCurrency(detail.computedTherapistAmount)}
+            </p>
+          )}
         </div>
       </div>
+
+      <PaycheckNotesPanel
+        notes={detail.notes}
+        payoutNotes={detail.payoutNotes}
+        computedTherapistAmount={detail.computedTherapistAmount}
+        therapistAmount={detail.therapistAmount}
+      />
 
       <PaycheckDetailTable invoices={detail.invoices} paycheckPayPeriodId={payPeriodId} />
     </div>

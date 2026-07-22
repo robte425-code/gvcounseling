@@ -31,7 +31,7 @@ export function PaychecksTable({ paychecks, detailBasePath, showTherapistColumn 
 
   return (
     <div className={portalCardClass}>
-      <div className="overflow-x-auto">
+      <div className={portalTableScrollClass}>
         <table className={portalTableClass}>
           <thead>
             <tr className="border-b border-border text-xs font-semibold uppercase tracking-wide text-muted">
@@ -39,14 +39,15 @@ export function PaychecksTable({ paychecks, detailBasePath, showTherapistColumn 
               <th className="py-2 pr-4">Pay period</th>
               <th className="py-2 pr-4">L&I payment date</th>
               <th className="py-2 pr-4 text-right">Invoices</th>
-              <th className="py-2 text-right">Therapist pay</th>
+              <th className="py-2 pr-4 text-right">Therapist pay</th>
+              <th className="py-2">Notes</th>
             </tr>
           </thead>
           <tbody>
             {paychecks.map((row) => (
               <tr key={`${row.payPeriodId}:${row.therapistId}`} className="border-b border-border/70">
                 {showTherapistColumn && (
-                  <td className="py-3 pr-4">
+                  <td className="py-3 pr-4 align-top">
                     <Link
                       href={paycheckHref(detailBasePath, row, showTherapistColumn)}
                       className="font-medium text-primary-dark hover:underline"
@@ -55,7 +56,7 @@ export function PaychecksTable({ paychecks, detailBasePath, showTherapistColumn 
                     </Link>
                   </td>
                 )}
-                <td className="py-3 pr-4">
+                <td className="py-3 pr-4 align-top">
                   {showTherapistColumn ? (
                     <>
                       <span className="font-medium text-foreground">{row.payPeriodLabel}</span>
@@ -73,10 +74,26 @@ export function PaychecksTable({ paychecks, detailBasePath, showTherapistColumn 
                     </>
                   )}
                 </td>
-                <td className="py-3 pr-4 text-muted">{row.paymentDateLabel ?? "—"}</td>
-                <td className="py-3 pr-4 text-right tabular-nums">{row.invoiceCount}</td>
-                <td className="py-3 text-right font-medium tabular-nums text-primary-dark">
+                <td className="py-3 pr-4 align-top text-muted">{row.paymentDateLabel ?? "—"}</td>
+                <td className="py-3 pr-4 align-top text-right tabular-nums">{row.invoiceCount}</td>
+                <td className="py-3 pr-4 align-top text-right font-medium tabular-nums text-primary-dark">
                   {formatCurrency(row.therapistAmount)}
+                  {Math.abs(row.therapistAmount - row.computedTherapistAmount) > 0.001 && (
+                    <p className="text-xs font-normal text-muted">
+                      Computed {formatCurrency(row.computedTherapistAmount)}
+                    </p>
+                  )}
+                </td>
+                <td className="py-3 align-top text-sm text-muted">
+                  {row.notes.length === 0 ? (
+                    "—"
+                  ) : (
+                    <ul className="space-y-1 text-primary-dark">
+                      {row.notes.map((note) => (
+                        <li key={note}>{note}</li>
+                      ))}
+                    </ul>
+                  )}
                 </td>
               </tr>
             ))}

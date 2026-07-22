@@ -11,9 +11,12 @@ export type PaycheckSummaryRow = {
   therapistId: string;
   therapistName: string;
   therapistAmount: number;
+  computedTherapistAmount: number;
   lniPaidAmount: number;
   invoiceCount: number;
   remittanceCount: number;
+  /** Admin adjustment notes (and similar) from payouts on this paycheck. */
+  notes: string[];
 };
 
 export type PaycheckInvoiceRow = {
@@ -32,12 +35,39 @@ export type PaycheckInvoiceRow = {
   invoiceHref: string;
 };
 
+export type PaycheckPayoutNote = {
+  remittanceNumber: string;
+  warrantRegister: string;
+  computedAmount: number;
+  paidAmount: number;
+  note: string | null;
+};
+
 function sameUtcDay(a: Date, b: Date): boolean {
   return calendarIsoFromDate(a) === calendarIsoFromDate(b);
 }
 
 function payoutTherapistName(therapist: { firstName: string; lastName: string }): string {
   return `${therapist.firstName} ${therapist.lastName}`;
+}
+
+function formatPayoutNote(payout: {
+  therapistAmount: unknown;
+  computedTherapistAmount: unknown;
+  adjustmentNote: string | null;
+}): string | null {
+  const paid = Number(payout.therapistAmount);
+  const computed = Number(payout.computedTherapistAmount);
+  const adjusted = Math.abs(paid - computed) > 0.001;
+  const note = payout.adjustmentNote?.trim() || null;
+  if (!adjusted && !note) return null;
+  if (adjusted && note) {
+    return `Adjusted from $${computed.toFixed(2)} to $${paid.toFixed(2)}: ${note}`;
+  }
+  if (adjusted) {
+    return `Adjusted from $${computed.toFixed(2)} to $${paid.toFixed(2)}`;
+  }
+  return note;
 }
 
 export async function loadPaycheckSummaries(options?: {
@@ -83,9 +113,11 @@ export async function loadPaycheckSummaries(options?: {
       therapistId: string;
       therapistName: string;
       therapistAmount: number;
+      computedTherapistAmount: number;
       lniPaidAmount: number;
       invoiceCount: number;
       remittanceIds: Set<string>;
+      notes: string[];
     }
   >();
 
@@ -95,21 +127,26 @@ export async function loadPaycheckSummaries(options?: {
     if (!period) continue;
 
     const key = `${period.id}:${payout.therapistId}`;
+    const note = formatPayoutNote(payout);
     const existing = grouped.get(key);
     if (existing) {
       existing.therapistAmount += Number(payout.therapistAmount);
+      existing.computedTherapistAmount += Number(payout.computedTherapistAmount);
       existing.lniPaidAmount += Number(payout.lniPaidAmount);
       existing.invoiceCount += payout.invoiceCount;
       existing.remittanceIds.add(remittance.id);
+      if (note && !existing.notes.includes(note)) existing.notes.push(note);
     } else {
       grouped.set(key, {
         payPeriod: period,
         therapistId: payout.therapistId,
         therapistName: payoutTherapistName(payout.therapist),
         therapistAmount: Number(payout.therapistAmount),
+        computedTherapistAmount: Number(payout.computedTherapistAmount),
         lniPaidAmount: Number(payout.lniPaidAmount),
         invoiceCount: payout.invoiceCount,
         remittanceIds: new Set([remittance.id]),
+        notes: note ? [note] : [],
       });
     }
   }
@@ -131,9 +168,11 @@ export async function loadPaycheckSummaries(options?: {
       therapistId: row.therapistId,
       therapistName: row.therapistName,
       therapistAmount: row.therapistAmount,
+      computedTherapistAmount: row.computedTherapistAmount,
       lniPaidAmount: row.lniPaidAmount,
       invoiceCount: row.invoiceCount,
       remittanceCount: row.remittanceIds.size,
+      notes: row.notes,
     }));
 }
 
@@ -146,7 +185,10 @@ export async function loadPaycheckDetail(options: {
   paymentDateLabel: string | null;
   therapistName: string;
   therapistAmount: number;
+  computedTherapistAmount: number;
   lniPaidAmount: number;
+  notes: string[];
+  payoutNotes: PaycheckPayoutNote[];
   invoices: PaycheckInvoiceRow[];
 } | null> {
   const payPeriod = await prisma.payPeriod.findUnique({
@@ -201,12 +243,31 @@ export async function loadPaycheckDetail(options: {
 
   const therapistName = payoutTherapistName(matchingPayouts[0]!.therapist);
   let therapistAmount = 0;
+  let computedTherapistAmount = 0;
   let lniPaidAmount = 0;
+  const notes: string[] = [];
+  const payoutNotes: PaycheckPayoutNote[] = [];
   const invoices: PaycheckInvoiceRow[] = [];
 
   for (const payout of matchingPayouts) {
     therapistAmount += Number(payout.therapistAmount);
+    computedTherapistAmount += Number(payout.computedTherapistAmount);
     lniPaidAmount += Number(payout.lniPaidAmount);
+
+    const noteText = formatPayoutNote(payout);
+    if (noteText && !notes.includes(noteText)) notes.push(noteText);
+
+    const adjusted =
+      Math.abs(Number(payout.therapistAmount) - Number(payout.computedTherapistAmount)) > 0.001;
+    if (adjusted || payout.adjustmentNote?.trim()) {
+      payoutNotes.push({
+        remittanceNumber: payout.payRun.remittanceAdvice.remittanceNumber,
+        warrantRegister: payout.payRun.remittanceAdvice.warrantRegister,
+        computedAmount: Number(payout.computedTherapistAmount),
+        paidAmount: Number(payout.therapistAmount),
+        note: payout.adjustmentNote?.trim() || null,
+      });
+    }
 
     for (const line of payout.lines) {
       const inv = line.invoice;
@@ -240,7 +301,10 @@ export async function loadPaycheckDetail(options: {
     paymentDateLabel: formatDate(payPeriod.paymentDate),
     therapistName,
     therapistAmount,
+    computedTherapistAmount,
     lniPaidAmount,
+    notes,
+    payoutNotes,
     invoices,
   };
 }

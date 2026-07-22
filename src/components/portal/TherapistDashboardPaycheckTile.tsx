@@ -41,6 +41,13 @@ export function TherapistDashboardPaycheckTile({ paycheck }: Props) {
           <p className="mt-1 text-sm text-muted">
             {paycheck.invoiceCount} paid invoice{paycheck.invoiceCount === 1 ? "" : "s"}
           </p>
+          {paycheck.notes.length > 0 && (
+            <ul className="mt-2 space-y-1 text-sm text-primary-dark">
+              {paycheck.notes.map((note) => (
+                <li key={note}>{note}</li>
+              ))}
+            </ul>
+          )}
         </div>
         <p className="text-3xl font-semibold tabular-nums text-primary-dark">
           {formatCurrency(paycheck.therapistAmount)}
