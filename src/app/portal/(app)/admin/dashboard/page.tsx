@@ -66,6 +66,7 @@ export default async function AdminDashboardPage() {
   const databaseSizeBytes = Number(databaseSizeRows[0]?.size_bytes ?? 0);
   const pendingInvoiceTotal = Number(pendingInvoices._sum.totalAmount ?? 0);
   const pendingInvoiceCount = pendingInvoices._count._all;
+  const unassignedReferralCount = unassignedClients.length;
 
   return (
     <div className="space-y-8">
@@ -75,6 +76,20 @@ export default async function AdminDashboardPage() {
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 sm:gap-4">
+        <Link
+          href="/portal/admin/clients?status=UNASSIGNED"
+          className={`${portalCardClass} transition hover:border-primary/40 hover:bg-primary/5 ${
+            unassignedReferralCount > 0 ? "border-amber-200 bg-amber-50/40" : ""
+          }`}
+        >
+          <p className="text-sm text-muted">New referrals to accept</p>
+          <p className="mt-2 text-3xl font-semibold text-primary-dark">{unassignedReferralCount}</p>
+          <p className="mt-1 text-sm text-muted">
+            {unassignedReferralCount === 0
+              ? "No unassigned referrals"
+              : "Awaiting therapist assignment"}
+          </p>
+        </Link>
         <div className={portalCardClass}>
           <p className="text-sm text-muted">Submitted invoices</p>
           <p className="mt-2 text-3xl font-semibold text-primary-dark">{submittedCount}</p>
