@@ -67,23 +67,53 @@ export function vrcFirstName(vrcName: string): string {
   return first;
 }
 
-function buildVrcEmailBody(vrcName: string, serviceDates: Date[], hasAttachments: boolean): string {
+const REFER_CLIENT_URL = "https://gvcounseling.com/refer-a-client";
+
+function escapeHtml(value: string): string {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;");
+}
+
+export function buildVrcEmailBody(
+  vrcName: string,
+  serviceDates: Date[],
+  hasAttachments: boolean,
+): { text: string; html: string } {
   const greetingName = vrcFirstName(vrcName);
   const serviceDatePhrase = formatServiceDatesPhrase(serviceDates);
   const { name, phone, email } = VRC_BILLING_EMAIL_SIGNATURE;
   const sessionLine = hasAttachments
     ? `Please find attached documentation of the BHI session conducted with the client on ${serviceDatePhrase}.`
     : `This confirms that a BHI session was conducted with the client on ${serviceDatePhrase}.`;
+  const referLineText = `Have a client who needs BHI therapy? Click here to refer your client! ${REFER_CLIENT_URL}`;
+  const referLineHtml = `Have a client who needs BHI therapy? <a href="${REFER_CLIENT_URL}">Click here to refer your client!</a>`;
 
-  return [
+  const text = [
     `Dear ${greetingName},`,
     "",
     sessionLine,
+    referLineText,
     "",
     name,
     `M: ${phone}`,
     `E: ${email}`,
   ].join("\n");
+
+  const html = [
+    `Dear ${escapeHtml(greetingName)},`,
+    "",
+    escapeHtml(sessionLine),
+    referLineHtml,
+    "",
+    escapeHtml(name),
+    escapeHtml(`M: ${phone}`),
+    escapeHtml(`E: ${email}`),
+  ].join("<br>\n");
+
+  return { text, html };
 }
 
 async function loadAttachmentForEmail(
@@ -216,21 +246,32 @@ export async function emailVrcsForPayPeriod(options: {
       const { to, redirected } = await resolveVrcOutboundEmail(intendedEmail);
       const greetingName = vrcFirstName(vrcName);
       const subject = `BHI session notification — ${client.lniClaimNumber}`;
-      const body = buildVrcEmailBody(greetingName, lineItems, true);
-      const text = redirected
+      const { text: bodyText, html: bodyHtml } = buildVrcEmailBody(greetingName, lineItems, true);
+      const redirectNote = redirected ? outboundEmailRedirectNote(vrcName, intendedEmail) : null;
+      const text = redirectNote
         ? [
-            body,
-            outboundEmailRedirectNote(vrcName, intendedEmail),
+            bodyText,
+            redirectNote,
             "",
             `Client: ${label}`,
             `Attachments: ${vrcAttachments.map((a) => a.filename).join(", ")}`,
           ].join("\n")
-        : body;
+        : bodyText;
+      const html = redirectNote
+        ? [
+            bodyHtml,
+            escapeHtml(redirectNote),
+            "",
+            escapeHtml(`Client: ${label}`),
+            escapeHtml(`Attachments: ${vrcAttachments.map((a) => a.filename).join(", ")}`),
+          ].join("<br>\n")
+        : bodyHtml;
       const cc = await resolveAdminCcForVrcEmail(to);
 
       await sendEmailTo(to, {
         subject,
         text,
+        html,
         cc,
         attachments: emailAttachments,
       });

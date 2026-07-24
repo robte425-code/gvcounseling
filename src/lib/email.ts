@@ -7,6 +7,8 @@ type Attachment = {
 type SendEmailOptions = {
   subject: string;
   text: string;
+  /** Optional HTML body (Postmark HtmlBody). When set, clients that prefer HTML show this. */
+  html?: string;
   replyTo?: string;
   cc?: string;
   attachments?: Attachment[];
@@ -73,6 +75,7 @@ async function postmarkSend(to: string, options: SendEmailOptions) {
       Cc: options.cc || undefined,
       Subject: subject,
       TextBody: options.text,
+      HtmlBody: options.html || undefined,
       ReplyTo: options.replyTo || undefined,
       MessageStream: "outbound",
       Attachments: options.attachments?.length
@@ -91,9 +94,16 @@ async function postmarkSend(to: string, options: SendEmailOptions) {
   }
 }
 
-export async function sendEmail({ subject, text, replyTo, cc, attachments = [] }: SendEmailOptions) {
+export async function sendEmail({
+  subject,
+  text,
+  html,
+  replyTo,
+  cc,
+  attachments = [],
+}: SendEmailOptions) {
   const to = envOrDefault("CONTACT_EMAIL", DEFAULT_CONTACT_EMAIL);
-  await postmarkSend(to, { subject, text, replyTo, cc, attachments });
+  await postmarkSend(to, { subject, text, html, replyTo, cc, attachments });
 }
 
 export async function sendEmailTo(to: string, options: SendEmailOptions) {
