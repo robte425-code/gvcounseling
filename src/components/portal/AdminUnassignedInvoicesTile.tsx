@@ -95,10 +95,15 @@ export function AdminUnassignedInvoicesTile({
         </p>
       )}
 
-      <form action={assignInvoicesToPayPeriodAction} className="mt-4 space-y-4">
-        <input type="hidden" name="returnTo" value={returnTo} />
-
-        <div className="flex flex-col gap-3 rounded-xl border border-border bg-white/80 p-4 sm:flex-row sm:flex-wrap sm:items-end">
+      <div className="mt-4 space-y-4">
+        <form
+          action={assignInvoicesToPayPeriodAction}
+          className="flex flex-col gap-3 rounded-xl border border-border bg-white/80 p-4 sm:flex-row sm:flex-wrap sm:items-end"
+        >
+          <input type="hidden" name="returnTo" value={returnTo} />
+          {[...selected].map((id) => (
+            <input key={id} type="hidden" name="invoiceIds" value={id} />
+          ))}
           <div className="w-full flex-1 sm:min-w-[12rem]">
             <label htmlFor="unassigned-payPeriodId" className={portalLabelCompactClass}>
               Pay period
@@ -147,7 +152,7 @@ export function AdminUnassignedInvoicesTile({
               Clear selection
             </button>
           )}
-        </div>
+        </form>
 
         <div className={portalTableScrollClass}>
           <table className={portalTableWideClass}>
@@ -183,8 +188,6 @@ export function AdminUnassignedInvoicesTile({
                     <label className="flex cursor-pointer items-center justify-center p-1">
                       <input
                         type="checkbox"
-                        name="invoiceIds"
-                        value={inv.id}
                         aria-label={`Select invoice #${inv.invoiceNumber}`}
                         checked={selected.has(inv.id)}
                         disabled={!inv.assignable}
@@ -241,7 +244,7 @@ export function AdminUnassignedInvoicesTile({
             </tbody>
           </table>
         </div>
-      </form>
+      </div>
     </section>
   );
 }
