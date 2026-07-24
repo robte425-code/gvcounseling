@@ -7,7 +7,7 @@
  */
 import "dotenv/config";
 
-const DONE_KEY = "sample_vrc_bhi_email_refer_cta_20260724_done";
+const DONE_KEY = "sample_vrc_bhi_email_refer_cta_blank_line_20260724_done";
 const ADMIN_EMAIL =
   process.env.CONTACT_EMAIL?.trim() ||
   process.env.GOOGLE_DRIVE_SYSTEM_USER_EMAIL?.trim() ||
@@ -46,7 +46,7 @@ async function main() {
   const html = [`<p><em>${sampleNote}</em></p>`, bodyHtml].join("<br>\n");
 
   await sendEmailTo(ADMIN_EMAIL, {
-    subject: "[SAMPLE] BHI session notification — refer-a-client CTA",
+    subject: "[SAMPLE] BHI session notification — refer-a-client CTA (blank line)",
     text,
     html,
   });
