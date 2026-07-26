@@ -48,7 +48,7 @@ export const homeContent = {
   heroSupport:
     "Statewide Washington counseling that helps people reclaim steadiness, confidence, and well-being after a workplace injury.",
   servicesIntro:
-    "Specialized support for injured workers across Washington State—telehealth-first care grounded in clinical expertise and respect.",
+    "We help injured workers across Washington through telehealth counseling that is professional, clear, and respectful.",
   commitment:
     "We walk alongside injured workers as they reclaim health and well-being, every step of the way.",
   teamIntro:
