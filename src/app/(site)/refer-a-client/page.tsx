@@ -27,10 +27,11 @@ export default function ReferPage() {
                 claim and approval documents help us verify eligibility and schedule without delay.
               </p>
             </div>
-            <div className="mt-10">
-              <ReferForm />
-            </div>
           </SiteReveal>
+          {/* Keep outside SiteReveal so the warning dialog is not trapped by transform/opacity */}
+          <div className="mt-10">
+            <ReferForm />
+          </div>
         </div>
       </section>
     </>

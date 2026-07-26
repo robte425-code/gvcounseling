@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 
 type Status = "idle" | "loading" | "success" | "error";
 
@@ -10,6 +11,12 @@ const REFERRAL_WARNINGS = [
 ] as const;
 
 function ReferralWarningDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   useEffect(() => {
     if (!open) return;
     const previousOverflow = document.body.style.overflow;
@@ -19,22 +26,22 @@ function ReferralWarningDialog({ open, onClose }: { open: boolean; onClose: () =
     };
   }, [open]);
 
-  if (!open) return null;
+  if (!open || !mounted) return null;
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto p-4 pt-[max(1.5rem,8vh)] sm:items-center sm:pt-4"
       role="dialog"
       aria-modal="true"
       aria-labelledby="referral-warning-title"
     >
       <button
         type="button"
-        className="absolute inset-0 bg-black/50"
+        className="fixed inset-0 bg-black/50"
         aria-label="Close warning"
         onClick={onClose}
       />
-      <div className="relative max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-2xl border border-border bg-surface p-6 shadow-xl sm:p-8">
+      <div className="relative my-auto w-full max-w-xl rounded-2xl border border-border bg-surface p-6 shadow-xl sm:max-h-[90vh] sm:overflow-y-auto sm:p-8">
         <h2 id="referral-warning-title" className="font-serif text-2xl font-semibold text-primary-dark">
           Before you refer a client
         </h2>
@@ -53,7 +60,8 @@ function ReferralWarningDialog({ open, onClose }: { open: boolean; onClose: () =
           I understand
         </button>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
