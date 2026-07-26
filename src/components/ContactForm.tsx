@@ -42,7 +42,7 @@ export function ContactForm() {
   }
 
   const inputClass =
-    "w-full rounded-xl border border-border bg-surface px-4 py-3 text-sm text-foreground outline-none transition-shadow focus:border-primary focus:ring-2 focus:ring-primary/20";
+    "w-full rounded-md border border-border bg-surface px-4 py-3 text-sm text-foreground outline-none transition-shadow focus:border-primary focus:ring-2 focus:ring-primary/20";
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
@@ -76,13 +76,13 @@ export function ContactForm() {
       </div>
 
       {status === "success" && (
-        <p className="rounded-xl bg-primary/10 px-4 py-3 text-sm text-primary-dark" role="status">
+        <p className="rounded-md bg-primary/10 px-4 py-3 text-sm text-primary-dark" role="status">
           Thank you for your message. We will get back to you soon.
         </p>
       )}
 
       {status === "error" && (
-        <p className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-800" role="alert">
+        <p className="rounded-md bg-red-50 px-4 py-3 text-sm text-red-800" role="alert">
           {errorMessage}
         </p>
       )}
@@ -91,9 +91,9 @@ export function ContactForm() {
         <button
           type="submit"
           disabled={status === "loading"}
-          className="rounded-full bg-primary px-8 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-primary-dark disabled:opacity-60"
+          className="rounded-md bg-primary px-8 py-3 text-sm font-semibold text-white transition hover:bg-primary-dark disabled:opacity-60"
         >
-          {status === "loading" ? "Sending…" : "Send"}
+          {status === "loading" ? "Sending…" : "Send message"}
         </button>
       </div>
     </form>

@@ -15,9 +15,9 @@ export const siteConfig = {
 };
 
 export const navLinks = [
-  { href: "/", label: "What we do" },
+  { href: "/", label: "Services" },
   { href: "/our-team", label: "Our team" },
-  { href: "/contact-us", label: "Contact us" },
+  { href: "/contact-us", label: "Contact" },
   { href: "/refer-a-client", label: "Refer a client" },
 ] as const;
 
@@ -29,18 +29,34 @@ export const footerLinks = [
   { href: "/accessibility", label: "Accessibility" },
 ] as const;
 
+/** Polished marketing copy for services (same offerings, clearer language). */
 export const services = [
   {
-    title: "Behavioral Health Intervention Sessions",
+    title: "Behavioral Health Intervention",
     description:
-      "These sessions are crafted to address the psychological aspects of injury and recovery, providing strategies and support for overcoming the challenges faced by injured workers.",
+      "Focused sessions that address the psychological side of injury and recovery—practical strategies and steady support for the challenges injured workers face.",
   },
   {
-    title: "Mental health conditions related to workplace injuries",
+    title: "Workplace injury mental health care",
     description:
-      "We recognize the profound impact that work-related injuries can have on mental health. Our targeted treatments are specifically designed to address mental health conditions that arise as a direct consequence of workplace injuries, ensuring a holistic approach to healing and rehabilitation.",
+      "Targeted treatment for mental health conditions that arise from work-related injuries, so healing includes both body and mind throughout rehabilitation.",
   },
 ];
+
+export const homeContent = {
+  heroHeadline: "Mental health care for injured workers",
+  heroSupport:
+    "Statewide Washington counseling that helps people reclaim steadiness, confidence, and well-being after a workplace injury.",
+  servicesIntro:
+    "Specialized support for injured workers across Washington State—telehealth-first care grounded in clinical expertise and respect.",
+  commitment:
+    "We walk alongside injured workers as they reclaim health and well-being, every step of the way.",
+  teamIntro:
+    "Licensed clinicians who bring experience, warmth, and clear therapeutic frameworks to every session.",
+  forVrcsTitle: "For vocational rehabilitation counselors",
+  forVrcsBody:
+    "Refer a client in a few minutes. We coordinate carefully so workers get timely behavioral health support during recovery.",
+};
 
 export const teamMembers = [
   {

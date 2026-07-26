@@ -1,15 +1,18 @@
 @import "tailwindcss";
 
 :root {
-  --background: #fafbf9;
-  --foreground: #1a2e22;
-  --primary: #2d6a4f;
-  --primary-light: #40916c;
-  --primary-dark: #1b4332;
-  --accent: #52b788;
-  --muted: #5c6b62;
+  /* Forest brand — compatible with portal; leaf-green accent aligns with logo */
+  --background: #f3f5f2;
+  --foreground: #15261c;
+  --primary: #2a5f48;
+  --primary-light: #3d8b66;
+  --primary-dark: #143528;
+  --accent: #7cb342;
+  --muted: #5a6b60;
   --surface: #ffffff;
-  --border: #d8e2dc;
+  --border: #d0dbd3;
+  --mist: #e7eee8;
+  --ink-soft: #2f4338;
 }
 
 @theme inline {
@@ -22,7 +25,9 @@
   --color-muted: var(--muted);
   --color-surface: var(--surface);
   --color-border: var(--border);
-  --font-sans: var(--font-geist-sans);
+  --color-mist: var(--mist);
+  --color-ink-soft: var(--ink-soft);
+  --font-sans: var(--font-manrope);
   --font-serif: var(--font-source-serif);
   --font-family-serif: var(--font-source-serif), ui-serif, Georgia, serif;
 }
@@ -35,9 +40,81 @@ body {
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-family: var(--font-manrope), system-ui, sans-serif;
 }
 
 ::selection {
   background: color-mix(in srgb, var(--accent) 35%, white);
+}
+
+/* —— Marketing site motion & atmosphere —— */
+.site-reveal {
+  opacity: 0;
+  transform: translateY(1.25rem);
+  transition:
+    opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.site-reveal-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@keyframes site-hero-ken {
+  from {
+    transform: scale(1.06);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+
+@keyframes site-hero-rise {
+  from {
+    opacity: 0;
+    transform: translateY(1.5rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.site-hero-media {
+  animation: site-hero-ken 14s ease-out forwards;
+}
+
+.site-hero-copy > * {
+  opacity: 0;
+  animation: site-hero-rise 0.9s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.site-hero-copy > *:nth-child(1) {
+  animation-delay: 0.1s;
+}
+.site-hero-copy > *:nth-child(2) {
+  animation-delay: 0.22s;
+}
+.site-hero-copy > *:nth-child(3) {
+  animation-delay: 0.34s;
+}
+.site-hero-copy > *:nth-child(4) {
+  animation-delay: 0.46s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .site-reveal,
+  .site-reveal-visible {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+
+  .site-hero-media,
+  .site-hero-copy > * {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
 }

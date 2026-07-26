@@ -1,11 +1,10 @@
 import type { Metadata } from "next";
-import { Geist } from "next/font/google";
-import { Source_Serif_4 } from "next/font/google";
+import { Manrope, Source_Serif_4 } from "next/font/google";
 import { siteConfig } from "@/lib/site";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const manrope = Manrope({
+  variable: "--font-manrope",
   subsets: ["latin"],
 });
 
@@ -29,7 +28,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${geistSans.variable} ${sourceSerif.variable} h-full scroll-smooth`}>
+    <html lang="en" className={`${manrope.variable} ${sourceSerif.variable} h-full scroll-smooth`}>
       <body className="flex min-h-full flex-col antialiased">
         <a
           href="#main-content"

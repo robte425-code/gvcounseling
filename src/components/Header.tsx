@@ -3,38 +3,52 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
-import { navLinks, portalLoginHref } from "@/lib/site";
+import { useEffect, useState } from "react";
+import { navLinks, portalLoginHref, siteConfig } from "@/lib/site";
 
 export function Header() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 12);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   return (
-    <header className="sticky top-0 z-50 border-b border-border/80 bg-surface/95 backdrop-blur-md">
-      <div className="mx-auto flex max-w-6xl items-center justify-between gap-6 px-4 py-3 sm:px-6 lg:px-8">
+    <header
+      className={`sticky top-0 z-50 transition-[background-color,box-shadow,border-color] duration-300 ${
+        scrolled
+          ? "border-b border-border/90 bg-surface/95 shadow-[0_1px_0_rgba(20,53,40,0.06)] backdrop-blur-md"
+          : "border-b border-transparent bg-surface/80 backdrop-blur-sm"
+      }`}
+    >
+      <div className="mx-auto flex max-w-6xl items-center justify-between gap-6 px-4 py-3.5 sm:px-6 lg:px-8">
         <Link href="/" className="shrink-0" onClick={() => setOpen(false)}>
           <Image
             src="/images/logo.png"
-            alt="Grandview Counseling"
+            alt={siteConfig.name}
             width={200}
             height={56}
             priority
-            className="h-10 w-auto sm:h-12"
+            className="h-10 w-auto sm:h-11"
           />
         </Link>
 
-        <nav className="hidden items-center gap-1 md:flex" aria-label="Main">
+        <nav className="hidden items-center gap-8 md:flex" aria-label="Main">
           {navLinks.map(({ href, label }) => {
             const active = pathname === href;
             return (
               <Link
                 key={href}
                 href={href}
-                className={`rounded-full px-4 py-2 text-sm font-medium transition-colors ${
+                className={`relative text-sm font-medium tracking-wide transition-colors after:absolute after:-bottom-1 after:left-0 after:h-px after:bg-accent after:transition-all after:duration-300 hover:text-primary-dark hover:after:w-full ${
                   active
-                    ? "bg-primary/10 text-primary"
-                    : "text-muted hover:bg-primary/5 hover:text-primary-dark"
+                    ? "text-primary-dark after:w-full"
+                    : "text-ink-soft after:w-0"
                 }`}
               >
                 {label}
@@ -43,7 +57,7 @@ export function Header() {
           })}
           <Link
             href={portalLoginHref}
-            className="ml-2 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-primary-dark"
+            className="ml-1 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary-dark"
           >
             Portal login
           </Link>
@@ -51,7 +65,7 @@ export function Header() {
 
         <button
           type="button"
-          className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg p-2 text-primary-dark md:hidden"
+          className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-md p-2 text-primary-dark md:hidden"
           aria-expanded={open}
           aria-controls="mobile-nav"
           aria-label={open ? "Close menu" : "Open menu"}
@@ -80,8 +94,8 @@ export function Header() {
                 <li key={href}>
                   <Link
                     href={href}
-                    className={`block min-h-11 rounded-lg px-3 py-2.5 text-sm font-medium ${
-                      active ? "bg-primary/10 text-primary" : "text-muted hover:bg-primary/5"
+                    className={`block min-h-11 rounded-md px-3 py-2.5 text-sm font-medium ${
+                      active ? "bg-mist text-primary-dark" : "text-ink-soft hover:bg-mist"
                     }`}
                     onClick={() => setOpen(false)}
                   >
@@ -93,7 +107,7 @@ export function Header() {
             <li className="pt-2">
               <Link
                 href={portalLoginHref}
-                className="block rounded-full bg-primary px-4 py-2.5 text-center text-sm font-semibold text-white"
+                className="block rounded-md bg-primary px-4 py-2.5 text-center text-sm font-semibold text-white"
                 onClick={() => setOpen(false)}
               >
                 Portal login

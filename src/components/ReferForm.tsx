@@ -48,7 +48,7 @@ function ReferralWarningDialog({ open, onClose }: { open: boolean; onClose: () =
         <button
           type="button"
           onClick={onClose}
-          className="mt-6 w-full rounded-full bg-primary px-8 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-primary-dark"
+          className="mt-6 w-full rounded-md bg-primary px-8 py-3 text-sm font-semibold text-white transition hover:bg-primary-dark"
         >
           I understand
         </button>
@@ -58,7 +58,7 @@ function ReferralWarningDialog({ open, onClose }: { open: boolean; onClose: () =
 }
 
 const inputClass =
-  "w-full rounded-xl border border-border bg-surface px-4 py-3 text-sm text-foreground outline-none transition-shadow focus:border-primary focus:ring-2 focus:ring-primary/20";
+  "w-full rounded-md border border-border bg-surface px-4 py-3 text-sm text-foreground outline-none transition-shadow focus:border-primary focus:ring-2 focus:ring-primary/20";
 
 const labelClass = "mb-1.5 block text-sm font-medium text-foreground";
 
@@ -106,7 +106,7 @@ function FileField({ label, name, required }: { label: string; name: string; req
         type="file"
         accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
         required={required}
-        className="block w-full text-sm text-muted file:mr-4 file:rounded-full file:border-0 file:bg-primary/10 file:px-4 file:py-2 file:text-sm file:font-medium file:text-primary hover:file:bg-primary/15"
+        className="block w-full text-sm text-muted file:mr-4 file:rounded-md file:border-0 file:bg-primary/10 file:px-4 file:py-2 file:text-sm file:font-medium file:text-primary hover:file:bg-primary/15"
       />
     </div>
   );
@@ -269,7 +269,7 @@ export function ReferForm() {
         <button
           type="submit"
           disabled={status === "loading"}
-          className="rounded-full bg-primary px-8 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-primary-dark disabled:opacity-60"
+          className="rounded-md bg-primary px-8 py-3 text-sm font-semibold text-white transition hover:bg-primary-dark disabled:opacity-60"
         >
           {status === "loading" ? "Submitting…" : "Submit"}
         </button>
