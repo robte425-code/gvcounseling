@@ -48,12 +48,18 @@ export function outboundEmailRedirectNote(label: string, intendedEmail: string):
 /** Admin addresses to Cc on VRC emails (skips addresses already in To when redirected). */
 export async function resolveAdminCcForVrcEmail(to: string): Promise<string | undefined> {
   const adminEmails = await getAdminNotificationEmails();
+  const fallback = process.env.CONTACT_EMAIL?.trim() || "ghim@gvcounseling.com";
+  const candidates = [...adminEmails, fallback]
+    .map((email) => email.trim())
+    .filter(Boolean);
+  const unique = [...new Map(candidates.map((email) => [email.toLowerCase(), email])).values()];
+
   const toSet = new Set(
     to
       .split(",")
       .map((email) => email.trim().toLowerCase())
       .filter(Boolean),
   );
-  const cc = adminEmails.filter((email) => !toSet.has(email.toLowerCase()));
+  const cc = unique.filter((email) => !toSet.has(email.toLowerCase()));
   return cc.length > 0 ? cc.join(", ") : undefined;
 }

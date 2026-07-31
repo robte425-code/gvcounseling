@@ -151,8 +151,8 @@ function PayPeriodRow({
               <ConfirmSubmitButton
                 confirmMessage={
                   vrcRoute === "admin"
-                    ? `Send VRC emails for all billed clients in ${row.periodLabel}? Messages will go to admins (${adminList}) instead of each VRC.`
-                    : `Email VRCs for all billed clients in ${row.periodLabel}? Each VRC will receive session documentation (excluding invoice PDFs) at their address on file.`
+                    ? `Send VRC emails for all billed clients in ${row.periodLabel}? Messages will go to admins (${adminList}) instead of each VRC. You will also get a results summary email.`
+                    : `Email VRCs for all billed clients in ${row.periodLabel}? Each VRC will receive session documentation (excluding invoice PDFs) at their address on file. Admin (${adminList}) will be CC'd on every message, and you will get a results summary email.`
                 }
                 className={`${portalButtonSecondaryClass} px-4 py-1.5 text-xs`}
                 disabled={!notifyReady}

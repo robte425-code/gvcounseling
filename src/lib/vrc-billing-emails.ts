@@ -11,6 +11,7 @@ import {
   resolveAdminCcForVrcEmail,
   resolveVrcOutboundEmail,
 } from "@/lib/outbound-email-routing";
+import { getAdminNotificationEmails } from "@/lib/portal-settings";
 import { prisma } from "@/lib/prisma";
 
 export const VRC_BILLING_EMAIL_SIGNATURE = {
@@ -34,8 +35,12 @@ type InvoiceAttachmentRecord = {
 
 export type VrcBillingEmailResult = {
   sent: number;
+  /** Human-readable lines like "BL41649 → jane@vrc.com (admin CC'd)". */
+  sentDetails: string[];
   skipped: string[];
   errors: string[];
+  /** Admin addresses that should have been CC'd (empty when mail was redirected to admin). */
+  adminCc: string[];
 };
 
 /** Session/supporting files for VRC email — excludes invoice PDFs. */
@@ -216,7 +221,13 @@ export async function emailVrcsForPayPeriod(options: {
     });
   }
 
-  const result: VrcBillingEmailResult = { sent: 0, skipped: [], errors: [] };
+  const result: VrcBillingEmailResult = {
+    sent: 0,
+    sentDetails: [],
+    skipped: [],
+    errors: [],
+    adminCc: [],
+  };
 
   for (const { client, therapistId, lineItems, attachments } of byClient.values()) {
     const label = `${client.lniClaimNumber} (${client.lastName}, ${client.firstName})`;
@@ -268,7 +279,12 @@ export async function emailVrcsForPayPeriod(options: {
             escapeHtml(`Attachments: ${vrcAttachments.map((a) => a.filename).join(", ")}`),
           ].join("<br>\n")
         : bodyHtml;
+
+      // Always CC admin(s) when the message is not already addressed only to them.
       const cc = await resolveAdminCcForVrcEmail(to);
+      if (cc) {
+        result.adminCc = cc.split(",").map((email) => email.trim()).filter(Boolean);
+      }
 
       await sendEmailTo(to, {
         subject,
@@ -279,6 +295,10 @@ export async function emailVrcsForPayPeriod(options: {
       });
 
       result.sent += 1;
+      const delivery = redirected
+        ? `${label} → admin inbox (intended ${intendedEmail})`
+        : `${label} → ${intendedEmail}${cc ? ` (admin CC: ${cc})` : ""}`;
+      result.sentDetails.push(delivery);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unknown error";
       result.errors.push(`${label}: ${message}`);
@@ -289,5 +309,69 @@ export async function emailVrcsForPayPeriod(options: {
     throw new Error("No VRC emails were sent.");
   }
 
+  await sendVrcEmailBatchSummary(result, options.payPeriodId);
+
   return result;
+}
+
+async function sendVrcEmailBatchSummary(
+  result: VrcBillingEmailResult,
+  payPeriodId: string,
+): Promise<void> {
+  const adminEmails = await getAdminNotificationEmails();
+  if (adminEmails.length === 0) return;
+
+  const payPeriod = await prisma.payPeriod.findUnique({
+    where: { id: payPeriodId },
+    select: { label: true, cutoffDate: true },
+  });
+  const periodLabel =
+    payPeriod?.label?.trim() ||
+    (payPeriod ? formatDate(payPeriod.cutoffDate) : payPeriodId);
+
+  const lines = [
+    `VRC email batch for pay period ${periodLabel}`,
+    "",
+    `Sent: ${result.sent}`,
+    `Skipped: ${result.skipped.length}`,
+    `Errors: ${result.errors.length}`,
+    "",
+  ];
+
+  if (result.adminCc.length) {
+    lines.push(`Admin CC on each VRC email: ${result.adminCc.join(", ")}`);
+    lines.push("");
+  } else if (result.sent > 0) {
+    lines.push(
+      "Admin was the To recipient (VRC outbound route is set to admin), so there was no separate CC.",
+    );
+    lines.push("");
+  }
+
+  if (result.sentDetails.length) {
+    lines.push("Sent:");
+    for (const detail of result.sentDetails) lines.push(`  • ${detail}`);
+    lines.push("");
+  }
+  if (result.skipped.length) {
+    lines.push("Skipped:");
+    for (const row of result.skipped) lines.push(`  • ${row}`);
+    lines.push("");
+  }
+  if (result.errors.length) {
+    lines.push("Errors:");
+    for (const row of result.errors) lines.push(`  • ${row}`);
+    lines.push("");
+  }
+
+  lines.push("You can also see this summary at the top of Bill L&I after Email VRCs runs.");
+
+  try {
+    await sendEmailTo(adminEmails.join(", "), {
+      subject: `[GV Counseling] VRC email results — ${result.sent} sent (${periodLabel})`,
+      text: lines.join("\n"),
+    });
+  } catch (error) {
+    console.error("VRC email batch summary failed:", error);
+  }
 }

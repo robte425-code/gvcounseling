@@ -1037,14 +1037,20 @@ export async function emailVrcsForPayPeriodAction(formData: FormData) {
   const params = new URLSearchParams();
   params.set("vrcEmailed", "1");
   params.set("sent", String(result.sent));
+  if (result.sentDetails.length) {
+    params.set("vrcRecipients", result.sentDetails.slice(0, 12).join(";;"));
+  }
+  if (result.adminCc.length) {
+    params.set("vrcAdminCc", result.adminCc.join(", "));
+  }
   if (result.skipped.length) {
-    params.set("vrcSkipped", result.skipped.slice(0, 5).join(";;"));
+    params.set("vrcSkipped", result.skipped.slice(0, 8).join(";;"));
   }
   if (result.errors.length) {
-    params.set("vrcErrors", result.errors.slice(0, 5).join(";;"));
+    params.set("vrcErrors", result.errors.slice(0, 8).join(";;"));
   }
 
-  redirect(`/portal/admin/billing?${params.toString()}`);
+  redirect(`/portal/admin/billing?${params.toString()}#vrc-email-results`);
 }
 
 export async function faxLniForPayPeriodAction(formData: FormData) {

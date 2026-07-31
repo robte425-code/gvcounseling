@@ -32,6 +32,8 @@ export default async function BillingPage({
     total?: string;
     vrcEmailed?: string;
     sent?: string;
+    vrcRecipients?: string;
+    vrcAdminCc?: string;
     vrcSkipped?: string;
     vrcErrors?: string;
     lniFaxed?: string;
@@ -87,10 +89,10 @@ export default async function BillingPage({
       ? `Synced ${params.total ?? "0"} pay periods from L&I (${params.created ?? "0"} new, ${params.updated ?? "0"} updated).`
       : null;
 
-  const vrcEmailMessage =
-    params.vrcEmailed === "1"
-      ? `Emailed ${params.sent ?? "0"} VRC${params.sent === "1" ? "" : "s"}.`
-      : null;
+  const vrcEmailRan = params.vrcEmailed === "1";
+  const vrcSentCount = params.sent ?? "0";
+  const vrcRecipients = params.vrcRecipients?.split(";;").filter(Boolean) ?? [];
+  const vrcAdminCc = params.vrcAdminCc?.trim() ?? "";
   const vrcSkipped = params.vrcSkipped?.split(";;").filter(Boolean) ?? [];
   const vrcErrors = params.vrcErrors?.split(";;").filter(Boolean) ?? [];
 
@@ -106,7 +108,7 @@ export default async function BillingPage({
 
   const hasAlerts = Boolean(
     syncMessage ||
-      vrcEmailMessage ||
+      vrcEmailRan ||
       lniFaxMessage ||
       vrcSkipped.length ||
       vrcErrors.length ||
@@ -143,16 +145,39 @@ export default async function BillingPage({
       <BillingJumpNav />
 
       {hasAlerts && (
-        <div className="space-y-2">
+        <div id="vrc-email-results" className="space-y-2 scroll-mt-24">
           {syncMessage && (
             <p className="rounded-xl bg-primary/10 px-4 py-3 text-sm text-primary-dark" role="status">
               {syncMessage}
             </p>
           )}
-          {vrcEmailMessage && (
-            <p className="rounded-xl bg-primary/10 px-4 py-3 text-sm text-primary-dark" role="status">
-              {vrcEmailMessage}
-            </p>
+          {vrcEmailRan && (
+            <div
+              className="rounded-xl border border-primary/20 bg-primary/10 px-4 py-3 text-sm text-primary-dark"
+              role="status"
+            >
+              <p className="font-semibold">
+                Email VRCs finished — {vrcSentCount} message
+                {vrcSentCount === "1" ? "" : "s"} sent.
+              </p>
+              {vrcAdminCc ? (
+                <p className="mt-1 text-xs text-muted">
+                  Admin CC on each VRC email: {vrcAdminCc}. A summary was also emailed to admin.
+                </p>
+              ) : (
+                <p className="mt-1 text-xs text-muted">
+                  A summary was emailed to admin. If outbound VRC mail is routed to admin, those
+                  messages appear in the admin inbox as the To recipient (no separate CC).
+                </p>
+              )}
+              {vrcRecipients.length > 0 && (
+                <ul className="mt-2 list-disc space-y-1 pl-5 text-xs text-primary-dark/90">
+                  {vrcRecipients.map((row) => (
+                    <li key={row}>{row}</li>
+                  ))}
+                </ul>
+              )}
+            </div>
           )}
           {lniFaxMessage && (
             <p className="rounded-xl bg-primary/10 px-4 py-3 text-sm text-primary-dark" role="status">
@@ -161,12 +186,12 @@ export default async function BillingPage({
           )}
           {vrcSkipped.length > 0 && (
             <p className="rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-950" role="status">
-              Skipped: {vrcSkipped.join(" ")}
+              Skipped: {vrcSkipped.join(" · ")}
             </p>
           )}
           {vrcErrors.length > 0 && (
             <p className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-900" role="alert">
-              Errors: {vrcErrors.join(" ")}
+              Errors: {vrcErrors.join(" · ")}
             </p>
           )}
           {lniFaxSkipped.length > 0 && (
