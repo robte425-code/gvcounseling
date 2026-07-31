@@ -130,8 +130,8 @@ export function AttendingNpiSearch({
       </button>
       {disabled && (
         <p className="text-xs text-muted">
-          No attending doctor on file from the referral import. Re-sync from Drive or edit the client
-          to add the doctor name, then search again.
+          No attending doctor on file from the referral import. Use Enter doctor name above, re-sync
+          from Drive, or edit the client, then search again.
         </p>
       )}
 

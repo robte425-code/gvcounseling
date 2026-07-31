@@ -5,6 +5,7 @@ import {
   StatusBadge,
 } from "@/components/portal/ui";
 import { AttendingNpiSearch } from "@/components/portal/AttendingNpiSearch";
+import { EditAttendingDoctorButton } from "@/components/portal/EditAttendingDoctorButton";
 import { formatDate } from "@/lib/constants";
 
 export type ClientDetailData = {
@@ -163,7 +164,24 @@ export function ClientDetailView({
             </dd>
           </div>
         )}
-        <DetailField label="Doctor" value={display(client.attendingDoctorName)} />
+        <div className="sm:col-span-2 lg:col-span-3">
+          <dt className="text-xs text-muted">Doctor</dt>
+          <dd className="mt-1 space-y-2 text-sm leading-snug">
+            {client.attendingDoctorName?.trim() ? (
+              <span>{client.attendingDoctorName.trim()}</span>
+            ) : (
+              <span className="text-muted">Not set</span>
+            )}
+            {clientId ? (
+              <div>
+                <EditAttendingDoctorButton
+                  clientId={clientId}
+                  doctorName={client.attendingDoctorName}
+                />
+              </div>
+            ) : null}
+          </dd>
+        </div>
         <DetailField label="Doctor phone" value={display(client.attendingDoctorPhone)} />
         <DetailField label="Doctor address" value={display(client.attendingDoctorAddress)} wide />
         <DetailField label="Claim manager" value={display(client.claimManagerName)} />

@@ -23,6 +23,11 @@ export type ParsedContactAddressesDocx = Pick<
   | "residenceZip"
 >;
 
+const DOCTOR_CREDENTIAL = /\b(PAC|ARNP|MD|DO|DC|APRN|NP)\b/i;
+const ATTENDING_LABEL = /Attending\s+(?:Physician|Doctor)\s*:?/i;
+const SECTION_BREAK =
+  /Claimant's Attorney:|Employer:|Claim Manager:|Attending\s+(?:Physician|Doctor)\s*:?|Physical Therapist:|Surgeon:/i;
+
 function preprocessRunTogetherAddress(text: string): string {
   return text
     .replace(/(\d+)([A-Za-z])/g, "$1 $2")
@@ -52,6 +57,26 @@ function parseLabeledAddress(block: string): Pick<
   };
 }
 
+/** Skip L&I metadata lines and return the first plausible person/doctor name. */
+function firstPersonNameLine(section: string): string | undefined {
+  for (const raw of section.split("\n")) {
+    const line = raw.trim().replace(/\s+/g, " ");
+    if (!line) continue;
+    if (
+      /^(External Identifier|Address|Phone|Fax|Email|Specialty|NPI|Location|Primary)\b/i.test(
+        line,
+      )
+    ) {
+      continue;
+    }
+    const upper = line.toUpperCase();
+    if (DOCTOR_CREDENTIAL.test(upper) || isPlausiblePersonName(upper)) {
+      return upper;
+    }
+  }
+  return undefined;
+}
+
 /** L&I "Contact & Addresses" Word export (Claimant / Claim Manager / Employer blocks). */
 export function parseContactAddressesDocxText(rawText: string): ParsedContactAddressesDocx {
   const text = rawText.replace(/\r\n/g, "\n");
@@ -62,7 +87,9 @@ export function parseContactAddressesDocxText(rawText: string): ParsedContactAdd
     result.clientName = claimantName.toUpperCase();
   }
 
-  const claimantSection = text.split(/Claimant:/i)[1]?.split(/Attending Physician|Claim Manager|Employer:/i)[0];
+  const claimantSection = text
+    .split(/Claimant:/i)[1]
+    ?.split(new RegExp(`${ATTENDING_LABEL.source}|Claim Manager|Employer:`, "i"))[0];
   if (claimantSection) {
     const addressBlock =
       claimantSection.match(/Address:\s*\n?\s*([^\n]+(?:\n[^\n]+)?)/i)?.[1] ??
@@ -80,11 +107,11 @@ export function parseContactAddressesDocxText(rawText: string): ParsedContactAdd
     }
   }
 
-  const claimManagerSection = text.split(/Claim Manager:/i)[1]?.split(/Claimant's Attorney|Employer:|Attending Physician:/i)[0];
+  const claimManagerSection = text.split(/Claim Manager:/i)[1]?.split(SECTION_BREAK)[0];
   if (claimManagerSection) {
-    const name = claimManagerSection.match(/^([^\n]+)/)?.[1]?.trim();
-    if (name && isPlausiblePersonName(name.split(/\s+/).slice(0, 3).join(" ").toUpperCase())) {
-      result.claimManagerName = name.split(/\s+/).slice(0, 3).join(" ").toUpperCase();
+    const name = firstPersonNameLine(claimManagerSection);
+    if (name) {
+      result.claimManagerName = name.split(/\s+/).slice(0, 3).join(" ");
     }
     result.claimManagerPhone =
       claimManagerSection.match(/Primary\s*\n?\s*(\d{3}-\d{3}-\d{4})/i)?.[1] ??
@@ -92,7 +119,9 @@ export function parseContactAddressesDocxText(rawText: string): ParsedContactAdd
     result.claimManagerFax = claimManagerSection.match(/Fax\s*\n?\s*(\d{3}-\d{3}-\d{4})/i)?.[1];
   }
 
-  const employerSection = text.split(/Employer:/i)[1]?.split(/Employer Representative|Physical Therapist|Surgeon:/i)[0];
+  const employerSection = text
+    .split(/Employer:/i)[1]
+    ?.split(/Employer Representative|Physical Therapist|Surgeon:|Attending\s+(?:Physician|Doctor)/i)[0];
   if (employerSection) {
     const employer = employerSection.match(/^([^\n(]+)/)?.[1]?.trim();
     if (employer && isPlausibleEmployerName(employer.toUpperCase())) {
@@ -100,11 +129,15 @@ export function parseContactAddressesDocxText(rawText: string): ParsedContactAdd
     }
   }
 
-  const physicianSection = text.split(/Attending Physician:/i)[1]?.split(/Attending Physician:|Claim Manager:|Employer:/i)[0];
+  // L&I Word exports often put "External Identifier: …" on the first line under
+  // Attending Physician/Doctor; the previous parser skipped that line and never
+  // read the doctor name on the following line (CM still worked because its name
+  // is usually the first line).
+  const physicianSection = text.split(ATTENDING_LABEL)[1]?.split(SECTION_BREAK)[0];
   if (physicianSection) {
-    const doctor = physicianSection.match(/^([^\n]+)/)?.[1]?.trim();
-    if (doctor && !/^External Identifier:/i.test(doctor)) {
-      result.attendingDoctorName = doctor.toUpperCase();
+    const doctor = firstPersonNameLine(physicianSection);
+    if (doctor) {
+      result.attendingDoctorName = doctor;
     }
   }
 
