@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useId, useState } from "react";
+import { FormEvent, useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import {
@@ -19,6 +19,7 @@ export function EditAttendingDoctorButton({ clientId, doctorName }: Props) {
   const router = useRouter();
   const titleId = useId();
   const inputId = useId();
+  const inputRef = useRef<HTMLInputElement>(null);
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [name, setName] = useState(doctorName?.trim() ?? "");
@@ -35,10 +36,24 @@ export function EditAttendingDoctorButton({ clientId, doctorName }: Props) {
     setError(null);
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !saving) {
+        event.preventDefault();
+        setOpen(false);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+
+    // Focus the input after paint.
+    const focusTimer = window.setTimeout(() => inputRef.current?.focus(), 0);
+
     return () => {
       document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", onKeyDown);
+      window.clearTimeout(focusTimer);
     };
-  }, [open, doctorName]);
+  }, [open, doctorName, saving]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -70,6 +85,15 @@ export function EditAttendingDoctorButton({ clientId, doctorName }: Props) {
     }
   }
 
+  function requestClose() {
+    if (saving) return;
+    const initial = doctorName?.trim() ?? "";
+    if (name.trim() !== initial && name.trim() !== "") {
+      if (!window.confirm("Discard changes to the doctor name?")) return;
+    }
+    setOpen(false);
+  }
+
   const hasName = Boolean(doctorName?.trim());
 
   return (
@@ -94,7 +118,7 @@ export function EditAttendingDoctorButton({ clientId, doctorName }: Props) {
                 type="button"
                 className="absolute inset-0 bg-black/50"
                 aria-label="Close"
-                onClick={() => setOpen(false)}
+                onClick={requestClose}
               />
               <form
                 onSubmit={handleSubmit}
@@ -112,13 +136,13 @@ export function EditAttendingDoctorButton({ clientId, doctorName }: Props) {
                     Doctor name <span className="text-primary">*</span>
                   </label>
                   <input
+                    ref={inputRef}
                     id={inputId}
                     type="text"
                     value={name}
                     onChange={(event) => setName(event.target.value)}
                     className={portalInputClass}
                     placeholder="e.g. JANE SMITH MD"
-                    autoFocus
                     required
                   />
                 </div>
@@ -130,7 +154,7 @@ export function EditAttendingDoctorButton({ clientId, doctorName }: Props) {
                 <div className="mt-6 flex flex-wrap justify-end gap-3">
                   <button
                     type="button"
-                    onClick={() => setOpen(false)}
+                    onClick={requestClose}
                     className={portalButtonSecondaryClass}
                     disabled={saving}
                   >

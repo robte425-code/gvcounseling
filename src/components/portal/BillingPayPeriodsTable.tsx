@@ -165,8 +165,8 @@ function PayPeriodRow({
               <ConfirmSubmitButton
                 confirmMessage={
                   lniFaxRoute === "test"
-                    ? `Send test L&I faxes for all billed clients in ${row.periodLabel}? All faxes (including self-insured employer copies) will go to our fax line (${LNI_FAX_TEST_FORMATTED}). You will get a results summary email with job numbers.`
-                    : `Fax L&I for all billed clients in ${row.periodLabel}? Each client gets a cover page plus session documentation (excluding invoice PDFs) faxed to ${LNI_FAX_PRODUCTION_FORMATTED}. Self-insured clients also fax a copy to their employer. You will get a results summary email with job numbers.`
+                    ? `Send test L&I faxes for all billed clients in ${row.periodLabel}? All faxes (including self-insured employer copies) will go to our fax line (${LNI_FAX_TEST_FORMATTED}). You will get one results summary email with job numbers.`
+                    : `Fax L&I for all billed clients in ${row.periodLabel}? Each client gets a cover page plus session documentation (excluding invoice PDFs) faxed to ${LNI_FAX_PRODUCTION_FORMATTED}. Self-insured clients also fax a copy to their employer. You will get one results summary email with job numbers.`
                 }
                 className={`${portalButtonSecondaryClass} px-4 py-1.5 text-xs`}
                 disabled={!notifyReady}

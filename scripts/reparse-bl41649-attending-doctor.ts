@@ -1,6 +1,6 @@
 /**
  * One-shot: re-parse BL41649 Drive docs and save attending doctor name.
- * Runs once on production build via PortalSetting marker.
+ * Safe for production build: never fails the build; only marks done on success.
  *
  * Manual:
  *   FORCE_REPARSE_BL41649=1 npx tsx scripts/reparse-bl41649-attending-doctor.ts
@@ -19,178 +19,194 @@ async function main() {
   const { prisma } = await import("../src/lib/prisma");
   const force = process.env.FORCE_REPARSE_BL41649?.trim() === "1";
 
-  if (!force) {
-    const done = await prisma.portalSetting.findUnique({
-      where: { key: DONE_KEY },
-      select: { value: true },
+  try {
+    if (!force) {
+      const done = await prisma.portalSetting.findUnique({
+        where: { key: DONE_KEY },
+        select: { value: true },
+      });
+      if (done) {
+        console.log("reparse-bl41649: already completed — skipping");
+        return;
+      }
+    }
+
+    const client = await prisma.client.findUnique({
+      where: { lniClaimNumber: CLAIM },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        attendingDoctorName: true,
+        claimManagerName: true,
+        driveFolderId: true,
+        lniClaimNumber: true,
+      },
     });
-    if (done) {
-      console.log("reparse-bl41649: already completed — skipping");
-      await prisma.$disconnect();
+
+    if (!client) {
+      console.log(`reparse-bl41649: client ${CLAIM} not found — skipping`);
       return;
     }
-  }
 
-  const client = await prisma.client.findUnique({
-    where: { lniClaimNumber: CLAIM },
-    select: {
-      id: true,
-      firstName: true,
-      lastName: true,
-      attendingDoctorName: true,
-      claimManagerName: true,
-      driveFolderId: true,
-      lniClaimNumber: true,
-    },
-  });
-
-  if (!client) {
-    console.log(`reparse-bl41649: client ${CLAIM} not found — skipping`);
-    await prisma.$disconnect();
-    return;
-  }
-
-  console.log(
-    `reparse-bl41649: ${client.lastName}, ${client.firstName} doctor=${client.attendingDoctorName ?? "(empty)"} cm=${client.claimManagerName ?? "(empty)"}`,
-  );
-
-  // Reuse the existing reparse script logic via child process would be heavy;
-  // inline the essential Drive reparse path.
-  const { getSystemDriveAccessToken } = await import("../src/lib/google-drive-system");
-  const {
-    downloadFileBuffer,
-    listClientFolderFiles,
-    listClientFolders,
-    resolveNewReferralsFolderId,
-  } = await import("../src/lib/google-drive");
-  const { importClientDocumentsFromFolderDetailed } = await import(
-    "../src/lib/client-document-import"
-  );
-  const { validateAndRepairClientImport } = await import("../src/lib/client-import-quality");
-  const mammoth = (await import("mammoth")).default;
-  const { parseContactAddressesDocxText } = await import(
-    "../src/lib/parse-contact-addresses-docx"
-  );
-
-  const { accessToken } = await getSystemDriveAccessToken();
-
-  let folderId = client.driveFolderId;
-  if (!folderId) {
-    const referralsFolderId = await resolveNewReferralsFolderId(accessToken);
-    const folders = await listClientFolders(accessToken, referralsFolderId);
-    const match = folders.find((f) => f.name.toUpperCase().startsWith(`${CLAIM} `));
-    if (!match) {
-      throw new Error(`No Drive folder for ${CLAIM}`);
+    // Already populated (e.g. manual entry) — mark done so build stops retrying.
+    if (client.attendingDoctorName?.trim() && !force) {
+      await prisma.portalSetting.upsert({
+        where: { key: DONE_KEY },
+        create: {
+          key: DONE_KEY,
+          value: JSON.stringify({
+            at: new Date().toISOString(),
+            ok: true,
+            attendingDoctorName: client.attendingDoctorName.trim(),
+            source: "already-on-record",
+          }),
+        },
+        update: {
+          value: JSON.stringify({
+            at: new Date().toISOString(),
+            ok: true,
+            attendingDoctorName: client.attendingDoctorName.trim(),
+            source: "already-on-record",
+          }),
+        },
+      });
+      console.log(
+        `reparse-bl41649: doctor already set ("${client.attendingDoctorName.trim()}") — marked done`,
+      );
+      return;
     }
-    folderId = match.id;
-  }
 
-  const files = await listClientFolderFiles(accessToken, folderId);
-  console.log(
-    "reparse-bl41649: files:",
-    files.map((f) => f.name).join(" | "),
-  );
-
-  // Direct debug parse of Addresses/Contacts docx files
-  let docxDoctor: string | undefined;
-  for (const file of files) {
-    const isDocx =
-      /word|docx/i.test(file.mimeType) || /\.docx$/i.test(file.name);
-    const looksAddresses = /address|contact/i.test(file.name);
-    if (!isDocx && !looksAddresses) continue;
-    if (!isDocx) continue;
-
-    const buffer = await downloadFileBuffer(accessToken, file);
-    const { value: text } = await mammoth.extractRawText({ buffer });
-    const parsed = parseContactAddressesDocxText(text);
     console.log(
-      `reparse-bl41649: ${file.name} → doctor=${parsed.attendingDoctorName ?? "(none)"} cm=${parsed.claimManagerName ?? "(none)"}`,
+      `reparse-bl41649: ${client.lastName}, ${client.firstName} doctor=${client.attendingDoctorName ?? "(empty)"} cm=${client.claimManagerName ?? "(empty)"}`,
     );
-    if (parsed.attendingDoctorName) {
-      docxDoctor = parsed.attendingDoctorName;
+
+    const { getSystemDriveAccessToken } = await import("../src/lib/google-drive-system");
+    const {
+      downloadFileBuffer,
+      listClientFolderFiles,
+      listClientFolders,
+      resolveNewReferralsFolderId,
+    } = await import("../src/lib/google-drive");
+    const { importClientDocumentsFromFolderDetailed } = await import(
+      "../src/lib/client-document-import"
+    );
+    const { validateAndRepairClientImport } = await import("../src/lib/client-import-quality");
+    const mammoth = (await import("mammoth")).default;
+    const { parseContactAddressesDocxText } = await import(
+      "../src/lib/parse-contact-addresses-docx"
+    );
+
+    const { accessToken } = await getSystemDriveAccessToken();
+
+    let folderId = client.driveFolderId;
+    if (!folderId) {
+      const referralsFolderId = await resolveNewReferralsFolderId(accessToken);
+      const folders = await listClientFolders(accessToken, referralsFolderId);
+      const match = folders.find((f) => f.name.toUpperCase().startsWith(`${CLAIM} `));
+      if (!match) {
+        console.log(`reparse-bl41649: no Drive folder for ${CLAIM} — will retry next deploy`);
+        return;
+      }
+      folderId = match.id;
     }
-  }
 
-  const { merged: folderSupplement } = await importClientDocumentsFromFolderDetailed(
-    accessToken,
-    folderId,
-  );
-  const quality = validateAndRepairClientImport(
-    {
-      claimNumber: CLAIM,
-      clientName: `${client.firstName} ${client.lastName}`,
-      diagnoses: [],
-      warnings: [],
-    },
-    folderSupplement,
-    { folderClaimNumber: CLAIM },
-  );
+    const files = await listClientFolderFiles(accessToken, folderId);
+    console.log(
+      "reparse-bl41649: files:",
+      files.map((f) => f.name).join(" | "),
+    );
 
-  const doctorName =
-    quality.supplement?.attendingDoctorName?.trim() ||
-    folderSupplement?.attendingDoctorName?.trim() ||
-    docxDoctor?.trim() ||
-    null;
+    let docxDoctor: string | undefined;
+    for (const file of files) {
+      const isDocx = /word|docx/i.test(file.mimeType) || /\.docx$/i.test(file.name);
+      if (!isDocx) continue;
 
-  if (!doctorName) {
-    console.error("reparse-bl41649: still could not extract attending doctor name");
+      const buffer = await downloadFileBuffer(accessToken, file);
+      const { value: text } = await mammoth.extractRawText({ buffer });
+      const parsed = parseContactAddressesDocxText(text);
+      console.log(
+        `reparse-bl41649: ${file.name} → doctor=${parsed.attendingDoctorName ?? "(none)"} cm=${parsed.claimManagerName ?? "(none)"}`,
+      );
+      if (parsed.attendingDoctorName) {
+        docxDoctor = parsed.attendingDoctorName;
+      }
+    }
+
+    const { merged: folderSupplement } = await importClientDocumentsFromFolderDetailed(
+      accessToken,
+      folderId,
+    );
+    const quality = validateAndRepairClientImport(
+      {
+        claimNumber: CLAIM,
+        clientName: `${client.firstName} ${client.lastName}`,
+        diagnoses: [],
+        warnings: [],
+      },
+      folderSupplement,
+      { folderClaimNumber: CLAIM },
+    );
+
+    const doctorName =
+      quality.supplement?.attendingDoctorName?.trim() ||
+      folderSupplement?.attendingDoctorName?.trim() ||
+      docxDoctor?.trim() ||
+      null;
+
+    if (!doctorName) {
+      // Do not mark done — retry on a later deploy after parser/Drive fixes.
+      console.log("reparse-bl41649: could not extract attending doctor — will retry next deploy");
+      return;
+    }
+
+    await prisma.client.update({
+      where: { id: client.id },
+      data: {
+        attendingDoctorName: doctorName,
+        attendingDoctorAddress:
+          quality.supplement?.attendingDoctorAddress ?? folderSupplement?.attendingDoctorAddress,
+        attendingDoctorPhone:
+          quality.supplement?.attendingDoctorPhone ?? folderSupplement?.attendingDoctorPhone,
+        driveFolderId: client.driveFolderId ?? folderId,
+      },
+    });
+
     await prisma.portalSetting.upsert({
       where: { key: DONE_KEY },
       create: {
         key: DONE_KEY,
-        value: JSON.stringify({ at: new Date().toISOString(), ok: false }),
+        value: JSON.stringify({
+          at: new Date().toISOString(),
+          ok: true,
+          attendingDoctorName: doctorName,
+        }),
       },
       update: {
-        value: JSON.stringify({ at: new Date().toISOString(), ok: false }),
+        value: JSON.stringify({
+          at: new Date().toISOString(),
+          ok: true,
+          attendingDoctorName: doctorName,
+        }),
       },
     });
-    await prisma.$disconnect();
-    process.exitCode = 1;
-    return;
+
+    console.log(`reparse-bl41649: saved attending doctor "${doctorName}"`);
+  } catch (error) {
+    // Never fail the production build for this one-shot.
+    console.error(
+      "reparse-bl41649: non-fatal error —",
+      error instanceof Error ? error.message : error,
+    );
+  } finally {
+    try {
+      await prisma.$disconnect();
+    } catch {
+      // ignore
+    }
   }
-
-  await prisma.client.update({
-    where: { id: client.id },
-    data: {
-      attendingDoctorName: doctorName,
-      attendingDoctorAddress:
-        quality.supplement?.attendingDoctorAddress ?? folderSupplement?.attendingDoctorAddress,
-      attendingDoctorPhone:
-        quality.supplement?.attendingDoctorPhone ?? folderSupplement?.attendingDoctorPhone,
-      driveFolderId: client.driveFolderId ?? folderId,
-    },
-  });
-
-  await prisma.portalSetting.upsert({
-    where: { key: DONE_KEY },
-    create: {
-      key: DONE_KEY,
-      value: JSON.stringify({
-        at: new Date().toISOString(),
-        ok: true,
-        attendingDoctorName: doctorName,
-      }),
-    },
-    update: {
-      value: JSON.stringify({
-        at: new Date().toISOString(),
-        ok: true,
-        attendingDoctorName: doctorName,
-      }),
-    },
-  });
-
-  console.log(`reparse-bl41649: saved attending doctor "${doctorName}"`);
-  await prisma.$disconnect();
 }
 
-main().catch(async (e) => {
-  console.error("reparse-bl41649 failed:", e);
-  try {
-    const { prisma } = await import("../src/lib/prisma");
-    await prisma.$disconnect();
-  } catch {
-    // ignore
-  }
-  process.exit(1);
+main().catch((e) => {
+  console.error("reparse-bl41649: unexpected error (non-fatal):", e);
 });

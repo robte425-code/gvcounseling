@@ -1037,20 +1037,23 @@ export async function emailVrcsForPayPeriodAction(formData: FormData) {
   const params = new URLSearchParams();
   params.set("vrcEmailed", "1");
   params.set("sent", String(result.sent));
-  if (result.sentDetails.length) {
-    params.set("vrcRecipients", result.sentDetails.slice(0, 12).join(";;"));
+  const preview = result.sentDetails.slice(0, 3);
+  if (preview.length) {
+    params.set("vrcRecipients", preview.join(";;"));
   }
+  const more = Math.max(0, result.sentDetails.length - preview.length);
+  if (more > 0) params.set("vrcMore", String(more));
   if (result.adminCc.length) {
     params.set("vrcAdminCc", result.adminCc.join(", "));
   }
   if (result.skipped.length) {
-    params.set("vrcSkipped", result.skipped.slice(0, 8).join(";;"));
+    params.set("vrcSkipped", result.skipped.slice(0, 5).join(";;"));
   }
   if (result.errors.length) {
-    params.set("vrcErrors", result.errors.slice(0, 8).join(";;"));
+    params.set("vrcErrors", result.errors.slice(0, 5).join(";;"));
   }
 
-  redirect(`/portal/admin/billing?${params.toString()}#vrc-email-results`);
+  redirect(`/portal/admin/billing?${params.toString()}#notify-results`);
 }
 
 export async function faxLniForPayPeriodAction(formData: FormData) {
@@ -1068,17 +1071,20 @@ export async function faxLniForPayPeriodAction(formData: FormData) {
   const params = new URLSearchParams();
   params.set("lniFaxed", "1");
   params.set("faxSent", String(result.sent));
-  if (result.sentDetails.length) {
-    params.set("lniFaxRecipients", result.sentDetails.slice(0, 12).join(";;"));
+  const preview = result.sentDetails.slice(0, 3);
+  if (preview.length) {
+    params.set("lniFaxRecipients", preview.join(";;"));
   }
+  const more = Math.max(0, result.sentDetails.length - preview.length);
+  if (more > 0) params.set("lniFaxMore", String(more));
   if (result.skipped.length) {
-    params.set("lniFaxSkipped", result.skipped.slice(0, 8).join(";;"));
+    params.set("lniFaxSkipped", result.skipped.slice(0, 5).join(";;"));
   }
   if (result.errors.length) {
-    params.set("lniFaxErrors", result.errors.slice(0, 8).join(";;"));
+    params.set("lniFaxErrors", result.errors.slice(0, 5).join(";;"));
   }
 
-  redirect(`/portal/admin/billing?${params.toString()}#lni-fax-results`);
+  redirect(`/portal/admin/billing?${params.toString()}#notify-results`);
 }
 
 export async function assignClientTherapistAction(formData: FormData) {

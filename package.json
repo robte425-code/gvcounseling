@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && node scripts/prisma-migrate-deploy.mjs && npx tsx scripts/run-pending-837-archive.ts && npx tsx scripts/reset-rejected-837-invoices-20260717.ts && npx tsx scripts/restore-invoice-263-billed.ts && npx tsx scripts/restore-ra721-claim-invoices-billed.ts && npx tsx scripts/reset-rejected-837-resubmit-20260717.ts && npx tsx scripts/relink-mismatched-drive-folders.ts --all && npx tsx scripts/send-sample-vrc-bhi-email.ts && npx tsx scripts/reparse-bl41649-attending-doctor.ts && next build",
+    "build": "prisma generate && node scripts/prisma-migrate-deploy.mjs && npx tsx scripts/run-pending-837-archive.ts && npx tsx scripts/relink-mismatched-drive-folders.ts --all && npx tsx scripts/reparse-bl41649-attending-doctor.ts && next build",
     "smoke:contact-addresses-docx": "tsx scripts/smoke-contact-addresses-docx.ts",
     "reparse:bl41649": "tsx scripts/reparse-bl41649-attending-doctor.ts",
     "audit:drive-folders": "tsx scripts/relink-mismatched-drive-folders.ts --all",

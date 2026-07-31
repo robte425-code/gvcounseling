@@ -15,7 +15,6 @@ import {
 import { getAdminNotificationEmails, getLniOutboundFaxRoute } from "@/lib/portal-settings";
 import { prisma } from "@/lib/prisma";
 import { sendEmailTo } from "@/lib/email";
-import { sendAdminLniFaxNotificationEmail } from "@/lib/referral-emails";
 
 export {
   defaultLniFaxDestination,
@@ -251,20 +250,9 @@ export async function faxLniForPayPeriod(options: {
       });
       result.sent += 1;
       result.sentDetails.push(`${label} → ${destinationLabel} (job ${lniSend.jobId})`);
-
-      try {
-        await sendAdminLniFaxNotificationEmail({
-          clientId: client.id,
-          clientName,
-          claimNumber: client.lniClaimNumber,
-          sentBy: "Pay period L&I fax",
-          faxJobId: lniSend.jobId,
-          destinationLabel,
-          filenames,
-        });
-      } catch (error) {
-        console.error("Admin L&I fax notification email failed:", error);
-      }
+      // Per-fax admin emails are skipped for pay-period batches to avoid inbox spam;
+      // a single batch summary is sent at the end instead. Individual client Fax L&I
+      // still uses sendAdminLniFaxNotificationEmail.
 
       if (client.selfInsured) {
         const employerFax = client.employerFax?.trim();

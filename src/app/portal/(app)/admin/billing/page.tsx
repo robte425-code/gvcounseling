@@ -33,12 +33,14 @@ export default async function BillingPage({
     vrcEmailed?: string;
     sent?: string;
     vrcRecipients?: string;
+    vrcMore?: string;
     vrcAdminCc?: string;
     vrcSkipped?: string;
     vrcErrors?: string;
     lniFaxed?: string;
     faxSent?: string;
     lniFaxRecipients?: string;
+    lniFaxMore?: string;
     lniFaxSkipped?: string;
     lniFaxErrors?: string;
   }>;
@@ -93,6 +95,7 @@ export default async function BillingPage({
   const vrcEmailRan = params.vrcEmailed === "1";
   const vrcSentCount = params.sent ?? "0";
   const vrcRecipients = params.vrcRecipients?.split(";;").filter(Boolean) ?? [];
+  const vrcMore = Number(params.vrcMore ?? "0");
   const vrcAdminCc = params.vrcAdminCc?.trim() ?? "";
   const vrcSkipped = params.vrcSkipped?.split(";;").filter(Boolean) ?? [];
   const vrcErrors = params.vrcErrors?.split(";;").filter(Boolean) ?? [];
@@ -100,6 +103,7 @@ export default async function BillingPage({
   const lniFaxRan = params.lniFaxed === "1";
   const faxSentCount = Number(params.faxSent ?? "0");
   const lniFaxRecipients = params.lniFaxRecipients?.split(";;").filter(Boolean) ?? [];
+  const lniFaxMore = Number(params.lniFaxMore ?? "0");
   const lniFaxSkipped = params.lniFaxSkipped?.split(";;").filter(Boolean) ?? [];
   const lniFaxErrors = params.lniFaxErrors?.split(";;").filter(Boolean) ?? [];
 
@@ -142,10 +146,7 @@ export default async function BillingPage({
       <BillingJumpNav />
 
       {hasAlerts && (
-        <div
-          id={lniFaxRan ? "lni-fax-results" : "vrc-email-results"}
-          className="space-y-2 scroll-mt-24"
-        >
+        <div id="notify-results" className="space-y-2 scroll-mt-24">
           {syncMessage && (
             <p className="rounded-xl bg-primary/10 px-4 py-3 text-sm text-primary-dark" role="status">
               {syncMessage}
@@ -162,12 +163,14 @@ export default async function BillingPage({
               </p>
               {vrcAdminCc ? (
                 <p className="mt-1 text-xs text-muted">
-                  Admin CC on each VRC email: {vrcAdminCc}. A summary was also emailed to admin.
+                  Admin CC on each VRC email: {vrcAdminCc}. Full details are in the admin summary
+                  email.
                 </p>
               ) : (
                 <p className="mt-1 text-xs text-muted">
-                  A summary was emailed to admin. If outbound VRC mail is routed to admin, those
-                  messages appear in the admin inbox as the To recipient (no separate CC).
+                  Full details are in the admin summary email. If outbound VRC mail is routed to
+                  admin, those messages appear in the admin inbox as the To recipient (no separate
+                  CC).
                 </p>
               )}
               {vrcRecipients.length > 0 && (
@@ -175,6 +178,9 @@ export default async function BillingPage({
                   {vrcRecipients.map((row) => (
                     <li key={row}>{row}</li>
                   ))}
+                  {vrcMore > 0 ? (
+                    <li>…and {vrcMore} more (see summary email)</li>
+                  ) : null}
                 </ul>
               )}
             </div>
@@ -188,13 +194,16 @@ export default async function BillingPage({
                 Fax L&I finished — {faxSentCount} fax{faxSentCount === 1 ? "" : "es"} sent.
               </p>
               <p className="mt-1 text-xs text-muted">
-                Admin receives a per-fax notice plus a batch summary email with job numbers.
+                Admin receives one batch summary email with destinations and job numbers.
               </p>
               {lniFaxRecipients.length > 0 && (
                 <ul className="mt-2 list-disc space-y-1 pl-5 text-xs text-primary-dark/90">
                   {lniFaxRecipients.map((row) => (
                     <li key={row}>{row}</li>
                   ))}
+                  {lniFaxMore > 0 ? (
+                    <li>…and {lniFaxMore} more (see summary email)</li>
+                  ) : null}
                 </ul>
               )}
             </div>
