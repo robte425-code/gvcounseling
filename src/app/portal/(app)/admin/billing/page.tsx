@@ -38,6 +38,7 @@ export default async function BillingPage({
     vrcErrors?: string;
     lniFaxed?: string;
     faxSent?: string;
+    lniFaxRecipients?: string;
     lniFaxSkipped?: string;
     lniFaxErrors?: string;
   }>;
@@ -96,20 +97,16 @@ export default async function BillingPage({
   const vrcSkipped = params.vrcSkipped?.split(";;").filter(Boolean) ?? [];
   const vrcErrors = params.vrcErrors?.split(";;").filter(Boolean) ?? [];
 
+  const lniFaxRan = params.lniFaxed === "1";
   const faxSentCount = Number(params.faxSent ?? "0");
-  const lniFaxMessage =
-    params.lniFaxed === "1"
-      ? faxSentCount > 0
-        ? `Sent ${params.faxSent} fax${faxSentCount === 1 ? "" : "es"} to L&I (and employer copies where applicable).`
-        : "No faxes were sent for this pay period."
-      : null;
+  const lniFaxRecipients = params.lniFaxRecipients?.split(";;").filter(Boolean) ?? [];
   const lniFaxSkipped = params.lniFaxSkipped?.split(";;").filter(Boolean) ?? [];
   const lniFaxErrors = params.lniFaxErrors?.split(";;").filter(Boolean) ?? [];
 
   const hasAlerts = Boolean(
     syncMessage ||
       vrcEmailRan ||
-      lniFaxMessage ||
+      lniFaxRan ||
       vrcSkipped.length ||
       vrcErrors.length ||
       lniFaxSkipped.length ||
@@ -145,7 +142,10 @@ export default async function BillingPage({
       <BillingJumpNav />
 
       {hasAlerts && (
-        <div id="vrc-email-results" className="space-y-2 scroll-mt-24">
+        <div
+          id={lniFaxRan ? "lni-fax-results" : "vrc-email-results"}
+          className="space-y-2 scroll-mt-24"
+        >
           {syncMessage && (
             <p className="rounded-xl bg-primary/10 px-4 py-3 text-sm text-primary-dark" role="status">
               {syncMessage}
@@ -179,10 +179,25 @@ export default async function BillingPage({
               )}
             </div>
           )}
-          {lniFaxMessage && (
-            <p className="rounded-xl bg-primary/10 px-4 py-3 text-sm text-primary-dark" role="status">
-              {lniFaxMessage}
-            </p>
+          {lniFaxRan && (
+            <div
+              className="rounded-xl border border-primary/20 bg-primary/10 px-4 py-3 text-sm text-primary-dark"
+              role="status"
+            >
+              <p className="font-semibold">
+                Fax L&I finished — {faxSentCount} fax{faxSentCount === 1 ? "" : "es"} sent.
+              </p>
+              <p className="mt-1 text-xs text-muted">
+                Admin receives a per-fax notice plus a batch summary email with job numbers.
+              </p>
+              {lniFaxRecipients.length > 0 && (
+                <ul className="mt-2 list-disc space-y-1 pl-5 text-xs text-primary-dark/90">
+                  {lniFaxRecipients.map((row) => (
+                    <li key={row}>{row}</li>
+                  ))}
+                </ul>
+              )}
+            </div>
           )}
           {vrcSkipped.length > 0 && (
             <p className="rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-950" role="status">
@@ -196,12 +211,12 @@ export default async function BillingPage({
           )}
           {lniFaxSkipped.length > 0 && (
             <p className="rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-950" role="status">
-              Fax skipped: {lniFaxSkipped.join(" ")}
+              Fax skipped: {lniFaxSkipped.join(" · ")}
             </p>
           )}
           {lniFaxErrors.length > 0 && (
             <p className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-900" role="alert">
-              Fax errors: {lniFaxErrors.join(" ")}
+              Fax errors: {lniFaxErrors.join(" · ")}
             </p>
           )}
         </div>

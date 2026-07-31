@@ -1068,14 +1068,17 @@ export async function faxLniForPayPeriodAction(formData: FormData) {
   const params = new URLSearchParams();
   params.set("lniFaxed", "1");
   params.set("faxSent", String(result.sent));
+  if (result.sentDetails.length) {
+    params.set("lniFaxRecipients", result.sentDetails.slice(0, 12).join(";;"));
+  }
   if (result.skipped.length) {
-    params.set("lniFaxSkipped", result.skipped.slice(0, 5).join(";;"));
+    params.set("lniFaxSkipped", result.skipped.slice(0, 8).join(";;"));
   }
   if (result.errors.length) {
-    params.set("lniFaxErrors", result.errors.slice(0, 5).join(";;"));
+    params.set("lniFaxErrors", result.errors.slice(0, 8).join(";;"));
   }
 
-  redirect(`/portal/admin/billing?${params.toString()}`);
+  redirect(`/portal/admin/billing?${params.toString()}#lni-fax-results`);
 }
 
 export async function assignClientTherapistAction(formData: FormData) {

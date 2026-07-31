@@ -12,8 +12,9 @@ import {
   LNI_FAX_TEST,
   type LniFaxDestination,
 } from "@/lib/lni-fax-constants";
-import { getLniOutboundFaxRoute } from "@/lib/portal-settings";
+import { getAdminNotificationEmails, getLniOutboundFaxRoute } from "@/lib/portal-settings";
 import { prisma } from "@/lib/prisma";
+import { sendEmailTo } from "@/lib/email";
 import { sendAdminLniFaxNotificationEmail } from "@/lib/referral-emails";
 
 export {
@@ -40,6 +41,8 @@ type InvoiceAttachmentRecord = {
 
 export type LniBillingFaxResult = {
   sent: number;
+  /** Human-readable lines like "BL41649 → L&I (job 12345)". */
+  sentDetails: string[];
   skipped: string[];
   errors: string[];
 };
@@ -199,7 +202,7 @@ export async function faxLniForPayPeriod(options: {
     });
   }
 
-  const result: LniBillingFaxResult = { sent: 0, skipped: [], errors: [] };
+  const result: LniBillingFaxResult = { sent: 0, sentDetails: [], skipped: [], errors: [] };
 
   for (const { client, therapist, therapistId, lineItems, attachments } of byClient.values()) {
     const label = `${client.lniClaimNumber} (${client.lastName}, ${client.firstName})`;
@@ -236,6 +239,9 @@ export async function faxLniForPayPeriod(options: {
       const lniRecipname = lniRedirected
         ? `[TEST] L&I — ${client.lniClaimNumber}`
         : "Washington State L&I";
+      const destinationLabel = lniRedirected
+        ? `test fax line (${lniFaxno})`
+        : `L&I (${lniFaxno})`;
 
       const lniSend = await sendFax({
         faxno: lniFaxno,
@@ -244,6 +250,7 @@ export async function faxLniForPayPeriod(options: {
         fileDataBase64,
       });
       result.sent += 1;
+      result.sentDetails.push(`${label} → ${destinationLabel} (job ${lniSend.jobId})`);
 
       try {
         await sendAdminLniFaxNotificationEmail({
@@ -252,9 +259,7 @@ export async function faxLniForPayPeriod(options: {
           claimNumber: client.lniClaimNumber,
           sentBy: "Pay period L&I fax",
           faxJobId: lniSend.jobId,
-          destinationLabel: lniRedirected
-            ? `test fax line (${lniFaxno})`
-            : `L&I (${lniFaxno})`,
+          destinationLabel,
           filenames,
         });
       } catch (error) {
@@ -274,14 +279,20 @@ export async function faxLniForPayPeriod(options: {
           const employerRecipname = employerRedirected
             ? `[TEST] Employer copy — ${employerName} (${client.lniClaimNumber})`
             : employerName;
+          const employerDestination = employerRedirected
+            ? `test fax line (${employerFaxno}) — employer copy for ${employerName}`
+            : `employer ${employerName} (${employerFaxno})`;
 
-          await sendFax({
+          const employerSend = await sendFax({
             faxno: employerFaxno,
             recipname: employerRecipname,
             filenames,
             fileDataBase64,
           });
           result.sent += 1;
+          result.sentDetails.push(
+            `${label} → ${employerDestination} (job ${employerSend.jobId})`,
+          );
         }
       }
     } catch (error) {
@@ -294,5 +305,63 @@ export async function faxLniForPayPeriod(options: {
     throw new Error("No L&I faxes were sent.");
   }
 
+  await sendLniFaxBatchSummary(result, options.payPeriodId, lniFaxDestination);
+
   return result;
+}
+
+async function sendLniFaxBatchSummary(
+  result: LniBillingFaxResult,
+  payPeriodId: string,
+  destination: LniFaxDestination,
+): Promise<void> {
+  const adminEmails = await getAdminNotificationEmails();
+  if (adminEmails.length === 0) return;
+
+  const payPeriod = await prisma.payPeriod.findUnique({
+    where: { id: payPeriodId },
+    select: { label: true, cutoffDate: true },
+  });
+  const periodLabel =
+    payPeriod?.label?.trim() ||
+    (payPeriod ? formatDate(payPeriod.cutoffDate) : payPeriodId);
+  const routeLabel =
+    destination === "test" ? "test fax line (not L&I production)" : "L&I production";
+
+  const lines = [
+    `L&I fax batch for pay period ${periodLabel}`,
+    `Route: ${routeLabel}`,
+    "",
+    `Sent: ${result.sent}`,
+    `Skipped: ${result.skipped.length}`,
+    `Errors: ${result.errors.length}`,
+    "",
+  ];
+
+  if (result.sentDetails.length) {
+    lines.push("Sent:");
+    for (const detail of result.sentDetails) lines.push(`  • ${detail}`);
+    lines.push("");
+  }
+  if (result.skipped.length) {
+    lines.push("Skipped:");
+    for (const row of result.skipped) lines.push(`  • ${row}`);
+    lines.push("");
+  }
+  if (result.errors.length) {
+    lines.push("Errors:");
+    for (const row of result.errors) lines.push(`  • ${row}`);
+    lines.push("");
+  }
+
+  lines.push("You can also see this summary at the top of Bill L&I after Fax L&I runs.");
+
+  try {
+    await sendEmailTo(adminEmails.join(", "), {
+      subject: `[GV Counseling] L&I fax results — ${result.sent} sent (${periodLabel})`,
+      text: lines.join("\n"),
+    });
+  } catch (error) {
+    console.error("L&I fax batch summary failed:", error);
+  }
 }
