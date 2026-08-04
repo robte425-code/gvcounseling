@@ -2,6 +2,7 @@ import { sendEmailTo } from "@/lib/email";
 import { formatCurrency, formatDate, calendarIsoFromDate, formatCalendarIso } from "@/lib/constants";
 import {
   outboundEmailRedirectNote,
+  resolveAdminCcForVrcEmail,
   resolveTherapistOutboundEmail,
 } from "@/lib/outbound-email-routing";
 import { getAdminNotificationEmails } from "@/lib/portal-settings";
@@ -199,9 +200,12 @@ export async function sendTherapistPayRunFinalizedEmail(options: {
     lines.push(outboundEmailRedirectNote(options.therapistName, intendedEmail));
   }
 
+  const cc = await resolveAdminCcForVrcEmail(to);
+
   await sendEmailTo(to, {
     subject: `Therapist pay finalized: RA ${options.remittanceNumber}`,
     text: lines.join("\n"),
+    cc,
   });
 }
 
