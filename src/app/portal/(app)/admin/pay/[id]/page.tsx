@@ -139,6 +139,10 @@ export default async function PayRemittanceDetailPage({
             paymentStatus: true,
             therapist: { select: { firstName: true, lastName: true } },
             client: { select: { firstName: true, lastName: true } },
+            lineItems: {
+              select: { serviceDate: true, procedureCode: true },
+              orderBy: [{ serviceDate: "asc" }, { sortOrder: "asc" }],
+            },
           },
         },
       },
@@ -535,6 +539,9 @@ export default async function PayRemittanceDetailPage({
             {remittance.lines.map((line) => {
               const serviceLines = parseRemittanceServiceLines(line.serviceLines);
               const serviceDate = formatBillServiceDate(line.serviceLines);
+              const matchedInvoiceDates = line.matchedInvoice
+                ? formatInvoiceServiceDates(line.matchedInvoice.lineItems)
+                : null;
               const clientName = lineClientName(line);
               const lniPaymentStatus = remittanceSectionToPaymentStatus(line.section);
               const invoicePaymentStatus = line.matchedInvoice?.paymentStatus ?? null;
@@ -566,11 +573,11 @@ export default async function PayRemittanceDetailPage({
                         <span>{clientName}</span>
                       </>
                     )}
-                    {serviceDate && (
-                      <>
-                        <span className="mx-2 text-muted">·</span>
-                        <span>DOS {serviceDate}</span>
-                      </>
+                    <span className="mx-2 text-muted">·</span>
+                    {serviceDate ? (
+                      <span className="font-medium text-primary-dark">DOS {serviceDate}</span>
+                    ) : (
+                      <span className="text-amber-800">DOS unknown</span>
                     )}
                     <span className="mx-2 text-muted">·</span>
                     <span className="text-muted">{paymentStatusLabel(lniPaymentStatus)}</span>
@@ -578,8 +585,11 @@ export default async function PayRemittanceDetailPage({
                       <>
                         <span className="mx-2 text-muted">·</span>
                         <span>
-                          Invoice #{line.matchedInvoice.invoiceNumber} (
-                          {line.matchedInvoice.therapist.firstName}{" "}
+                          Invoice #{line.matchedInvoice.invoiceNumber}
+                          {matchedInvoiceDates?.datesLabel
+                            ? ` · DOS ${matchedInvoiceDates.datesLabel}`
+                            : ""}{" "}
+                          ({line.matchedInvoice.therapist.firstName}{" "}
                           {line.matchedInvoice.therapist.lastName})
                         </span>
                       </>
@@ -589,7 +599,7 @@ export default async function PayRemittanceDetailPage({
                     {formatCurrency(Number(line.billTotalPayable))}
                   </span>
                 </div>
-                {isUnresolved && serviceLines.length > 0 && (
+                {serviceLines.length > 0 && (
                   <ul className="mt-1.5 space-y-0.5 text-xs text-slate-700">
                     {serviceLines.map((serviceLine, index) => {
                       const dos = isUsableServiceDate(serviceLine.serviceDateFrom)
@@ -600,14 +610,22 @@ export default async function PayRemittanceDetailPage({
                           <span className="font-medium text-primary-dark">
                             {serviceLine.procedureCode}
                           </span>
-                          {dos ? <span> · DOS {dos}</span> : null}
-                          {serviceLine.units > 0 ? <span> · {serviceLine.units} u</span> : null}
-                          <span className="tabular-nums">
-                            {" "}
-                            · billed {formatCurrency(serviceLine.billed)}
-                            {" · "}
-                            payable {formatCurrency(serviceLine.payable)}
-                          </span>
+                          {dos ? (
+                            <span> · DOS {dos}</span>
+                          ) : (
+                            <span className="text-amber-800"> · DOS unknown</span>
+                          )}
+                          {isUnresolved && serviceLine.units > 0 ? (
+                            <span> · {serviceLine.units} u</span>
+                          ) : null}
+                          {isUnresolved ? (
+                            <span className="tabular-nums">
+                              {" "}
+                              · billed {formatCurrency(serviceLine.billed)}
+                              {" · "}
+                              payable {formatCurrency(serviceLine.payable)}
+                            </span>
+                          ) : null}
                         </li>
                       );
                     })}
