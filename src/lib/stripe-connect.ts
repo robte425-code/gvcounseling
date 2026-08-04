@@ -284,7 +284,9 @@ export async function payTherapistPayRunWithStripe(remittanceAdviceId: string): 
 
   let finalized = payRun.status === "FINALIZED";
   if (transferredCount > 0 && allPositivePaid && payRun.status !== "FINALIZED") {
-    await finalizeTherapistPayRun(remittanceAdviceId);
+    // Mark pay run finalized without emailing — therapists are emailed only via
+    // the admin "Finalize therapist pay" button.
+    await finalizeTherapistPayRun(remittanceAdviceId, { notifyTherapists: false });
     finalized = true;
   }
 

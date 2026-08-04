@@ -2774,7 +2774,8 @@ export async function finalizeTherapistPayRunAction(
   if (!remittanceAdviceId) return { error: "Remittance is required." };
 
   try {
-    await finalizeTherapistPayRun(remittanceAdviceId);
+    // Payout summary email (paid + unpaid RA bills) only on this button — not Stripe auto-finalize.
+    await finalizeTherapistPayRun(remittanceAdviceId, { notifyTherapists: true });
   } catch (error) {
     return {
       error: error instanceof Error ? error.message : "Could not finalize therapist pay.",

@@ -70,6 +70,18 @@ function parseCasEobCodes(segment: X12Segment): string[] {
   return codes;
 }
 
+const PLACEHOLDER_SERVICE_DATE = "1970-01-01";
+
+/** Service-date qualifiers commonly used on 835 SVC loops (DTM follows SVC). */
+function isServiceDateQualifier(qualifier: string): boolean {
+  return qualifier === "472" || qualifier === "150" || qualifier === "151";
+}
+
+function applyServiceDateToLine(line: RemittanceServiceLine, iso: string): void {
+  line.serviceDateFrom = iso;
+  line.serviceDateTo = iso;
+}
+
 function parseSvcLine(
   segment: X12Segment,
   componentSeparator: string,
@@ -81,10 +93,11 @@ function parseSvcLine(
   const billed = parseX12Money(segment.elements[1]);
   const payable = parseX12Money(segment.elements[2]);
   const units = Number.parseFloat(segment.elements[4] ?? segment.elements[3] ?? "1");
+  const dos = serviceDate ?? PLACEHOLDER_SERVICE_DATE;
 
   return {
-    serviceDateFrom: serviceDate ?? "1970-01-01",
-    serviceDateTo: serviceDate ?? "1970-01-01",
+    serviceDateFrom: dos,
+    serviceDateTo: dos,
     units: Number.isFinite(units) && units > 0 ? units : 1,
     procedureCode,
     billed,
@@ -154,9 +167,10 @@ function parse835Claims(
       return;
     }
     if (!draft.serviceLines.length && draft.billTotalPayable > 0) {
+      const dos = pendingServiceDate ?? PLACEHOLDER_SERVICE_DATE;
       draft.serviceLines.push({
-        serviceDateFrom: pendingServiceDate ?? "1970-01-01",
-        serviceDateTo: pendingServiceDate ?? "1970-01-01",
+        serviceDateFrom: dos,
+        serviceDateTo: dos,
         units: 1,
         procedureCode: "UNKNOWN",
         billed: draft.billTotalBilled,
@@ -165,6 +179,13 @@ function parse835Claims(
         payable: draft.billTotalPayable,
         eobCode: draft.eobCodes[0],
       });
+    } else if (pendingServiceDate) {
+      // Claim-level DOS fallback for lines that never received a post-SVC DTM*472.
+      for (const line of draft.serviceLines) {
+        if (line.serviceDateFrom === PLACEHOLDER_SERVICE_DATE) {
+          applyServiceDateToLine(line, pendingServiceDate);
+        }
+      }
     }
     bills.push(finalizeClaimDraft(draft));
     draft = null;
@@ -243,17 +264,29 @@ function parse835Claims(
       }
       case "SVC": {
         if (!draft) break;
+        // DTM*472 normally follows SVC in 835; seed from any prior claim-level date.
         draft.serviceLines.push(
           parseSvcLine(segment, componentSeparator, pendingServiceDate, pendingEobCodes),
         );
+        pendingEobCodes = [];
         break;
       }
       case "DTM": {
         const qualifier = segment.elements[0] ?? "";
         const iso = parseX12Date(segment.elements[1]);
-        if (!iso) break;
-        if (qualifier === "472") {
+        if (!iso || !draft) break;
+        if (!isServiceDateQualifier(qualifier)) break;
+        // Prefer service-start / service date for pending; "151" is period end only.
+        if (qualifier === "472" || qualifier === "150") {
           pendingServiceDate = iso;
+        }
+        // Standard 835 order is SVC then DTM — attach DOS to the latest service line.
+        const lastLine = draft.serviceLines[draft.serviceLines.length - 1];
+        if (lastLine && (qualifier === "472" || qualifier === "150")) {
+          applyServiceDateToLine(lastLine, iso);
+        } else if (lastLine && qualifier === "151" && lastLine.serviceDateFrom === PLACEHOLDER_SERVICE_DATE) {
+          applyServiceDateToLine(lastLine, iso);
+          pendingServiceDate = pendingServiceDate ?? iso;
         }
         break;
       }

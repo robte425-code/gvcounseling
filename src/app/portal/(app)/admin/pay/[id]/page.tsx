@@ -464,7 +464,8 @@ export default async function PayRemittanceDetailPage({
 
       {query.finalized === "1" && (
         <p className="rounded-xl bg-primary/10 px-4 py-3 text-sm text-primary-dark" role="status">
-          Therapist pay finalized. Therapists were emailed and will see invoices as Paid.
+          Therapist pay finalized. Therapists were emailed a payout summary (paid invoices
+          plus unpaid / denied / in-process bills on this remittance).
         </p>
       )}
 

@@ -352,9 +352,17 @@ function testLocal835Parse() {
     parsed.bills[0]!.claimNumber === "BJ87697" &&
     parsed.bills[0]!.section === "PAID" &&
     parsed.bills[0]!.billTotalPayable === 150 &&
-    parsed.bills[0]!.serviceLines[0]!.procedureCode === "96158";
+    parsed.bills[0]!.serviceLines[0]!.procedureCode === "96158" &&
+    // DTM*472 follows SVC in real 835s — DOS must attach to that service line.
+    parsed.bills[0]!.serviceLines[0]!.serviceDateFrom === "2024-06-01";
 
-  record("local/835-parse", ok ? "PASS" : "FAIL");
+  record(
+    "local/835-parse",
+    ok ? "PASS" : "FAIL",
+    ok
+      ? undefined
+      : `dos=${parsed.bills[0]?.serviceLines[0]?.serviceDateFrom ?? "missing"}`,
+  );
 }
 
 function testLocalRemittanceCrossVerify() {

@@ -35,18 +35,22 @@ export type PayRunFinalizedInvoice = {
   invoiceNumber: number;
   claimNumber: string;
   therapistAmount: number;
+  serviceDates?: string[];
+};
+
+/** Non-paid remittance bills (denied / in process / other unpaid) for payout summary. */
+export type PayRunUnpaidBill = {
+  claimNumber: string;
+  clientName: string;
+  section: string;
+  invoiceNumber: number | null;
+  serviceDates: string[];
+  eobCodes: string[];
+  billTotalPayable: number;
 };
 
 function sectionLabel(section: "DENIED" | "IN_PROCESS"): string {
   return section === "DENIED" ? "Denied" : "In process";
-}
-
-function formatAttentionInvoiceLines(lines: InvoiceAttentionLine[]): string[] {
-  return lines.map((line) => {
-    const dates = line.serviceDates.length ? line.serviceDates.join(", ") : "n/a";
-    const eobs = line.eobCodes.length ? ` · EOB ${line.eobCodes.join(", ")}` : "";
-    return `- #${line.invoiceNumber} · ${line.claimNumber} · ${line.clientName} · ${sectionLabel(line.section)} · DOS ${dates}${eobs}`;
-  });
 }
 
 export async function sendAdminInvoiceSubmittedEmail(options: {
@@ -74,46 +78,6 @@ export async function sendAdminInvoiceSubmittedEmail(options: {
       "",
       "Grandview Counseling",
     ].join("\n"),
-  });
-}
-
-export async function sendTherapistRaNeedsAttentionEmail(options: {
-  therapistEmail: string;
-  therapistName: string;
-  remittanceNumber: string;
-  remittanceAdviceId: string;
-  lines: InvoiceAttentionLine[];
-}) {
-  if (options.lines.length === 0) return;
-  const intendedEmail = options.therapistEmail.trim();
-  if (!intendedEmail) return;
-
-  const { to, redirected } = await resolveTherapistOutboundEmail(intendedEmail);
-  const deniedCount = options.lines.filter((line) => line.section === "DENIED").length;
-  const inProcessCount = options.lines.length - deniedCount;
-  const payUrl = `${getSiteUrl()}/portal/therapist/invoices`;
-  const body = [
-    `Hello ${options.therapistName},`,
-    "",
-    `Remittance ${options.remittanceNumber} includes ${options.lines.length} of your invoice(s) that need attention:`,
-    deniedCount ? `- Denied: ${deniedCount}` : null,
-    inProcessCount ? `- In process: ${inProcessCount}` : null,
-    "",
-    ...formatAttentionInvoiceLines(options.lines),
-    "",
-    "Review your invoices in the portal:",
-    payUrl,
-    "",
-    "Grandview Counseling",
-  ].filter((line): line is string => line != null);
-
-  if (redirected) {
-    body.push(outboundEmailRedirectNote(options.therapistName, intendedEmail));
-  }
-
-  await sendEmailTo(to, {
-    subject: `L&I needs attention: RA ${options.remittanceNumber}`,
-    text: body.join("\n"),
   });
 }
 
@@ -153,6 +117,19 @@ export async function sendAdminRaNeedsAttentionEmail(options: {
   });
 }
 
+function unpaidSectionLabel(section: string): string {
+  switch (section) {
+    case "DENIED":
+      return "Denied";
+    case "IN_PROCESS":
+      return "In process";
+    case "PAID":
+      return "Paid";
+    default:
+      return section.replace(/_/g, " ").toLowerCase();
+  }
+}
+
 export async function sendTherapistPayRunFinalizedEmail(options: {
   therapistEmail: string;
   therapistName: string;
@@ -161,6 +138,7 @@ export async function sendTherapistPayRunFinalizedEmail(options: {
   therapistAmount: number;
   lniPaidAmount: number;
   invoices: PayRunFinalizedInvoice[];
+  unpaidBills?: PayRunUnpaidBill[];
   adjustmentNote?: string | null;
   computedTherapistAmount?: number | null;
 }) {
@@ -172,6 +150,7 @@ export async function sendTherapistPayRunFinalizedEmail(options: {
   const computed = options.computedTherapistAmount;
   const adjusted =
     computed != null && Math.abs(options.therapistAmount - computed) > 0.001;
+  const unpaidBills = options.unpaidBills ?? [];
   const lines = [
     `Hello ${options.therapistName},`,
     "",
@@ -185,12 +164,31 @@ export async function sendTherapistPayRunFinalizedEmail(options: {
       ? [`Adjustment note: ${options.adjustmentNote.trim()}`]
       : []),
     `L&I paid amount: ${formatCurrency(options.lniPaidAmount)}`,
-    `Invoices: ${options.invoices.length}`,
+    `Paid invoices: ${options.invoices.length}`,
     "",
-    ...options.invoices.map(
-      (invoice) =>
-        `- #${invoice.invoiceNumber} · ${invoice.claimNumber} · ${formatCurrency(invoice.therapistAmount)}`,
-    ),
+    "Paid invoices:",
+    ...(options.invoices.length
+      ? options.invoices.map((invoice) => {
+          const dates =
+            invoice.serviceDates && invoice.serviceDates.length
+              ? ` · DOS ${invoice.serviceDates.join(", ")}`
+              : "";
+          return `- #${invoice.invoiceNumber} · ${invoice.claimNumber}${dates} · ${formatCurrency(invoice.therapistAmount)}`;
+        })
+      : ["- None"]),
+    "",
+    `Unpaid bills on this remittance (denied, in process, or other non-paid): ${unpaidBills.length}`,
+    ...(unpaidBills.length
+      ? unpaidBills.map((bill) => {
+          const dates = bill.serviceDates.length
+            ? ` · DOS ${bill.serviceDates.join(", ")}`
+            : "";
+          const invoice =
+            bill.invoiceNumber != null ? ` · Invoice #${bill.invoiceNumber}` : "";
+          const eobs = bill.eobCodes.length ? ` · EOB ${bill.eobCodes.join(", ")}` : "";
+          return `- ${bill.claimNumber} · ${bill.clientName}${invoice} · ${unpaidSectionLabel(bill.section)}${dates}${eobs} · L&I ${formatCurrency(bill.billTotalPayable)}`;
+        })
+      : ["- None"]),
     "",
     "View invoices in the portal:",
     payUrl,

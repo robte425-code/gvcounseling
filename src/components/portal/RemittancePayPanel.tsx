@@ -443,7 +443,7 @@ export function FinalizeTherapistPayRunForm({
         </p>
       )}
       <ConfirmSubmitButton
-        confirmMessage={`Finalize therapist pay for this remittance?\n\n${therapistCount} therapist(s) will be emailed their payout totaling $${therapistTotal.toFixed(2)}.`}
+        confirmMessage={`Finalize therapist pay for this remittance?\n\n${therapistCount} therapist(s) will be emailed a payout summary (paid invoices plus unpaid / denied / in-process bills on this RA) totaling $${therapistTotal.toFixed(2)}.`}
         className={portalButtonClass}
         disabled={pending}
       >
