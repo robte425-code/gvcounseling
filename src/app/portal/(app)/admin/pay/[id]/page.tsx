@@ -141,7 +141,7 @@ export default async function PayRemittanceDetailPage({
             client: { select: { firstName: true, lastName: true } },
             lineItems: {
               select: { serviceDate: true, procedureCode: true },
-              orderBy: [{ serviceDate: "asc" }, { sortOrder: "asc" }],
+              orderBy: [{ serviceDate: "asc" as const }, { sortOrder: "asc" as const }],
             },
           },
         },
@@ -228,7 +228,7 @@ export default async function PayRemittanceDetailPage({
             therapist: { select: { firstName: true, lastName: true } },
             lineItems: {
               select: { serviceDate: true, procedureCode: true },
-              orderBy: [{ serviceDate: "asc" }, { sortOrder: "asc" }],
+              orderBy: [{ serviceDate: "asc" as const }, { sortOrder: "asc" as const }],
             },
           },
           orderBy: { invoiceNumber: "desc" },
