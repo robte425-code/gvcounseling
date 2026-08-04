@@ -1522,11 +1522,8 @@ export async function payTherapistPayRunWithStripeAction(
     revalidatePath("/portal/therapist/invoices");
     revalidatePath("/portal/therapist/paychecks");
     const dollars = (result.totalCents / 100).toFixed(2);
-    const finalizeNote = result.finalized
-      ? " Therapist pay was finalized (invoices marked Paid; therapists emailed)."
-      : "";
     return {
-      success: `Paid ${result.transferredCount} therapist${result.transferredCount === 1 ? "" : "s"} via Stripe ($${dollars}). Funds go to their bank on Stripe’s payout schedule.${finalizeNote}`,
+      success: `Paid ${result.transferredCount} therapist${result.transferredCount === 1 ? "" : "s"} via Stripe ($${dollars}). Funds go to their bank on Stripe’s payout schedule. Click Finalize therapist pay to mark Paid in the portal and email payout summaries.`,
     };
   } catch (error) {
     return {

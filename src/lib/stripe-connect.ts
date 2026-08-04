@@ -1,6 +1,5 @@
 import { getSiteUrl } from "@/lib/site-url";
 import { dollarsToStripeCents, getStripe } from "@/lib/stripe";
-import { finalizeTherapistPayRun } from "@/lib/therapist-pay-notifications";
 import { prisma } from "@/lib/prisma";
 
 export type StripeConnectStatus = {
@@ -272,25 +271,15 @@ export async function payTherapistPayRunWithStripe(remittanceAdviceId: string): 
     });
   }
 
-  const paidPayoutIds = new Set([
-    ...payRun.payouts.filter((p) => p.stripeTransferId).map((p) => p.id),
-    ...transfers.map((t) => t.payoutId),
-  ]);
-  const allPositivePaid = payRun.payouts.every((payout) => {
-    const amount = Number(payout.therapistAmount);
-    if (!Number.isFinite(amount) || amount <= 0) return true;
-    return paidPayoutIds.has(payout.id);
-  });
-
-  let finalized = payRun.status === "FINALIZED";
-  if (transferredCount > 0 && allPositivePaid && payRun.status !== "FINALIZED") {
-    // Mark pay run finalized without emailing — therapists are emailed only via
-    // the admin "Finalize therapist pay" button.
-    await finalizeTherapistPayRun(remittanceAdviceId, { notifyTherapists: false });
-    finalized = true;
-  }
-
-  return { transferredCount, skippedCount, totalCents, transfers, finalized };
+  // Do not auto-finalize here. Admin must click "Finalize therapist pay" to mark
+  // Paid in the portal and send payout summary emails (paid + unpaid RA bills).
+  return {
+    transferredCount,
+    skippedCount,
+    totalCents,
+    transfers,
+    finalized: payRun.status === "FINALIZED",
+  };
 }
 
 export async function getStripePlatformBalanceAvailableCents(): Promise<number | null> {

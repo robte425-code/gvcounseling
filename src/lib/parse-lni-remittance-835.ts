@@ -77,9 +77,22 @@ function isServiceDateQualifier(qualifier: string): boolean {
   return qualifier === "472" || qualifier === "150" || qualifier === "151";
 }
 
-function applyServiceDateToLine(line: RemittanceServiceLine, iso: string): void {
+function applyServiceDateFrom(line: RemittanceServiceLine, iso: string): void {
+  const previousFrom = line.serviceDateFrom;
   line.serviceDateFrom = iso;
+  if (
+    line.serviceDateTo === PLACEHOLDER_SERVICE_DATE ||
+    line.serviceDateTo === previousFrom
+  ) {
+    line.serviceDateTo = iso;
+  }
+}
+
+function applyServiceDateTo(line: RemittanceServiceLine, iso: string): void {
   line.serviceDateTo = iso;
+  if (line.serviceDateFrom === PLACEHOLDER_SERVICE_DATE) {
+    line.serviceDateFrom = iso;
+  }
 }
 
 function parseSvcLine(
@@ -155,19 +168,20 @@ function parse835Claims(
 ): RemittanceBill[] {
   const bills: RemittanceBill[] = [];
   let draft: ClaimDraft | null = null;
-  let pendingServiceDate: string | null = null;
+  /** DTM service date seen before any SVC on this claim (safe to seed every SVC). */
+  let claimLevelServiceDate: string | null = null;
   let pendingEobCodes: string[] = [];
 
   const flush = () => {
     if (!draft) return;
     if (!draft.claimNumber) {
       draft = null;
-      pendingServiceDate = null;
+      claimLevelServiceDate = null;
       pendingEobCodes = [];
       return;
     }
     if (!draft.serviceLines.length && draft.billTotalPayable > 0) {
-      const dos = pendingServiceDate ?? PLACEHOLDER_SERVICE_DATE;
+      const dos = claimLevelServiceDate ?? PLACEHOLDER_SERVICE_DATE;
       draft.serviceLines.push({
         serviceDateFrom: dos,
         serviceDateTo: dos,
@@ -179,17 +193,17 @@ function parse835Claims(
         payable: draft.billTotalPayable,
         eobCode: draft.eobCodes[0],
       });
-    } else if (pendingServiceDate) {
-      // Claim-level DOS fallback for lines that never received a post-SVC DTM*472.
+    } else if (claimLevelServiceDate) {
+      // Only backfill from a true claim-level DTM (before any SVC), never from a later SVC's DTM.
       for (const line of draft.serviceLines) {
         if (line.serviceDateFrom === PLACEHOLDER_SERVICE_DATE) {
-          applyServiceDateToLine(line, pendingServiceDate);
+          applyServiceDateFrom(line, claimLevelServiceDate);
         }
       }
     }
     bills.push(finalizeClaimDraft(draft));
     draft = null;
-    pendingServiceDate = null;
+    claimLevelServiceDate = null;
     pendingEobCodes = [];
   };
 
@@ -264,9 +278,9 @@ function parse835Claims(
       }
       case "SVC": {
         if (!draft) break;
-        // DTM*472 normally follows SVC in 835; seed from any prior claim-level date.
+        // Seed from claim-level DTM only; post-SVC DTM*472 overwrites this line next.
         draft.serviceLines.push(
-          parseSvcLine(segment, componentSeparator, pendingServiceDate, pendingEobCodes),
+          parseSvcLine(segment, componentSeparator, claimLevelServiceDate, pendingEobCodes),
         );
         pendingEobCodes = [];
         break;
@@ -276,17 +290,23 @@ function parse835Claims(
         const iso = parseX12Date(segment.elements[1]);
         if (!iso || !draft) break;
         if (!isServiceDateQualifier(qualifier)) break;
-        // Prefer service-start / service date for pending; "151" is period end only.
-        if (qualifier === "472" || qualifier === "150") {
-          pendingServiceDate = iso;
-        }
-        // Standard 835 order is SVC then DTM — attach DOS to the latest service line.
+
         const lastLine = draft.serviceLines[draft.serviceLines.length - 1];
-        if (lastLine && (qualifier === "472" || qualifier === "150")) {
-          applyServiceDateToLine(lastLine, iso);
-        } else if (lastLine && qualifier === "151" && lastLine.serviceDateFrom === PLACEHOLDER_SERVICE_DATE) {
-          applyServiceDateToLine(lastLine, iso);
-          pendingServiceDate = pendingServiceDate ?? iso;
+        if (!lastLine) {
+          // Claim-level date before any SVC — safe to seed every subsequent SVC.
+          if (qualifier === "472" || qualifier === "150") {
+            claimLevelServiceDate = iso;
+          } else if (qualifier === "151" && !claimLevelServiceDate) {
+            claimLevelServiceDate = iso;
+          }
+          break;
+        }
+
+        // Standard 835 order is SVC then DTM — attach DOS to the latest service line only.
+        if (qualifier === "472" || qualifier === "150") {
+          applyServiceDateFrom(lastLine, iso);
+        } else if (qualifier === "151") {
+          applyServiceDateTo(lastLine, iso);
         }
         break;
       }

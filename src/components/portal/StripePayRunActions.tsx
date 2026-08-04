@@ -52,8 +52,8 @@ export function StripePayRunActions({
         <p className="mt-1 text-xs text-muted">
           Sends each therapist’s final paycheck amount from your Stripe platform balance to their
           Connect account. Adjust amounts above (with a note) before paying. Stripe then deposits to
-          their bank. On success, therapist pay is finalized automatically (Paid in the portal +
-          payout emails).{" "}
+          their bank. After paying, click Finalize therapist pay to mark Paid in the portal and
+          email payout summaries (paid invoices plus unpaid / denied / in-process bills).{" "}
           {platformBalanceLabel
             ? `Available balance: ${platformBalanceLabel}.`
             : "Add funds in Stripe Dashboard → Balances if transfers fail for insufficient balance."}

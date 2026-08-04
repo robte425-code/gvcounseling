@@ -138,6 +138,14 @@ function clientNameFromLine(line: {
   return line.patientName?.trim() || "Unknown client";
 }
 
+type TherapistContact = {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  lniProviderId: string | null;
+};
+
 export async function finalizeTherapistPayRun(
   remittanceAdviceId: string,
   options?: { notifyTherapists?: boolean },
@@ -154,7 +162,15 @@ export async function finalizeTherapistPayRun(
             select: {
               invoiceNumber: true,
               therapistId: true,
-              therapist: { select: { id: true, lniProviderId: true } },
+              therapist: {
+                select: {
+                  id: true,
+                  email: true,
+                  firstName: true,
+                  lastName: true,
+                  lniProviderId: true,
+                },
+              },
               client: { select: { firstName: true, lastName: true, lniClaimNumber: true } },
               lineItems: {
                 select: { serviceDate: true },
@@ -218,11 +234,16 @@ export async function finalizeTherapistPayRun(
   if (!notifyTherapists) return;
 
   const unpaidByTherapistId = new Map<string, PayRunUnpaidBill[]>();
+  const therapistContacts = new Map<string, TherapistContact>();
+
+  for (const payout of remittance.payRun.payouts) {
+    therapistContacts.set(payout.therapist.id, payout.therapist);
+  }
 
   for (const line of remittance.lines) {
     if (line.section === "PAID") continue;
 
-    const matchedTherapistId = line.matchedInvoice?.therapistId ?? null;
+    const matchedTherapist = line.matchedInvoice?.therapist ?? null;
     const providerId = line.serviceProviderId
       ? normalizeLniProviderId(line.serviceProviderId)
       : "";
@@ -246,32 +267,36 @@ export async function finalizeTherapistPayRun(
       billTotalPayable: Number(line.billTotalPayable),
     };
 
-    const therapistIds = new Set<string>();
-    if (matchedTherapistId) therapistIds.add(matchedTherapistId);
-    if (providerId) {
-      for (const payout of remittance.payRun.payouts) {
-        const therapistProvider = payout.therapist.lniProviderId
-          ? normalizeLniProviderId(payout.therapist.lniProviderId)
+    // Prefer matched invoice therapist exclusively; otherwise provider-id match among
+    // therapists already on this remittance (payout or other matched unpaid). Never
+    // fall back to "the only payout therapist".
+    let therapistId: string | null = null;
+    if (matchedTherapist) {
+      therapistId = matchedTherapist.id;
+      therapistContacts.set(matchedTherapist.id, matchedTherapist);
+    } else if (providerId) {
+      for (const therapist of therapistContacts.values()) {
+        const therapistProvider = therapist.lniProviderId
+          ? normalizeLniProviderId(therapist.lniProviderId)
           : "";
         if (therapistProvider && therapistProvider === providerId) {
-          therapistIds.add(payout.therapist.id);
+          therapistId = therapist.id;
+          break;
         }
       }
     }
 
-    // If still unassigned but there is exactly one payout therapist on this RA, attach there.
-    if (therapistIds.size === 0 && remittance.payRun.payouts.length === 1) {
-      therapistIds.add(remittance.payRun.payouts[0]!.therapist.id);
-    }
+    if (!therapistId) continue;
 
-    for (const therapistId of therapistIds) {
-      const list = unpaidByTherapistId.get(therapistId) ?? [];
-      list.push(unpaid);
-      unpaidByTherapistId.set(therapistId, list);
-    }
+    const list = unpaidByTherapistId.get(therapistId) ?? [];
+    list.push(unpaid);
+    unpaidByTherapistId.set(therapistId, list);
   }
 
+  const emailedTherapistIds = new Set<string>();
+
   for (const payout of remittance.payRun.payouts) {
+    emailedTherapistIds.add(payout.therapist.id);
     try {
       await sendTherapistPayRunFinalizedEmail({
         therapistEmail: payout.therapist.email,
@@ -296,6 +321,28 @@ export async function finalizeTherapistPayRun(
       });
     } catch (error) {
       console.error("Therapist pay-run finalized email failed:", error);
+    }
+  }
+
+  // Therapists with only unpaid/denied/in-process matched bills (no paid payout) still get a summary.
+  for (const [therapistId, unpaidBills] of unpaidByTherapistId) {
+    if (emailedTherapistIds.has(therapistId) || unpaidBills.length === 0) continue;
+    const therapist = therapistContacts.get(therapistId);
+    if (!therapist?.email) continue;
+    try {
+      await sendTherapistPayRunFinalizedEmail({
+        therapistEmail: therapist.email,
+        therapistName: `${therapist.firstName} ${therapist.lastName}`.trim(),
+        remittanceNumber: remittance.remittanceNumber,
+        remittanceAdviceId: remittance.id,
+        therapistAmount: 0,
+        computedTherapistAmount: 0,
+        lniPaidAmount: 0,
+        invoices: [],
+        unpaidBills,
+      });
+    } catch (error) {
+      console.error("Therapist unpaid-only remittance summary email failed:", error);
     }
   }
 }
