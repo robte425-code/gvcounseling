@@ -327,35 +327,24 @@ export function ApplyRemittanceForm({
   const flipDeniedWarnings = paidToDeniedWarnings.filter((warning) => !warning.willRemainPaid);
   const remainPaidWarnings = paidToDeniedWarnings.filter((warning) => warning.willRemainPaid);
   const warningSummary = paidToDeniedWarningSummary(paidToDeniedWarnings);
-  const crossVerifyBlocked =
-    crossVerify?.status === "mismatched" ||
-    (sourceFormat === "ERA_835" && crossVerify?.status === "missing_counterpart");
-
   return (
     <form action={formAction}>
       <input type="hidden" name="remittanceAdviceId" value={remittanceAdviceId} />
-      {sourceFormat === "PDF_RA" && crossVerify?.status === "missing_counterpart" && (
+      {crossVerify?.status === "missing_counterpart" && (
         <p className="mb-3 rounded-xl border border-border bg-primary/[0.03] px-4 py-3 text-sm text-muted" role="status">
-          No 835 ERA imported for this payment yet. You can apply from the PDF RA; import the 835
-          later to cross-verify.
+          {sourceFormat === "ERA_835"
+            ? "No PDF RA imported for this payment yet. You can apply from this 835 once every bill is matched; import the PDF later if you want to cross-verify."
+            : "No 835 ERA imported for this payment yet. You can apply from this PDF RA once every bill is matched; import the 835 later if you want to cross-verify."}
         </p>
       )}
-      {crossVerifyBlocked && (
-        <p className="mb-3 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-950" role="alert">
-          {crossVerify?.status === "mismatched" ? (
-            <>
-              <span className="font-semibold">PDF ↔ 835 mismatch.</span> Resolve differences or
-              import the matching PDF RA before applying. Applying a mismatched source is blocked.
-            </>
-          ) : (
-            <>
-              <span className="font-semibold">No PDF RA imported yet.</span> Import the PDF
-              remittance and verify it matches this 835 before applying payments.
-            </>
-          )}
+      {crossVerify?.status === "mismatched" && (
+        <p className="mb-3 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-950" role="status">
+          <span className="font-semibold">PDF ↔ 835 differ.</span> Review the cross-verify panel.
+          You can still apply from this source once every bill is matched (only one source can be
+          applied per payment).
         </p>
       )}
-      {sourceFormat === "ERA_835" && crossVerify?.status === "matched" && (
+      {crossVerify?.status === "matched" && (
         <p className="mb-3 rounded-xl bg-primary/10 px-4 py-3 text-sm text-primary-dark" role="status">
           PDF and 835 match. You can apply from either source; only one can be applied per payment.
         </p>
@@ -410,7 +399,7 @@ export function ApplyRemittanceForm({
             : ""
         }`}
         className={portalButtonClass}
-        disabled={pending || hasUnmatched || crossVerifyBlocked}
+        disabled={pending || hasUnmatched}
       >
         {pending ? "Applying…" : "Apply remittance & create pay run"}
       </ConfirmSubmitButton>

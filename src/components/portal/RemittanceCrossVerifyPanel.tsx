@@ -60,8 +60,8 @@ export function RemittanceCrossVerifyPanel({ verify, currentSourceLabel }: Panel
       <div className="rounded-xl border border-border bg-primary/[0.03] px-4 py-3">
         <p className="text-sm font-medium text-primary-dark">PDF ↔ 835 verification</p>
         <p className="mt-1 text-sm text-muted">
-          This {currentSourceLabel} has no imported {missingLabel} yet. Import the other format to
-          cross-check totals, bill counts, and line amounts before applying.
+          This {currentSourceLabel} has no imported {missingLabel} yet. You can still apply once
+          every bill is matched. Import the other format anytime to cross-check totals and lines.
         </p>
       </div>
     );
