@@ -126,9 +126,10 @@ export default async function PayPage({
       <div>
         <h1 className="font-serif text-3xl font-semibold text-primary-dark">Process RA</h1>
         <p className="mt-2 max-w-2xl text-sm text-muted">
-          Import L&I Remittance Advice PDFs and 835 ERA files when payments arrive. Cross-verify PDF
-          and 835 totals before applying. Review matches, update invoice L&I status, and calculate
-          therapist pay from invoice amounts.
+          Import L&I Remittance Advice PDFs and/or 835 ERA files when payments arrive. Apply from
+          either source once every bill is matched. Optionally cross-verify PDF ↔ 835 totals.
+          Review matches, update invoice L&I status, and calculate therapist pay from invoice
+          amounts.
         </p>
       </div>
 
