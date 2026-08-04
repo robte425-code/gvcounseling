@@ -164,7 +164,6 @@ export async function sendTherapistPayRunFinalizedEmail(options: {
     ...(options.adjustmentNote?.trim()
       ? [`Adjustment note: ${options.adjustmentNote.trim()}`]
       : []),
-    `L&I paid amount: ${formatCurrency(options.lniPaidAmount)}`,
     `Paid invoices: ${options.invoices.length}`,
     "",
     "Paid invoices:",
