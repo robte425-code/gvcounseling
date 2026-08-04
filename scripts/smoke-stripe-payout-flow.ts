@@ -190,10 +190,12 @@ async function runMockedPayAndFinalizeFlow() {
     });
 
     const allPaid = refreshed?.payouts.every((p) => p.stripeTransferId) ?? false;
+    // Stripe pays Connect accounts but leaves the pay run DRAFT so admin Finalize
+    // can mark Paid + email summaries.
     const ok =
       result.transferredCount === therapists.length &&
-      result.finalized === true &&
-      refreshed?.status === "FINALIZED" &&
+      result.finalized === false &&
+      refreshed?.status === "DRAFT" &&
       refreshed.stripePaidAt != null &&
       allPaid;
 
@@ -201,7 +203,7 @@ async function runMockedPayAndFinalizeFlow() {
       name,
       ok ? "PASS" : "FAIL",
       ok
-        ? `transferred=${result.transferredCount} finalized=${result.finalized}`
+        ? `transferred=${result.transferredCount} status=${refreshed?.status}`
         : `result=${JSON.stringify(result)} status=${refreshed?.status}`,
     );
   } catch (error) {
