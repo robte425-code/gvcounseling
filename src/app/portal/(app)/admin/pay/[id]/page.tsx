@@ -10,7 +10,13 @@ import {
   portalSectionHeadingClass,
   StatusBadge,
 } from "@/components/portal/ui";
-import { formatCurrency, formatCalendarIso, formatDate } from "@/lib/constants";
+import {
+  calendarIsoFromDate,
+  formatCurrency,
+  formatCalendarIso,
+  formatDate,
+} from "@/lib/constants";
+import type { PaymentStatus } from "@/generated/prisma/client";
 import {
   paymentStatusLabel,
   remittanceSectionToPaymentStatus,
@@ -53,20 +59,55 @@ function lineClientName(line: {
   return name || null;
 }
 
-function formatBillServiceDate(serviceLines: unknown): string | null {
-  if (!Array.isArray(serviceLines) || serviceLines.length === 0) return null;
+const PLACEHOLDER_SERVICE_DATE = "1970-01-01";
 
+function isUsableServiceDate(date: string | null | undefined): date is string {
+  return typeof date === "string" && date.length > 0 && date !== PLACEHOLDER_SERVICE_DATE;
+}
+
+function parseRemittanceServiceLines(serviceLines: unknown): RemittanceServiceLine[] {
+  if (!Array.isArray(serviceLines)) return [];
+  return serviceLines.filter((line): line is RemittanceServiceLine => {
+    if (!line || typeof line !== "object") return false;
+    return typeof (line as RemittanceServiceLine).procedureCode === "string";
+  });
+}
+
+function formatBillServiceDate(serviceLines: unknown): string | null {
   const dates = [
     ...new Set(
-      serviceLines
-        .map((line) => (line as RemittanceServiceLine).serviceDateFrom)
-        .filter((date): date is string => typeof date === "string" && date.length > 0),
+      parseRemittanceServiceLines(serviceLines)
+        .map((line) => line.serviceDateFrom)
+        .filter(isUsableServiceDate),
     ),
   ].sort();
 
   if (!dates.length) return null;
   if (dates.length === 1) return formatCalendarIso(dates[0]!);
   return `${formatCalendarIso(dates[0]!)} – ${formatCalendarIso(dates[dates.length - 1]!)}`;
+}
+
+function formatInvoiceServiceDates(
+  lineItems: Array<{ serviceDate: Date; procedureCode: string }>,
+): { datesLabel: string | null; proceduresLabel: string | null } {
+  const dates = [
+    ...new Set(lineItems.map((item) => calendarIsoFromDate(item.serviceDate))),
+  ].sort();
+  const procedures = [
+    ...new Set(lineItems.map((item) => item.procedureCode).filter(Boolean)),
+  ].sort();
+
+  const datesLabel =
+    dates.length === 0
+      ? null
+      : dates.length === 1
+        ? formatCalendarIso(dates[0]!)
+        : `${formatCalendarIso(dates[0]!)} – ${formatCalendarIso(dates[dates.length - 1]!)}`;
+
+  return {
+    datesLabel,
+    proceduresLabel: procedures.length > 0 ? procedures.join(", ") : null,
+  };
 }
 
 export default async function PayRemittanceDetailPage({
@@ -162,6 +203,69 @@ export default async function PayRemittanceDetailPage({
   const matchedCount = remittance.lines.filter((line) => line.matchedInvoiceId).length;
   const supersededCount = remittance.lines.filter((line) => line.supersededAt).length;
   const unresolvedCount = countUnresolvedRemittanceLines(remittance.lines);
+  const unresolvedClaimNumbers = [
+    ...new Set(
+      remittance.lines
+        .filter((line) => !line.matchedInvoiceId && !line.supersededAt)
+        .map((line) => line.claimNumber),
+    ),
+  ];
+  const claimCandidateInvoices =
+    remittance.status === "PREVIEW" && unresolvedClaimNumbers.length > 0
+      ? await prisma.invoice.findMany({
+          where: { client: { lniClaimNumber: { in: unresolvedClaimNumbers } } },
+          select: {
+            id: true,
+            invoiceNumber: true,
+            status: true,
+            paymentStatus: true,
+            totalAmount: true,
+            client: { select: { lniClaimNumber: true } },
+            therapist: { select: { firstName: true, lastName: true } },
+            lineItems: {
+              select: { serviceDate: true, procedureCode: true },
+              orderBy: [{ serviceDate: "asc" }, { sortOrder: "asc" }],
+            },
+          },
+          orderBy: { invoiceNumber: "desc" },
+        })
+      : [];
+  const matchedInvoiceIdsOnThisRa = new Set(
+    remittance.lines
+      .map((line) => line.matchedInvoiceId)
+      .filter((id): id is string => Boolean(id)),
+  );
+  const candidatesByClaim = new Map<
+    string,
+    Array<{
+      invoiceNumber: number;
+      status: string;
+      paymentStatus: string | null;
+      totalAmount: number;
+      therapistName: string;
+      serviceDatesLabel: string | null;
+      procedureCodesLabel: string | null;
+      alreadyMatchedOnThisRa: boolean;
+    }>
+  >();
+  for (const invoice of claimCandidateInvoices) {
+    const claim = invoice.client.lniClaimNumber;
+    if (!claim) continue;
+    const { datesLabel, proceduresLabel } = formatInvoiceServiceDates(invoice.lineItems);
+    const entry = {
+      invoiceNumber: invoice.invoiceNumber,
+      status: invoice.status,
+      paymentStatus: invoice.paymentStatus,
+      totalAmount: Number(invoice.totalAmount),
+      therapistName: `${invoice.therapist.firstName} ${invoice.therapist.lastName}`,
+      serviceDatesLabel: datesLabel,
+      procedureCodesLabel: proceduresLabel,
+      alreadyMatchedOnThisRa: matchedInvoiceIdsOnThisRa.has(invoice.id),
+    };
+    const list = candidatesByClaim.get(claim) ?? [];
+    list.push(entry);
+    candidatesByClaim.set(claim, list);
+  }
   const wrongYearSuggestions =
     remittance.status === "PREVIEW"
       ? await listWrongYearSupersedeSuggestions(remittance.id)
@@ -429,6 +533,7 @@ export default async function PayRemittanceDetailPage({
           </h2>
           <ul className="mt-4 space-y-2">
             {remittance.lines.map((line) => {
+              const serviceLines = parseRemittanceServiceLines(line.serviceLines);
               const serviceDate = formatBillServiceDate(line.serviceLines);
               const clientName = lineClientName(line);
               const lniPaymentStatus = remittanceSectionToPaymentStatus(line.section);
@@ -439,6 +544,9 @@ export default async function PayRemittanceDetailPage({
               const paidToDeniedWarning = paidToDeniedWarningByLineId.get(line.id);
               const isSuperseded = Boolean(line.supersededAt);
               const isUnresolved = !line.matchedInvoiceId && !isSuperseded;
+              const claimCandidates = isUnresolved
+                ? (candidatesByClaim.get(line.claimNumber) ?? [])
+                : [];
               const invoiceHref = line.matchedInvoice
                 ? `/portal/admin/invoices/${line.matchedInvoice.id}`
                 : undefined;
@@ -461,7 +569,7 @@ export default async function PayRemittanceDetailPage({
                     {serviceDate && (
                       <>
                         <span className="mx-2 text-muted">·</span>
-                        <span>{serviceDate}</span>
+                        <span>DOS {serviceDate}</span>
                       </>
                     )}
                     <span className="mx-2 text-muted">·</span>
@@ -481,6 +589,40 @@ export default async function PayRemittanceDetailPage({
                     {formatCurrency(Number(line.billTotalPayable))}
                   </span>
                 </div>
+                {isUnresolved && serviceLines.length > 0 && (
+                  <ul className="mt-1.5 space-y-0.5 text-xs text-slate-700">
+                    {serviceLines.map((serviceLine, index) => {
+                      const dos = isUsableServiceDate(serviceLine.serviceDateFrom)
+                        ? formatCalendarIso(serviceLine.serviceDateFrom)
+                        : null;
+                      return (
+                        <li key={`${serviceLine.procedureCode}-${serviceLine.serviceDateFrom}-${index}`}>
+                          <span className="font-medium text-primary-dark">
+                            {serviceLine.procedureCode}
+                          </span>
+                          {dos ? <span> · DOS {dos}</span> : null}
+                          {serviceLine.units > 0 ? <span> · {serviceLine.units} u</span> : null}
+                          <span className="tabular-nums">
+                            {" "}
+                            · billed {formatCurrency(serviceLine.billed)}
+                            {" · "}
+                            payable {formatCurrency(serviceLine.payable)}
+                          </span>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+                {isUnresolved &&
+                  (line.icn || line.serviceProviderName || line.serviceProviderId) && (
+                  <p className="mt-1 text-xs text-muted">
+                    {line.icn ? `ICN ${line.icn}` : null}
+                    {line.icn && (line.serviceProviderName || line.serviceProviderId) ? " · " : null}
+                    {line.serviceProviderName || line.serviceProviderId
+                      ? `Provider ${line.serviceProviderName || line.serviceProviderId}`
+                      : null}
+                  </p>
+                )}
                 {paidToDeniedWarning && remittance.status === "PREVIEW" && (
                   <p className="mt-1 text-xs text-amber-900">
                     {paidToDeniedWarning.willRemainPaid
@@ -504,6 +646,61 @@ export default async function PayRemittanceDetailPage({
                 {remittance.status === "PREVIEW" && isUnresolved && (
                   <RemittanceBillRowActions>
                     <div className="mt-2 space-y-2">
+                      <div>
+                        <p className="text-xs font-medium text-primary-dark">
+                          Invoices for claim {line.claimNumber}
+                        </p>
+                        {claimCandidates.length === 0 ? (
+                          <p className="mt-1 text-xs text-muted">
+                            No invoices found for this claim. Create or bill an invoice first.
+                          </p>
+                        ) : (
+                          <ul className="mt-1 space-y-1">
+                            {claimCandidates.map((candidate) => (
+                              <li
+                                key={candidate.invoiceNumber}
+                                className="text-xs text-slate-700"
+                              >
+                                <span className="font-medium text-primary-dark">
+                                  #{candidate.invoiceNumber}
+                                </span>
+                                {candidate.serviceDatesLabel ? (
+                                  <span> · DOS {candidate.serviceDatesLabel}</span>
+                                ) : (
+                                  <span className="text-muted"> · DOS unknown</span>
+                                )}
+                                {candidate.procedureCodesLabel ? (
+                                  <span> · {candidate.procedureCodesLabel}</span>
+                                ) : null}
+                                <span className="tabular-nums">
+                                  {" "}
+                                  · {formatCurrency(candidate.totalAmount)}
+                                </span>
+                                <span>
+                                  {" "}
+                                  · {candidate.therapistName}
+                                </span>
+                                <span className="text-muted">
+                                  {" "}
+                                  · {candidate.status.toLowerCase()}
+                                  {candidate.paymentStatus
+                                    ? ` / ${paymentStatusLabel(candidate.paymentStatus as PaymentStatus)}`
+                                    : ""}
+                                </span>
+                                {candidate.alreadyMatchedOnThisRa ? (
+                                  <span className="text-amber-800"> · already matched here</span>
+                                ) : null}
+                                {candidate.status !== "BILLED" ? (
+                                  <span className="text-amber-800">
+                                    {" "}
+                                    · must be billed to match
+                                  </span>
+                                ) : null}
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
                       <p className="text-xs text-muted">
                         Review: match to the correct billed invoice, or discard this L&I line if it
                         is a duplicate / not yours to apply.
@@ -513,6 +710,10 @@ export default async function PayRemittanceDetailPage({
                           remittanceAdviceId={remittance.id}
                           lineId={line.id}
                           claimNumber={line.claimNumber}
+                          candidates={claimCandidates.filter(
+                            (candidate) =>
+                              candidate.status === "BILLED" && !candidate.alreadyMatchedOnThisRa,
+                          )}
                         />
                         {wrongYearSuggestion && (
                           <CreateWrongYearRebillForm

@@ -773,38 +773,81 @@ export function UnmatchRemittanceLineForm({
 
 const manualMatchInitialState: ManualMatchRemittanceState = {};
 
+export type RemittanceMatchCandidate = {
+  invoiceNumber: number;
+  status: string;
+  paymentStatus: string | null;
+  totalAmount: number;
+  therapistName: string;
+  serviceDatesLabel: string | null;
+  procedureCodesLabel: string | null;
+  alreadyMatchedOnThisRa: boolean;
+};
+
 export function ManualMatchRemittanceLineForm({
   remittanceAdviceId,
   lineId,
   claimNumber,
+  candidates = [],
 }: {
   remittanceAdviceId: string;
   lineId: string;
   claimNumber: string;
+  candidates?: RemittanceMatchCandidate[];
 }) {
   const [state, formAction, pending] = useActionState(
     manualMatchRemittanceLineAction,
     manualMatchInitialState,
+  );
+  const selectableCandidates = candidates.filter(
+    (candidate) => candidate.status === "BILLED" && !candidate.alreadyMatchedOnThisRa,
   );
 
   return (
     <form action={formAction} className="mt-2 flex flex-wrap items-end gap-2">
       <input type="hidden" name="remittanceAdviceId" value={remittanceAdviceId} />
       <input type="hidden" name="lineId" value={lineId} />
-      <div>
-        <label className={portalLabelCompactClass} htmlFor={`invoice-${lineId}`}>
-          Invoice # (claim {claimNumber})
-        </label>
-        <input
-          id={`invoice-${lineId}`}
-          name="invoiceNumber"
-          type="number"
-          min={1}
-          required
-          className={portalInputCompactClass}
-          placeholder="e.g. 1042"
-        />
-      </div>
+      {selectableCandidates.length > 0 ? (
+        <div>
+          <label className={portalLabelCompactClass} htmlFor={`invoice-${lineId}`}>
+            Match invoice (claim {claimNumber})
+          </label>
+          <select
+            id={`invoice-${lineId}`}
+            name="invoiceNumber"
+            required
+            defaultValue=""
+            className={portalInputCompactClass}
+          >
+            <option value="" disabled>
+              Select invoice…
+            </option>
+            {selectableCandidates.map((candidate) => (
+              <option key={candidate.invoiceNumber} value={candidate.invoiceNumber}>
+                #{candidate.invoiceNumber}
+                {candidate.serviceDatesLabel ? ` · DOS ${candidate.serviceDatesLabel}` : ""}
+                {candidate.procedureCodesLabel ? ` · ${candidate.procedureCodesLabel}` : ""}
+                {` · ${candidate.therapistName}`}
+              </option>
+            ))}
+          </select>
+        </div>
+      ) : (
+        <div>
+          <label className={portalLabelCompactClass} htmlFor={`invoice-${lineId}`}>
+            Invoice # (claim {claimNumber})
+          </label>
+          <input
+            id={`invoice-${lineId}`}
+            name="invoiceNumber"
+            type="number"
+            min={1}
+            required
+            className={portalInputCompactClass}
+            placeholder="e.g. 1042"
+          />
+        </div>
+      )}
       {state.error && (
         <p className="w-full rounded-lg bg-red-50 px-2 py-1 text-xs text-red-800" role="alert">
           {state.error}
