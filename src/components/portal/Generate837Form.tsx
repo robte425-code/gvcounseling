@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { portalButtonClass } from "@/components/portal/ui";
 import type { IsaUsageIndicator } from "@/lib/edi837";
 
@@ -19,6 +20,7 @@ export function Generate837Form({
   compact = false,
   disabled = false,
 }: Props) {
+  const router = useRouter();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -47,6 +49,7 @@ export function Generate837Form({
       anchor.download = filename;
       anchor.click();
       URL.revokeObjectURL(url);
+      router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not generate 837 file.");
     } finally {
