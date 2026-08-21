@@ -156,6 +156,7 @@ function PayPeriodRow({
                 }
                 className={`${portalButtonSecondaryClass} px-4 py-1.5 text-xs`}
                 disabled={!notifyReady}
+                pendingLabel="Emailing VRCs…"
               >
                 Email VRCs
               </ConfirmSubmitButton>
@@ -170,6 +171,7 @@ function PayPeriodRow({
                 }
                 className={`${portalButtonSecondaryClass} px-4 py-1.5 text-xs`}
                 disabled={!notifyReady}
+                pendingLabel="Faxing L&I…"
               >
                 Fax L&I
               </ConfirmSubmitButton>
