@@ -8,14 +8,27 @@ export class RateLimitError extends Error {
   }
 }
 
+/**
+ * Identify the caller for rate limiting, preferring headers the platform sets
+ * over ones the caller can choose.
+ *
+ * Taking the first entry of x-forwarded-for let a caller pick their own bucket
+ * by varying the header, so the limit never triggered. x-vercel-forwarded-for
+ * and x-real-ip are set by the proxy; on x-forwarded-for the proxy appends, so
+ * the last entry is the one it vouches for, not the first.
+ */
 export function clientIpFromRequest(request: NextRequest): string {
-  const forwarded = request.headers.get("x-forwarded-for");
-  if (forwarded) {
-    const first = forwarded.split(",")[0]?.trim();
-    if (first) return first;
-  }
+  const vercelForwarded = request.headers.get("x-vercel-forwarded-for")?.trim();
+  if (vercelForwarded) return vercelForwarded.split(",").pop()!.trim();
+
   const realIp = request.headers.get("x-real-ip")?.trim();
   if (realIp) return realIp;
+
+  const forwarded = request.headers.get("x-forwarded-for");
+  if (forwarded) {
+    const last = forwarded.split(",").pop()?.trim();
+    if (last) return last;
+  }
   return "unknown";
 }
 

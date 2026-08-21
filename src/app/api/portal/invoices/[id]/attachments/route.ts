@@ -5,6 +5,7 @@ import { formatServiceDateFolderName, calendarIsoFromDate } from "@/lib/constant
 import { getDriveAccessTokenForClient } from "@/lib/google-drive-access";
 import { getOrCreateDriveSubfolder, uploadDriveFile } from "@/lib/google-drive";
 import { prisma } from "@/lib/prisma";
+import { UploadValidationError, validateUploadedFile } from "@/lib/upload-validation";
 
 function normalizeServiceDate(value: string): string | null {
   const trimmed = value.trim();
@@ -79,6 +80,11 @@ export async function POST(
       folderName,
     );
 
+    // Same rules as the public referral form: this route accepted any file of any
+    // size and stored the client-supplied content type verbatim. Checked before
+    // buffering so an oversized file is refused rather than read into memory.
+    validateUploadedFile(file.name, file.type, file.size);
+
     const buffer = Buffer.from(await file.arrayBuffer());
     const uploaded = await uploadDriveFile(
       accessToken,
@@ -111,6 +117,11 @@ export async function POST(
       },
     });
   } catch (e) {
+    // A rejected file is the caller's mistake, not a server fault, and the message
+    // says which rule it broke.
+    if (e instanceof UploadValidationError) {
+      return NextResponse.json({ error: e.message }, { status: 400 });
+    }
     console.error(e);
     return NextResponse.json(
       { error: e instanceof Error ? e.message : "Upload failed" },

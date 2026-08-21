@@ -20,7 +20,11 @@ import {
 import { getSystemDriveAccessToken } from "@/lib/google-drive-system";
 import { mergeParsedReferral, resolveClientName, type ParsedReferral } from "@/lib/referral-parser";
 import { prisma } from "@/lib/prisma";
-import { UploadValidationError, validateReferralUploadBatch } from "@/lib/upload-validation";
+import {
+  UploadValidationError,
+  validateReferralUploadBatch,
+  validateUploadedFile,
+} from "@/lib/upload-validation";
 
 export type ReferralIntakeResult = {
   clientId: string;
@@ -62,6 +66,10 @@ export async function collectReferralUploads(formData: FormData): Promise<Upload
   for (const fieldName of REFERRAL_FILE_FIELDS) {
     const file = formData.get(fieldName);
     if (file instanceof File && file.size > 0) {
+      // Checked before arrayBuffer(): validating afterwards meant the size limit
+      // ran only once every file was already resident in memory, which is the
+      // allocation it exists to prevent.
+      validateUploadedFile(file.name, file.type, file.size);
       files.push({
         fieldName,
         filename: file.name,

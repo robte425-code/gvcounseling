@@ -625,8 +625,19 @@ export async function deleteClientAction(formData: FormData) {
   redirect(appendQueryParam(destination, "deleted=1"));
 }
 
+/** No invoice has anywhere near this many lines; the cap just stops the loop below
+ *  being driven by whatever number the form happens to carry. */
+const MAX_INVOICE_LINE_ITEMS = 200;
+
 function parseInvoiceLineItems(formData: FormData) {
-  const lineCount = parseInt(String(formData.get("lineCount") ?? "0"), 10);
+  const requestedLineCount = parseInt(String(formData.get("lineCount") ?? "0"), 10);
+  if (!Number.isFinite(requestedLineCount) || requestedLineCount < 0) {
+    throw new Error("Invalid invoice line count.");
+  }
+  if (requestedLineCount > MAX_INVOICE_LINE_ITEMS) {
+    throw new Error(`An invoice cannot have more than ${MAX_INVOICE_LINE_ITEMS} lines.`);
+  }
+  const lineCount = requestedLineCount;
   const lineItems: { serviceDate: Date; procedureCode: string; sortOrder: number }[] = [];
 
   for (let i = 0; i < lineCount; i++) {

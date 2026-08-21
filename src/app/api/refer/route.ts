@@ -65,10 +65,8 @@ export async function POST(request: NextRequest) {
     const formDetails = lines.join("\n");
     const replyTo = String(formData.get("vrcEmail") || "");
 
-    let intakeWarnings: string[] = [];
     try {
       const intake = await processReferralIntake(formData, uploads);
-      intakeWarnings = intake.warnings;
       await sendReferralIntakeAdminNotice({
         clientName: String(clientName),
         claimNumber: intake.claimNumber,
@@ -79,19 +77,22 @@ export async function POST(request: NextRequest) {
       });
     } catch (intakeError) {
       console.error("Referral intake error:", intakeError);
-      intakeWarnings = [
-        intakeError instanceof Error ? intakeError.message : "Client record creation failed.",
-      ];
+      // Admins get the real reason; the caller does not. This endpoint is public,
+      // and messages like "a client with claim number X already exists" told anyone
+      // who guessed a claim number that the worker is a patient here.
       await sendReferralIntakeFailedNotice({
         clientName: String(clientName),
         claimNumber: String(formData.get("claimNumbers") ?? "").trim() || undefined,
         formDetails,
-        errorMessage: intakeWarnings[0]!,
+        errorMessage:
+          intakeError instanceof Error ? intakeError.message : "Client record creation failed.",
         replyTo,
       });
     }
 
-    return NextResponse.json({ ok: true, warnings: intakeWarnings });
+    // Warnings are internal notes about the parsed referral, so they are not echoed
+    // back either — the response says only that the referral was received.
+    return NextResponse.json({ ok: true, warnings: [] });
   } catch (error) {
     if (error instanceof RateLimitError) {
       return NextResponse.json({ error: error.message }, { status: 429 });
