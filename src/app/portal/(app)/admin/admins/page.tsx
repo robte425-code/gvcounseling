@@ -3,10 +3,8 @@ import { requireAdmin } from "@/auth";
 import { AdminForm } from "@/components/portal/AdminForm";
 import { CutoffReminderSettings } from "@/components/portal/CutoffReminderSettings";
 import { OutboundEmailTestingToggles } from "@/components/portal/OutboundEmailTestingToggles";
-import { StripeSettings } from "@/components/portal/StripeSettings";
 import { portalCardClass, portalTableNarrowClass, portalTableScrollClass } from "@/components/portal/ui";
 import { getCutoffReminderDays, getOutboundTestingSettings } from "@/lib/portal-settings";
-import { isStripeConfigured } from "@/lib/stripe";
 import { prisma } from "@/lib/prisma";
 
 export default async function AdminAdminsPage({
@@ -59,8 +57,6 @@ export default async function AdminAdminsPage({
         earlierDays={cutoffReminderDays.earlierDays}
         laterDays={cutoffReminderDays.laterDays}
       />
-
-      <StripeSettings configured={isStripeConfigured()} />
 
       <section className="space-y-4">
         <h2 className="font-serif text-xl font-semibold text-primary-dark">Current admins</h2>

@@ -58,7 +58,6 @@ import {
   DEFAULT_CUTOFF_REMINDER_DAYS_EARLIER,
   DEFAULT_CUTOFF_REMINDER_DAYS_LATER,
 } from "../src/lib/cutoff-reminder-settings";
-import { dollarsToStripeCents, isStripeConfigured } from "../src/lib/stripe";
 import {
   testDbRemittanceApplyAndRevert,
   testDbRemittanceMultiApplyRevert,
@@ -491,22 +490,6 @@ function testLocalCutoffReminderSettings() {
   record("local/cutoff-reminder-settings", ok ? "PASS" : "FAIL");
 }
 
-function testLocalStripeHelpers() {
-  const centsOk =
-    dollarsToStripeCents(12.34) === 1234 &&
-    dollarsToStripeCents(0.1) === 10 &&
-    dollarsToStripeCents(750) === 75000;
-  let negativeRejected = false;
-  try {
-    dollarsToStripeCents(-1);
-  } catch {
-    negativeRejected = true;
-  }
-  const configuredFlag = typeof isStripeConfigured() === "boolean";
-  const ok = centsOk && negativeRejected && configuredFlag;
-  record("local/stripe-helpers", ok ? "PASS" : "FAIL");
-}
-
 function testLocalInvoiceDeletePolicy() {
   if (!canDeleteAdminInvoice({ payPeriodId: null })) {
     record("local/invoice-delete-policy", "FAIL", "unassigned should be deletable");
@@ -859,7 +842,6 @@ async function main() {
   testLocal835MismatchFixture();
   testLocalEdi837SubmissionAudit();
   testLocalCutoffReminderSettings();
-  testLocalStripeHelpers();
   testLocalRemittanceCrossVerify();
   testLocalInvoiceDeletePolicy();
   await testLocalRemittanceGuardsAsync(record);

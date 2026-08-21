@@ -60,12 +60,6 @@ import {
   type OutboundLniFaxRoute,
 } from "@/lib/portal-settings";
 import type { IsaUsageIndicator } from "@/lib/edi837";
-import {
-  createTherapistStripeOnboardingLink,
-  payTherapistPayRunWithStripe,
-  syncTherapistStripeConnectStatus,
-} from "@/lib/stripe-connect";
-import { isStripeConfigured } from "@/lib/stripe";
 import { getNextInvoiceNumber } from "@/lib/invoice-numbers";
 import { INVOICE_SUBMIT_REQUIRES_ATTACHMENT_MESSAGE } from "@/lib/invoice-form-data";
 import { parseTherapistInvoicesReturnTo } from "@/lib/invoice-list-filters";
@@ -1332,104 +1326,6 @@ export async function updateCutoffReminderDaysAction(
   }
 }
 
-export type StripeOnboardTherapistState = { error?: string };
-
-export async function startTherapistStripeOnboardingAction(
-  _prevState: StripeOnboardTherapistState,
-  formData: FormData,
-): Promise<StripeOnboardTherapistState> {
-  await requireAdmin();
-  const therapistId = String(formData.get("therapistId") ?? "").trim();
-  if (!therapistId) return { error: "Therapist is required." };
-  if (!isStripeConfigured()) {
-    return { error: "Stripe is not configured. Set STRIPE_SECRET_KEY in Vercel." };
-  }
-
-  try {
-    const { url } = await createTherapistStripeOnboardingLink(therapistId, {
-      returnAudience: "admin",
-    });
-    redirect(url);
-  } catch (error) {
-    if (isNextRedirectError(error)) throw error;
-    return {
-      error: error instanceof Error ? error.message : "Could not start Stripe onboarding.",
-    };
-  }
-}
-
-/** Therapist self-serve Connect onboarding (also works while admin is “viewing as” them). */
-export async function startSelfStripeOnboardingAction(
-  _prevState: StripeOnboardTherapistState,
-  formData: FormData,
-): Promise<StripeOnboardTherapistState> {
-  const session = await requireTherapist();
-  const therapistId = session.user.id;
-  void formData;
-  if (!isStripeConfigured()) {
-    return { error: "Stripe payouts are not available yet. Ask your admin." };
-  }
-
-  try {
-    const { url } = await createTherapistStripeOnboardingLink(therapistId, {
-      returnAudience: "therapist",
-    });
-    redirect(url);
-  } catch (error) {
-    if (isNextRedirectError(error)) throw error;
-    return {
-      error: error instanceof Error ? error.message : "Could not start Stripe onboarding.",
-    };
-  }
-}
-
-export type SyncStripeConnectState = { error?: string; ready?: boolean };
-
-export async function syncTherapistStripeConnectAction(
-  _prevState: SyncStripeConnectState,
-  formData: FormData,
-): Promise<SyncStripeConnectState> {
-  await requireAdmin();
-  const therapistId = String(formData.get("therapistId") ?? "").trim();
-  if (!therapistId) return { error: "Therapist is required." };
-  if (!isStripeConfigured()) {
-    return { error: "Stripe is not configured. Set STRIPE_SECRET_KEY in Vercel." };
-  }
-
-  try {
-    const status = await syncTherapistStripeConnectStatus(therapistId);
-    revalidatePath(`/portal/admin/therapists/${therapistId}/edit`);
-    revalidatePath("/portal/admin/therapists");
-    return { ready: status.ready };
-  } catch (error) {
-    return {
-      error: error instanceof Error ? error.message : "Could not refresh Stripe status.",
-    };
-  }
-}
-
-export async function syncSelfStripeConnectAction(
-  _prevState: SyncStripeConnectState,
-  _formData: FormData,
-): Promise<SyncStripeConnectState> {
-  const session = await requireTherapist();
-  if (!isStripeConfigured()) {
-    return { error: "Stripe payouts are not available yet. Ask your admin." };
-  }
-
-  try {
-    const status = await syncTherapistStripeConnectStatus(session.user.id);
-    revalidatePath("/portal/therapist/account");
-    return { ready: status.ready };
-  } catch (error) {
-    return {
-      error: error instanceof Error ? error.message : "Could not refresh Stripe status.",
-    };
-  }
-}
-
-export type PayStripePayRunState = { error?: string; success?: string };
-
 export type UpdateTherapistPayoutAdjustmentState = { error?: string; success?: string };
 
 export async function updateTherapistPayRunPayoutAdjustmentAction(
@@ -1471,9 +1367,6 @@ export async function updateTherapistPayRunPayoutAdjustmentAction(
   if (payout.payRun.status !== "DRAFT") {
     return { error: "Paycheck amounts can only be adjusted before therapist pay is finalized." };
   }
-  if (payout.stripeTransferId) {
-    return { error: "This paycheck was already sent via Stripe and cannot be changed." };
-  }
 
   const computed = Number(payout.computedTherapistAmount);
   const changed = Math.abs(rounded - computed) > 0.001;
@@ -1501,35 +1394,6 @@ export async function updateTherapistPayRunPayoutAdjustmentAction(
       ? `Updated ${name} to $${rounded.toFixed(2)} (computed $${computed.toFixed(2)}).`
       : `Saved ${name} at computed amount $${rounded.toFixed(2)}.`,
   };
-}
-
-export async function payTherapistPayRunWithStripeAction(
-  _prevState: PayStripePayRunState,
-  formData: FormData,
-): Promise<PayStripePayRunState> {
-  await requireAdmin();
-  const remittanceAdviceId = String(formData.get("remittanceAdviceId") ?? "").trim();
-  if (!remittanceAdviceId) return { error: "Remittance is required." };
-  if (!isStripeConfigured()) {
-    return { error: "Stripe is not configured. Set STRIPE_SECRET_KEY in Vercel." };
-  }
-
-  try {
-    const result = await payTherapistPayRunWithStripe(remittanceAdviceId);
-    revalidatePath("/portal/admin/pay");
-    revalidatePath(`/portal/admin/pay/${remittanceAdviceId}`);
-    revalidatePath("/portal/admin/invoices");
-    revalidatePath("/portal/therapist/invoices");
-    revalidatePath("/portal/therapist/paychecks");
-    const dollars = (result.totalCents / 100).toFixed(2);
-    return {
-      success: `Paid ${result.transferredCount} therapist${result.transferredCount === 1 ? "" : "s"} via Stripe ($${dollars}). Funds go to their bank on Stripe’s payout schedule. Click Finalize therapist pay to mark Paid in the portal and email payout summaries.`,
-    };
-  } catch (error) {
-    return {
-      error: error instanceof Error ? error.message : "Could not pay with Stripe.",
-    };
-  }
 }
 
 export async function acceptUnassignedClientAction(formData: FormData) {
@@ -2771,7 +2635,6 @@ export async function finalizeTherapistPayRunAction(
   if (!remittanceAdviceId) return { error: "Remittance is required." };
 
   try {
-    // Payout summary email (paid + unpaid RA bills) only on this button — not Stripe auto-finalize.
     await finalizeTherapistPayRun(remittanceAdviceId, { notifyTherapists: true });
   } catch (error) {
     return {

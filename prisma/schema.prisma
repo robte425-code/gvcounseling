@@ -72,8 +72,6 @@ model User {
   active             Boolean   @default(true)
   lniProviderId      String?
   npi                String?
-  stripeConnectAccountId String?  @unique
-  stripeConnectReady Boolean  @default(false)
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
   clients            Client[]
@@ -371,7 +369,6 @@ model TherapistPayRun {
   remittanceAdvice   RemittanceAdvice      @relation(fields: [remittanceAdviceId], references: [id], onDelete: Cascade)
   status             TherapistPayRunStatus @default(DRAFT)
   finalizedAt        DateTime?
-  stripePaidAt       DateTime?
   payouts            TherapistPayRunPayout[]
   createdAt          DateTime              @default(now())
   updatedAt          DateTime              @updatedAt
@@ -392,9 +389,6 @@ model TherapistPayRunPayout {
   /** Required when therapistAmount differs from computedTherapistAmount. */
   adjustmentNote           String?             @db.Text
   adjustedAt               DateTime?
-  stripeTransferId         String?             @unique
-  stripeTransferStatus     String?
-  stripePaidAt             DateTime?
   lines                    TherapistPayRunLine[]
 
   @@unique([payRunId, therapistId])

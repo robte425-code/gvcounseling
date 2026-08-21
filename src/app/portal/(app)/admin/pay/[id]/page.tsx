@@ -2,7 +2,6 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireAdmin } from "@/auth";
 import { ApplyRemittanceForm, CreateWrongYearRebillForm, CreateWrongYearRebillsForm, DeleteRemittancePreviewForm, FinalizeTherapistPayRunForm, ManualMatchRemittanceLineForm, RematchRemittanceForm, RevertAppliedRemittanceForm, SupersedeRemittanceLineForm, SupersedeWrongYearStaleLinesForm, UnmatchRemittanceLineForm, UnsupersedeRemittanceLineForm } from "@/components/portal/RemittancePayPanel";
-import { StripePayRunActions } from "@/components/portal/StripePayRunActions";
 import { TherapistPayoutAdjustForm } from "@/components/portal/TherapistPayoutAdjustForm";
 import { RemittanceBillRow, RemittanceBillRowActions } from "@/components/portal/RemittanceBillRow";
 import {
@@ -35,8 +34,6 @@ import {
   type PaidToDeniedWarning,
 } from "@/lib/remittance-paid-to-denied-warnings";
 import type { RemittanceServiceLine } from "@/lib/parse-lni-remittance-pdf";
-import { getStripePlatformBalanceAvailableCents } from "@/lib/stripe-connect";
-import { isStripeConfigured } from "@/lib/stripe";
 import { prisma } from "@/lib/prisma";
 
 function parseEobCodeDescriptions(value: unknown): Record<string, string> {
@@ -157,8 +154,6 @@ export default async function PayRemittanceDetailPage({
               select: {
                 firstName: true,
                 lastName: true,
-                stripeConnectAccountId: true,
-                stripeConnectReady: true,
               },
             },
             lines: {
@@ -199,11 +194,6 @@ export default async function PayRemittanceDetailPage({
       if (!remittance) notFound();
     }
   }
-
-  const stripeConfigured = isStripeConfigured();
-  const platformBalanceCents = stripeConfigured
-    ? await getStripePlatformBalanceAvailableCents()
-    : null;
 
   const matchedCount = remittance.lines.filter((line) => line.matchedInvoiceId).length;
   const supersededCount = remittance.lines.filter((line) => line.supersededAt).length;
@@ -859,7 +849,7 @@ export default async function PayRemittanceDetailPage({
           <p className="mt-1 text-xs text-muted">
             Based on invoice line amounts (therapist fee schedule at submit) for L&I-paid invoices.
             After apply, you can adjust each therapist’s final paycheck amount and add a note before
-            paying with Stripe.
+            finalizing and sending the wire transfer manually via BECU.
           </p>
           {therapistPayPreviewError && (
             <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900" role="alert">
@@ -875,7 +865,6 @@ export default async function PayRemittanceDetailPage({
                   therapistAmount: Number(payout.therapistAmount),
                   computedTherapistAmount: Number(payout.computedTherapistAmount),
                   adjustmentNote: payout.adjustmentNote,
-                  stripeTransferId: payout.stripeTransferId,
                   lniPaidAmount: Number(payout.lniPaidAmount),
                   invoiceCount: payout.invoiceCount,
                 }))
@@ -885,7 +874,6 @@ export default async function PayRemittanceDetailPage({
                   therapistAmount: payout.therapistAmount,
                   computedTherapistAmount: payout.therapistAmount,
                   adjustmentNote: null as string | null,
-                  stripeTransferId: null as string | null,
                   lniPaidAmount: payout.lniPaidAmount,
                   invoiceCount: payout.invoiceCount,
                 }))
@@ -893,10 +881,7 @@ export default async function PayRemittanceDetailPage({
               const adjusted =
                 Math.abs(payout.therapistAmount - payout.computedTherapistAmount) > 0.001;
               const canEdit =
-                remittance.status === "APPLIED" &&
-                remittance.payRun?.status === "DRAFT" &&
-                !payout.stripeTransferId &&
-                Boolean(payout.payoutId);
+                remittance.status === "APPLIED" && remittance.payRun?.status === "DRAFT";
               return (
               <li key={payout.therapistName} className="rounded-lg bg-primary/[0.03] px-3 py-2">
                 <p className="font-medium text-primary-dark">{payout.therapistName}</p>
@@ -965,32 +950,6 @@ export default async function PayRemittanceDetailPage({
                   : " · therapist pay draft (therapists see Pending until finalized)"}
                 .
               </p>
-              {remittance.payRun && remittance.payRun.payouts.length > 0 && (
-                <StripePayRunActions
-                  remittanceAdviceId={remittance.id}
-                  payoutSummaries={remittance.payRun.payouts.map((payout) => ({
-                    therapistName: `${payout.therapist.firstName} ${payout.therapist.lastName}`.trim(),
-                    amount: Number(payout.therapistAmount),
-                    computedAmount: Number(payout.computedTherapistAmount),
-                    adjustmentNote: payout.adjustmentNote,
-                    ready: Boolean(
-                      payout.therapist.stripeConnectAccountId && payout.therapist.stripeConnectReady,
-                    ),
-                    alreadyPaid: Boolean(payout.stripeTransferId),
-                  }))}
-                  stripeConfigured={stripeConfigured}
-                  stripePaidAtLabel={
-                    remittance.payRun.stripePaidAt
-                      ? formatDate(remittance.payRun.stripePaidAt)
-                      : null
-                  }
-                  platformBalanceLabel={
-                    platformBalanceCents == null
-                      ? null
-                      : formatCurrency(platformBalanceCents / 100)
-                  }
-                />
-              )}
               {remittance.payRun?.status === "DRAFT" && (
                 <>
                   <FinalizeTherapistPayRunForm
