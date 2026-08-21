@@ -1,5 +1,5 @@
 import { portalTableNarrowClass, portalTableScrollClass } from "@/components/portal/ui";
-import { formatCurrency, formatDate, PROCEDURE_CODES } from "@/lib/constants";
+import { formatCurrency, formatCalendarDate, PROCEDURE_CODES } from "@/lib/constants";
 import { getCurrentProcedureFeeFromSchedule, type FeeScheduleRow } from "@/lib/procedure-fee-schedule";
 
 type Props = {
@@ -34,7 +34,7 @@ export function TherapistFeesTable({ fees }: Props) {
               {current ? formatCurrency(current.amount) : <span className="text-muted">Not set</span>}
             </td>
             <td className="py-3 pr-4 whitespace-nowrap">
-              {current ? formatDate(current.effectiveFrom) : <span className="text-muted">—</span>}
+              {current ? formatCalendarDate(current.effectiveFrom) : <span className="text-muted">—</span>}
             </td>
           </tr>
         ))}

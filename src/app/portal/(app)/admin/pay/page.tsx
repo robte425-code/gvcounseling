@@ -2,7 +2,7 @@ import Link from "next/link";
 import { requireAdmin } from "@/auth";
 import { RemittanceImportForm, DeleteRemittancePreviewForm } from "@/components/portal/RemittancePayPanel";
 import { portalCardClass, portalSectionHeadingClass, StatusBadge } from "@/components/portal/ui";
-import { formatCurrency, formatDate } from "@/lib/constants";
+import { formatCurrency, formatCalendarDate } from "@/lib/constants";
 import {
   countUnresolvedRemittanceLines,
   summarizeRemittanceBillCounts,
@@ -203,7 +203,7 @@ export default async function PayPage({
                       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                         <div>
                           <p className="font-medium text-primary-dark">
-                            RA {remittance.remittanceNumber} · {formatDate(remittance.invoiceDate)}
+                            RA {remittance.remittanceNumber} · {formatCalendarDate(remittance.invoiceDate)}
                           </p>
                           <p className="mt-1 text-xs text-muted">
                             {remittanceSourceFormatLabel(remittance.sourceFormat)} · Warrant{" "}

@@ -7,6 +7,7 @@ import {
   type DriveFolderAuditReport,
 } from "@/lib/drive-folder-audit";
 import { prisma } from "@/lib/prisma";
+import { formatDateTime } from "@/lib/constants";
 
 function safeDecodeParam(value: string): string {
   try {
@@ -123,7 +124,7 @@ export default async function GoogleDriveIntegrationPage({
             Last client Drive folder audit
           </h2>
           <p className="text-muted">
-            Ran {new Date(lastAudit.ranAt).toLocaleString()} —{" "}
+            Ran {formatDateTime(lastAudit.ranAt)} —{" "}
             <span className="text-primary-dark">
               {lastAudit.ok} ok, {lastAudit.relinked} relinked, {lastAudit.issues} issues
             </span>

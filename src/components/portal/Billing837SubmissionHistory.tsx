@@ -1,4 +1,4 @@
-import { formatCurrency, formatDate } from "@/lib/constants";
+import { formatCurrency, formatDate, formatCalendarDate } from "@/lib/constants";
 import { listRecentEdi837Submissions } from "@/lib/edi837-submission";
 import { portalCardClass, portalSectionHeadingClass } from "@/components/portal/ui";
 
@@ -20,7 +20,7 @@ export async function Billing837SubmissionHistory() {
         <ul className="mt-4 max-h-80 space-y-3 overflow-y-auto overscroll-contain pr-1">
           {submissions.map((submission) => {
             const periodLabel =
-              submission.payPeriod.label ?? formatDate(submission.payPeriod.cutoffDate);
+              submission.payPeriod.label ?? formatCalendarDate(submission.payPeriod.cutoffDate);
             const adminName = `${submission.generatedBy.firstName} ${submission.generatedBy.lastName}`;
             return (
               <li

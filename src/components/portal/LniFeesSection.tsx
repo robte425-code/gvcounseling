@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { createProcedureCodeFeeAction } from "@/lib/portal-actions";
-import { formatCurrency, formatDate, PROCEDURE_CODES } from "@/lib/constants";
+import { formatCurrency, formatCalendarDate, PROCEDURE_CODES } from "@/lib/constants";
 import { getCurrentProcedureFeeFromSchedule, loadAllProcedureCodeFees } from "@/lib/procedure-fees";
 import {
   portalButtonSecondaryClass,
@@ -59,7 +59,7 @@ export async function LniFeesSection() {
                   {current ? formatCurrency(current.amount) : <span className="text-muted">Not set</span>}
                 </td>
                 <td className="px-4 py-2.5 whitespace-nowrap">
-                  {current ? formatDate(current.effectiveFrom) : <span className="text-muted">—</span>}
+                  {current ? formatCalendarDate(current.effectiveFrom) : <span className="text-muted">—</span>}
                 </td>
               </tr>
             ))}

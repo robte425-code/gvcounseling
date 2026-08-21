@@ -3,7 +3,7 @@ import { requireTherapist } from "@/auth";
 import { TherapistDashboardPaycheckTile } from "@/components/portal/TherapistDashboardPaycheckTile";
 import { TherapistDashboardStatCard } from "@/components/portal/TherapistDashboardStatCard";
 import { portalButtonClass, portalCardClass, portalSectionHeadingClass, StatusBadge } from "@/components/portal/ui";
-import { formatCurrency, formatDate } from "@/lib/constants";
+import { formatCurrency, formatCalendarDate } from "@/lib/constants";
 import { loadPaycheckSummaries } from "@/lib/paychecks";
 import { prisma } from "@/lib/prisma";
 
@@ -101,20 +101,20 @@ export default async function TherapistDashboardPage() {
           {nextPayPeriod ? (
             <>
               <p className="mt-2 font-serif text-xl font-semibold text-primary-dark">
-                {nextPayPeriod.label ?? formatDate(nextPayPeriod.cutoffDate)}
+                {nextPayPeriod.label ?? formatCalendarDate(nextPayPeriod.cutoffDate)}
               </p>
               <dl className="mt-4 space-y-3 text-sm">
                 <div>
                   <dt className="text-muted">Billing cutoff</dt>
                   <dd className="font-medium text-foreground">
-                    {formatDate(nextPayPeriod.cutoffDate)}
+                    {formatCalendarDate(nextPayPeriod.cutoffDate)}
                   </dd>
                 </div>
                 <div>
                   <dt className="text-muted">Expected L&I payment</dt>
                   <dd className="font-medium text-foreground">
                     {nextPayPeriod.paymentDate
-                      ? formatDate(nextPayPeriod.paymentDate)
+                      ? formatCalendarDate(nextPayPeriod.paymentDate)
                       : "—"}
                   </dd>
                 </div>
@@ -170,7 +170,7 @@ export default async function TherapistDashboardPage() {
             </h2>
             {nextPayPeriod ? (
               <p className="mt-1 text-sm text-muted">
-                Cutoff {formatDate(nextPayPeriod.cutoffDate)}
+                Cutoff {formatCalendarDate(nextPayPeriod.cutoffDate)}
                 {nextPayPeriod.label ? ` · ${nextPayPeriod.label}` : ""}
               </p>
             ) : null}

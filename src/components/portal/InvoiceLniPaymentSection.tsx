@@ -1,6 +1,6 @@
 import type { PaymentStatus } from "@/generated/prisma/client";
 import { StatusBadge } from "@/components/portal/ui";
-import { formatDate } from "@/lib/constants";
+import { formatCalendarDate } from "@/lib/constants";
 import { parseInvoiceEobDescriptions } from "@/lib/invoice-payment-status";
 
 type Props = {
@@ -26,7 +26,7 @@ export function InvoiceLniPaymentSection({
       <div className="mt-2 flex flex-wrap items-center gap-2">
         <StatusBadge status={paymentStatus} />
         {paymentStatus === "PAID" && lniPaidAt && (
-          <span className="text-sm text-muted">Paid {formatDate(lniPaidAt)}</span>
+          <span className="text-sm text-muted">Paid {formatCalendarDate(lniPaidAt)}</span>
         )}
       </div>
       {lniEobCodes.length > 0 && (

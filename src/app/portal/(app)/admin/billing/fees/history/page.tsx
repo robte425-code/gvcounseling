@@ -2,7 +2,7 @@ import Link from "next/link";
 import { requireAdmin } from "@/auth";
 import {
   formatCurrency,
-  formatDate,
+  formatCalendarDate,
   formatProcedureCodeLabel,
 } from "@/lib/constants";
 import { loadAllProcedureCodeFees } from "@/lib/procedure-fees";
@@ -44,9 +44,9 @@ export default async function LniFeeHistoryPage() {
                 <tr key={fee.id} className="border-b border-border/60 last:border-0">
                   <td className="py-3 pr-4">{formatProcedureCodeLabel(fee.procedureCode)}</td>
                   <td className="py-3 pr-4">{formatCurrency(Number(fee.amount))}</td>
-                  <td className="py-3 pr-4">{formatDate(fee.effectiveFrom)}</td>
+                  <td className="py-3 pr-4">{formatCalendarDate(fee.effectiveFrom)}</td>
                   <td className="py-3 pr-4">
-                    {fee.effectiveTo ? formatDate(fee.effectiveTo) : "Current"}
+                    {fee.effectiveTo ? formatCalendarDate(fee.effectiveTo) : "Current"}
                   </td>
                 </tr>
               ))}

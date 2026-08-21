@@ -6,7 +6,7 @@ import { InvoiceLniPaymentSection } from "@/components/portal/InvoiceLniPaymentS
 import { InvoiceNotesSection } from "@/components/portal/InvoiceNotesSection";
 import { InvoiceTherapistPaymentSection } from "@/components/portal/InvoiceTherapistPaymentSection";
 import { StatusBadge } from "@/components/portal/ui";
-import { formatCurrency, formatDate, calendarIsoFromDate } from "@/lib/constants";
+import { formatCurrency, formatDate, formatCalendarDate, calendarIsoFromDate } from "@/lib/constants";
 import { toInvoiceAttachmentViews } from "@/lib/invoice-attachments";
 import {
   invoiceTherapistPayRunLinesInclude,
@@ -74,7 +74,7 @@ export default async function AdminInvoiceDetailPage({
             Billed {formatDate(invoice.billedAt)}
             {invoice.clmControlNumber ? ` · CLM ${invoice.clmControlNumber}` : ""}
             {invoice.payPeriod
-              ? ` · ${invoice.payPeriod.label ?? formatDate(invoice.payPeriod.cutoffDate)}`
+              ? ` · ${invoice.payPeriod.label ?? formatCalendarDate(invoice.payPeriod.cutoffDate)}`
               : ""}
           </p>
         )}
@@ -91,7 +91,7 @@ export default async function AdminInvoiceDetailPage({
         {invoice.status === "SUBMITTED" && invoice.payPeriod && (
           <p className="mt-2 text-sm text-muted">
             Assigned to pay period{" "}
-            {invoice.payPeriod.label ?? formatDate(invoice.payPeriod.cutoffDate)}
+            {invoice.payPeriod.label ?? formatCalendarDate(invoice.payPeriod.cutoffDate)}
           </p>
         )}
       </div>

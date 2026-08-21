@@ -5,6 +5,7 @@ import {
   requireSession,
 } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { formatDateTime } from "@/lib/constants";
 
 type AuthSession = Awaited<ReturnType<typeof requireSession>>;
 
@@ -97,13 +98,7 @@ export function formatClientNoteAuthorName(author: {
 }
 
 export function formatClientNoteTimestamp(createdAt: Date): string {
-  return createdAt.toLocaleString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
+  return formatDateTime(createdAt);
 }
 
 export function wasClientNoteEdited(createdAt: Date, updatedAt: Date): boolean {

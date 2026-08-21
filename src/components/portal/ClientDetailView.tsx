@@ -6,7 +6,7 @@ import {
 } from "@/components/portal/ui";
 import { AttendingNpiSearch } from "@/components/portal/AttendingNpiSearch";
 import { EditAttendingDoctorButton } from "@/components/portal/EditAttendingDoctorButton";
-import { formatDate } from "@/lib/constants";
+import { formatCalendarDate } from "@/lib/constants";
 
 export type ClientDetailData = {
   lniClaimNumber: string;
@@ -121,9 +121,9 @@ export function ClientDetailView({
       <DetailSection title="Client">
         <DetailField label="Claim #" value={<span className="font-mono">{client.lniClaimNumber}</span>} />
         <DetailField label="Name" value={fullName} />
-        <DetailField label="DOB" value={formatDate(client.dateOfBirth)} />
+        <DetailField label="DOB" value={formatCalendarDate(client.dateOfBirth)} />
         <DetailField label="Gender" value={formatGender(client.gender)} />
-        <DetailField label="Injury date" value={formatDate(client.dateOfInjury)} />
+        <DetailField label="Injury date" value={formatCalendarDate(client.dateOfInjury)} />
         <DetailField label="Phone" value={display(client.workerPhone)} />
         <DetailField label="Employer" value={display(client.employerName)} />
         {client.selfInsured && (

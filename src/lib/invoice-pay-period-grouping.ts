@@ -1,4 +1,4 @@
-import { calendarIsoFromDate, formatCalendarIso, formatDate } from "@/lib/constants";
+import { calendarIsoFromDate, formatCalendarIso, formatCalendarDate } from "@/lib/constants";
 
 export type PayPeriodGroupableInvoice = {
   invoiceNumber: number;
@@ -45,7 +45,7 @@ export function payPeriodLabel(
   period: { label: string | null; cutoffDate: Date } | null,
 ): string | null {
   if (!period) return null;
-  return period.label ?? formatDate(period.cutoffDate);
+  return period.label ?? formatCalendarDate(period.cutoffDate);
 }
 
 export function groupInvoicesByPayPeriod<T extends PayPeriodGroupableInvoice>(

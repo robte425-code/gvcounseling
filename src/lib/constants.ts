@@ -130,15 +130,6 @@ export function formatCurrency(amount: number | string): string {
 
 const CALENDAR_ISO = /^(\d{4})-(\d{2})-(\d{2})$/;
 
-/** Local calendar date as YYYY-MM-DD (matches HTML date inputs). */
-export function todayCalendarIso(): string {
-  const d = new Date();
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-}
-
 /** Format a calendar ISO date (YYYY-MM-DD) without UTC timezone shift. */
 export function formatCalendarIso(iso: string): string {
   const match = CALENDAR_ISO.exec(iso.trim());
@@ -156,13 +147,49 @@ export function calendarIsoFromDate(d: Date): string {
   return `${y}-${m}-${day}`;
 }
 
+/** Business is located in Washington State; all timestamp display should read in this zone. */
+export const BUSINESS_TIME_ZONE = "America/Los_Angeles";
+
+/**
+ * Format a real timestamp (an instant, e.g. submittedAt/billedAt/createdAt) as a date in business time.
+ *
+ * NOT for calendar-date columns stored as UTC midnight — cutoffDate, paymentDate, invoiceDate,
+ * lniPaidAt, serviceDate, effectiveFrom, dateOfBirth, dateOfInjury. Those shift back a day when
+ * converted to Pacific; use formatCalendarDate instead.
+ */
 export function formatDate(d: Date | string | null | undefined): string {
   if (!d) return "—";
   if (typeof d === "string" && CALENDAR_ISO.test(d.trim())) {
     return formatCalendarIso(d);
   }
   const date = typeof d === "string" ? new Date(d) : d;
-  return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    timeZone: BUSINESS_TIME_ZONE,
+  });
+}
+
+/** Format a real timestamp with time of day. For a Date stored as UTC midnight (a calendar date, not an instant) use formatCalendarDate. */
+export function formatDateTime(d: Date | string | null | undefined): string {
+  if (!d) return "—";
+  const date = typeof d === "string" ? new Date(d) : d;
+  return date.toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    timeZone: BUSINESS_TIME_ZONE,
+  });
+}
+
+/** Format a Date stored as UTC midnight (calendar date convention) — immune to server/browser timezone. */
+export function formatCalendarDate(d: Date | string | null | undefined): string {
+  if (!d) return "—";
+  const date = typeof d === "string" ? new Date(d) : d;
+  return formatCalendarIso(calendarIsoFromDate(date));
 }
 
 /** Folder name for invoice attachments: mm-dd-yyyy from an ISO date (YYYY-MM-DD). */

@@ -7,7 +7,7 @@ import {
 } from "@/components/portal/AdminInvoicesTable";
 import { AdminUnassignedInvoicesTile } from "@/components/portal/AdminUnassignedInvoicesTile";
 import { portalCardClass } from "@/components/portal/ui";
-import { formatDate } from "@/lib/constants";
+import { formatCalendarDate } from "@/lib/constants";
 import {
   earliestServiceDateIso,
   formatInvoiceServiceDates,
@@ -198,7 +198,7 @@ export default async function AdminInvoicesPage({
 
   const periodOptions: PayPeriodOption[] = payPeriods.map((period) => ({
     id: period.id,
-    label: period.label ?? `Cutoff ${formatDate(period.cutoffDate)}`,
+    label: period.label ?? `Cutoff ${formatCalendarDate(period.cutoffDate)}`,
   }));
 
   const nextPayPeriodId = nextPayPeriod?.id ?? payPeriods[0]?.id ?? null;

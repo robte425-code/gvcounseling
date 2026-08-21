@@ -14,6 +14,7 @@ import {
   calendarIsoFromDate,
   formatCurrency,
   formatCalendarIso,
+  formatCalendarDate,
   formatDate,
 } from "@/lib/constants";
 import type { PaymentStatus } from "@/generated/prisma/client";
@@ -406,7 +407,7 @@ export default async function PayRemittanceDetailPage({
             RA {remittance.remittanceNumber}
           </h1>
           <p className="mt-2 text-sm text-muted">
-            {sourceLabel} · Payment date {formatDate(remittance.invoiceDate)} · Warrant{" "}
+            {sourceLabel} · Payment date {formatCalendarDate(remittance.invoiceDate)} · Warrant{" "}
             {remittance.warrantRegister} · {remittance.status === "APPLIED" ? "Applied" : "Preview"}
           </p>
         </div>

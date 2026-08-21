@@ -6,7 +6,7 @@ import {
   type TherapistInvoiceRow,
 } from "@/components/portal/TherapistInvoicesTable";
 import { portalButtonClass, portalCardClass } from "@/components/portal/ui";
-import { formatDate } from "@/lib/constants";
+import { formatCalendarDate } from "@/lib/constants";
 import {
   earliestServiceDateIso,
   formatInvoiceServiceDates,
@@ -125,7 +125,7 @@ export default async function TherapistInvoicesPage({
 
   const periodOptions = payPeriods.map((period) => ({
     id: period.id,
-    label: period.label ?? `Cutoff ${formatDate(period.cutoffDate)}`,
+    label: period.label ?? `Cutoff ${formatCalendarDate(period.cutoffDate)}`,
   }));
 
   const invoicesReturnTo = buildTherapistInvoicesHref(filters);

@@ -1,4 +1,4 @@
-import { calendarIsoFromDate, formatDate } from "@/lib/constants";
+import { calendarIsoFromDate, formatCalendarDate } from "@/lib/constants";
 import { payPeriodLabel } from "@/lib/invoice-pay-period-grouping";
 import { excludeSyntheticSpreadsheetRemittancesWhere } from "@/lib/remittance-advice";
 import { prisma } from "@/lib/prisma";
@@ -162,9 +162,9 @@ export async function loadPaycheckSummaries(options?: {
     })
     .map((row) => ({
       payPeriodId: row.payPeriod.id,
-      payPeriodLabel: payPeriodLabel(row.payPeriod) ?? formatDate(row.payPeriod.cutoffDate),
-      paymentDateLabel: row.payPeriod.paymentDate ? formatDate(row.payPeriod.paymentDate) : null,
-      cutoffLabel: formatDate(row.payPeriod.cutoffDate),
+      payPeriodLabel: payPeriodLabel(row.payPeriod) ?? formatCalendarDate(row.payPeriod.cutoffDate),
+      paymentDateLabel: row.payPeriod.paymentDate ? formatCalendarDate(row.payPeriod.paymentDate) : null,
+      cutoffLabel: formatCalendarDate(row.payPeriod.cutoffDate),
       therapistId: row.therapistId,
       therapistName: row.therapistName,
       therapistAmount: row.therapistAmount,
@@ -272,7 +272,7 @@ export async function loadPaycheckDetail(options: {
     for (const line of payout.lines) {
       const inv = line.invoice;
       const serviceDates = inv.lineItems
-        .map((item) => formatDate(item.serviceDate))
+        .map((item) => formatCalendarDate(item.serviceDate))
         .filter((value, index, arr) => arr.indexOf(value) === index)
         .join(", ");
 
@@ -288,7 +288,7 @@ export async function loadPaycheckDetail(options: {
         lniPaidAt: inv.lniPaidAt?.toISOString() ?? null,
         remittanceNumber: payout.payRun.remittanceAdvice.remittanceNumber,
         warrantRegister: payout.payRun.remittanceAdvice.warrantRegister,
-        remittanceInvoiceDate: formatDate(payout.payRun.remittanceAdvice.invoiceDate),
+        remittanceInvoiceDate: formatCalendarDate(payout.payRun.remittanceAdvice.invoiceDate),
         invoiceHref: `${options.invoiceBasePath}/${inv.id}`,
       });
     }
@@ -297,8 +297,8 @@ export async function loadPaycheckDetail(options: {
   invoices.sort((a, b) => a.invoiceNumber - b.invoiceNumber);
 
   return {
-    payPeriodLabel: payPeriodLabel(payPeriod) ?? formatDate(payPeriod.cutoffDate),
-    paymentDateLabel: formatDate(payPeriod.paymentDate),
+    payPeriodLabel: payPeriodLabel(payPeriod) ?? formatCalendarDate(payPeriod.cutoffDate),
+    paymentDateLabel: formatCalendarDate(payPeriod.paymentDate),
     therapistName,
     therapistAmount,
     computedTherapistAmount,

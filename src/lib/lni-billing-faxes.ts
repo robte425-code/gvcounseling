@@ -1,4 +1,4 @@
-import { calendarIsoFromDate, formatDate } from "@/lib/constants";
+import { calendarIsoFromDate, formatDate, formatCalendarDate } from "@/lib/constants";
 import { sendFax } from "@/lib/faxage";
 import {
   downloadFileBuffer,
@@ -312,7 +312,7 @@ async function sendLniFaxBatchSummary(
   });
   const periodLabel =
     payPeriod?.label?.trim() ||
-    (payPeriod ? formatDate(payPeriod.cutoffDate) : payPeriodId);
+    (payPeriod ? formatCalendarDate(payPeriod.cutoffDate) : payPeriodId);
   const routeLabel =
     destination === "test" ? "test fax line (not L&I production)" : "L&I production";
 

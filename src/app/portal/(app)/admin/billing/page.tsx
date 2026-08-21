@@ -15,7 +15,7 @@ import {
   portalLabelCompactClass,
   portalSectionHeadingClass,
 } from "@/components/portal/ui";
-import { formatDate } from "@/lib/constants";
+import { formatCalendarDate } from "@/lib/constants";
 import { prisma } from "@/lib/prisma";
 import { BillingJumpNav } from "@/components/portal/BillingJumpNav";
 import { LniFeesSection } from "@/components/portal/LniFeesSection";
@@ -78,9 +78,9 @@ export default async function BillingPage({
   const periodRows = periods.map((period) => ({
     id: period.id,
     label: period.label,
-    cutoffLabel: formatDate(period.cutoffDate),
-    paymentLabel: formatDate(period.paymentDate),
-    periodLabel: period.label ?? formatDate(period.cutoffDate),
+    cutoffLabel: formatCalendarDate(period.cutoffDate),
+    paymentLabel: formatCalendarDate(period.paymentDate),
+    periodLabel: period.label ?? formatCalendarDate(period.cutoffDate),
     assignedInvoices: period._count.invoices,
     billedInvoices: billedCountByPeriodId.get(period.id) ?? 0,
   }));

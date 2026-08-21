@@ -1,4 +1,4 @@
-import { calendarIsoFromDate, formatDate } from "@/lib/constants";
+import { calendarIsoFromDate, formatDate, formatCalendarDate } from "@/lib/constants";
 import { sendEmailTo } from "@/lib/email";
 import {
   downloadFileBuffer,
@@ -327,7 +327,7 @@ async function sendVrcEmailBatchSummary(
   });
   const periodLabel =
     payPeriod?.label?.trim() ||
-    (payPeriod ? formatDate(payPeriod.cutoffDate) : payPeriodId);
+    (payPeriod ? formatCalendarDate(payPeriod.cutoffDate) : payPeriodId);
 
   const lines = [
     `VRC email batch for pay period ${periodLabel}`,
