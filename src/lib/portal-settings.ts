@@ -44,8 +44,16 @@ export function parseOutboundEmailRoute(
   return undefined;
 }
 
+/**
+ * Fails closed, like the L&I fax route's "test" default.
+ *
+ * This applies only when no setting row exists — a fresh, restored, or cloned
+ * database. Sending real session documentation to real VRCs is not something a
+ * missing row should be able to switch on; an admin turns it on deliberately
+ * from the Admin page. Production stores "intended" explicitly and is unaffected.
+ */
 export function defaultOutboundEmailRoute(): OutboundEmailRoute {
-  return "intended";
+  return "admin";
 }
 
 export function parseOutboundLniFaxRoute(
