@@ -44,9 +44,19 @@ const CLAIM_NUMBER = /[A-Z]{2}\d{5,6}/;
 const EOB_CODE = /(\d{3}|P\d{2})/i;
 const EOB_CODE_SUFFIX = `(?:\\s+(${EOB_CODE.source}))(?![\\d.])`;
 
+/**
+ * A money amount as L&I prints it: thousands separators on anything over $999,
+ * and a leading minus on a recoupment.
+ *
+ * Matching only [\d.]+ meant a bill of $1,000 or more failed to match and the
+ * entire bill was dropped from the import with no error — the payment was never
+ * matched to an invoice and never paid to a therapist.
+ */
+const MONEY = String.raw`-?[\d,]+(?:\.\d+)?`;
+
 const SERVICE_LINE =
   new RegExp(
-    `(\\d{6})\\s+(\\d{6})\\s+([\\d.]+)\\s+(\\w+)\\s+([\\d.]+)\\s+([\\d.]+)\\s+([\\d.]+)\\s+([\\d.]+)${EOB_CODE_SUFFIX}?`,
+    `(\\d{6})\\s+(\\d{6})\\s+(${MONEY})\\s+(\\w+)\\s+(${MONEY})\\s+(${MONEY})\\s+(${MONEY})\\s+(${MONEY})${EOB_CODE_SUFFIX}?`,
     "g",
   );
 
@@ -60,8 +70,17 @@ export function normalizeLniProviderId(value: string): string {
   return digits.padStart(7, "0");
 }
 
+/**
+ * Throws rather than returning NaN. A NaN reaching a Decimal column fails the write
+ * with an opaque Prisma error, and one reaching the serviceLines JSON is stored as
+ * null — a silently wrong amount, which is worse than a refused import.
+ */
 function parseMoney(value: string): number {
-  return Number.parseFloat(value.replace(/,/g, ""));
+  const amount = Number.parseFloat(value.replace(/,/g, ""));
+  if (!Number.isFinite(amount)) {
+    throw new Error(`Could not read a dollar amount from "${value}" in the remittance PDF.`);
+  }
+  return amount;
 }
 
 function parseServiceDate(mmddyy: string): string {
@@ -134,7 +153,9 @@ function parseBillTotal(text: string): {
   payable: number;
 } | null {
   const match = text.match(
-    /\*\*\*BILL TOTAL \. \. \.\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)/,
+    new RegExp(
+      `\\*\\*\\*BILL TOTAL \\. \\. \\.\\s+(${MONEY})\\s+(${MONEY})\\s+(${MONEY})\\s+(${MONEY})`,
+    ),
   );
   if (!match) return null;
   return {
@@ -162,7 +183,7 @@ function parseServiceLineFromClaimRow(match: RegExpMatchArray): RemittanceServic
 function extractEobAfterBillTotal(patAndTotal: string): string | undefined {
   const match = patAndTotal.match(
     new RegExp(
-      `\\*\\*\\*BILL TOTAL \\. \\. \\.\\s+[\\d.]+\\s+[\\d.]+\\s+[\\d.]+\\s+[\\d.]+${EOB_CODE_SUFFIX}(?=\\s+(?:PAT|${CLAIM_NUMBER.source}))`,
+      `\\*\\*\\*BILL TOTAL \\. \\. \\.\\s+${MONEY}\\s+${MONEY}\\s+${MONEY}\\s+${MONEY}${EOB_CODE_SUFFIX}(?=\\s+(?:PAT|${CLAIM_NUMBER.source}))`,
       "i",
     ),
   );
@@ -220,7 +241,7 @@ function parseBillChunk(
   const billBody = beforeIcn.slice(claimStart);
   const claimLineMatch = billBody.match(
     new RegExp(
-      `^(${CLAIM_NUMBER.source})\\s+(.+?)\\s+(\\d{6})\\s+(\\d{6})\\s+([\\d.]+)\\s+(\\w+)\\s+([\\d.]+)\\s+([\\d.]+)\\s+([\\d.]+)\\s+([\\d.]+)${EOB_CODE_SUFFIX}?`,
+      `^(${CLAIM_NUMBER.source})\\s+(.+?)\\s+(\\d{6})\\s+(\\d{6})\\s+(${MONEY})\\s+(\\w+)\\s+(${MONEY})\\s+(${MONEY})\\s+(${MONEY})\\s+(${MONEY})${EOB_CODE_SUFFIX}?`,
     ),
   );
   if (!claimLineMatch) return null;
@@ -532,9 +553,15 @@ export function parseLniRemittanceText(
     normalized.match(/PAYEE NAME:\s*([^]+?)\s+GRANDVIEW COUNSELING/i)?.[1]?.trim() ??
     "GRANDVIEW COUNSELING LLC";
 
-  const totalPaid = parseMoney(
-    normalized.match(/\*\*\*\*\*\* TOTAL AMOUNT \*\*\*\*\*\*\s+([\d,.]+)/i)?.[1] ?? "0",
-  );
+  // Every other header field throws when absent; defaulting this one to "0" quietly
+  // recorded a $0 remittance whose bills nonetheless summed to real money.
+  const totalPaidRaw = normalized.match(
+    new RegExp(`\\*\\*\\*\\*\\*\\* TOTAL AMOUNT \\*\\*\\*\\*\\*\\*\\s+(${MONEY})`, "i"),
+  )?.[1];
+  if (!totalPaidRaw) {
+    throw new Error("Could not read the TOTAL AMOUNT line from the remittance PDF.");
+  }
+  const totalPaid = parseMoney(totalPaidRaw);
 
   const detailStart = normalized.search(/REMITTANCE ADVICE DETAIL/i);
   const detailText = detailStart >= 0 ? normalized.slice(detailStart) : normalized;
