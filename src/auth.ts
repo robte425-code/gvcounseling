@@ -5,6 +5,14 @@ import { authConfig } from "@/auth.config";
 import { getRealRole, getRealUserId, isImpersonating } from "@/lib/session";
 import { verifyPassword } from "@/lib/password";
 import { prisma } from "@/lib/prisma";
+import { isRateLimited, recordRateLimitedAttempt } from "@/lib/rate-limit";
+
+/** Keyed on the address rather than the caller's IP, which is attacker-chosen. */
+const LOGIN_MAX_FAILURES = 10;
+const LOGIN_WINDOW_MS = 15 * 60 * 1000;
+function loginRateLimitKey(email: string): string {
+  return `login:${email}`;
+}
 
 export { getRealRole, getRealUserId, isImpersonating, portalHomePath } from "@/lib/session";
 
@@ -22,12 +30,25 @@ export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
         const password = credentials?.password?.toString();
         if (!email || !password) return null;
 
+        // Nothing throttled sign-in, so an address could be guessed against
+        // indefinitely with only bcrypt's cost as a brake. Only wrong guesses are
+        // charged, so signing in normally never runs the budget down.
+        if (await isRateLimited(loginRateLimitKey(email), LOGIN_MAX_FAILURES, LOGIN_WINDOW_MS)) {
+          return null;
+        }
+
         const user = await prisma.user.findUnique({ where: { email } });
-        if (!user) return null;
+        if (!user) {
+          await recordRateLimitedAttempt(loginRateLimitKey(email), LOGIN_WINDOW_MS);
+          return null;
+        }
         if (user.role === "THERAPIST" && !user.active) return null;
 
         const valid = await verifyPassword(password, user.passwordHash);
-        if (!valid) return null;
+        if (!valid) {
+          await recordRateLimitedAttempt(loginRateLimitKey(email), LOGIN_WINDOW_MS);
+          return null;
+        }
 
         return {
           id: user.id,

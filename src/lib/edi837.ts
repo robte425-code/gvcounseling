@@ -100,9 +100,19 @@ function hiSegment(primary: string, additional: string[]): string {
   return seg("HI", parts.join("*"));
 }
 
+/**
+ * SV102 is the charge for the whole service line, not the price of one unit, and
+ * CLM02 is the sum of those. Emitting the per-unit fee alongside a unit count of
+ * 2 billed L&I half the line, and disagreed with the batch report the admin
+ * reviewed beforehand, which does multiply.
+ */
+function lineChargeAmount(line: { amount: number; units?: number }): number {
+  return Math.round(line.amount * (line.units ?? 1) * 100) / 100;
+}
+
 function buildClaim(hlNumber: number, claim: Edi837Claim): string {
   const { client, therapist, lines } = claim;
-  const total = lines.reduce((sum, l) => sum + l.amount, 0);
+  const total = Math.round(lines.reduce((sum, l) => sum + lineChargeAmount(l), 0) * 100) / 100;
   const demographicDate = client.dateOfBirth;
   const injuryDate = client.dateOfInjury ?? demographicDate;
 
@@ -164,7 +174,7 @@ function buildClaim(hlNumber: number, claim: Edi837Claim): string {
     out += seg(
       "SV1",
       `HC:${line.procedureCode}`,
-      formatAmount(line.amount),
+      formatAmount(lineChargeAmount(line)),
       "UN",
       String(line.units ?? 1),
       PLACE_OF_SERVICE,
@@ -275,10 +285,14 @@ export function buildEdi837(
   isa += gs;
   isa += seg("IEA", "1", isaControl);
 
-  const totalAmount = claims.reduce(
-    (sum, c) => sum + c.lines.reduce((s, l) => s + l.amount, 0),
-    0,
-  );
+  // Must agree with the CLM02 totals emitted above, so it uses the same line charge.
+  const totalAmount =
+    Math.round(
+      claims.reduce(
+        (sum, c) => sum + c.lines.reduce((s, l) => s + lineChargeAmount(l), 0),
+        0,
+      ) * 100,
+    ) / 100;
 
   return {
     content: isa,

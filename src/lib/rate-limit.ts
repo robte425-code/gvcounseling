@@ -63,3 +63,31 @@ export async function enforceRateLimit(
     throw new RateLimitError();
   }
 }
+
+/** True when the key has already used up its allowance, without spending any of it. */
+export async function isRateLimited(
+  key: string,
+  limit: number,
+  windowMs: number,
+): Promise<boolean> {
+  const bucket = await prisma.rateLimitBucket.findUnique({
+    where: { key_windowStart: { key, windowStart: windowStart(new Date(), windowMs) } },
+    select: { count: true },
+  });
+  return (bucket?.count ?? 0) >= limit;
+}
+
+/**
+ * Count one attempt against the key without enforcing.
+ *
+ * Lets sign-in charge only failures, so someone logging in normally is never
+ * throttled and the budget is spent solely by wrong guesses.
+ */
+export async function recordRateLimitedAttempt(key: string, windowMs: number): Promise<void> {
+  const start = windowStart(new Date(), windowMs);
+  await prisma.rateLimitBucket.upsert({
+    where: { key_windowStart: { key, windowStart: start } },
+    create: { key, windowStart: start, count: 1 },
+    update: { count: { increment: 1 } },
+  });
+}
