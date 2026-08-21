@@ -1,4 +1,4 @@
-import { calendarIsoFromDate, formatCalendarDate } from "@/lib/constants";
+import { formatCalendarDate } from "@/lib/constants";
 import { payPeriodLabel } from "@/lib/invoice-pay-period-grouping";
 import { excludeSyntheticSpreadsheetRemittancesWhere } from "@/lib/remittance-advice";
 import { prisma } from "@/lib/prisma";
@@ -43,8 +43,35 @@ export type PaycheckPayoutNote = {
   note: string | null;
 };
 
-function sameUtcDay(a: Date, b: Date): boolean {
-  return calendarIsoFromDate(a) === calendarIsoFromDate(b);
+type PayPeriodMatch = { id: string; paymentDate: Date | null };
+
+/**
+ * L&I pays on its own schedule, so a remittance's payment date often lands a day
+ * or two off the pay period's expected paymentDate. Matching on an exact date
+ * silently hid those paychecks, so resolve to the closest pay period instead.
+ *
+ * Pay periods are two weeks apart, so a window of half that keeps the nearest
+ * period unambiguous; beyond it, treat the remittance as belonging to no period.
+ */
+const PAY_PERIOD_MATCH_WINDOW_DAYS = 7;
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+function resolvePayPeriodForPaymentDate<T extends PayPeriodMatch>(
+  payPeriods: T[],
+  remittancePaymentDate: Date,
+): T | null {
+  let best: T | null = null;
+  let bestDistance = Infinity;
+  for (const period of payPeriods) {
+    if (!period.paymentDate) continue;
+    const distance = Math.abs(period.paymentDate.getTime() - remittancePaymentDate.getTime());
+    if (distance < bestDistance) {
+      bestDistance = distance;
+      best = period;
+    }
+  }
+  if (!best || bestDistance > PAY_PERIOD_MATCH_WINDOW_DAYS * MS_PER_DAY) return null;
+  return best;
 }
 
 function payoutTherapistName(therapist: { firstName: string; lastName: string }): string {
@@ -100,12 +127,6 @@ export async function loadPaycheckSummaries(options?: {
     }),
   ]);
 
-  const payPeriodByPaymentDate = new Map<string, (typeof payPeriods)[number]>();
-  for (const period of payPeriods) {
-    if (!period.paymentDate) continue;
-    payPeriodByPaymentDate.set(calendarIsoFromDate(period.paymentDate), period);
-  }
-
   const grouped = new Map<
     string,
     {
@@ -123,7 +144,7 @@ export async function loadPaycheckSummaries(options?: {
 
   for (const payout of payouts) {
     const remittance = payout.payRun.remittanceAdvice;
-    const period = payPeriodByPaymentDate.get(calendarIsoFromDate(remittance.invoiceDate));
+    const period = resolvePayPeriodForPaymentDate(payPeriods, remittance.invoiceDate);
     if (!period) continue;
 
     const key = `${period.id}:${payout.therapistId}`;
@@ -191,10 +212,13 @@ export async function loadPaycheckDetail(options: {
   payoutNotes: PaycheckPayoutNote[];
   invoices: PaycheckInvoiceRow[];
 } | null> {
-  const payPeriod = await prisma.payPeriod.findUnique({
-    where: { id: options.payPeriodId },
+  // Every pay period is needed, not just the requested one: a remittance belongs
+  // to whichever period is closest, so that can only be decided against all of them.
+  const allPayPeriods = await prisma.payPeriod.findMany({
+    where: { paymentDate: { not: null } },
     select: { id: true, label: true, cutoffDate: true, paymentDate: true },
   });
+  const payPeriod = allPayPeriods.find((period) => period.id === options.payPeriodId);
   if (!payPeriod?.paymentDate) return null;
 
   const payouts = await prisma.therapistPayRunPayout.findMany({
@@ -236,8 +260,10 @@ export async function loadPaycheckDetail(options: {
     },
   });
 
-  const matchingPayouts = payouts.filter((payout) =>
-    sameUtcDay(payout.payRun.remittanceAdvice.invoiceDate, payPeriod.paymentDate!),
+  const matchingPayouts = payouts.filter(
+    (payout) =>
+      resolvePayPeriodForPaymentDate(allPayPeriods, payout.payRun.remittanceAdvice.invoiceDate)
+        ?.id === payPeriod.id,
   );
   if (!matchingPayouts.length) return null;
 
