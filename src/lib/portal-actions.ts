@@ -57,6 +57,7 @@ import { getSiteUrl } from "@/lib/site-url";
 import { fetchLniPayPeriods } from "@/lib/lni-pay-periods";
 import { createProcedureCodeFee, createTherapistProcedureCodeFee, updateTherapistProcedureCodeFee, applyTherapistFeeSchedule } from "@/lib/procedure-fees";
 import { prisma } from "@/lib/prisma";
+import { storeNotifyBatchResult } from "@/lib/notify-batch-results";
 import {
   getVrcOutboundEmailRoute,
   parseOutboundEmailRoute,
@@ -1078,26 +1079,20 @@ export async function emailVrcsForPayPeriodAction(formData: FormData) {
 
   revalidatePath("/portal/admin/billing");
 
-  const params = new URLSearchParams();
-  params.set("vrcEmailed", "1");
-  params.set("sent", String(result.sent));
-  const preview = result.sentDetails.slice(0, 3);
-  if (preview.length) {
-    params.set("vrcRecipients", preview.join(";;"));
-  }
-  const more = Math.max(0, result.sentDetails.length - preview.length);
-  if (more > 0) params.set("vrcMore", String(more));
-  if (result.adminCc.length) {
-    params.set("vrcAdminCc", result.adminCc.join(", "));
-  }
-  if (result.skipped.length) {
-    params.set("vrcSkipped", result.skipped.slice(0, 5).join(";;"));
-  }
-  if (result.errors.length) {
-    params.set("vrcErrors", result.errors.slice(0, 5).join(";;"));
-  }
+  // Held server-side: these lines carry patient names, claim numbers, and VRC
+  // addresses, which must not travel in a query string. The full list is shown
+  // now rather than the first few, since there is no longer a length concern.
+  const resultId = await storeNotifyBatchResult({
+    kind: "vrc",
+    sent: result.sent,
+    recipients: result.sentDetails,
+    more: 0,
+    adminCc: result.adminCc,
+    skipped: result.skipped,
+    errors: result.errors,
+  });
 
-  redirect(`/portal/admin/billing?${params.toString()}#notify-results`);
+  redirect(`/portal/admin/billing?notifyResult=${resultId}#notify-results`);
 }
 
 export async function faxLniForPayPeriodAction(formData: FormData) {
@@ -1112,23 +1107,17 @@ export async function faxLniForPayPeriodAction(formData: FormData) {
 
   revalidatePath("/portal/admin/billing");
 
-  const params = new URLSearchParams();
-  params.set("lniFaxed", "1");
-  params.set("faxSent", String(result.sent));
-  const preview = result.sentDetails.slice(0, 3);
-  if (preview.length) {
-    params.set("lniFaxRecipients", preview.join(";;"));
-  }
-  const more = Math.max(0, result.sentDetails.length - preview.length);
-  if (more > 0) params.set("lniFaxMore", String(more));
-  if (result.skipped.length) {
-    params.set("lniFaxSkipped", result.skipped.slice(0, 5).join(";;"));
-  }
-  if (result.errors.length) {
-    params.set("lniFaxErrors", result.errors.slice(0, 5).join(";;"));
-  }
+  const resultId = await storeNotifyBatchResult({
+    kind: "fax",
+    sent: result.sent,
+    recipients: result.sentDetails,
+    more: 0,
+    adminCc: [],
+    skipped: result.skipped,
+    errors: result.errors,
+  });
 
-  redirect(`/portal/admin/billing?${params.toString()}#notify-results`);
+  redirect(`/portal/admin/billing?notifyResult=${resultId}#notify-results`);
 }
 
 export async function assignClientTherapistAction(formData: FormData) {

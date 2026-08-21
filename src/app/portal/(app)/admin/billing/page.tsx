@@ -17,6 +17,7 @@ import {
 } from "@/components/portal/ui";
 import { formatCalendarDate } from "@/lib/constants";
 import { prisma } from "@/lib/prisma";
+import { consumeNotifyBatchResult } from "@/lib/notify-batch-results";
 import { BillingJumpNav } from "@/components/portal/BillingJumpNav";
 import { LniFeesSection } from "@/components/portal/LniFeesSection";
 import { Billing837SubmissionHistory } from "@/components/portal/Billing837SubmissionHistory";
@@ -30,19 +31,7 @@ export default async function BillingPage({
     created?: string;
     updated?: string;
     total?: string;
-    vrcEmailed?: string;
-    sent?: string;
-    vrcRecipients?: string;
-    vrcMore?: string;
-    vrcAdminCc?: string;
-    vrcSkipped?: string;
-    vrcErrors?: string;
-    lniFaxed?: string;
-    faxSent?: string;
-    lniFaxRecipients?: string;
-    lniFaxMore?: string;
-    lniFaxSkipped?: string;
-    lniFaxErrors?: string;
+    notifyResult?: string;
   }>;
 }) {
   await requireAdmin();
@@ -92,20 +81,24 @@ export default async function BillingPage({
       ? `Synced ${params.total ?? "0"} pay periods from L&I (${params.created ?? "0"} new, ${params.updated ?? "0"} updated).`
       : null;
 
-  const vrcEmailRan = params.vrcEmailed === "1";
-  const vrcSentCount = params.sent ?? "0";
-  const vrcRecipients = params.vrcRecipients?.split(";;").filter(Boolean) ?? [];
-  const vrcMore = Number(params.vrcMore ?? "0");
-  const vrcAdminCc = params.vrcAdminCc?.trim() ?? "";
-  const vrcSkipped = params.vrcSkipped?.split(";;").filter(Boolean) ?? [];
-  const vrcErrors = params.vrcErrors?.split(";;").filter(Boolean) ?? [];
+  // Read once from the server-side store; the URL carries only an opaque id so
+  // patient names and claim numbers stay out of logs and browser history.
+  const notifyResult = await consumeNotifyBatchResult(params.notifyResult);
 
-  const lniFaxRan = params.lniFaxed === "1";
-  const faxSentCount = Number(params.faxSent ?? "0");
-  const lniFaxRecipients = params.lniFaxRecipients?.split(";;").filter(Boolean) ?? [];
-  const lniFaxMore = Number(params.lniFaxMore ?? "0");
-  const lniFaxSkipped = params.lniFaxSkipped?.split(";;").filter(Boolean) ?? [];
-  const lniFaxErrors = params.lniFaxErrors?.split(";;").filter(Boolean) ?? [];
+  const vrcEmailRan = notifyResult?.kind === "vrc";
+  const vrcSentCount = vrcEmailRan ? String(notifyResult.sent) : "0";
+  const vrcRecipients = vrcEmailRan ? notifyResult.recipients : [];
+  const vrcMore = vrcEmailRan ? notifyResult.more : 0;
+  const vrcAdminCc = vrcEmailRan ? notifyResult.adminCc.join(", ") : "";
+  const vrcSkipped = vrcEmailRan ? notifyResult.skipped : [];
+  const vrcErrors = vrcEmailRan ? notifyResult.errors : [];
+
+  const lniFaxRan = notifyResult?.kind === "fax";
+  const faxSentCount = lniFaxRan ? notifyResult.sent : 0;
+  const lniFaxRecipients = lniFaxRan ? notifyResult.recipients : [];
+  const lniFaxMore = lniFaxRan ? notifyResult.more : 0;
+  const lniFaxSkipped = lniFaxRan ? notifyResult.skipped : [];
+  const lniFaxErrors = lniFaxRan ? notifyResult.errors : [];
 
   const hasAlerts = Boolean(
     syncMessage ||
