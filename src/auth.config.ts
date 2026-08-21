@@ -15,7 +15,10 @@ type AdminSnapshot = {
 
 export const authConfig = {
   trustHost: true,
-  session: { strategy: "jwt" },
+  // Auth.js defaults to a 30-day idle expiry that refreshes on every use, so a
+  // session could live indefinitely. Revocation is enforced per request against
+  // the database in auth.ts; this bounds how long a stolen token stays useful.
+  session: { strategy: "jwt", maxAge: 7 * 24 * 60 * 60 },
   pages: {
     signIn: "/portal/login",
   },
