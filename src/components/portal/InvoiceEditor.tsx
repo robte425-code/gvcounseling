@@ -111,12 +111,17 @@ export function InvoiceEditor({
     submitInitialState,
   );
 
+  // Returns the same object when the price is unchanged. Repricing must be idempotent:
+  // the server rebuilds therapistFeeSchedule on every render, so a new object here would
+  // change `lines`, which retriggers the parent's autosave, which refreshes — forever.
   function priceLine(line: LineItem): LineItem {
     if (!therapistFeeSchedule?.length || !line.serviceDate || !line.procedureCode) {
       return line;
     }
     const amount = resolveFeeAmount(therapistFeeSchedule, line.procedureCode, line.serviceDate);
-    return { ...line, amount: amount !== null ? amount.toFixed(2) : "" };
+    const priced = amount !== null ? amount.toFixed(2) : "";
+    if (priced === line.amount) return line;
+    return { ...line, amount: priced };
   }
 
   const [clientId, setClientId] = useState(
@@ -128,7 +133,13 @@ export function InvoiceEditor({
 
   useEffect(() => {
     if (!usesTherapistFees) return;
-    setLines((prev) => prev.map(priceLine));
+    // Idempotent: returns the same array when nothing repriced, so this settles after one
+    // pass rather than cascading — which is the failure the rule below guards against.
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- see above
+    setLines((prev) => {
+      const next = prev.map(priceLine);
+      return next.every((line, i) => line === prev[i]) ? prev : next;
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- reprice when fee schedule loads
   }, [therapistFeeSchedule]);
 
