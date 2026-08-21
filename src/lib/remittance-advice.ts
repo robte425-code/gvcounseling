@@ -378,7 +378,15 @@ export async function revertAppliedRemittance(remittanceAdviceId: string): Promi
     where: { id: remittanceAdviceId },
     include: {
       lines: { select: { matchedInvoiceId: true } },
-      payRun: { select: { status: true } },
+      payRun: {
+        select: {
+          status: true,
+          payouts: {
+            where: { wireSentAt: { not: null } },
+            select: { therapist: { select: { firstName: true, lastName: true } } },
+          },
+        },
+      },
     },
   });
 
@@ -389,6 +397,19 @@ export async function revertAppliedRemittance(remittanceAdviceId: string): Promi
   if (remittance.payRun?.status === "FINALIZED") {
     throw new Error(
       "Cannot revert a remittance with finalized therapist pay. Unfinalize is not supported.",
+    );
+  }
+  // Deleting the remittance cascades to the pay run and its payouts, which is where the
+  // wire date and BECU confirmation number live — the only record that money left the
+  // account. Wires are recorded while the pay run is still DRAFT, so the finalized check
+  // above does not cover this.
+  const wired = remittance.payRun?.payouts ?? [];
+  if (wired.length > 0) {
+    const names = wired
+      .map((payout) => `${payout.therapist.firstName} ${payout.therapist.lastName}`.trim())
+      .join(", ");
+    throw new Error(
+      `Cannot revert: a wire is already recorded for ${names}. Clear the recorded wire first if the wire was not actually sent.`,
     );
   }
 
