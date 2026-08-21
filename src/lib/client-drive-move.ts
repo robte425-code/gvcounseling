@@ -4,6 +4,7 @@ import {
   moveDriveFolder,
   resolveNewReferralsFolderId,
   resolveTherapistFolderForUser,
+  revokeDriveItemFromUser,
   shareDriveItemWithUser,
 } from "@/lib/google-drive";
 import { getSystemDriveAccessToken } from "@/lib/google-drive-system";
@@ -26,6 +27,28 @@ export async function ensureClientDriveFolderSharedWithTherapist(
     await shareDriveItemWithUser(accessToken, driveFolderId, therapist.email, "writer");
   } catch (error) {
     console.error("Drive folder share with therapist failed:", error);
+  }
+}
+
+/**
+ * Withdraw a therapist's Drive access to a client folder.
+ *
+ * Call when a client leaves them — reassignment, or the therapist being removed.
+ * Grants used to be one way, so access outlived the assignment indefinitely,
+ * including to notes the next therapist wrote afterwards.
+ */
+export async function revokeClientDriveFolderFromTherapist(
+  driveFolderId: string | null | undefined,
+  therapistEmail: string | null | undefined,
+): Promise<void> {
+  if (!driveFolderId || !therapistEmail) return;
+
+  try {
+    const { accessToken } = await getSystemDriveAccessToken();
+    await revokeDriveItemFromUser(accessToken, driveFolderId, therapistEmail);
+  } catch (error) {
+    // Never block the reassignment itself; the folder move is what the admin asked for.
+    console.error("Drive folder revoke from therapist failed:", error);
   }
 }
 

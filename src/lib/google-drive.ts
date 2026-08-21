@@ -633,6 +633,43 @@ export async function shareDriveItemWithUser(
   }
 }
 
+/**
+ * Withdraw a person's direct access to a Drive folder.
+ *
+ * The counterpart to shareDriveItemWithUser, which had none — grants were one
+ * way, so a therapist kept read and write access to a client's session notes
+ * after the client was reassigned or the therapist left the practice.
+ *
+ * Only removes that person's own user permission; inherited and owner
+ * permissions are left alone.
+ */
+export async function revokeDriveItemFromUser(
+  accessToken: string,
+  fileId: string,
+  email: string,
+): Promise<void> {
+  const trimmed = email.trim().toLowerCase();
+  if (!trimmed) return;
+
+  const { permissions } = await driveJson<{
+    permissions?: { id: string; type?: string; role?: string; emailAddress?: string }[];
+  }>(
+    accessToken,
+    `/files/${fileId}/permissions?supportsAllDrives=true&fields=permissions(id,type,role,emailAddress)`,
+  );
+
+  for (const permission of permissions ?? []) {
+    if (permission.type !== "user") continue;
+    if (permission.role === "owner") continue;
+    if (permission.emailAddress?.trim().toLowerCase() !== trimmed) continue;
+    await driveJson(
+      accessToken,
+      `/files/${fileId}/permissions/${permission.id}?supportsAllDrives=true`,
+      { method: "DELETE" },
+    );
+  }
+}
+
 export async function getDriveFolderParentIds(
   accessToken: string,
   folderId: string,

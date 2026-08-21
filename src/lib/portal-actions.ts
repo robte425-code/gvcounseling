@@ -16,11 +16,22 @@ import type { ClientAssignmentStatus } from "@/generated/prisma/client";
 import { Gender } from "@/generated/prisma/client";
 import { formatCalendarDate, parseClaimNumber } from "@/lib/constants";
 import { todayInBusinessZone } from "@/lib/invoice-pay-period-grouping";
-import { moveClientDriveFolderToClosedCases, moveClientDriveFolderToNewReferrals, moveClientDriveFolderToTherapist } from "@/lib/client-drive-move";
+import {
+  moveClientDriveFolderToClosedCases,
+  moveClientDriveFolderToNewReferrals,
+  moveClientDriveFolderToTherapist,
+  revokeClientDriveFolderFromTherapist,
+} from "@/lib/client-drive-move";
 import { canAdminCloseClient, canTherapistCloseClient } from "@/lib/client-assignment-status";
 import { recordClientStatusChange, type ClientStatusChangeAction } from "@/lib/client-status-change";
 import { formatVrcAcceptanceNote } from "@/lib/client-notes";
-import { ensureTherapistDriveFolder, removeTherapistDriveFolder, deleteInvoiceDriveAttachments, trashClientDriveFolder } from "@/lib/google-drive";
+import {
+  ensureTherapistDriveFolder,
+  removeTherapistDriveFolder,
+  deleteInvoiceDriveAttachments,
+  revokeDriveItemFromUser,
+  trashClientDriveFolder,
+} from "@/lib/google-drive";
 import { getDriveAccessTokenForClient } from "@/lib/google-drive-access";
 import { getSystemDriveAccessToken } from "@/lib/google-drive-system";
 import {
@@ -547,13 +558,26 @@ export async function saveClientAction(formData: FormData) {
     }
   }
 
-  if (isAdmin && therapistChanged && existing?.driveFolderId && therapistId) {
-    const therapist = await prisma.user.findUnique({
-      where: { id: therapistId, role: "THERAPIST", active: true },
-      select: { email: true, firstName: true, lastName: true },
-    });
-    if (therapist) {
-      await moveClientDriveFolderToTherapist(existing.driveFolderId, therapist);
+  if (isAdmin && therapistChanged && existing?.driveFolderId) {
+    // Withdraw the outgoing therapist first. Sharing was one way, so without this
+    // they keep read and write access to the client's session notes forever,
+    // including whatever the next therapist writes.
+    if (existing.therapistId && existing.therapistId !== therapistId) {
+      const previous = await prisma.user.findUnique({
+        where: { id: existing.therapistId },
+        select: { email: true },
+      });
+      await revokeClientDriveFolderFromTherapist(existing.driveFolderId, previous?.email);
+    }
+
+    if (therapistId) {
+      const therapist = await prisma.user.findUnique({
+        where: { id: therapistId, role: "THERAPIST", active: true },
+        select: { email: true, firstName: true, lastName: true },
+      });
+      if (therapist) {
+        await moveClientDriveFolderToTherapist(existing.driveFolderId, therapist);
+      }
     }
   }
 
@@ -2093,9 +2117,20 @@ export async function deleteTherapistAction(formData: FormData) {
     throw new Error(`Cannot delete: therapist has ${invoiceCount} invoice(s).`);
   }
 
+  // Their client folders move to New Referrals below, but the per-folder grants
+  // are separate from the folder tree — removing the therapist folder never
+  // touched them, so a deleted account kept Drive access to every client it had.
+  const assignedClients = await prisma.client.findMany({
+    where: { therapistId: id, driveFolderId: { not: null } },
+    select: { driveFolderId: true },
+  });
+
   let driveWarning: string | undefined;
   try {
     const { accessToken } = await getSystemDriveAccessToken();
+    for (const client of assignedClients) {
+      await revokeDriveItemFromUser(accessToken, client.driveFolderId!, therapist.email);
+    }
     await removeTherapistDriveFolder(accessToken, therapist);
   } catch (e) {
     driveWarning =
