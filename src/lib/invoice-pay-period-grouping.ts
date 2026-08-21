@@ -1,4 +1,9 @@
-import { calendarIsoFromDate, formatCalendarIso, formatCalendarDate } from "@/lib/constants";
+import {
+  BUSINESS_TIME_ZONE,
+  calendarIsoFromDate,
+  formatCalendarIso,
+  formatCalendarDate,
+} from "@/lib/constants";
 
 export type PayPeriodGroupableInvoice = {
   invoiceNumber: number;
@@ -18,8 +23,28 @@ const UNASSIGNED_GROUP_KEY = "__unassigned__";
 
 export { UNASSIGNED_GROUP_KEY };
 
+/** Normalize a calendar date (already stored as UTC midnight) to UTC midnight. */
 export function startOfUtcDay(date = new Date()): Date {
   return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+}
+
+/**
+ * Today's calendar date where the business is, as UTC midnight so it compares
+ * directly against calendar-date columns.
+ *
+ * Not startOfUtcDay(new Date()): that reads the UTC components of the current
+ * instant, so "today" rolls over at 5pm Pacific and cutoff-day work lands in the
+ * following pay period.
+ */
+export function todayInBusinessZone(now = new Date()): Date {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: BUSINESS_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(now);
+  const value = (type: string) => Number(parts.find((part) => part.type === type)?.value);
+  return new Date(Date.UTC(value("year"), value("month") - 1, value("day")));
 }
 
 export function formatInvoiceServiceDates(lineItems: { serviceDate: Date }[]): string {

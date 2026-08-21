@@ -6,15 +6,12 @@ import { portalButtonClass, portalCardClass, portalSectionHeadingClass, StatusBa
 import { formatCurrency, formatCalendarDate } from "@/lib/constants";
 import { loadPaycheckSummaries } from "@/lib/paychecks";
 import { prisma } from "@/lib/prisma";
-
-function startOfUtcDay(date = new Date()): Date {
-  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
-}
+import { todayInBusinessZone } from "@/lib/invoice-pay-period-grouping";
 
 export default async function TherapistDashboardPage() {
   const session = await requireTherapist();
   const therapistId = session.user.id;
-  const today = startOfUtcDay();
+  const today = todayInBusinessZone();
 
   const nextPayPeriod = await prisma.payPeriod.findFirst({
     where: { cutoffDate: { gte: today } },

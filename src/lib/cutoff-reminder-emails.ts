@@ -2,7 +2,7 @@ import {
   sendAdminCutoffReminderEmail,
   sendTherapistCutoffReminderEmail,
 } from "@/lib/portal-workflow-emails";
-import { startOfUtcDay } from "@/lib/invoice-pay-period-grouping";
+import { todayInBusinessZone } from "@/lib/invoice-pay-period-grouping";
 import {
   getCutoffReminderDays,
   markCutoffReminderSent,
@@ -41,7 +41,7 @@ export async function findPayPeriodsDueForCutoffReminder(options?: {
       ? { earlierDays: options.earlierDays, laterDays: options.laterDays }
       : await getCutoffReminderDays();
 
-  const today = startOfUtcDay(options?.now ?? new Date());
+  const today = todayInBusinessZone(options?.now ?? new Date());
   const offsets = [...new Set([days.earlierDays, days.laterDays])];
   const targetDates = offsets.map((daysBefore) => ({
     daysBefore,

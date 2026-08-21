@@ -13,7 +13,7 @@ import {
   formatInvoiceServiceDates,
   payPeriodLabel,
   payPeriodSortKey,
-  startOfUtcDay,
+  todayInBusinessZone,
 } from "@/lib/invoice-pay-period-grouping";
 import {
   buildAdminInvoicesHref,
@@ -163,7 +163,7 @@ export default async function AdminInvoicesPage({
   const params = await searchParams;
   const filters = parseInvoiceFilters(params);
   const returnTo = buildAdminInvoicesHref(filters);
-  const today = startOfUtcDay();
+  const today = todayInBusinessZone();
 
   const [invoices, unassignedInvoices, payPeriods, therapists, nextPayPeriod] = await Promise.all([
     prisma.invoice.findMany({

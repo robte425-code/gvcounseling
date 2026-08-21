@@ -15,7 +15,7 @@ import type { ImpersonationUpdate } from "@/types/next-auth";
 import type { ClientAssignmentStatus } from "@/generated/prisma/client";
 import { Gender } from "@/generated/prisma/client";
 import { formatCalendarDate, parseClaimNumber } from "@/lib/constants";
-import { startOfUtcDay } from "@/lib/invoice-pay-period-grouping";
+import { todayInBusinessZone } from "@/lib/invoice-pay-period-grouping";
 import { moveClientDriveFolderToClosedCases, moveClientDriveFolderToNewReferrals, moveClientDriveFolderToTherapist } from "@/lib/client-drive-move";
 import { canAdminCloseClient, canTherapistCloseClient } from "@/lib/client-assignment-status";
 import { recordClientStatusChange, type ClientStatusChangeAction } from "@/lib/client-status-change";
@@ -1458,7 +1458,7 @@ export async function recordTherapistPayoutWireAction(
   if (!wireSentAt) return { error: "Enter the date the wire was sent." };
 
   // A wire cannot have been sent in the future; guard against a typo'd year.
-  const todayUtc = startOfUtcDay();
+  const todayUtc = todayInBusinessZone();
   if (wireSentAt.getTime() > todayUtc.getTime()) {
     return { error: "Wire date cannot be in the future." };
   }

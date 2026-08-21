@@ -1,5 +1,5 @@
 import { sendAdminPaymentDueReminderEmail } from "@/lib/portal-workflow-emails";
-import { startOfUtcDay } from "@/lib/invoice-pay-period-grouping";
+import { startOfUtcDay, todayInBusinessZone } from "@/lib/invoice-pay-period-grouping";
 import {
   markPaymentDueReminderSent,
   wasPaymentDueReminderSent,
@@ -43,7 +43,7 @@ export async function findPayPeriodsDueForPaymentReminder(options?: {
   }>
 > {
   const daysBefore = options?.daysBefore ?? PAYMENT_DUE_REMINDER_DAYS_BEFORE;
-  const today = startOfUtcDay(options?.now ?? new Date());
+  const today = todayInBusinessZone(options?.now ?? new Date());
   const targetPaymentDate = addUtcDays(today, daysBefore);
 
   const payPeriods = await prisma.payPeriod.findMany({
