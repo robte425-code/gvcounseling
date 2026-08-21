@@ -4,12 +4,51 @@ import { requireAdmin } from "@/auth";
 import { parseClaimNumber } from "@/lib/constants";
 import { prisma } from "@/lib/prisma";
 
+/**
+ * Split one CSV row, honouring quoted fields.
+ *
+ * Splitting on bare commas meant a single quoted name like "Smith, John" shifted
+ * every later column by one, and the "Unknown" fallback then wrote that literal
+ * string in as a client's legal name.
+ */
+function splitCsvRow(line: string): string[] {
+  const cells: string[] = [];
+  let cell = "";
+  let inQuotes = false;
+
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i]!;
+    if (inQuotes) {
+      if (char === '"') {
+        // A doubled quote inside a quoted field is a literal quote.
+        if (line[i + 1] === '"') {
+          cell += '"';
+          i++;
+        } else {
+          inQuotes = false;
+        }
+      } else {
+        cell += char;
+      }
+    } else if (char === '"') {
+      inQuotes = true;
+    } else if (char === ",") {
+      cells.push(cell.trim());
+      cell = "";
+    } else {
+      cell += char;
+    }
+  }
+  cells.push(cell.trim());
+  return cells;
+}
+
 function parseCsv(text: string): Record<string, string>[] {
   const lines = text.trim().split(/\r?\n/);
   if (lines.length < 2) return [];
-  const headers = lines[0]!.split(",").map((h) => h.trim().toLowerCase().replace(/\s+/g, "_"));
+  const headers = splitCsvRow(lines[0]!).map((h) => h.toLowerCase().replace(/\s+/g, "_"));
   return lines.slice(1).map((line) => {
-    const cols = line.split(",").map((c) => c.trim().replace(/^"|"$/g, ""));
+    const cols = splitCsvRow(line);
     const row: Record<string, string> = {};
     headers.forEach((h, i) => {
       row[h] = cols[i] ?? "";
