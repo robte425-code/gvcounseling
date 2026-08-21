@@ -61,7 +61,7 @@ import {
   type OutboundLniFaxRoute,
 } from "@/lib/portal-settings";
 import type { IsaUsageIndicator } from "@/lib/edi837";
-import { getNextInvoiceNumber } from "@/lib/invoice-numbers";
+import { createInvoiceWithNextNumber } from "@/lib/invoice-numbers";
 import { INVOICE_SUBMIT_REQUIRES_ATTACHMENT_MESSAGE } from "@/lib/invoice-form-data";
 import { parseTherapistInvoicesReturnTo } from "@/lib/invoice-list-filters";
 import { assertAdminCanDeleteInvoice } from "@/lib/invoice-delete-policy";
@@ -333,6 +333,16 @@ export async function deletePayPeriodAction(formData: FormData) {
   const invoices = await prisma.invoice.count({ where: { payPeriodId: id } });
   if (invoices > 0) {
     throw new Error("Cannot delete a pay period that has assigned invoices.");
+  }
+  // Edi837Submission cascades from the pay period, and it is the only record of
+  // what was transmitted to L&I — ISA control numbers, claim counts, file hashes.
+  // Reassigning a period's invoices elsewhere made it deletable and would have
+  // taken that audit trail with it.
+  const submissions = await prisma.edi837Submission.count({ where: { payPeriodId: id } });
+  if (submissions > 0) {
+    throw new Error(
+      `Cannot delete a pay period with ${submissions} recorded 837 submission${submissions === 1 ? "" : "s"}. That history is the record of what was billed to L&I.`,
+    );
   }
   await prisma.payPeriod.delete({ where: { id } });
   revalidatePath("/portal/admin/billing");
@@ -714,19 +724,21 @@ async function persistInvoiceFromFormData(
     });
     if (!client) throw new Error("Client not found.");
 
-    const invoice = await prisma.invoice.create({
-      data: {
-        therapistId: session.user.id,
-        clientId,
-        invoiceNumber: await getNextInvoiceNumber(prisma, session.user.id),
-        totalAmount,
-        status: "DRAFT",
-        lineItems: {
-          create: pricedLineItems.map((line) => ({ ...line, units: 1 })),
+    const invoice = await createInvoiceWithNextNumber(prisma, session.user.id, (invoiceNumber) =>
+      prisma.invoice.create({
+        data: {
+          therapistId: session.user.id,
+          clientId,
+          invoiceNumber,
+          totalAmount,
+          status: "DRAFT",
+          lineItems: {
+            create: pricedLineItems.map((line) => ({ ...line, units: 1 })),
+          },
         },
-      },
-      include: { client: true },
-    });
+        include: { client: true },
+      }),
+    );
 
     return { invoice, created: true as const };
   }
@@ -791,15 +803,17 @@ export async function createInvoiceDraftAction(clientId: string) {
   });
   if (!client) throw new Error("Client not found.");
 
-  const invoice = await prisma.invoice.create({
-    data: {
-      therapistId: session.user.id,
-      clientId,
-      invoiceNumber: await getNextInvoiceNumber(prisma, session.user.id),
-      totalAmount: 0,
-      status: "DRAFT",
-    },
-  });
+  const invoice = await createInvoiceWithNextNumber(prisma, session.user.id, (invoiceNumber) =>
+    prisma.invoice.create({
+      data: {
+        therapistId: session.user.id,
+        clientId,
+        invoiceNumber,
+        totalAmount: 0,
+        status: "DRAFT",
+      },
+    }),
+  );
 
   revalidatePath("/portal/therapist/invoices");
   revalidatePath("/portal/therapist/invoices/new");

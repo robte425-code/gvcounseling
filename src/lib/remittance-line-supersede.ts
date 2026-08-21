@@ -1,5 +1,5 @@
 import { calendarIsoFromDate } from "@/lib/constants";
-import { getNextInvoiceNumber } from "@/lib/invoice-numbers";
+import { createInvoiceWithNextNumber } from "@/lib/invoice-numbers";
 import type { RemittanceServiceLine } from "@/lib/parse-lni-remittance-pdf";
 import { rematchRemittanceAdvice } from "@/lib/remittance-advice";
 import { prisma } from "@/lib/prisma";
@@ -323,32 +323,38 @@ export async function createWrongYearRebillFromLine(lineId: string): Promise<Wro
     };
   }
 
-  const nextNumber = await getNextInvoiceNumber(prisma, source.therapistId);
-  await prisma.invoice.create({
-    data: {
-      therapistId: source.therapistId,
-      clientId: source.clientId,
-      invoiceNumber: nextNumber,
-      status: "BILLED",
-      paymentStatus: "UNPAID",
-      lniPaidAt: null,
-      lniEobCodes: [],
-      lniEobCodeDescriptions: {},
-      totalAmount: Number(source.totalAmount),
-      billedAt: source.billedAt,
-      submittedAt: null,
-      payPeriodId: null,
-      lineItems: {
-        create: lineItems.map((item) => ({
-          serviceDate: item.serviceDate,
-          procedureCode: item.procedureCode,
-          amount: item.amount,
-          units: item.units,
-          sortOrder: item.sortOrder,
-        })),
-      },
+  const nextNumber = await createInvoiceWithNextNumber(
+    prisma,
+    source.therapistId,
+    async (invoiceNumber) => {
+      await prisma.invoice.create({
+        data: {
+          therapistId: source.therapistId,
+          clientId: source.clientId,
+          invoiceNumber,
+          status: "BILLED",
+          paymentStatus: "UNPAID",
+          lniPaidAt: null,
+          lniEobCodes: [],
+          lniEobCodeDescriptions: {},
+          totalAmount: Number(source.totalAmount),
+          billedAt: source.billedAt,
+          submittedAt: null,
+          payPeriodId: null,
+          lineItems: {
+            create: lineItems.map((item) => ({
+              serviceDate: item.serviceDate,
+              procedureCode: item.procedureCode,
+              amount: item.amount,
+              units: item.units,
+              sortOrder: item.sortOrder,
+            })),
+          },
+        },
+      });
+      return invoiceNumber;
     },
-  });
+  );
 
   await rematchRemittanceAdvice(line.remittanceAdvice.id);
 

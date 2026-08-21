@@ -223,13 +223,20 @@ export async function finalizeTherapistPayRun(
     throw new Error("This therapist pay run is already finalized.");
   }
 
-  await prisma.therapistPayRun.update({
-    where: { id: remittance.payRun.id },
+  // Conditional on the status, so two concurrent submits cannot both pass the
+  // check above and both go on to email every therapist their payout summary —
+  // and those emails are what prompt the wire, so a duplicate invites a duplicate
+  // payment. The second writer updates zero rows and stops here.
+  const finalized = await prisma.therapistPayRun.updateMany({
+    where: { id: remittance.payRun.id, status: "DRAFT" },
     data: {
       status: "FINALIZED",
       finalizedAt: new Date(),
     },
   });
+  if (finalized.count === 0) {
+    throw new Error("This therapist pay run is already finalized.");
+  }
 
   if (!notifyTherapists) return;
 
