@@ -23,7 +23,11 @@ import {
   remittanceSectionToPaymentStatus,
 } from "@/lib/invoice-payment-status";
 import { RemittanceCrossVerifyPanel } from "@/components/portal/RemittanceCrossVerifyPanel";
-import { buildTherapistPayPreview, rematchUnresolvedRemittanceLines } from "@/lib/remittance-advice";
+import {
+  buildTherapistPayPreview,
+  findInvoicesAlreadyPaidToTherapist,
+  rematchUnresolvedRemittanceLines,
+} from "@/lib/remittance-advice";
 import { verifyRemittanceAgainstCounterpart } from "@/lib/remittance-cross-verify";
 import { remittanceSourceFormatLabel } from "@/lib/remittance-file-format";
 import {
@@ -277,6 +281,25 @@ export default async function PayRemittanceDetailPage({
 
   let therapistPayPreview: Awaited<ReturnType<typeof buildTherapistPayPreview>> = [];
   let therapistPayPreviewError: string | null = null;
+
+  // L&I re-reports a bill on a later warrant when an invoice spans billing cycles.
+  // Those no longer generate a second payout, but the admin should see which ones
+  // were held back rather than wonder why the total is lower than the bills.
+  const paidBillInvoiceIds = remittance.lines
+    .filter((line) => !line.supersededAt && line.section === "PAID" && line.matchedInvoiceId)
+    .map((line) => line.matchedInvoiceId!);
+  const alreadyPaidInvoiceIds = await findInvoicesAlreadyPaidToTherapist(paidBillInvoiceIds);
+  const alreadyPaidInvoiceNumbers = remittance.lines
+    .filter(
+      (line) =>
+        line.matchedInvoiceId &&
+        alreadyPaidInvoiceIds.has(line.matchedInvoiceId) &&
+        line.section === "PAID" &&
+        !line.supersededAt,
+    )
+    .map((line) => line.matchedInvoice?.invoiceNumber)
+    .filter((n): n is number => typeof n === "number");
+  const uniqueAlreadyPaid = [...new Set(alreadyPaidInvoiceNumbers)].sort((a, b) => a - b);
 
   if (remittance.status === "PREVIEW") {
     try {
@@ -852,6 +875,16 @@ export default async function PayRemittanceDetailPage({
             After apply, you can adjust each therapist’s final paycheck amount and add a note before
             finalizing and sending the wire transfer manually via BECU.
           </p>
+          {uniqueAlreadyPaid.length > 0 && (
+            <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-900" role="status">
+              {uniqueAlreadyPaid.length} bill{uniqueAlreadyPaid.length === 1 ? "" : "s"} on this
+              remittance {uniqueAlreadyPaid.length === 1 ? "is" : "are"} for invoice
+              {uniqueAlreadyPaid.length === 1 ? "" : "s"}{" "}
+              {uniqueAlreadyPaid.map((n) => `#${n}`).join(", ")}, already paid to the therapist on
+              an earlier remittance. L&I re-reported {uniqueAlreadyPaid.length === 1 ? "it" : "them"}
+              ; no second payout is created.
+            </p>
+          )}
           {therapistPayPreviewError && (
             <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900" role="alert">
               {therapistPayPreviewError}

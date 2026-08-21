@@ -61,6 +61,26 @@ export async function computeTherapistAmountForInvoice(
   return computeTherapistPayAmountForInvoice(invoice, feeRows);
 }
 
+/**
+ * Invoices that already produced a therapist payout on an earlier remittance.
+ *
+ * An invoice is paid in full or not at all, and L&I never splits one across
+ * warrants — so a second payout for the same invoice is always wrong. It happened
+ * because L&I re-reports a bill on a later warrant when it spans billing cycles,
+ * and the re-report was read as a fresh payment. Nine invoices were paid twice
+ * that way, $531.70 in total.
+ */
+export async function findInvoicesAlreadyPaidToTherapist(
+  invoiceIds: string[],
+): Promise<Set<string>> {
+  if (!invoiceIds.length) return new Set();
+  const existing = await prisma.therapistPayRunLine.findMany({
+    where: { invoiceId: { in: invoiceIds } },
+    select: { invoiceId: true },
+  });
+  return new Set(existing.map((line) => line.invoiceId));
+}
+
 export async function buildTherapistPayPreview(
   matches: MatchedRemittanceBill[],
 ): Promise<TherapistPayPreview[]> {
@@ -70,6 +90,7 @@ export async function buildTherapistPayPreview(
   if (!paidMatches.length) return [];
 
   const invoiceIds = paidMatches.map((match) => match.matchedInvoiceId!);
+  const alreadyPaid = await findInvoicesAlreadyPaidToTherapist(invoiceIds);
   const invoices = await prisma.invoice.findMany({
     where: { id: { in: invoiceIds } },
     include: {
@@ -107,6 +128,10 @@ export async function buildTherapistPayPreview(
   for (const match of paidMatches) {
     const invoice = invoiceById.get(match.matchedInvoiceId!);
     if (!invoice) continue;
+
+    // The bill still matches the invoice, so the invoice's L&I status reconciles
+    // normally; it just does not generate a second payout.
+    if (alreadyPaid.has(invoice.id)) continue;
 
     const therapistAmount = await computeTherapistAmountForInvoice(
       invoice,
