@@ -27,18 +27,34 @@ export function EditAttendingDoctorButton({ clientId, doctorName }: Props) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- mount flag for portal rendering; runs once
     setMounted(true);
   }, []);
 
+  // Seed the field when the dialog opens, and only then. Doing this in an effect that
+  // also depended on `saving` meant clicking Save re-ran it and wiped what was typed.
+  const [wasOpen, setWasOpen] = useState(open);
+  if (open !== wasOpen) {
+    setWasOpen(open);
+    if (open) {
+      setName(doctorName?.trim() ?? "");
+      setError(null);
+    }
+  }
+
+  // Escape must see the current `saving` without making it a dependency.
+  const savingRef = useRef(saving);
+  useEffect(() => {
+    savingRef.current = saving;
+  }, [saving]);
+
   useEffect(() => {
     if (!open) return;
-    setName(doctorName?.trim() ?? "");
-    setError(null);
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
 
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && !saving) {
+      if (event.key === "Escape" && !savingRef.current) {
         event.preventDefault();
         setOpen(false);
       }
@@ -53,7 +69,7 @@ export function EditAttendingDoctorButton({ clientId, doctorName }: Props) {
       window.removeEventListener("keydown", onKeyDown);
       window.clearTimeout(focusTimer);
     };
-  }, [open, doctorName, saving]);
+  }, [open]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();

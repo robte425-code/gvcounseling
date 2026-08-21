@@ -327,7 +327,7 @@ export async function searchAttendingNpiRegistry(options: {
   };
 
   const seenNpis = new Set<string>();
-  let providers: NpiRegistryProvider[] = [];
+  const providers: NpiRegistryProvider[] = [];
   const searchVariants: string[] = [];
   let lastError: string | undefined;
 

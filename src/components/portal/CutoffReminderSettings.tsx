@@ -29,6 +29,7 @@ export function CutoffReminderSettings({ earlierDays, laterDays }: Props) {
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- syncs saved values back into the inputs; string compare, inputs disabled while pending
     setEarlier(String(earlierDays));
     setLater(String(laterDays));
   }, [earlierDays, laterDays]);

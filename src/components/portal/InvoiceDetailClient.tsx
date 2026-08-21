@@ -69,12 +69,14 @@ export function InvoiceDetailClient({
     (!usesTherapistFees || !lines.some((line) => !line.amount));
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- mirrors saved service dates for the upload gate
     setPersistedServiceDates(savedServiceDates);
   }, [savedServiceDates]);
 
   useEffect(() => {
     // Merge instead of replace: a stale router.refresh() must not erase uploads
     // that already succeeded client-side (and are in the DB) before cache catches up.
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- merges server attachments without dropping just-uploaded ones; keyed on ids, not array identity
     setAttachmentItems((prev) => mergeUniqueAttachments(prev, attachments));
     // eslint-disable-next-line react-hooks/exhaustive-deps -- sync when server attachment ids change, not array reference
   }, [serverAttachmentIds]);

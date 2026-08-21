@@ -92,6 +92,7 @@ export function NewInvoiceClient({
       }
     }
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- resets draft state when the selected client changes
     setInvoiceId(null);
     setAttachments([]);
     setPersistedServiceDates([]);

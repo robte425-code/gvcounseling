@@ -81,6 +81,7 @@ export function PortalSidebar({ groups, siteLabel, footer, children }: PortalSid
   const pathname = usePathname();
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- closes the mobile drawer on navigation
     setMobileOpen(false);
   }, [pathname]);
 

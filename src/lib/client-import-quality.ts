@@ -462,7 +462,7 @@ function sanitizeReferral(
   context: ImportQualityContext,
   repairs: string[],
 ): ParsedReferral {
-  let next = { ...referral, diagnoses: [...referral.diagnoses] };
+  const next = { ...referral, diagnoses: [...referral.diagnoses] };
 
   if (next.clientName && !isPlausiblePersonName(next.clientName)) {
     repairs.push(`Referral client name looked invalid; using folder name if available.`);
@@ -523,7 +523,7 @@ export function validateAndRepairClientImport(
     repairedSupplement = sanitizeSupplement(repairedSupplement, repairs);
   }
 
-  let repairedReferral = sanitizeReferral(referral, repairedSupplement, context, repairs);
+  const repairedReferral = sanitizeReferral(referral, repairedSupplement, context, repairs);
 
   if (
     context.folderClaimNumber &&

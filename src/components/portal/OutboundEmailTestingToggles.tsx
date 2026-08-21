@@ -130,14 +130,17 @@ export function OutboundEmailTestingToggles({
   const [lniFaxSelected, setLniFaxSelected] = useState(lniFaxRoute);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- syncs the server value into the toggle; primitive, so React bails when equal
     setVrcSelected(vrcRoute);
   }, [vrcRoute]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- syncs the server value into the toggle; primitive, so React bails when equal
     setTherapistSelected(therapistRoute);
   }, [therapistRoute]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- syncs the server value into the toggle; primitive, so React bails when equal
     setLniFaxSelected(lniFaxRoute);
   }, [lniFaxRoute]);
 

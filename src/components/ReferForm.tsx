@@ -14,6 +14,7 @@ function ReferralWarningDialog({ open, onClose }: { open: boolean; onClose: () =
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- mount flag for portal rendering; runs once
     setMounted(true);
   }, []);
 

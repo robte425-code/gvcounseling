@@ -60,6 +60,7 @@ export function InvoiceAttachments({
 
   useEffect(() => {
     if (lineServiceDates.length === 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- clears the picked date only when it vanishes from the lines; functional update is a no-op otherwise
       setServiceDate("");
       return;
     }
