@@ -1214,12 +1214,37 @@ function requireStatusChangeReason(formData: FormData): string {
   return reason;
 }
 
-function actorDisplayName(session: Awaited<ReturnType<typeof requireSession>>): string {
+function sessionUserDisplayName(session: Awaited<ReturnType<typeof requireSession>>): string {
   const user = session.user;
   const first = user.firstName?.trim();
   const last = user.lastName?.trim();
   if (first || last) return `${first ?? ""} ${last ?? ""}`.trim();
   return user.name?.trim() || user.email || "Portal user";
+}
+
+/**
+ * Who to credit in a permanent record.
+ *
+ * While an admin is viewing as a therapist, session.user carries the therapist's
+ * name, so notes and notification emails read as though the therapist closed the
+ * client or sent the fax. The stored authorId was always the admin; nothing a
+ * person read said so. Names both, so the record cannot be misread.
+ */
+async function actorDisplayName(
+  session: Awaited<ReturnType<typeof requireSession>>,
+): Promise<string> {
+  const shown = sessionUserDisplayName(session);
+  if (!isImpersonating(session)) return shown;
+
+  const realUser = await prisma.user.findUnique({
+    where: { id: getRealUserId(session) },
+    select: { firstName: true, lastName: true, email: true },
+  });
+  if (!realUser) return `${shown} (via an admin)`;
+
+  const realName =
+    `${realUser.firstName ?? ""} ${realUser.lastName ?? ""}`.trim() || realUser.email;
+  return `${realName} (admin, viewing as ${shown})`;
 }
 
 async function logClientStatusChange(options: {
@@ -1233,7 +1258,7 @@ async function logClientStatusChange(options: {
     clientId: options.client.id,
     authorId: getRealUserId(options.session),
     action: options.action,
-    actorName: actorDisplayName(options.session),
+    actorName: await actorDisplayName(options.session),
     actorRole: options.role,
     reason: options.reason,
     clientName: clientDisplayName(options.client),
@@ -2375,7 +2400,7 @@ export async function addClientNoteAction(formData: FormData) {
     },
   });
 
-  const authorName = actorDisplayName(session);
+  const authorName = await actorDisplayName(session);
   const clientName = clientDisplayName(client);
   const isAdminAuthor = getRealRole(session) === "ADMIN" && !isImpersonating(session);
 
@@ -2504,7 +2529,7 @@ export async function addInvoiceNoteAction(formData: FormData) {
     },
   });
 
-  const authorName = actorDisplayName(session);
+  const authorName = await actorDisplayName(session);
   const clientName = clientDisplayName(invoice.client);
   const isAdminAuthor = getRealRole(session) === "ADMIN" && !isImpersonating(session);
 
