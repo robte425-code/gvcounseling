@@ -14,7 +14,8 @@ import {
 import type { ImpersonationUpdate } from "@/types/next-auth";
 import type { ClientAssignmentStatus } from "@/generated/prisma/client";
 import { Gender } from "@/generated/prisma/client";
-import { parseClaimNumber } from "@/lib/constants";
+import { formatCalendarDate, parseClaimNumber } from "@/lib/constants";
+import { startOfUtcDay } from "@/lib/invoice-pay-period-grouping";
 import { moveClientDriveFolderToClosedCases, moveClientDriveFolderToNewReferrals, moveClientDriveFolderToTherapist } from "@/lib/client-drive-move";
 import { canAdminCloseClient, canTherapistCloseClient } from "@/lib/client-assignment-status";
 import { recordClientStatusChange, type ClientStatusChangeAction } from "@/lib/client-status-change";
@@ -1367,6 +1368,12 @@ export async function updateTherapistPayRunPayoutAdjustmentAction(
   if (payout.payRun.status !== "DRAFT") {
     return { error: "Paycheck amounts can only be adjusted before therapist pay is finalized." };
   }
+  if (payout.wireSentAt) {
+    return {
+      error:
+        "A wire is already recorded for this paycheck. Clear the wire first if the amount was wrong.",
+    };
+  }
 
   const computed = Number(payout.computedTherapistAmount);
   const changed = Math.abs(rounded - computed) > 0.001;
@@ -1393,6 +1400,80 @@ export async function updateTherapistPayRunPayoutAdjustmentAction(
     success: changed
       ? `Updated ${name} to $${rounded.toFixed(2)} (computed $${computed.toFixed(2)}).`
       : `Saved ${name} at computed amount $${rounded.toFixed(2)}.`,
+  };
+}
+
+export type RecordTherapistPayoutWireState = { error?: string; success?: string };
+
+/**
+ * Record (or clear) the manual BECU wire for one therapist payout.
+ *
+ * The wire itself happens outside the app; this is the portal's record that it
+ * went out, and it locks the paycheck amount so the figure on file cannot drift
+ * from the amount actually sent.
+ */
+export async function recordTherapistPayoutWireAction(
+  _prevState: RecordTherapistPayoutWireState,
+  formData: FormData,
+): Promise<RecordTherapistPayoutWireState> {
+  await requireAdmin();
+  const payoutId = String(formData.get("payoutId") ?? "").trim();
+  const remittanceAdviceId = String(formData.get("remittanceAdviceId") ?? "").trim();
+  const clear = String(formData.get("clear") ?? "").trim() === "1";
+  const wireReference = String(formData.get("wireReference") ?? "").trim();
+
+  if (!payoutId) return { error: "Payout is required." };
+  if (!remittanceAdviceId) return { error: "Remittance is required." };
+
+  const payout = await prisma.therapistPayRunPayout.findUnique({
+    where: { id: payoutId },
+    include: {
+      payRun: { select: { remittanceAdviceId: true } },
+      therapist: { select: { firstName: true, lastName: true } },
+    },
+  });
+  if (!payout || payout.payRun.remittanceAdviceId !== remittanceAdviceId) {
+    return { error: "Payout not found for this remittance." };
+  }
+
+  const name = `${payout.therapist.firstName} ${payout.therapist.lastName}`.trim();
+
+  function revalidate() {
+    revalidatePath("/portal/admin/pay");
+    revalidatePath(`/portal/admin/pay/${remittanceAdviceId}`);
+    revalidatePath("/portal/admin/paychecks");
+    revalidatePath("/portal/therapist/paychecks");
+  }
+
+  if (clear) {
+    await prisma.therapistPayRunPayout.update({
+      where: { id: payout.id },
+      data: { wireSentAt: null, wireReference: null },
+    });
+    revalidate();
+    return { success: `Cleared the recorded wire for ${name}.` };
+  }
+
+  const wireSentAt = parseDate(formData.get("wireSentAt"));
+  if (!wireSentAt) return { error: "Enter the date the wire was sent." };
+
+  // A wire cannot have been sent in the future; guard against a typo'd year.
+  const todayUtc = startOfUtcDay();
+  if (wireSentAt.getTime() > todayUtc.getTime()) {
+    return { error: "Wire date cannot be in the future." };
+  }
+  if (!wireReference) {
+    return { error: "Enter the BECU confirmation number for the wire." };
+  }
+
+  await prisma.therapistPayRunPayout.update({
+    where: { id: payout.id },
+    data: { wireSentAt, wireReference },
+  });
+
+  revalidate();
+  return {
+    success: `Recorded ${name}'s wire sent ${formatCalendarDate(wireSentAt)} (ref ${wireReference}).`,
   };
 }
 

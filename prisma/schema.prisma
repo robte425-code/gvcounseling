@@ -389,6 +389,10 @@ model TherapistPayRunPayout {
   /** Required when therapistAmount differs from computedTherapistAmount. */
   adjustmentNote           String?             @db.Text
   adjustedAt               DateTime?
+  /** Date the BECU wire was sent, as entered by an admin. Calendar date, not an instant. */
+  wireSentAt               DateTime?           @db.Date
+  /** BECU confirmation / reference number for the wire. */
+  wireReference            String?
   lines                    TherapistPayRunLine[]
 
   @@unique([payRunId, therapistId])

@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { requireAdmin } from "@/auth";
 import { ApplyRemittanceForm, CreateWrongYearRebillForm, CreateWrongYearRebillsForm, DeleteRemittancePreviewForm, FinalizeTherapistPayRunForm, ManualMatchRemittanceLineForm, RematchRemittanceForm, RevertAppliedRemittanceForm, SupersedeRemittanceLineForm, SupersedeWrongYearStaleLinesForm, UnmatchRemittanceLineForm, UnsupersedeRemittanceLineForm } from "@/components/portal/RemittancePayPanel";
 import { TherapistPayoutAdjustForm } from "@/components/portal/TherapistPayoutAdjustForm";
+import { TherapistPayoutWireForm } from "@/components/portal/TherapistPayoutWireForm";
 import { RemittanceBillRow, RemittanceBillRowActions } from "@/components/portal/RemittanceBillRow";
 import {
   portalCardClass,
@@ -867,6 +868,8 @@ export default async function PayRemittanceDetailPage({
                   adjustmentNote: payout.adjustmentNote,
                   lniPaidAmount: Number(payout.lniPaidAmount),
                   invoiceCount: payout.invoiceCount,
+                  wireSentAt: payout.wireSentAt ? calendarIsoFromDate(payout.wireSentAt) : null,
+                  wireReference: payout.wireReference,
                 }))
               : therapistPayPreview?.map((payout) => ({
                   payoutId: null as string | null,
@@ -876,12 +879,16 @@ export default async function PayRemittanceDetailPage({
                   adjustmentNote: null as string | null,
                   lniPaidAmount: payout.lniPaidAmount,
                   invoiceCount: payout.invoiceCount,
+                  wireSentAt: null as string | null,
+                  wireReference: null as string | null,
                 }))
             )?.map((payout) => {
               const adjusted =
                 Math.abs(payout.therapistAmount - payout.computedTherapistAmount) > 0.001;
               const canEdit =
                 remittance.status === "APPLIED" && remittance.payRun?.status === "DRAFT";
+              // A recorded wire locks the amount: the figure on file must match what was sent.
+              const canEditAmount = canEdit && !payout.wireSentAt;
               return (
               <li key={payout.therapistName} className="rounded-lg bg-primary/[0.03] px-3 py-2">
                 <p className="font-medium text-primary-dark">{payout.therapistName}</p>
@@ -898,15 +905,26 @@ export default async function PayRemittanceDetailPage({
                   {formatCurrency(payout.lniPaidAmount)}
                 </p>
                 {payout.payoutId && (
-                  <TherapistPayoutAdjustForm
-                    payoutId={payout.payoutId}
-                    remittanceAdviceId={remittance.id}
-                    therapistName={payout.therapistName}
-                    computedAmount={payout.computedTherapistAmount}
-                    amount={payout.therapistAmount}
-                    adjustmentNote={payout.adjustmentNote}
-                    canEdit={canEdit}
-                  />
+                  <>
+                    <TherapistPayoutAdjustForm
+                      payoutId={payout.payoutId}
+                      remittanceAdviceId={remittance.id}
+                      therapistName={payout.therapistName}
+                      computedAmount={payout.computedTherapistAmount}
+                      amount={payout.therapistAmount}
+                      adjustmentNote={payout.adjustmentNote}
+                      canEdit={canEditAmount}
+                    />
+                    <TherapistPayoutWireForm
+                      payoutId={payout.payoutId}
+                      remittanceAdviceId={remittance.id}
+                      therapistName={payout.therapistName}
+                      amountLabel={formatCurrency(payout.therapistAmount)}
+                      wireSentAt={payout.wireSentAt}
+                      wireReference={payout.wireReference}
+                      canEdit={canEdit}
+                    />
+                  </>
                 )}
               </li>
               );
