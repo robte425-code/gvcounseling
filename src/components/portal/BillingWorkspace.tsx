@@ -35,11 +35,13 @@ function BillingModeToggles({
   onUsageIndicatorChange,
   onBillingEnvironmentChange,
   saving,
+  saveError,
 }: {
   usageIndicator: IsaUsageIndicator;
   onUsageIndicatorChange: (value: IsaUsageIndicator) => void;
   onBillingEnvironmentChange: (value: BillingEnvironment) => void;
   saving: boolean;
+  saveError: string | null;
 }) {
   const billingEnvironment = deriveBillingEnvironment(usageIndicator);
 
@@ -49,6 +51,12 @@ function BillingModeToggles({
         <p className="text-xs font-semibold uppercase tracking-wide text-muted">Modes</p>
         {saving ? <p className="text-xs text-muted">Saving…</p> : null}
       </div>
+
+      {saveError ? (
+        <p className="rounded-lg bg-red-50 px-3 py-2 text-xs text-red-800" role="alert">
+          {saveError}
+        </p>
+      ) : null}
 
       <div className="space-y-2 rounded-xl border border-primary/20 bg-primary/[0.06] p-3">
         <div>
@@ -128,14 +136,26 @@ export function BillingWorkspace({
 }: Props) {
   const [usageIndicator, setUsageIndicator] = useState<IsaUsageIndicator>(defaultUsageIndicator);
   const [saving, startSave] = useTransition();
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   function persistUsageIndicator(value: IsaUsageIndicator) {
+    const previous = usageIndicator;
     setUsageIndicator(value);
+    setSaveError(null);
     startSave(async () => {
       try {
         await updateBillingIsaUsageIndicatorAction(value);
       } catch (error) {
+        // Failing quietly left the toggle reading Production while the database
+        // still held Test, so the next 837 would go to L&I stamped as a test
+        // interchange and be discarded.
         console.error("Could not save billing mode:", error);
+        setUsageIndicator(previous);
+        setSaveError(
+          error instanceof Error
+            ? `Could not switch billing mode: ${error.message}`
+            : "Could not switch billing mode. It is unchanged.",
+        );
       }
     });
   }
@@ -153,6 +173,7 @@ export function BillingWorkspace({
           onUsageIndicatorChange={persistUsageIndicator}
           onBillingEnvironmentChange={setBillingEnvironment}
           saving={saving}
+          saveError={saveError}
         />
         {addPayPeriod}
       </section>

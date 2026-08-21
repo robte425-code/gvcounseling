@@ -128,6 +128,7 @@ export function OutboundEmailTestingToggles({
   const [vrcSelected, setVrcSelected] = useState(vrcRoute);
   const [therapistSelected, setTherapistSelected] = useState(therapistRoute);
   const [lniFaxSelected, setLniFaxSelected] = useState(lniFaxRoute);
+  const [routeError, setRouteError] = useState<string | null>(null);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- syncs the server value into the toggle; primitive, so React bails when equal
@@ -144,31 +145,51 @@ export function OutboundEmailTestingToggles({
     setLniFaxSelected(lniFaxRoute);
   }, [lniFaxRoute]);
 
-  function updateVrc(next: OutboundEmailRoute) {
-    if (next === vrcSelected || pending) return;
-    setVrcSelected(next);
+  // These decide where real patient documentation goes. Setting the toggle
+  // optimistically and letting a failure pass silently left the panel asserting a
+  // routing the server does not have — reading "our fax line" while production
+  // faxing was live. On failure the toggle goes back and says so.
+  function applyRouteChange<T>(
+    next: T,
+    current: T,
+    setSelected: (value: T) => void,
+    persist: (value: T) => Promise<unknown>,
+    label: string,
+  ) {
+    if (next === current || pending) return;
+    setSelected(next);
+    setRouteError(null);
     startTransition(async () => {
-      await updateOutboundVrcEmailRouteAction(next);
-      router.refresh();
+      try {
+        await persist(next);
+        router.refresh();
+      } catch (error) {
+        setSelected(current);
+        setRouteError(
+          error instanceof Error
+            ? `Could not change ${label} routing: ${error.message}`
+            : `Could not change ${label} routing. It is unchanged.`,
+        );
+      }
     });
+  }
+
+  function updateVrc(next: OutboundEmailRoute) {
+    applyRouteChange(next, vrcSelected, setVrcSelected, updateOutboundVrcEmailRouteAction, "VRC email");
   }
 
   function updateTherapist(next: OutboundEmailRoute) {
-    if (next === therapistSelected || pending) return;
-    setTherapistSelected(next);
-    startTransition(async () => {
-      await updateOutboundTherapistEmailRouteAction(next);
-      router.refresh();
-    });
+    applyRouteChange(
+      next,
+      therapistSelected,
+      setTherapistSelected,
+      updateOutboundTherapistEmailRouteAction,
+      "therapist email",
+    );
   }
 
   function updateLniFax(next: OutboundLniFaxRoute) {
-    if (next === lniFaxSelected || pending) return;
-    setLniFaxSelected(next);
-    startTransition(async () => {
-      await updateOutboundLniFaxRouteAction(next);
-      router.refresh();
-    });
+    applyRouteChange(next, lniFaxSelected, setLniFaxSelected, updateOutboundLniFaxRouteAction, "L&I fax");
   }
 
   const adminList = adminEmails.join(", ");
@@ -179,6 +200,12 @@ export function OutboundEmailTestingToggles({
       <p className="mt-1 text-sm text-muted">
         Redirect portal emails and faxes away from real recipients for safe testing.
       </p>
+
+      {routeError ? (
+        <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800" role="alert">
+          {routeError}
+        </p>
+      ) : null}
 
       <div className="mt-4 space-y-3">
         <p className="text-xs font-semibold uppercase tracking-wide text-muted">Email</p>

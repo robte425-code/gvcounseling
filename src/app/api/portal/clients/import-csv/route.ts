@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/auth";
 import { parseClaimNumber } from "@/lib/constants";
 import { prisma } from "@/lib/prisma";
@@ -66,6 +67,11 @@ export async function POST(request: Request) {
         created++;
       }
     }
+
+    // Its two sibling import routes revalidate; this one did not, so the clients
+    // list could still render without the rows just imported and an admin would
+    // reasonably re-upload the same file.
+    revalidatePath("/portal/admin/clients");
 
     return NextResponse.json({ created, updated, errors });
   } catch (e) {
