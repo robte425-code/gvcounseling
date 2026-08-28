@@ -4,7 +4,12 @@ import { auth, getRealRole, getRealUserId, isImpersonating } from "@/auth";
 import { getDriveAccessTokenForClient } from "@/lib/google-drive-access";
 import { uploadDriveFile } from "@/lib/google-drive";
 import { prisma } from "@/lib/prisma";
-import { UploadValidationError, validateUploadedFile } from "@/lib/upload-validation";
+import {
+  REQUEST_UPLOAD_MAX_FILE_BYTES,
+  UploadValidationError,
+  requestUploadMaxMb,
+  validateUploadedFile,
+} from "@/lib/upload-validation";
 
 /** Admin, or the therapist this client is assigned to. Mirrors the attending-doctor route. */
 async function getClientForUpload(clientId: string) {
@@ -53,9 +58,16 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       return NextResponse.json({ error: "No file uploaded." }, { status: 400 });
     }
 
-    // Checked before any file is read into memory.
+    // Checked before any file is read into memory. The tighter per-file cap is the
+    // platform's, not ours: Vercel returns 413 above ~4.5 MB before this runs, and
+    // the client sends one file per request so a batch cannot add up past it either.
     for (const file of files) {
       validateUploadedFile(file.name, file.type, file.size);
+      if (file.size > REQUEST_UPLOAD_MAX_FILE_BYTES) {
+        throw new UploadValidationError(
+          `${file.name} is too large. Each file must be ${requestUploadMaxMb()} MB or smaller; add bigger files in Google Drive directly.`,
+        );
+      }
     }
 
     const accessToken = await getDriveAccessTokenForClient({

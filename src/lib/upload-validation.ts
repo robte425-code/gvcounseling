@@ -26,6 +26,17 @@ const EXTENSION_TO_MIME: Record<string, string> = {
   ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 };
 
+/**
+ * Vercel rejects a serverless function request body over roughly 4.5 MB with a 413
+ * before any handler runs, so a limit above that is unenforceable — the caller just
+ * sees an opaque failure. Anything posted straight to a route handler stays under it.
+ */
+export const REQUEST_UPLOAD_MAX_FILE_BYTES = 4 * 1024 * 1024;
+
+export function requestUploadMaxMb(): number {
+  return Math.round(REQUEST_UPLOAD_MAX_FILE_BYTES / (1024 * 1024));
+}
+
 export const REFERRAL_MAX_FILE_BYTES = 15 * 1024 * 1024;
 export const REFERRAL_MAX_TOTAL_BYTES = 40 * 1024 * 1024;
 export const REFERRAL_MAX_FILES = 7;
