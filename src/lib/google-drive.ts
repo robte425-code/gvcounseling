@@ -794,6 +794,51 @@ export async function resolveEdi837FilesFolderId(accessToken: string): Promise<s
   return createDriveFolder(accessToken, configuredName, "root");
 }
 
+/**
+ * Start a resumable upload and return the session URL the browser PUTs bytes to.
+ *
+ * A file posted to one of our route handlers is capped at roughly 4.5 MB by the
+ * platform, which rejects it before any handler runs. Handing the browser a
+ * session URL sends the bytes straight to Google instead, so the size ceiling and
+ * the function's memory stop being the constraint.
+ *
+ * The name, type, and parent folder are fixed here, server-side — the URL is a
+ * capability to create that one file in that one folder, nothing else.
+ */
+export async function createResumableUploadSession(
+  accessToken: string,
+  parentFolderId: string,
+  filename: string,
+  mimeType: string,
+  sizeBytes: number,
+): Promise<string> {
+  const type = mimeType || mimeTypeForFilename(filename);
+  const res = await fetch(
+    "https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&supportsAllDrives=true",
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json; charset=UTF-8",
+        "X-Upload-Content-Type": type,
+        "X-Upload-Content-Length": String(sizeBytes),
+      },
+      body: JSON.stringify({ name: filename, parents: [parentFolderId] }),
+    },
+  );
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Could not start the Drive upload (${res.status}): ${text.slice(0, 200)}`);
+  }
+
+  const location = res.headers.get("location");
+  if (!location) {
+    throw new Error("Google did not return an upload session URL.");
+  }
+  return location;
+}
+
 export async function uploadDriveFile(
   accessToken: string,
   parentFolderId: string,

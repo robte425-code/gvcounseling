@@ -37,6 +37,16 @@ export function requestUploadMaxMb(): number {
   return Math.round(REQUEST_UPLOAD_MAX_FILE_BYTES / (1024 * 1024));
 }
 
+/**
+ * Ceiling for a file sent straight from the browser to Google. Nothing about our
+ * server constrains this — it is a sanity bound on a single clinical document.
+ */
+export const DIRECT_UPLOAD_MAX_FILE_BYTES = 100 * 1024 * 1024;
+
+export function directUploadMaxMb(): number {
+  return Math.round(DIRECT_UPLOAD_MAX_FILE_BYTES / (1024 * 1024));
+}
+
 export const REFERRAL_MAX_FILE_BYTES = 15 * 1024 * 1024;
 export const REFERRAL_MAX_TOTAL_BYTES = 40 * 1024 * 1024;
 export const REFERRAL_MAX_FILES = 7;

@@ -3,10 +3,74 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { portalButtonClass, portalButtonSecondaryClass } from "@/components/portal/ui";
-import { REQUEST_UPLOAD_MAX_FILE_BYTES, requestUploadMaxMb } from "@/lib/upload-validation";
+import {
+  DIRECT_UPLOAD_MAX_FILE_BYTES,
+  REQUEST_UPLOAD_MAX_FILE_BYTES,
+  directUploadMaxMb,
+} from "@/lib/upload-validation";
 
 /** Matches the server's allow-list in upload-validation.ts. */
 const ACCEPT = ".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif,.webp";
+
+
+/** Small files: straight through our route, which then writes to Drive. */
+async function uploadViaServer(clientId: string, file: File): Promise<string | null> {
+  const data = new FormData();
+  data.append("file", file);
+
+  const response = await fetch(`/api/portal/clients/${clientId}/drive-files`, {
+    method: "POST",
+    body: data,
+  });
+  if (response.ok) return null;
+
+  // A 413 comes from the platform, not the route, so it is not JSON.
+  const body = (await response.json().catch(() => null)) as { error?: string } | null;
+  return (
+    body?.error ??
+    (response.status === 413
+      ? `${file.name} is too large to send through the server.`
+      : `Upload failed for ${file.name}.`)
+  );
+}
+
+/**
+ * Larger files: the server mints a Google upload URL and the bytes go straight
+ * there, so the platform's ~4.5 MB request body limit never applies.
+ */
+async function uploadDirectToDrive(clientId: string, file: File): Promise<string | null> {
+  const sessionResponse = await fetch(`/api/portal/clients/${clientId}/drive-files/session`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      filename: file.name,
+      contentType: file.type || "application/octet-stream",
+      size: file.size,
+    }),
+  });
+  const sessionBody = (await sessionResponse.json().catch(() => null)) as {
+    uploadUrl?: string;
+    error?: string;
+  } | null;
+
+  if (!sessionResponse.ok || !sessionBody?.uploadUrl) {
+    return sessionBody?.error ?? `Could not start the upload for ${file.name}.`;
+  }
+
+  try {
+    const put = await fetch(sessionBody.uploadUrl, {
+      method: "PUT",
+      headers: { "Content-Type": file.type || "application/octet-stream" },
+      body: file,
+    });
+    if (!put.ok) {
+      return `Google rejected the upload of ${file.name} (${put.status}).`;
+    }
+    return null;
+  } catch {
+    return `Could not send ${file.name} to Google Drive. Check your connection, or add the file in Drive directly.`;
+  }
+}
 
 export function ClientDriveUpload({
   clientId,
@@ -34,12 +98,10 @@ export function ClientDriveUpload({
     setError("");
     setUploadedCount(0);
 
-    // Caught here so the file is never sent: the platform rejects an oversized body
-    // with a 413 that carries no explanation the user could act on.
-    const tooBig = selected.find((file) => file.size > REQUEST_UPLOAD_MAX_FILE_BYTES);
+    const tooBig = selected.find((file) => file.size > DIRECT_UPLOAD_MAX_FILE_BYTES);
     if (tooBig) {
       setError(
-        `${tooBig.name} is too large. Each file must be ${requestUploadMaxMb()} MB or smaller — add bigger files in Google Drive directly.`,
+        `${tooBig.name} is too large. Each file must be ${directUploadMaxMb()} MB or smaller.`,
       );
       setUploading(false);
       return;
@@ -47,26 +109,16 @@ export function ClientDriveUpload({
 
     let done = 0;
     try {
-      // One request per file. Sending them together made a set of individually
-      // acceptable files add up past the request body limit.
+      // One request per file either way, so a batch of individually acceptable
+      // files cannot add up past the body limit.
       for (const file of selected) {
-        const data = new FormData();
-        data.append("file", file);
+        const failure =
+          file.size > REQUEST_UPLOAD_MAX_FILE_BYTES
+            ? await uploadDirectToDrive(clientId, file)
+            : await uploadViaServer(clientId, file);
 
-        const response = await fetch(`/api/portal/clients/${clientId}/drive-files`, {
-          method: "POST",
-          body: data,
-        });
-
-        if (!response.ok) {
-          // A 413 comes from the platform, not the route, so it is not JSON.
-          const body = (await response.json().catch(() => null)) as { error?: string } | null;
-          setError(
-            body?.error ??
-              (response.status === 413
-                ? `${file.name} is too large to upload here. Add it in Google Drive directly.`
-                : `Upload failed for ${file.name}.`),
-          );
+        if (failure) {
+          setError(failure);
           break;
         }
         done += 1;
@@ -133,9 +185,8 @@ export function ClientDriveUpload({
       </div>
 
       <p className="mt-2 text-xs text-muted">
-        PDF, Word, or image files up to {requestUploadMaxMb()} MB each. Uploaded to
-        {folderName ? ` ${folderName}` : " this client's Drive folder"}. Larger files can be
-        added in Google Drive directly.
+        PDF, Word, or image files up to {directUploadMaxMb()} MB each. Uploaded to
+        {folderName ? ` ${folderName}` : " this client's Drive folder"}.
       </p>
 
       {selected.length > 0 && (
