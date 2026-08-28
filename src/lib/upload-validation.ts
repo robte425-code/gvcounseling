@@ -47,9 +47,23 @@ export function directUploadMaxMb(): number {
   return Math.round(DIRECT_UPLOAD_MAX_FILE_BYTES / (1024 * 1024));
 }
 
-export const REFERRAL_MAX_FILE_BYTES = 15 * 1024 * 1024;
-export const REFERRAL_MAX_TOTAL_BYTES = 40 * 1024 * 1024;
+/**
+ * The referral form posts every field and file in one request, so the whole
+ * submission has to fit under the platform's ~4.5 MB request body limit. The old
+ * 15 MB / 40 MB limits were unreachable: a VRC attaching large scans got a 413
+ * from the platform with no explanation, and nothing here ever ran.
+ *
+ * Measured against real referral packets already in Drive: median file 0.07 MB,
+ * p90 0.24 MB; median packet 0.56 MB, p90 2.31 MB. These limits clear all but the
+ * occasional oversized scan, which now gets told so plainly.
+ */
+export const REFERRAL_MAX_FILE_BYTES = 4 * 1024 * 1024;
+export const REFERRAL_MAX_TOTAL_BYTES = 4 * 1024 * 1024;
 export const REFERRAL_MAX_FILES = 7;
+
+export function referralMaxTotalMb(): number {
+  return Math.round(REFERRAL_MAX_TOTAL_BYTES / (1024 * 1024));
+}
 
 function fileExtension(filename: string): string {
   const dot = filename.lastIndexOf(".");

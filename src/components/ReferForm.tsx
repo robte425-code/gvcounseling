@@ -2,6 +2,11 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
+import {
+  REFERRAL_MAX_FILE_BYTES,
+  REFERRAL_MAX_TOTAL_BYTES,
+  referralMaxTotalMb,
+} from "@/lib/upload-validation";
 
 type Status = "idle" | "loading" | "success" | "error";
 
@@ -166,6 +171,38 @@ export function ReferForm() {
     const form = e.currentTarget;
     const data = new FormData(form);
 
+    // Checked here so an oversized packet is never sent: the whole submission goes
+    // in one request, and the platform rejects it above its body limit with a 413
+    // the VRC cannot interpret and cannot report back to us.
+    const files = data.getAll("claimStatusFile").concat(
+      data.getAll("addressesFile"),
+      data.getAll("bhiApprovalFile"),
+      data.getAll("attachment1"),
+      data.getAll("attachment2"),
+      data.getAll("attachment3"),
+      data.getAll("attachment4"),
+    );
+    let totalBytes = 0;
+    for (const entry of files) {
+      if (entry instanceof File && entry.size > 0) {
+        totalBytes += entry.size;
+        if (entry.size > REFERRAL_MAX_FILE_BYTES) {
+          setStatus("error");
+          setErrorMessage(
+            `${entry.name} is ${(entry.size / (1024 * 1024)).toFixed(1)} MB. Each file must be ${referralMaxTotalMb()} MB or smaller — please email it to us separately.`,
+          );
+          return;
+        }
+      }
+    }
+    if (totalBytes > REFERRAL_MAX_TOTAL_BYTES) {
+      setStatus("error");
+      setErrorMessage(
+        `Your attachments total ${(totalBytes / (1024 * 1024)).toFixed(1)} MB. The form accepts ${referralMaxTotalMb()} MB in one submission — please send the largest file to us by email instead.`,
+      );
+      return;
+    }
+
     try {
       const res = await fetch("/api/refer", { method: "POST", body: data });
       if (!res.ok) {
@@ -253,6 +290,10 @@ export function ReferForm() {
         <p className="text-sm text-muted">
           Please attach any progress reports or notes from the claim file that may be helpful for the
           therapist to understand the client&apos;s therapeutic needs
+        </p>
+        <p className="text-xs text-muted">
+          PDF, Word, or image files, up to {referralMaxTotalMb()} MB in total across all
+          attachments. If you have something larger, send the rest to us by email.
         </p>
         <div className="grid gap-5 sm:grid-cols-2">
           <FileField label="Attached file 1" name="attachment1" />
