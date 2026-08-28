@@ -176,6 +176,7 @@ export default async function AdminClientDetailPage({
           initiatorUserId={getRealUserId(session)}
           clientId={client.id}
           claimNumber={client.lniClaimNumber}
+          canUpload
         />
       </Suspense>
       <ClientNotesSection

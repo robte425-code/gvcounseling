@@ -137,6 +137,7 @@ export default async function TherapistClientDetailPage({
           initiatorUserId={session.user.id}
           clientId={client.id}
           claimNumber={client.lniClaimNumber}
+          canUpload
         />
       </Suspense>
       <ClientNotesSection clientId={client.id} returnTo={clientDetailPath} />

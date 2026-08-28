@@ -7,12 +7,14 @@ export async function ClientDriveFilesSection({
   initiatorUserId,
   clientId,
   claimNumber,
+  canUpload = false,
 }: {
   driveFolderId: string | null;
   therapistId?: string | null;
   initiatorUserId?: string;
   clientId?: string;
   claimNumber?: string;
+  canUpload?: boolean;
 }) {
   const drive = await loadClientDriveContents(driveFolderId, {
     therapistId,
@@ -20,5 +22,5 @@ export async function ClientDriveFilesSection({
     clientId,
     claimNumber,
   });
-  return <ClientDriveFiles drive={drive} />;
+  return <ClientDriveFiles drive={drive} clientId={clientId} canUpload={canUpload} />;
 }

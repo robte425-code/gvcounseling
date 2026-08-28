@@ -2,6 +2,7 @@ import {
   portalCardCompactClass,
   portalSectionHeadingClass,
 } from "@/components/portal/ui";
+import { ClientDriveUpload } from "@/components/portal/ClientDriveUpload";
 import type { DriveItemLink } from "@/lib/google-drive";
 import type { ClientDriveContentsResult } from "@/lib/client-drive-contents";
 
@@ -24,7 +25,17 @@ function DriveItemRow({ item }: { item: DriveItemLink }) {
   );
 }
 
-export function ClientDriveFiles({ drive }: { drive: ClientDriveContentsResult }) {
+export function ClientDriveFiles({
+  drive,
+  clientId,
+  canUpload = false,
+}: {
+  drive: ClientDriveContentsResult;
+  clientId?: string;
+  /** Opt-in: the referral review page reuses this list, and a therapist has not
+   *  accepted that client yet, so uploading there is not offered. */
+  canUpload?: boolean;
+}) {
   if (!drive.linked) {
     return (
       <div className={portalCardCompactClass}>
@@ -66,6 +77,9 @@ export function ClientDriveFiles({ drive }: { drive: ClientDriveContentsResult }
             <DriveItemRow key={item.id} item={item} />
           ))}
         </ul>
+      )}
+      {canUpload && clientId && (
+        <ClientDriveUpload clientId={clientId} folderName={drive.folderName} />
       )}
     </div>
   );
