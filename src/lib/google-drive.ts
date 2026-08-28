@@ -811,6 +811,7 @@ export async function createResumableUploadSession(
   filename: string,
   mimeType: string,
   sizeBytes: number,
+  browserOrigin: string,
 ): Promise<string> {
   const type = mimeType || mimeTypeForFilename(filename);
   const res = await fetch(
@@ -822,6 +823,11 @@ export async function createResumableUploadSession(
         "Content-Type": "application/json; charset=UTF-8",
         "X-Upload-Content-Type": type,
         "X-Upload-Content-Length": String(sizeBytes),
+        // Google binds CORS to the origin given here. Without it the upload still
+        // succeeds, but the response carries no access-control-allow-origin, so the
+        // browser blocks reading it and fetch throws — an upload that worked, reported
+        // as a failure.
+        Origin: browserOrigin,
       },
       body: JSON.stringify({ name: filename, parents: [parentFolderId] }),
     },

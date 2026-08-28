@@ -72,12 +72,16 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       initiatorUserId: getRealUserId(session),
     });
 
+    // The browser's own origin, so Google returns CORS headers it will accept.
+    const browserOrigin = request.headers.get("origin") ?? new URL(request.url).origin;
+
     const uploadUrl = await createResumableUploadSession(
       accessToken,
       client.driveFolderId,
       filename,
       contentType ?? "",
       size,
+      browserOrigin,
     );
 
     return NextResponse.json({ uploadUrl });
