@@ -42,7 +42,18 @@ export type ParsedRemittanceAdvice = {
 
 const CLAIM_NUMBER = /[A-Z]{2}\d{5,6}/;
 const EOB_CODE = /(\d{3}|P\d{2})/i;
-const EOB_CODE_SUFFIX = `(?:\\s+(${EOB_CODE.source}))(?![\\d.])`;
+/**
+ * A trailing EOB code, with the guard that stops it from biting into the next
+ * service line's date.
+ *
+ * The lookahead belongs INSIDE the group. Callers append "?" to make the code
+ * optional, and with the lookahead outside, that "?" attaches to the lookahead
+ * instead of the group: the code becomes mandatory and unguarded. On a bill whose
+ * rows run together once whitespace is collapsed, the row then swallowed the first
+ * three digits of the following row's date as a bogus EOB, leaving the rest of the
+ * bill unparseable — and a bill whose only row had no code failed to match at all.
+ */
+const EOB_CODE_SUFFIX = `(?:\\s+(${EOB_CODE.source})(?![\\d.]))`;
 
 /**
  * A money amount as L&I prints it: thousands separators on anything over $999,
