@@ -36,6 +36,8 @@ type ClaimDraft = {
   casAdjustedTotal: number;
   /** CLP02 as sent, kept for the few payers that do use it meaningfully. */
   clpStatus: string;
+  /** CLP01, the patient account number we sent — our claim control number. */
+  patientAccountNumber: string;
 };
 
 function parseRemittanceFilenameIds(filename: string): {
@@ -158,6 +160,7 @@ function finalizeClaimDraft(draft: ClaimDraft): RemittanceBill {
   const payable = draft.serviceLines.reduce((sum, line) => sum + line.payable, 0);
 
   return {
+    patientAccountNumber: draft.patientAccountNumber,
     // Decided here rather than at CLP, because it depends on the CAS segments
     // that follow it.
     section: resolveSection(
@@ -186,6 +189,7 @@ function emptyClaimDraft(): ClaimDraft {
     section: "IN_PROCESS",
     casAdjustedTotal: 0,
     clpStatus: "",
+    patientAccountNumber: "",
     claimNumber: "",
     patientName: "",
     icn: "",
@@ -255,6 +259,7 @@ function parse835Claims(
           ...emptyClaimDraft(),
           // Provisional: revised once the claim's CAS segments have been read.
           clpStatus: segment.elements[1] ?? "",
+          patientAccountNumber: (segment.elements[0] ?? "").trim().toUpperCase(),
           section: paymentAmount > 0 ? "PAID" : "IN_PROCESS",
           claimNumber:
             extractClaimNumberFromSegments([

@@ -208,10 +208,18 @@ export async function matchRemittanceBills(
   options?: { reservedInvoiceIds?: Iterable<string> },
 ): Promise<MatchedRemittanceBill[]> {
   const claimNumbers = [...new Set(bills.map((bill) => bill.claimNumber))];
+  // The account number L&I echoes back is the claim control number we sent, which
+  // names the invoice outright — a far better key than claim plus service date.
+  const accountNumbers = [
+    ...new Set(bills.map((bill) => bill.patientAccountNumber).filter(Boolean)),
+  ];
   const invoices = await prisma.invoice.findMany({
     where: {
       status: "BILLED",
-      client: { lniClaimNumber: { in: claimNumbers } },
+      OR: [
+        { client: { lniClaimNumber: { in: claimNumbers } } },
+        { clmControlNumber: { in: accountNumbers } },
+      ],
     },
     // Ordered so matching is reproducible. Postgres does not promise a row order,
     // and two invoices on a claim can be identical to the scorer — same service
@@ -228,6 +236,15 @@ export async function matchRemittanceBills(
   });
 
   const usedInvoiceIds = new Set<string>(options?.reservedInvoiceIds ?? []);
+
+  // Only unambiguous control numbers count: the column carries no uniqueness
+  // constraint, so a number held by two invoices identifies neither.
+  const byControlNumber = new Map<string, (typeof invoices)[number] | null>();
+  for (const invoice of invoices) {
+    const control = invoice.clmControlNumber?.trim().toUpperCase();
+    if (!control) continue;
+    byControlNumber.set(control, byControlNumber.has(control) ? null : invoice);
+  }
 
   return bills.map((bill) => {
     const providerId = bill.serviceProviderId
@@ -267,6 +284,22 @@ export async function matchRemittanceBills(
           matchedInvoiceId: share.invoiceId,
           matchNote: note,
         })),
+      };
+    }
+
+    // L&I is quoting our own control number back at us, so this is the invoice —
+    // no scoring needed. Tried after the bundled-bill split, which covers the case
+    // where one bill settles several invoices and the number names only one.
+    const control = bill.patientAccountNumber.trim().toUpperCase();
+    const byControl = control ? byControlNumber.get(control) : undefined;
+    if (byControl && !usedInvoiceIds.has(byControl.id)) {
+      usedInvoiceIds.add(byControl.id);
+      return {
+        bill,
+        matchedInvoiceId: byControl.id,
+        matchNote: "Matched on the claim control number L&I echoed back",
+        paymentStatus: remittanceSectionToPaymentStatus(bill.section),
+        additionalMatches: [],
       };
     }
 

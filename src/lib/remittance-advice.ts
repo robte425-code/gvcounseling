@@ -86,7 +86,10 @@ export async function findInvoicesAlreadyPaidToTherapist(
  * lines have no bundled-bill split to report — each line already carries a single
  * invoice — so they are not made to supply one.
  */
-type PayableMatch = Pick<MatchedRemittanceBill, "bill" | "matchedInvoiceId">;
+type PayableMatch = {
+  bill: Pick<RemittanceBill, "section" | "billTotalPayable">;
+  matchedInvoiceId: MatchedRemittanceBill["matchedInvoiceId"];
+};
 
 export async function buildTherapistPayPreview(
   matches: PayableMatch[],
@@ -665,6 +668,8 @@ function lineToRemittanceBill(line: {
   return {
     section: line.section,
     claimNumber: line.claimNumber,
+    // Not stored on the line, so a rematch falls back to claim and service date.
+    patientAccountNumber: "",
     patientName: line.patientName ?? "",
     icn: line.icn,
     serviceProviderId: line.serviceProviderId,

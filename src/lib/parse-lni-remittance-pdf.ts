@@ -15,6 +15,12 @@ export type RemittanceServiceLine = {
 export type RemittanceBill = {
   section: RemittanceBillSection;
   claimNumber: string;
+  /**
+   * The bill's "PAT ACCT/RX NUM-" value: whatever we sent as CLM01, echoed back.
+   * For anything billed recently that is the invoice's own clmControlNumber, which
+   * identifies the invoice outright.
+   */
+  patientAccountNumber: string;
   patientName: string;
   icn: string;
   serviceProviderId: string;
@@ -253,7 +259,11 @@ function parseBillChunk(
   );
   if (!icnMatch) return null;
 
-  const claimNumber = icnMatch[1]!.toUpperCase();
+  // "PAT ACCT/RX NUM-" is whatever we put in the 837's CLM01, echoed back. On
+  // anything billed recently that is our own claim control number, not an L&I
+  // claim number, so it must not be read as one. The real claim number heads the
+  // bill's first service row and is taken from there below.
+  const patientAccountNumber = icnMatch[1]!.toUpperCase();
   const icn = icnMatch[2]!;
   const beforeIcn = chunk.slice(0, icnMatch.index ?? chunk.length);
 
@@ -268,6 +278,8 @@ function parseBillChunk(
   );
   if (!claimLineMatch) return null;
 
+  // Older bills echo the claim number itself, so the two agree; newer ones do not.
+  const claimNumber = claimLineMatch[1]!.toUpperCase();
   const patientName = claimLineMatch[2]!.trim();
   const serviceLines: RemittanceServiceLine[] = [
     parseServiceLineFromClaimRow(claimLineMatch),
@@ -289,6 +301,7 @@ function parseBillChunk(
   return {
     section: context.section,
     claimNumber,
+    patientAccountNumber,
     patientName,
     icn,
     serviceProviderId: context.serviceProviderId,
