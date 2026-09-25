@@ -32,6 +32,10 @@ type ClaimDraft = {
   billTotalNonCovered: number;
   billTotalPayable: number;
   eobCodes: string[];
+  /** What CAS segments adjusted away, used to tell a denial from a payment. */
+  casAdjustedTotal: number;
+  /** CLP02 as sent, kept for the few payers that do use it meaningfully. */
+  clpStatus: string;
 };
 
 function parseRemittanceFilenameIds(filename: string): {
@@ -43,14 +47,40 @@ function parseRemittanceFilenameIds(filename: string): {
   return { payeeNumber: match[1]!, warrantRegister: match[2]! };
 }
 
-function clpStatusToSection(status: string, paymentAmount: number): RemittanceBillSection {
+/**
+ * The section a claim belongs to.
+ *
+ * CLP02 alone cannot say. L&I stamps every claim in its 835 with status 1,
+ * "processed as primary", denials included, so keying on 4 or 22 never fired and
+ * every denial was filed as still in process — reported as awaiting a decision
+ * when L&I had already refused it and was waiting to be re-billed.
+ *
+ * What marks a denial is the money: nothing paid, and CAS adjustments writing off
+ * the whole charge. Anything actually in process is absent from the 835 entirely
+ * — across the three files L&I has sent, every paid and denied bill on the
+ * matching PDF appears here and not one of its in-process bills does — so a claim
+ * that reaches us with nothing paid has been decided, not deferred.
+ */
+function resolveSection(
+  status: string,
+  paymentAmount: number,
+  chargeAmount: number,
+  casAdjustedTotal: number,
+): RemittanceBillSection {
   const code = status.trim();
   if (code === "4" || code === "22") return "DENIED";
   if (paymentAmount > 0) return "PAID";
-  if (code === "1" || code === "2" || code === "3" || code === "19" || code === "20" || code === "21") {
-    return paymentAmount > 0 ? "PAID" : "IN_PROCESS";
-  }
+  if (chargeAmount > 0 && Math.abs(casAdjustedTotal - chargeAmount) < 0.005) return "DENIED";
   return "IN_PROCESS";
+}
+
+/** What a CAS segment adjusted away, summed over its reason/amount triplets. */
+function parseCasAdjustedAmount(segment: X12Segment): number {
+  let total = 0;
+  for (let i = 2; i < segment.elements.length; i += 3) {
+    total += parseX12Money(segment.elements[i]);
+  }
+  return Math.round(total * 100) / 100;
 }
 
 function extractClaimNumberFromSegments(segments: string[]): string | null {
@@ -128,7 +158,14 @@ function finalizeClaimDraft(draft: ClaimDraft): RemittanceBill {
   const payable = draft.serviceLines.reduce((sum, line) => sum + line.payable, 0);
 
   return {
-    section: draft.section,
+    // Decided here rather than at CLP, because it depends on the CAS segments
+    // that follow it.
+    section: resolveSection(
+      draft.clpStatus,
+      payable || draft.billTotalPayable,
+      billed || draft.billTotalBilled,
+      draft.casAdjustedTotal,
+    ),
     claimNumber: draft.claimNumber,
     patientName: draft.patientName,
     icn: draft.icn,
@@ -147,6 +184,8 @@ function finalizeClaimDraft(draft: ClaimDraft): RemittanceBill {
 function emptyClaimDraft(): ClaimDraft {
   return {
     section: "IN_PROCESS",
+    casAdjustedTotal: 0,
+    clpStatus: "",
     claimNumber: "",
     patientName: "",
     icn: "",
@@ -214,7 +253,9 @@ function parse835Claims(
         const paymentAmount = parseX12Money(segment.elements[3]);
         draft = {
           ...emptyClaimDraft(),
-          section: clpStatusToSection(segment.elements[1] ?? "", paymentAmount),
+          // Provisional: revised once the claim's CAS segments have been read.
+          clpStatus: segment.elements[1] ?? "",
+          section: paymentAmount > 0 ? "PAID" : "IN_PROCESS",
           claimNumber:
             extractClaimNumberFromSegments([
               segment.elements[0] ?? "",
@@ -235,6 +276,7 @@ function parse835Claims(
         if (!draft) break;
         const codes = parseCasEobCodes(segment);
         draft.eobCodes.push(...codes);
+        draft.casAdjustedTotal = Math.round((draft.casAdjustedTotal + parseCasAdjustedAmount(segment)) * 100) / 100;
         pendingEobCodes = codes;
         break;
       }
