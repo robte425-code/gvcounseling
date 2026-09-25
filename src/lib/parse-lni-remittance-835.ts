@@ -19,7 +19,6 @@ import {
 const CLAIM_NUMBER = /[A-Z]{2}\d{5,6}/;
 
 type ClaimDraft = {
-  section: RemittanceBillSection;
   claimNumber: string;
   patientName: string;
   icn: string;
@@ -72,7 +71,11 @@ function resolveSection(
   const code = status.trim();
   if (code === "4" || code === "22") return "DENIED";
   if (paymentAmount > 0) return "PAID";
-  if (chargeAmount > 0 && Math.abs(casAdjustedTotal - chargeAmount) < 0.005) return "DENIED";
+  // At least the whole charge, not exactly: CAS appears at claim level on some
+  // bills and service level on others, and a bill carrying both would double the
+  // total and slip back through as in process under an equality test. Nothing was
+  // paid by this point, so writing off the charge in full is a denial either way.
+  if (chargeAmount > 0 && casAdjustedTotal >= chargeAmount - 0.005) return "DENIED";
   return "IN_PROCESS";
 }
 
@@ -186,7 +189,6 @@ function finalizeClaimDraft(draft: ClaimDraft): RemittanceBill {
 
 function emptyClaimDraft(): ClaimDraft {
   return {
-    section: "IN_PROCESS",
     casAdjustedTotal: 0,
     clpStatus: "",
     patientAccountNumber: "",
@@ -257,10 +259,8 @@ function parse835Claims(
         const paymentAmount = parseX12Money(segment.elements[3]);
         draft = {
           ...emptyClaimDraft(),
-          // Provisional: revised once the claim's CAS segments have been read.
           clpStatus: segment.elements[1] ?? "",
           patientAccountNumber: (segment.elements[0] ?? "").trim().toUpperCase(),
-          section: paymentAmount > 0 ? "PAID" : "IN_PROCESS",
           claimNumber:
             extractClaimNumberFromSegments([
               segment.elements[0] ?? "",
