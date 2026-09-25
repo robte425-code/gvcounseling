@@ -191,10 +191,21 @@ function parseServiceLineFromClaimRow(match: RegExpMatchArray): RemittanceServic
   };
 }
 
+/**
+ * The EOB code L&I prints after a bill's total — its own reason code, such as 259
+ * for a claim number / worker name mismatch, which carries far more than the HIPAA
+ * code the 835 gives for the same bill.
+ *
+ * The trailing lookahead keeps the code from running into whatever follows. It
+ * used to admit only the next bill, so the last bill in a section lost its code:
+ * what follows there is the section's own total line ("**DENIED BILL TOTALS ...").
+ * A denial that happened to be printed last was therefore recorded with no reason
+ * at all. Section totals and the end of the bill both count now.
+ */
 function extractEobAfterBillTotal(patAndTotal: string): string | undefined {
   const match = patAndTotal.match(
     new RegExp(
-      `\\*\\*\\*BILL TOTAL \\. \\. \\.\\s+${MONEY}\\s+${MONEY}\\s+${MONEY}\\s+${MONEY}${EOB_CODE_SUFFIX}(?=\\s+(?:PAT|${CLAIM_NUMBER.source}))`,
+      `\\*\\*\\*BILL TOTAL \\. \\. \\.\\s+${MONEY}\\s+${MONEY}\\s+${MONEY}\\s+${MONEY}${EOB_CODE_SUFFIX}(?=\\s+(?:PAT|\\*\\*|${CLAIM_NUMBER.source})|\\s*$)`,
       "i",
     ),
   );
