@@ -213,6 +213,13 @@ export async function matchRemittanceBills(
       status: "BILLED",
       client: { lniClaimNumber: { in: claimNumbers } },
     },
+    // Ordered so matching is reproducible. Postgres does not promise a row order,
+    // and two invoices on a claim can be identical to the scorer — same service
+    // date, same procedure codes — so whichever arrived first used to win. A claim
+    // billed twice on one date, once paid and once denied, could therefore swap
+    // which invoice each bill attached to from one rematch to the next, flipping
+    // an invoice between Paid and Denied without anything having changed.
+    orderBy: { invoiceNumber: "asc" },
     include: {
       client: { select: { lniClaimNumber: true } },
       therapist: { select: { id: true, lniProviderId: true, firstName: true, lastName: true } },
@@ -273,6 +280,27 @@ export async function matchRemittanceBills(
           bestScore = score;
           best = invoice;
           bestNote = note;
+          continue;
+        }
+        // A claim billed twice on one service date leaves two invoices the scorer
+        // cannot tell apart — same date, same procedure codes. Settle it on the
+        // section the invoice already sits at, so the bill L&I paid keeps the
+        // invoice recorded as paid and the denied bill keeps the denied one.
+        // Failing that, take the lowest invoice number: an arbitrary choice, but
+        // the same one every time, which is what keeps a rematch from flipping an
+        // invoice between Paid and Denied on its own.
+        if (score === bestScore && best !== null && score > 0) {
+          const billStatus = remittanceSectionToPaymentStatus(bill.section);
+          const bestAgrees = best.paymentStatus === billStatus;
+          const invoiceAgrees = invoice.paymentStatus === billStatus;
+          const preferInvoice =
+            invoiceAgrees !== bestAgrees
+              ? invoiceAgrees
+              : invoice.invoiceNumber < best.invoiceNumber;
+          if (preferInvoice) {
+            best = invoice;
+            bestNote = note;
+          }
         }
       }
       return { best, bestScore, bestNote };
