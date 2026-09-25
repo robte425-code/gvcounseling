@@ -81,8 +81,15 @@ export async function findInvoicesAlreadyPaidToTherapist(
   return new Set(existing.map((line) => line.invoiceId));
 }
 
+/**
+ * Only the fields pay needs. Callers that rebuild matches from stored remittance
+ * lines have no bundled-bill split to report — each line already carries a single
+ * invoice — so they are not made to supply one.
+ */
+type PayableMatch = Pick<MatchedRemittanceBill, "bill" | "matchedInvoiceId">;
+
 export async function buildTherapistPayPreview(
-  matches: MatchedRemittanceBill[],
+  matches: PayableMatch[],
 ): Promise<TherapistPayPreview[]> {
   const paidMatches = matches.filter(
     (match) => match.bill.section === "PAID" && match.matchedInvoiceId,
@@ -237,6 +244,19 @@ export async function importRemittancePreview(options: {
     );
   }
 
+  // When L&I settles several of our invoices on one bill, the matcher hands back
+  // the extra invoices with their own share of the service lines. Each becomes its
+  // own remittance line, so every invoice on the bill is matched, reconciled and
+  // paid out rather than only the one the bill was matched to.
+  const lineInputs = options.matches.flatMap((match) => [
+    { bill: match.bill, matchedInvoiceId: match.matchedInvoiceId, matchNote: match.matchNote },
+    ...match.additionalMatches.map((extra) => ({
+      bill: extra.bill,
+      matchedInvoiceId: extra.matchedInvoiceId as string | null,
+      matchNote: extra.matchNote as string | null,
+    })),
+  ]);
+
   const remittance = await prisma.remittanceAdvice.create({
     data: {
       remittanceNumber: options.parsed.remittanceNumber,
@@ -252,7 +272,7 @@ export async function importRemittancePreview(options: {
       importedById: options.importedById,
       status: "PREVIEW",
       lines: {
-        create: options.matches.map((match) => {
+        create: lineInputs.map((match) => {
           const eobCodeDescriptions = resolveEobDescriptions(
             match.bill.eobCodes,
             options.parsed.eobCodeDescriptions,
@@ -277,7 +297,7 @@ export async function importRemittancePreview(options: {
     },
   });
 
-  for (const match of options.matches) {
+  for (const match of lineInputs) {
     await syncInvoiceEobFromLine({
       matchedInvoiceId: match.matchedInvoiceId,
       eobCodes: match.bill.eobCodes,

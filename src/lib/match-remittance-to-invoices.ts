@@ -2,7 +2,7 @@ import type { PaymentStatus } from "@/generated/prisma/client";
 import { calendarIsoFromDate } from "@/lib/constants";
 import { remittanceSectionToPaymentStatus } from "@/lib/invoice-payment-status";
 import { normalizeLniProviderId } from "@/lib/parse-lni-remittance-pdf";
-import type { RemittanceBill } from "@/lib/parse-lni-remittance-pdf";
+import type { RemittanceBill, RemittanceServiceLine } from "@/lib/parse-lni-remittance-pdf";
 import { prisma } from "@/lib/prisma";
 
 export type MatchedRemittanceBill = {
@@ -10,6 +10,21 @@ export type MatchedRemittanceBill = {
   matchedInvoiceId: string | null;
   matchNote: string | null;
   paymentStatus: PaymentStatus;
+  /**
+   * The other invoices L&I settled on this same bill, each with its own share of
+   * the bill's service lines. Empty for the ordinary one-invoice bill.
+   *
+   * The returned array stays one entry per input bill — rematchRemittanceAdvice
+   * pairs matches with existing lines by position — so the extra invoices travel
+   * here and are expanded into their own remittance lines when imported.
+   */
+  additionalMatches: AdditionalRemittanceMatch[];
+};
+
+export type AdditionalRemittanceMatch = {
+  bill: RemittanceBill;
+  matchedInvoiceId: string;
+  matchNote: string;
 };
 
 function serviceLineKey(procedureCode: string, serviceDate: string): string {
@@ -121,6 +136,73 @@ function matchScore(
   return { score: procedureScore, note: null };
 }
 
+type MatchCandidate = {
+  id: string;
+  lineItems: Array<{ procedureCode: string; serviceDate: Date }>;
+};
+
+/** What L&I paid across a set of service lines. */
+function payableOf(serviceLines: RemittanceServiceLine[]): number {
+  return serviceLines.reduce((total, line) => total + line.payable, 0);
+}
+
+/** A bill carrying only one invoice's share of the service lines. */
+function billShare(bill: RemittanceBill, serviceLines: RemittanceServiceLine[]): RemittanceBill {
+  return {
+    ...bill,
+    serviceLines,
+    billTotalBilled: serviceLines.reduce((total, line) => total + line.billed, 0),
+    billTotalAllowed: serviceLines.reduce((total, line) => total + line.allowed, 0),
+    billTotalNonCovered: serviceLines.reduce((total, line) => total + line.nonCovered, 0),
+    billTotalPayable: payableOf(serviceLines),
+  };
+}
+
+/**
+ * L&I sometimes settles several of our invoices on one bill — a single ICN whose
+ * service lines span more than one date of service. Matching picks a single best
+ * invoice, so every other invoice on such a bill was left unmatched: never marked
+ * paid, and never paid out to the therapist.
+ *
+ * Splits the bill into each invoice's share, or returns null to leave it whole.
+ * It only splits when the apportionment is unambiguous:
+ *   - every service date matches exactly one candidate invoice's own dates,
+ *   - at least two distinct invoices are involved,
+ *   - no invoice is already spoken for by another bill, and
+ *   - the service lines account for the whole bill total.
+ * Anything less is left as a single bill for a person to resolve, since guessing
+ * at the shares would put wrong amounts on an invoice.
+ */
+function splitBundledBill(
+  bill: RemittanceBill,
+  candidates: MatchCandidate[],
+  usedInvoiceIds: ReadonlySet<string>,
+): Array<{ invoiceId: string; serviceLines: RemittanceServiceLine[] }> | null {
+  const billDates = billServiceDates(bill);
+  if (billDates.length < 2) return null;
+
+  // Only apportion when the lines add up to what L&I says the bill paid.
+  if (Math.abs(payableOf(bill.serviceLines) - bill.billTotalPayable) > 0.005) return null;
+
+  const byInvoice = new Map<string, RemittanceServiceLine[]>();
+  for (const date of billDates) {
+    const owners = candidates.filter((invoice) =>
+      invoiceServiceDates(invoice.lineItems).includes(date),
+    );
+    if (owners.length !== 1) return null;
+
+    const owner = owners[0]!;
+    if (usedInvoiceIds.has(owner.id)) return null;
+
+    const share = byInvoice.get(owner.id) ?? [];
+    share.push(...bill.serviceLines.filter((line) => line.serviceDateFrom === date));
+    byInvoice.set(owner.id, share);
+  }
+
+  if (byInvoice.size < 2) return null;
+  return [...byInvoice].map(([invoiceId, serviceLines]) => ({ invoiceId, serviceLines }));
+}
+
 export async function matchRemittanceBills(
   bills: RemittanceBill[],
   options?: { reservedInvoiceIds?: Iterable<string> },
@@ -162,6 +244,24 @@ export async function matchRemittanceBills(
     // who owns the claim in our system; fall back to claim + service date matching.
     const candidates =
       providerMatchedInvoices.length > 0 ? providerMatchedInvoices : claimInvoices;
+
+    const split = splitBundledBill(bill, candidates, usedInvoiceIds);
+    if (split) {
+      const [primary, ...rest] = split;
+      for (const share of split) usedInvoiceIds.add(share.invoiceId);
+      const note = `L&I settled ${split.length} of our invoices on this bill (ICN ${bill.icn}); split into each invoice's share of the service lines`;
+      return {
+        bill: billShare(bill, primary!.serviceLines),
+        matchedInvoiceId: primary!.invoiceId,
+        matchNote: note,
+        paymentStatus: remittanceSectionToPaymentStatus(bill.section),
+        additionalMatches: rest.map((share) => ({
+          bill: billShare(bill, share.serviceLines),
+          matchedInvoiceId: share.invoiceId,
+          matchNote: note,
+        })),
+      };
+    }
 
     const pickBest = (pool: typeof invoices) => {
       let best: (typeof invoices)[number] | null = null;
@@ -208,6 +308,7 @@ export async function matchRemittanceBills(
               : `No billed invoice for claim ${bill.claimNumber}`
             : `No invoice matched service date/lines (${(bestScore * 100).toFixed(0)}% score)`,
         paymentStatus: remittanceSectionToPaymentStatus(bill.section),
+        additionalMatches: [],
       };
     }
 
@@ -217,6 +318,7 @@ export async function matchRemittanceBills(
       matchedInvoiceId: best.id,
       matchNote: bestNote,
       paymentStatus: remittanceSectionToPaymentStatus(bill.section),
+      additionalMatches: [],
     };
   });
 }
