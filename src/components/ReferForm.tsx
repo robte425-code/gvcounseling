@@ -254,15 +254,22 @@ export function ReferForm() {
       <section className="space-y-5">
         <h2 className="font-serif text-xl font-semibold text-primary-dark">Client Info</h2>
         <Field label="Client name" name="clientName" required placeholder="Client name" />
+        {/*
+          The claim number is checked here as well as on the server, so a number
+          typed without its letters is caught while the form and its files are
+          still in front of the VRC rather than after the referral is gone.
+
+          It has to agree with extractPrimaryClaimNumber, which reads a list and
+          takes the first claim it recognises. So this allows anything before the
+          last separator: "31627, BL12687" is a valid referral, and an earlier
+          rule that demanded the first entry be well formed rejected it. It still
+          refuses a value with no letter-and-digit claim in it at all.
+        */}
         <Field
           label="Please enter the LNI claim number(s) associated with the client you are referring."
           name="claimNumbers"
           required
-          // Caught here rather than after the form is gone: a claim number sent as
-          // digits alone is refused on the server, and the referral's attachments
-          // go with it. Loose enough for several claims on one line, and for the
-          // space some claim status screens print after the letters.
-          pattern="[^A-Za-z0-9]*[A-Za-z]{1,2}\s*[0-9]{4,}.*"
+          pattern="(?:.*[,;/])?\s*[A-Za-z]{1,2}\s*[0-9]{4,}.*"
           title="Claim numbers begin with one or two letters followed by digits, such as BL12687."
           hint="Begins with one or two letters, e.g. BL12687. Separate several with commas."
           placeholder="BL12687"

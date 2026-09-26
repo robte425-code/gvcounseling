@@ -85,6 +85,14 @@ export async function collectReferralUploads(formData: FormData): Promise<Upload
 export { UploadValidationError };
 
 /**
+ * Base64 runs about a third larger than the bytes it carries, so the total sits
+ * well inside what the mail provider accepts. A referral is already capped at
+ * REFERRAL_MAX_TOTAL_BYTES, so this should never bite; it is here so that raising
+ * that limit cannot silently start bouncing the notice.
+ */
+const MAX_ATTACHMENT_BYTES = 7 * 1024 * 1024;
+
+/**
  * The referral's own files, encoded for an email attachment.
  *
  * A referral that fails intake never reaches Drive, and its uploads live only in
@@ -93,14 +101,9 @@ export { UploadValidationError };
  * approval letter were otherwise destroyed by a single malformed claim number,
  * with nothing to recover from and no sign to the VRC that anything went wrong.
  *
- * Base64 runs about a third larger than the bytes it carries, so the total is
- * capped well inside what the mail provider accepts. A referral is already capped
- * at REFERRAL_MAX_TOTAL_BYTES, so this should never bite; it is here so that
- * raising that limit cannot silently start bouncing the notice, which would lose
- * the files all over again. Anything left out is named in the returned notes.
+ * Anything left out for size is named in the returned notes rather than dropped
+ * silently.
  */
-const MAX_ATTACHMENT_BYTES = 7 * 1024 * 1024;
-
 export function referralUploadsAsAttachments(uploads: UploadedReferralFile[]): {
   attachments: { filename: string; content: string; contentType?: string }[];
   omitted: string[];
