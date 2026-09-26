@@ -82,25 +82,40 @@ function Field({
   required,
   type = "text",
   placeholder,
+  pattern,
+  title,
+  hint,
 }: {
   label: string;
   name: string;
   required?: boolean;
   type?: string;
   placeholder?: string;
+  pattern?: string;
+  title?: string;
+  hint?: string;
 }) {
+  const hintId = hint ? `${name}-hint` : undefined;
   return (
     <div>
       <label htmlFor={name} className={labelClass}>
         {label}
         {required && <span className="text-primary"> *</span>}
       </label>
+      {hint && (
+        <p id={hintId} className="mb-1 text-xs text-muted">
+          {hint}
+        </p>
+      )}
       <input
         id={name}
         name={name}
         type={type}
         required={required}
         placeholder={placeholder}
+        pattern={pattern}
+        title={title}
+        aria-describedby={hintId}
         className={inputClass}
       />
     </div>
@@ -243,6 +258,14 @@ export function ReferForm() {
           label="Please enter the LNI claim number(s) associated with the client you are referring."
           name="claimNumbers"
           required
+          // Caught here rather than after the form is gone: a claim number sent as
+          // digits alone is refused on the server, and the referral's attachments
+          // go with it. Loose enough for several claims on one line, and for the
+          // space some claim status screens print after the letters.
+          pattern="[^A-Za-z0-9]*[A-Za-z]{1,2}\s*[0-9]{4,}.*"
+          title="Claim numbers begin with one or two letters followed by digits, such as BL12687."
+          hint="Begins with one or two letters, e.g. BL12687. Separate several with commas."
+          placeholder="BL12687"
         />
 
         <FileField

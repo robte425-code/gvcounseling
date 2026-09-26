@@ -84,6 +84,48 @@ export async function collectReferralUploads(formData: FormData): Promise<Upload
 
 export { UploadValidationError };
 
+/**
+ * The referral's own files, encoded for an email attachment.
+ *
+ * A referral that fails intake never reaches Drive, and its uploads live only in
+ * the request that carried them. Sending them with the failure notice is the one
+ * chance to keep them: a VRC's claim status screen, contacts screen and BHI
+ * approval letter were otherwise destroyed by a single malformed claim number,
+ * with nothing to recover from and no sign to the VRC that anything went wrong.
+ *
+ * Base64 runs about a third larger than the bytes it carries, so the total is
+ * capped well inside what the mail provider accepts. A referral is already capped
+ * at REFERRAL_MAX_TOTAL_BYTES, so this should never bite; it is here so that
+ * raising that limit cannot silently start bouncing the notice, which would lose
+ * the files all over again. Anything left out is named in the returned notes.
+ */
+const MAX_ATTACHMENT_BYTES = 7 * 1024 * 1024;
+
+export function referralUploadsAsAttachments(uploads: UploadedReferralFile[]): {
+  attachments: { filename: string; content: string; contentType?: string }[];
+  omitted: string[];
+} {
+  const attachments: { filename: string; content: string; contentType?: string }[] = [];
+  const omitted: string[] = [];
+  let encodedBytes = 0;
+
+  for (const upload of uploads) {
+    const content = upload.buffer.toString("base64");
+    if (encodedBytes + content.length > MAX_ATTACHMENT_BYTES) {
+      omitted.push(upload.filename);
+      continue;
+    }
+    encodedBytes += content.length;
+    attachments.push({
+      filename: upload.filename,
+      content,
+      contentType: upload.mimeType,
+    });
+  }
+
+  return { attachments, omitted };
+}
+
 async function uploadReferralToDrive(
   claimNumber: string,
   clientName: string,

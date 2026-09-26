@@ -2,8 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   collectReferralUploads,
   processReferralIntake,
+  referralUploadsAsAttachments,
   UploadValidationError,
 } from "@/lib/referral-intake";
+import { extractPrimaryClaimNumber } from "@/lib/parse-referral-form";
 import {
   sendReferralIntakeAdminNotice,
   sendReferralIntakeFailedNotice,
@@ -47,6 +49,27 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Required fields are missing." }, { status: 400 });
     }
 
+    // Checked before the referral is accepted, so the VRC can correct it while
+    // they still have the form and their files in front of them. A claim number
+    // submitted as digits alone once cost a referral its claim status screen,
+    // contacts screen and BHI approval letter, with the endpoint still answering
+    // that the submission had been received.
+    //
+    // Only the shape is reported. Every other reason a referral can fail stays
+    // unspoken: this endpoint is public, and saying that a claim number is
+    // already on file tells anyone who guesses one that the worker is a patient
+    // here. The shape of a claim number gives away nothing about anybody.
+    const claimNumbers = String(formData.get("claimNumbers") ?? "");
+    if (!extractPrimaryClaimNumber(claimNumbers)) {
+      return NextResponse.json(
+        {
+          error:
+            "That does not look like an L&I claim number. They begin with one or two letters followed by digits, such as BL12687. Please check the Claim and Account Center and try again.",
+        },
+        { status: 400 },
+      );
+    }
+
     const lines: string[] = ["New client referral submission", ""];
 
     for (const field of textFields) {
@@ -80,13 +103,20 @@ export async function POST(request: NextRequest) {
       // Admins get the real reason; the caller does not. This endpoint is public,
       // and messages like "a client with claim number X already exists" told anyone
       // who guessed a claim number that the worker is a patient here.
+      //
+      // The referral's files go out with the notice. Intake failing means they
+      // never reached Drive, and they exist nowhere else once this request ends.
+      const { attachments, omitted } = referralUploadsAsAttachments(uploads);
       await sendReferralIntakeFailedNotice({
         clientName: String(clientName),
-        claimNumber: String(formData.get("claimNumbers") ?? "").trim() || undefined,
-        formDetails,
+        claimNumber: claimNumbers.trim() || undefined,
+        formDetails: omitted.length
+          ? `${formDetails}\n\nToo large to attach: ${omitted.join(", ")}`
+          : formDetails,
         errorMessage:
           intakeError instanceof Error ? intakeError.message : "Client record creation failed.",
         replyTo,
+        attachments,
       });
     }
 
