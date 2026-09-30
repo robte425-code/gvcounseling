@@ -317,14 +317,25 @@ export async function importRemittancePreview(options: {
   return { remittanceAdviceId: remittance.id };
 }
 
+/**
+ * Takes the caller's transaction when there is one.
+ *
+ * Reaching for the global client from inside a transaction deadlocked against it:
+ * reconcileInvoiceAfterRemittanceUnmatch updates the invoice row, then called this
+ * on a separate connection to update the same row, so the transaction could not
+ * commit until an update that could not run until it committed. Deleting a
+ * remittance preview whose matched invoice still appeared on another preview
+ * failed every time, burning the whole transaction allowance before rolling back.
+ */
 async function syncInvoiceEobFromLine(options: {
   matchedInvoiceId: string | null;
   eobCodes: string[];
   eobCodeDescriptions: Record<string, string>;
+  db?: RemittanceDb;
 }): Promise<void> {
   if (!options.matchedInvoiceId) return;
 
-  await prisma.invoice.update({
+  await (options.db ?? prisma).invoice.update({
     where: { id: options.matchedInvoiceId },
     data: {
       lniEobCodes: options.eobCodes,
@@ -378,6 +389,7 @@ export async function reconcileInvoiceAfterRemittanceUnmatch(
       matchedInvoiceId: invoiceId,
       eobCodes: previewLine.eobCodes,
       eobCodeDescriptions: parseLineEobDescriptions(previewLine.eobCodeDescriptions),
+      db: tx,
     });
     return;
   }
