@@ -67,6 +67,14 @@ export function RemittanceImportForm() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  /**
+   * Set once the import has answered and the page is being opened. The button
+   * stays disabled across both stages so nothing is imported twice, but importing
+   * and opening take about as long as each other and the page being opened is
+   * heavy, so a single "Importing…" sat there long after the import was done and
+   * read as a stall.
+   */
+  const [opening, setOpening] = useState<string | null>(null);
   const [driveFiles, setDriveFiles] = useState<DriveRemittanceFile[]>([]);
   const [driveLoading, setDriveLoading] = useState(true);
   const [driveError, setDriveError] = useState<string | null>(null);
@@ -152,7 +160,14 @@ export function RemittanceImportForm() {
         return;
       }
 
-      if ((body.imported ?? 0) === 1 && (body.failed ?? 0) === 0 && body.remittanceAdviceId) {
+      const importedCount = body.imported ?? 0;
+      const failedCount = body.failed ?? 0;
+      setOpening(
+        `Imported ${importedCount} remittance${importedCount === 1 ? "" : "s"}` +
+          `${failedCount > 0 ? `, ${failedCount} failed` : ""}. Opening…`,
+      );
+
+      if (importedCount === 1 && failedCount === 0 && body.remittanceAdviceId) {
         router.push(`/portal/admin/pay/${body.remittanceAdviceId}`);
         return;
       }
@@ -163,6 +178,7 @@ export function RemittanceImportForm() {
       router.push(`/portal/admin/pay?${params.toString()}`);
     } catch {
       setError("Remittance import failed. Check your connection and try again.");
+      setOpening(null);
       setLoading(false);
     }
   }
@@ -290,12 +306,20 @@ export function RemittanceImportForm() {
         </p>
       )}
 
+      {opening && !error && (
+        <p className="rounded-lg bg-primary/10 px-3 py-2 text-sm text-primary-dark" role="status">
+          {opening}
+        </p>
+      )}
+
       <button type="submit" disabled={loading || selectionCount === 0} className={portalButtonClass}>
-        {loading
-          ? "Importing…"
-          : selectionCount > 1
-            ? `Import ${selectionCount} remittances`
-            : "Import & preview"}
+        {opening
+          ? "Opening…"
+          : loading
+            ? "Importing…"
+            : selectionCount > 1
+              ? `Import ${selectionCount} remittances`
+              : "Import & preview"}
       </button>
     </form>
   );
