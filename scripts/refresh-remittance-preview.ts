@@ -27,6 +27,36 @@ function arg(name: string): string | null {
   return i >= 0 && process.argv[i + 1] ? process.argv[i + 1] : null;
 }
 
+/**
+ * Point Drive at an account that is actually connected.
+ *
+ * The server reads the account from GOOGLE_DRIVE_SYSTEM_USER_EMAIL and refuses if
+ * it has no Drive connection, which is right for the app. For a maintenance script
+ * it is only an obstacle: pulling a fresh env file can leave that variable naming
+ * an account that never connected, and the script then fails on configuration
+ * rather than on anything to do with the remittance. Any connected admin will do,
+ * and which one is used is printed rather than quietly substituted.
+ */
+async function pointDriveAtAConnectedAccount(
+  prisma: { user: { findFirst: (args: unknown) => Promise<{ email: string } | null> } },
+): Promise<void> {
+  const configured = process.env.GOOGLE_DRIVE_SYSTEM_USER_EMAIL?.trim() || "ghim@gvcounseling.com";
+  const connected = await prisma.user.findFirst({
+    where: { email: configured, googleDriveConnection: { isNot: null } },
+    select: { email: true },
+  });
+  if (connected) return;
+
+  const fallback = await prisma.user.findFirst({
+    where: { role: "ADMIN", googleDriveConnection: { isNot: null } },
+    select: { email: true },
+  });
+  if (!fallback) return; // Let the server's own error explain it.
+
+  console.log(`Drive: ${configured} has no Drive connection, using ${fallback.email}.`);
+  process.env.GOOGLE_DRIVE_SYSTEM_USER_EMAIL = fallback.email;
+}
+
 async function main() {
   const { createPrismaClient } = await import("../src/lib/prisma");
   const { getSystemDriveAccessToken } = await import("../src/lib/google-drive-system");
@@ -78,6 +108,7 @@ async function main() {
     return;
   }
 
+  await pointDriveAtAConnectedAccount(prisma as never);
   const { accessToken } = await getSystemDriveAccessToken();
   const files = await listLniRemittanceAdvicePdfs(accessToken);
   const file = files.find((f) => f.name === existing.sourceFilename);
