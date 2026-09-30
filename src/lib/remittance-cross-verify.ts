@@ -67,23 +67,20 @@ function normalizeServiceLines(value: unknown): RemittanceServiceLine[] {
   return value as RemittanceServiceLine[];
 }
 
+/**
+ * A bill's identity across the two formats: L&I's own claim control number.
+ *
+ * The key used to fold in the claim number, service provider id, section, service
+ * dates and EOB codes. The two formats state none of those the same way — the
+ * provider id is padded differently (0480003 against 0000480003), the 835 reports
+ * no service lines for a bill it paid nothing on, and the codes come from
+ * different vocabularies entirely, L&I's own 259 against the HIPAA 140. So no bill
+ * ever matched its own counterpart, and every one was reported as both missing
+ * from one side and extra on the other. The ICN is L&I's, identifies the bill, and
+ * both formats carry it verbatim.
+ */
 function billKey(line: RemittanceLineForCompare): string {
-  const dates = normalizeServiceLines(line.serviceLines)
-    .map((entry) => entry.serviceDateFrom)
-    .sort()
-    .join(",");
-  const codes = normalizeServiceLines(line.serviceLines)
-    .map((entry) => entry.procedureCode)
-    .sort()
-    .join(",");
-  return [
-    line.claimNumber.toUpperCase(),
-    line.icn.trim(),
-    line.serviceProviderId.trim(),
-    line.section,
-    dates,
-    codes,
-  ].join("|");
+  return line.icn.trim().toUpperCase();
 }
 
 function fingerprint(line: RemittanceLineForCompare): BillFingerprint {
@@ -161,7 +158,7 @@ export function compareRemittanceAdvices(
     if (!other) {
       issues.push({
         kind: "missing_bill",
-        message: `No matching bill in ${counterpart.sourceFormat === "ERA_835" ? "835 ERA" : "PDF RA"} for claim ${bill.claimNumber} (${bill.section}).`,
+        message: `No matching bill in ${counterpart.sourceFormat === "ERA_835" ? "835 ERA" : "PDF RA"} for bill ${bill.icn} (${bill.section}).`,
       });
       continue;
     }
@@ -169,21 +166,28 @@ export function compareRemittanceAdvices(
     if (bill.section !== other.section) {
       issues.push({
         kind: "section",
-        message: `Claim ${bill.claimNumber} section differs (${bill.section} vs ${other.section}).`,
+        message: `Bill ${bill.icn} section differs (${bill.section} vs ${other.section}).`,
       });
     }
 
     if (Math.abs(bill.billTotalPayable - other.billTotalPayable) > MONEY_TOLERANCE) {
       issues.push({
         kind: "payable",
-        message: `Claim ${bill.claimNumber} payable differs (${bill.billTotalPayable} vs ${other.billTotalPayable}).`,
+        message: `Bill ${bill.icn} payable differs (${bill.billTotalPayable} vs ${other.billTotalPayable}).`,
       });
     }
 
-    if (!compareServiceLines(bill.serviceLines, other.serviceLines)) {
+    // Only where both sides itemise. An 835 lists no service lines for a bill it
+    // paid nothing on, while the PDF itemises all of them at zero, and calling
+    // that a discrepancy buried the real ones.
+    if (
+      bill.serviceLines.length > 0 &&
+      other.serviceLines.length > 0 &&
+      !compareServiceLines(bill.serviceLines, other.serviceLines)
+    ) {
       issues.push({
         kind: "service_lines",
-        message: `Claim ${bill.claimNumber} service lines differ between sources.`,
+        message: `Bill ${bill.icn} service lines differ between sources.`,
       });
     }
 
@@ -194,7 +198,7 @@ export function compareRemittanceAdvices(
     ) {
       issues.push({
         kind: "matched_invoice",
-        message: `Claim ${bill.claimNumber} matched different invoices between sources.`,
+        message: `Bill ${bill.icn} matched different invoices between sources.`,
       });
     }
   }
@@ -203,7 +207,7 @@ export function compareRemittanceAdvices(
     if (!primaryBills.some((entry) => entry.key === bill.key)) {
       issues.push({
         kind: "extra_bill",
-        message: `Extra bill in ${counterpart.sourceFormat === "ERA_835" ? "835 ERA" : "PDF RA"} for claim ${bill.claimNumber} (${bill.section}).`,
+        message: `Extra bill in ${counterpart.sourceFormat === "ERA_835" ? "835 ERA" : "PDF RA"} for bill ${bill.icn} (${bill.section}).`,
       });
     }
   }
@@ -232,21 +236,28 @@ const remittanceCompareInclude = {
   },
 } as const;
 
+/**
+ * The same remittance in the other format, for one remittance.
+ *
+ * Narrowed by the bills this one reports, then settled by the same overlap rule
+ * findCounterpart uses, so the page for a single remittance and the list agree.
+ */
 export async function findRemittanceCounterpart(
-  remittance: Pick<
-    RemittanceAdviceForCompare,
-    "id" | "remittanceNumber" | "warrantRegister" | "sourceFormat"
-  >,
+  remittance: Pick<RemittanceAdviceForCompare, "id" | "sourceFormat" | "lines">,
 ) {
   const targetFormat = remittance.sourceFormat === "PDF_RA" ? "ERA_835" : "PDF_RA";
-  return prisma.remittanceAdvice.findFirst({
+  const icns = [...icnsOf(remittance)];
+  if (!icns.length) return null;
+
+  const candidates = await prisma.remittanceAdvice.findMany({
     where: {
-      remittanceNumber: remittance.remittanceNumber,
-      warrantRegister: remittance.warrantRegister,
       sourceFormat: targetFormat,
+      lines: { some: { icn: { in: icns }, supersededAt: null } },
     },
     include: remittanceCompareInclude,
   });
+
+  return findCounterpart(remittance, candidates);
 }
 
 export async function verifyRemittanceAgainstCounterpart(
@@ -278,46 +289,82 @@ export async function verifyRemittanceAgainstCounterpart(
   return compareRemittanceAdvices(remittance, counterpart);
 }
 
-export async function loadRemittanceCrossVerifySummaries(
-  remittances: RemittanceAdviceForCompare[],
-): Promise<Map<string, RemittanceCrossVerifyResult>> {
-  if (!remittances.length) return new Map();
+/** The bills a remittance reports, by L&I's own claim control number. */
+function icnsOf(remittance: Pick<RemittanceAdviceForCompare, "lines">): Set<string> {
+  const icns = new Set<string>();
+  for (const line of remittance.lines) {
+    const icn = line.icn.trim();
+    if (icn) icns.add(icn);
+  }
+  return icns;
+}
 
-  const counterparts = await prisma.remittanceAdvice.findMany({
-    where: {
-      OR: remittances.map((row) => ({
-        remittanceNumber: row.remittanceNumber,
-        warrantRegister: row.warrantRegister,
-        sourceFormat: row.sourceFormat === "PDF_RA" ? "ERA_835" : "PDF_RA",
-      })),
-    },
-    include: remittanceCompareInclude,
-  });
+/**
+ * The same remittance in the other format, found by the bills the two report.
+ *
+ * Pairing used to be on remittance number and warrant register, which the two
+ * formats do not share. A PDF carries L&I's own "REMITTANCE ADVICE: 108125" and
+ * "WARRANT REGISTER: 60938"; an 835 carries neither, so the parser fell back to
+ * the payee number and the EFT trace from TRN02 — 0479998 and 169417!. Those can
+ * never equal 108125 and 60938, so every remittance reported a missing
+ * counterpart and the comparison silently never ran on anything.
+ *
+ * ICNs are the one identifier both formats state per bill, and they are L&I's, not
+ * ours. A bill is re-reported on later remittances as it moves from in process to
+ * settled, so sharing one ICN proves nothing; the pair has to share more than half
+ * of whichever side lists fewer bills, and the best overlap wins.
+ */
+type Pairable = Pick<RemittanceAdviceForCompare, "id" | "sourceFormat" | "lines">;
 
-  const counterpartByPair = new Map(
-    counterparts.map((row) => [
-      `${row.remittanceNumber}::${row.warrantRegister}::${row.sourceFormat}`,
-      row,
-    ]),
-  );
+function findCounterpart<T extends Pairable>(remittance: Pairable, all: T[]): T | null {
+  const wanted = remittance.sourceFormat === "PDF_RA" ? "ERA_835" : "PDF_RA";
+  const mine = icnsOf(remittance);
+  if (!mine.size) return null;
 
-  const results = new Map<string, RemittanceCrossVerifyResult>();
-  for (const remittance of remittances) {
-    const targetFormat = remittance.sourceFormat === "PDF_RA" ? "ERA_835" : "PDF_RA";
-    const counterpart = counterpartByPair.get(
-      `${remittance.remittanceNumber}::${remittance.warrantRegister}::${targetFormat}`,
-    );
-    if (!counterpart) {
-      results.set(remittance.id, {
-        status: "missing_counterpart",
-        counterpartId: null,
-        counterpartFormat: targetFormat,
-        issues: [],
-      });
-      continue;
+  let best: T | null = null;
+  let bestOverlap = 0;
+  let bestSmaller = 0;
+
+  for (const other of all) {
+    if (other.id === remittance.id || other.sourceFormat !== wanted) continue;
+    const theirs = icnsOf(other);
+    if (!theirs.size) continue;
+
+    let overlap = 0;
+    for (const icn of theirs) {
+      if (mine.has(icn)) overlap += 1;
     }
+    if (overlap > bestOverlap) {
+      bestOverlap = overlap;
+      best = other;
+      bestSmaller = Math.min(mine.size, theirs.size);
+    }
+  }
 
-    results.set(remittance.id, compareRemittanceAdvices(remittance, counterpart));
+  if (!best || bestOverlap * 2 <= bestSmaller) return null;
+  return best;
+}
+
+/**
+ * Compare every remittance against its counterpart in the other format.
+ *
+ * Counterparts are found within the set handed in, which is every remittance the
+ * page already loaded, so this costs no further queries.
+ */
+export function loadRemittanceCrossVerifySummaries(
+  remittances: RemittanceAdviceForCompare[],
+): Map<string, RemittanceCrossVerifyResult> {
+  const results = new Map<string, RemittanceCrossVerifyResult>();
+
+  for (const remittance of remittances) {
+    const counterpartFormat = remittance.sourceFormat === "PDF_RA" ? "ERA_835" : "PDF_RA";
+    const counterpart = findCounterpart(remittance, remittances);
+    results.set(
+      remittance.id,
+      counterpart
+        ? compareRemittanceAdvices(remittance, counterpart)
+        : { status: "missing_counterpart", counterpartId: null, counterpartFormat, issues: [] },
+    );
   }
 
   return results;

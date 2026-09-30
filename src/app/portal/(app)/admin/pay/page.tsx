@@ -113,7 +113,7 @@ export default async function PayPage({
     },
   });
 
-  const crossVerifyById = await loadRemittanceCrossVerifySummaries(remittances);
+  const crossVerifyById = loadRemittanceCrossVerifySummaries(remittances);
 
   const previewUnresolved = remittances.filter(
     (remittance) =>
