@@ -3,6 +3,7 @@ import { remittanceSectionToPaymentStatus, resolvePaymentFromRemittanceLines, pa
 import { matchRemittanceBills } from "@/lib/match-remittance-to-invoices";
 import type { MatchedRemittanceBill } from "@/lib/match-remittance-to-invoices";
 import { countUnresolvedRemittanceLines } from "@/lib/remittance-line-supersede";
+import { findRemittanceCounterpart } from "@/lib/remittance-cross-verify";
 import { parseLniRemittance835 } from "@/lib/parse-lni-remittance-835";
 import { parseLniRemittancePdf } from "@/lib/parse-lni-remittance-pdf";
 import type { ParsedRemittanceAdvice, RemittanceBill, RemittanceServiceLine } from "@/lib/parse-lni-remittance-pdf";
@@ -901,17 +902,15 @@ export async function applyRemittanceAdvice(remittanceAdviceId: string): Promise
   if (!remittance) throw new Error("Remittance advice not found.");
   if (remittance.status === "APPLIED") throw new Error("This remittance has already been applied.");
 
-  const siblingApplied = await prisma.remittanceAdvice.findFirst({
-    where: {
-      remittanceNumber: remittance.remittanceNumber,
-      warrantRegister: remittance.warrantRegister,
-      status: "APPLIED",
-      sourceFormat: { not: remittance.sourceFormat },
-    },
-    select: { id: true, sourceFormat: true },
-  });
-  if (siblingApplied) {
-    const appliedLabel = siblingApplied.sourceFormat === "ERA_835" ? "835 ERA" : "PDF RA";
+  // The same remittance in the other format must not also be applied, or the same
+  // money is taken twice. This looked for it by remittance number and warrant
+  // register, which the two formats do not share — a PDF carries L&I's own numbers
+  // and an 835 carries the payee number and the EFT trace — so the guard never
+  // fired and nothing stopped both being applied. Bills are matched on the ICN
+  // instead, the one identifier both formats state verbatim.
+  const counterpart = await findRemittanceCounterpart(remittance);
+  if (counterpart?.status === "APPLIED") {
+    const appliedLabel = counterpart.sourceFormat === "ERA_835" ? "835 ERA" : "PDF RA";
     throw new Error(
       `Cannot apply: the ${appliedLabel} for this remittance is already applied. Revert it first if you need to switch sources.`,
     );
