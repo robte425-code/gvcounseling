@@ -425,12 +425,22 @@ export async function deleteRemittancePreview(remittanceAdviceId: string): Promi
     ),
   ];
 
-  await prisma.$transaction(async (tx) => {
-    await tx.remittanceAdvice.delete({ where: { id: remittanceAdviceId } });
-    for (const invoiceId of invoiceIds) {
-      await reconcileInvoiceAfterRemittanceUnmatch(invoiceId, tx);
-    }
-  });
+  // Reconciling one invoice is several round trips, and a preview can have a
+  // matched invoice for every bill on it, so the default five seconds is not
+  // enough: deleting a twelve-bill preview ran out at 5325 ms partway through.
+  // It rolls back cleanly when that happens, but the preview cannot be removed at
+  // all. Raised rather than reduced because the work is per invoice and already
+  // minimal — and note this is a different fault from the deadlock that
+  // syncInvoiceEobFromLine used to cause, which no allowance could have fixed.
+  await prisma.$transaction(
+    async (tx) => {
+      await tx.remittanceAdvice.delete({ where: { id: remittanceAdviceId } });
+      for (const invoiceId of invoiceIds) {
+        await reconcileInvoiceAfterRemittanceUnmatch(invoiceId, tx);
+      }
+    },
+    { maxWait: 10_000, timeout: 30_000 },
+  );
 }
 
 /** Undo an applied remittance: reset matched invoices and delete RA + pay run. */
