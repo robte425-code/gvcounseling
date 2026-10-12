@@ -32,6 +32,9 @@ function arg(name: string): string | null {
 
 type Line = { procedureCode: string; serviceDate: Date; amount: number; units: number; sortOrder: number };
 
+/** The cross-reference this script leaves on a source it has already rebilled. */
+const CROSS_REFERENCE_PREFIX = "Rebilled as invoice #";
+
 function signature(lines: Line[]): string {
   return [...lines]
     .sort((a, b) => a.sortOrder - b.sortOrder)
@@ -71,6 +74,7 @@ async function main() {
     include: {
       lineItems: { orderBy: { sortOrder: "asc" } },
       attachments: { orderBy: { createdAt: "asc" } },
+      notes: { orderBy: { createdAt: "asc" } },
       client: { select: { firstName: true, lastName: true } },
       therapist: { select: { firstName: true, lastName: true } },
       payRunLines: { select: { id: true } },
@@ -105,7 +109,10 @@ async function main() {
     console.log(
       `\n#${source.invoiceNumber} ${source.client.lastName}, ${source.client.firstName} — DOS ${dos}, ${codes}, $${Number(source.totalAmount).toFixed(2)}`,
     );
-    console.log(`  ${source.status}/${source.paymentStatus} eob=${JSON.stringify(source.lniEobCodes)}  ${source.attachments.length} attachment(s)`);
+    const carriedNotes = source.notes.filter((n) => !n.body.startsWith(CROSS_REFERENCE_PREFIX));
+    console.log(
+      `  ${source.status}/${source.paymentStatus} eob=${JSON.stringify(source.lniEobCodes)}  ${source.attachments.length} attachment(s), ${carriedNotes.length} note(s) to carry`,
+    );
 
     // Guards: only rebill what L&I actually refused, and never a bill it paid.
     if (source.paymentStatus === "PAID") {
@@ -158,7 +165,8 @@ async function main() {
       console.log(
         `  would create a new Submitted invoice: same lines, ${source.attachments.length} attachment(s) carried over, no pay period, no control number`,
       );
-      for (const a of source.attachments) console.log(`     ${a.filename}`);
+      for (const a of source.attachments) console.log(`     file: ${a.filename}`);
+      for (const n of carriedNotes) console.log(`     note: ${n.createdAt.toISOString().slice(0, 10)} ${n.body.slice(0, 60)}…`);
       created += 1;
       continue;
     }
@@ -207,7 +215,18 @@ async function main() {
               size: a.size,
             })),
           },
-          ...(admin ? { notes: { create: [{ authorId: admin.id, body: note }] } } : {}),
+          notes: {
+            create: [
+              // The source's own notes come first, in their original order, each
+              // keeping its author. createdAt cannot be carried over, so the date
+              // it was written is stated in the body rather than lost.
+              ...carriedNotes.map((n) => ({
+                authorId: n.authorId,
+                body: `Carried over from invoice #${source.invoiceNumber}, written ${n.createdAt.toISOString().slice(0, 10)}:\n\n${n.body}`,
+              })),
+              ...(admin ? [{ authorId: admin.id, body: note }] : []),
+            ],
+          },
         },
       });
       return invoiceNumber;
@@ -226,7 +245,7 @@ async function main() {
     }
 
     console.log(
-      `  -> created #${newNumber}: Submitted, ${source.attachments.length} attachment(s), no pay period, no control number`,
+      `  -> created #${newNumber}: Submitted, ${source.attachments.length} attachment(s), ${carriedNotes.length} note(s) carried, no pay period, no control number`,
     );
     created += 1;
   }
