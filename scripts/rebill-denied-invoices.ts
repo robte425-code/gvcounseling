@@ -70,6 +70,7 @@ async function main() {
     orderBy: { invoiceNumber: "asc" },
     include: {
       lineItems: { orderBy: { sortOrder: "asc" } },
+      attachments: { orderBy: { createdAt: "asc" } },
       client: { select: { firstName: true, lastName: true } },
       therapist: { select: { firstName: true, lastName: true } },
       payRunLines: { select: { id: true } },
@@ -104,7 +105,7 @@ async function main() {
     console.log(
       `\n#${source.invoiceNumber} ${source.client.lastName}, ${source.client.firstName} — DOS ${dos}, ${codes}, $${Number(source.totalAmount).toFixed(2)}`,
     );
-    console.log(`  ${source.status}/${source.paymentStatus} eob=${JSON.stringify(source.lniEobCodes)}`);
+    console.log(`  ${source.status}/${source.paymentStatus} eob=${JSON.stringify(source.lniEobCodes)}  ${source.attachments.length} attachment(s)`);
 
     // Guards: only rebill what L&I actually refused, and never a bill it paid.
     if (source.paymentStatus === "PAID") {
@@ -119,6 +120,15 @@ async function main() {
     }
     if (source.payRunLines.length > 0) {
       console.log(`  SKIP: has ${source.payRunLines.length} therapist pay line(s) — resolve the payout first.`);
+      continue;
+    }
+    // Submitting an invoice requires at least one attachment, because the session
+    // documentation is what gets faxed to L&I with the bill. A rebill inherits the
+    // original's attachments, so with none to inherit there is nothing to submit.
+    if (!source.attachments.length) {
+      console.log(
+        "  SKIP: the original has no attachments, so the rebill would have no session documentation to fax. Attach the notes to it first.",
+      );
       continue;
     }
 
@@ -145,7 +155,10 @@ async function main() {
     }
 
     if (dryRun) {
-      console.log(`  would create a new Submitted invoice with the same lines, no pay period, no control number`);
+      console.log(
+        `  would create a new Submitted invoice: same lines, ${source.attachments.length} attachment(s) carried over, no pay period, no control number`,
+      );
+      for (const a of source.attachments) console.log(`     ${a.filename}`);
       created += 1;
       continue;
     }
@@ -182,6 +195,18 @@ async function main() {
               sortOrder: l.sortOrder,
             })),
           },
+          // The same session documentation, pointing at the same stored files.
+          // These are Drive links and nothing deletes the file when an attachment
+          // row goes, so both invoices referring to one file is safe — and it is
+          // the same session, so they should refer to the same notes.
+          attachments: {
+            create: source.attachments.map((a) => ({
+              filename: a.filename,
+              blobUrl: a.blobUrl,
+              contentType: a.contentType,
+              size: a.size,
+            })),
+          },
           ...(admin ? { notes: { create: [{ authorId: admin.id, body: note }] } } : {}),
         },
       });
@@ -200,7 +225,9 @@ async function main() {
       });
     }
 
-    console.log(`  -> created #${newNumber}: Submitted, no pay period, no control number`);
+    console.log(
+      `  -> created #${newNumber}: Submitted, ${source.attachments.length} attachment(s), no pay period, no control number`,
+    );
     created += 1;
   }
 
