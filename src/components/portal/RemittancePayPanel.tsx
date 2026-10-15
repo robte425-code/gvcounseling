@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useMemo, useState } from "react";
+import { useActionState, useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   applyRemittanceAdviceAction,
@@ -74,10 +74,22 @@ export function RemittanceImportForm() {
    * heavy, so a single "Importing…" sat there long after the import was done and
    * read as a stall.
    */
-  const [opening, setOpening] = useState<string | null>(null);
+  /**
+   * What the import returned, shown while the next page is being opened.
+   *
+   * Derived from the navigation rather than cleared by hand. Importing several
+   * files lands back on this same page with an `imported` count, and a route that
+   * does not change does not remount the component, so anything switched on here
+   * and switched off on unmount stayed on for good — which is why the button sat
+   * on "Opening…". A transition is pending until the navigation and its server
+   * render finish, so showing this only while it is pending needs no clearing.
+   */
+  const [result, setResult] = useState<string | null>(null);
+  const [isNavigating, startNavigation] = useTransition();
   const [driveFiles, setDriveFiles] = useState<DriveRemittanceFile[]>([]);
   const [driveLoading, setDriveLoading] = useState(true);
   const [driveError, setDriveError] = useState<string | null>(null);
+  const [driveReloadToken, setDriveReloadToken] = useState(0);
   const [selectedDriveIds, setSelectedDriveIds] = useState<Set<string>>(new Set());
   const [localFiles, setLocalFiles] = useState<File[]>([]);
 
@@ -106,7 +118,7 @@ export function RemittanceImportForm() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [driveReloadToken]);
 
   const selectableDriveFiles = useMemo(
     () => driveFiles.filter((file) => !file.alreadyImported),
@@ -162,23 +174,35 @@ export function RemittanceImportForm() {
 
       const importedCount = body.imported ?? 0;
       const failedCount = body.failed ?? 0;
-      setOpening(
-        `Imported ${importedCount} remittance${importedCount === 1 ? "" : "s"}` +
-          `${failedCount > 0 ? `, ${failedCount} failed` : ""}. Opening…`,
-      );
-
-      if (importedCount === 1 && failedCount === 0 && body.remittanceAdviceId) {
-        router.push(`/portal/admin/pay/${body.remittanceAdviceId}`);
-        return;
-      }
 
       const params = new URLSearchParams();
-      if ((body.imported ?? 0) > 0) params.set("imported", String(body.imported));
-      if ((body.failed ?? 0) > 0) params.set("failed", String(body.failed));
-      router.push(`/portal/admin/pay?${params.toString()}`);
+      if (importedCount > 0) params.set("imported", String(importedCount));
+      if (failedCount > 0) params.set("failed", String(failedCount));
+      const destination =
+        importedCount === 1 && failedCount === 0 && body.remittanceAdviceId
+          ? `/portal/admin/pay/${body.remittanceAdviceId}`
+          : `/portal/admin/pay?${params.toString()}`;
+
+      // The request is finished; the transition covers opening the next page.
+      setLoading(false);
+      setResult(
+        `Imported ${importedCount} remittance${importedCount === 1 ? "" : "s"}` +
+          `${failedCount > 0 ? `, ${failedCount} failed` : ""}.`,
+      );
+
+      // The form stays on screen when the navigation lands back here, so drop the
+      // selection and re-read the folder: those files are imported now, and
+      // offering them again invites importing them twice.
+      setSelectedDriveIds(new Set());
+      setLocalFiles([]);
+      setDriveReloadToken((token) => token + 1);
+
+      startNavigation(() => {
+        router.push(destination);
+      });
     } catch {
       setError("Remittance import failed. Check your connection and try again.");
-      setOpening(null);
+      setResult(null);
       setLoading(false);
     }
   }
@@ -306,14 +330,18 @@ export function RemittanceImportForm() {
         </p>
       )}
 
-      {opening && !error && (
+      {isNavigating && result && !error && (
         <p className="rounded-lg bg-primary/10 px-3 py-2 text-sm text-primary-dark" role="status">
-          {opening}
+          {result} Opening…
         </p>
       )}
 
-      <button type="submit" disabled={loading || selectionCount === 0} className={portalButtonClass}>
-        {opening
+      <button
+        type="submit"
+        disabled={loading || isNavigating || selectionCount === 0}
+        className={portalButtonClass}
+      >
+        {isNavigating
           ? "Opening…"
           : loading
             ? "Importing…"
