@@ -126,8 +126,12 @@ export function buildVrcEmailBody(
     : plural
       ? `This confirms that ${noun} were conducted with the client on ${serviceDatePhrase}.`
       : `This confirms that ${typeNames ? indefiniteArticleForInitialism(typeNames) : "a"} ${noun} was conducted with the client on ${serviceDatePhrase}.`;
-  const referLineText = `Have a client who needs BHI therapy? Click here to refer your client! ${REFER_CLIENT_URL}`;
-  const referLineHtml = `Have a client who needs BHI therapy? <a href="${REFER_CLIENT_URL}">Click here to refer your client!</a>`;
+  // "or", not "and": this invites a referral for either kind of care, where the
+  // line above reports what was actually delivered.
+  const referTypes = sessionTypeNames(types, "or");
+  const referSubject = `${referTypes ? `${referTypes} ` : ""}therapy`;
+  const referLineText = `Have a client who needs ${referSubject}? Click here to refer your client! ${REFER_CLIENT_URL}`;
+  const referLineHtml = `Have a client who needs ${escapeHtml(referSubject)}? <a href="${REFER_CLIENT_URL}">Click here to refer your client!</a>`;
 
   const text = [
     `Dear ${greetingName},`,

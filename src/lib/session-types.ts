@@ -68,9 +68,16 @@ export function sessionTypesForProcedureCodes(codes: Iterable<string>): SessionT
 /**
  * How to name those types in a sentence: "BHI", "MHS", "BHI and MHS", or an empty
  * string when none of the codes is recognised.
+ *
+ * The conjunction is the caller's to pick, because the two readings differ. What
+ * was delivered joins with "and" — both kinds of session happened. An invitation
+ * to refer joins with "or" — either kind is welcome.
  */
-export function sessionTypeNames(types: SessionType[]): string {
-  return types.join(" and ");
+export function sessionTypeNames(
+  types: SessionType[],
+  conjunction: "and" | "or" = "and",
+): string {
+  return types.join(` ${conjunction} `);
 }
 
 /**
