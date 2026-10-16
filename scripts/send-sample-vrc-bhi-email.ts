@@ -34,19 +34,22 @@ async function main() {
     }
   }
 
-  const { buildVrcEmailBody } = await import("../src/lib/vrc-billing-emails");
+  const { buildVrcEmailBody, vrcEmailSubject } = await import("../src/lib/vrc-billing-emails");
   const { sendEmailTo } = await import("../src/lib/email");
 
-  const sampleServiceDate = new Date(Date.UTC(2026, 6, 15)); // Jul 15, 2026
-  const { text: bodyText, html: bodyHtml } = buildVrcEmailBody("Alex", [sampleServiceDate], true);
+  // 96158 so the sample reads as a BHI session; swap for 90837 to see MHS.
+  const sampleSessions = [
+    { serviceDate: new Date(Date.UTC(2026, 6, 15)), procedureCode: "96158" }, // Jul 15, 2026
+  ];
+  const { text: bodyText, html: bodyHtml } = buildVrcEmailBody("Alex", sampleSessions, true);
 
   const sampleNote =
-    "This is a sample of the VRC BHI session notification email (no attachments).";
+    `This is a sample of the VRC session notification email (no attachments). Live subject: "${vrcEmailSubject("BL12687", sampleSessions)}".`;
   const text = [sampleNote, "", bodyText].join("\n");
   const html = [`<p><em>${sampleNote}</em></p>`, bodyHtml].join("<br>\n");
 
   await sendEmailTo(ADMIN_EMAIL, {
-    subject: "[SAMPLE] BHI session notification — refer-a-client CTA (blank line)",
+    subject: "[SAMPLE] VRC session notification — refer-a-client CTA (blank line)",
     text,
     html,
   });

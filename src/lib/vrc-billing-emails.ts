@@ -1,3 +1,9 @@
+import {
+  indefiniteArticleForInitialism,
+  sessionTypeNames,
+  sessionTypesForProcedureCodes,
+} from "@/lib/session-types";
+import type { SessionType } from "@/lib/session-types";
 import { calendarIsoFromDate, formatDate, formatCalendarDate } from "@/lib/constants";
 import { sendEmailTo } from "@/lib/email";
 import {
@@ -82,17 +88,43 @@ function escapeHtml(value: string): string {
     .replaceAll('"', "&quot;");
 }
 
+export type VrcEmailSession = { serviceDate: Date; procedureCode: string };
+
+/**
+ * How to refer to the sessions in a subject line: "BHI", "MHS", "BHI and MHS",
+ * or "Session" where no code is recognised.
+ */
+export function vrcEmailSubject(claimNumber: string, sessions: VrcEmailSession[]): string {
+  const names = sessionTypeNames(sessionTypesForProcedureCodes(sessions.map((s) => s.procedureCode)));
+  return names
+    ? `${names} session notification — ${claimNumber}`
+    : `Session notification — ${claimNumber}`;
+}
+
 export function buildVrcEmailBody(
   vrcName: string,
-  serviceDates: Date[],
+  sessions: VrcEmailSession[],
   hasAttachments: boolean,
 ): { text: string; html: string } {
   const greetingName = vrcFirstName(vrcName);
-  const serviceDatePhrase = formatServiceDatesPhrase(serviceDates);
+  const serviceDatePhrase = formatServiceDatesPhrase(sessions.map((s) => s.serviceDate));
   const { name, phone, email } = VRC_BILLING_EMAIL_SIGNATURE;
+
+  // Name the service from the codes billed. A VRC referring for one kind of care
+  // and told about the other has reason to doubt the note belongs to their client,
+  // and a code in neither family is described as a session with no type attached
+  // rather than called the wrong thing.
+  const types: SessionType[] = sessionTypesForProcedureCodes(sessions.map((s) => s.procedureCode));
+  const typeNames = sessionTypeNames(types);
+  const dateCount = new Set(sessions.map((s) => calendarIsoFromDate(s.serviceDate))).size;
+  const plural = dateCount > 1;
+  const noun = `${typeNames ? `${typeNames} ` : ""}session${plural ? "s" : ""}`;
+
   const sessionLine = hasAttachments
-    ? `Please find attached documentation of the BHI session conducted with the client on ${serviceDatePhrase}.`
-    : `This confirms that a BHI session was conducted with the client on ${serviceDatePhrase}.`;
+    ? `Please find attached documentation of the ${noun} conducted with the client on ${serviceDatePhrase}.`
+    : plural
+      ? `This confirms that ${noun} were conducted with the client on ${serviceDatePhrase}.`
+      : `This confirms that ${typeNames ? indefiniteArticleForInitialism(typeNames) : "a"} ${noun} was conducted with the client on ${serviceDatePhrase}.`;
   const referLineText = `Have a client who needs BHI therapy? Click here to refer your client! ${REFER_CLIENT_URL}`;
   const referLineHtml = `Have a client who needs BHI therapy? <a href="${REFER_CLIENT_URL}">Click here to refer your client!</a>`;
 
@@ -186,7 +218,7 @@ export async function emailVrcsForPayPeriod(options: {
         },
       },
       therapist: { select: { id: true } },
-      lineItems: { select: { serviceDate: true } },
+      lineItems: { select: { serviceDate: true, procedureCode: true } },
       attachments: true,
     },
     orderBy: [{ client: { lastName: "asc" } }, { invoiceNumber: "asc" }],
@@ -201,7 +233,7 @@ export async function emailVrcsForPayPeriod(options: {
     {
       client: (typeof invoices)[number]["client"];
       therapistId: string;
-      lineItems: Date[];
+      sessions: VrcEmailSession[];
       attachments: InvoiceAttachmentRecord[];
     }
   >();
@@ -209,14 +241,14 @@ export async function emailVrcsForPayPeriod(options: {
   for (const invoice of invoices) {
     const existing = byClient.get(invoice.clientId);
     if (existing) {
-      existing.lineItems.push(...invoice.lineItems.map((line) => line.serviceDate));
+      existing.sessions.push(...invoice.lineItems);
       existing.attachments.push(...invoice.attachments);
       continue;
     }
     byClient.set(invoice.clientId, {
       client: invoice.client,
       therapistId: invoice.therapistId,
-      lineItems: invoice.lineItems.map((line) => line.serviceDate),
+      sessions: [...invoice.lineItems],
       attachments: [...invoice.attachments],
     });
   }
@@ -229,7 +261,7 @@ export async function emailVrcsForPayPeriod(options: {
     adminCc: [],
   };
 
-  for (const { client, therapistId, lineItems, attachments } of byClient.values()) {
+  for (const { client, therapistId, sessions, attachments } of byClient.values()) {
     const label = `${client.lniClaimNumber} (${client.lastName}, ${client.firstName})`;
 
     if (!client.vrcEmail?.trim()) {
@@ -258,8 +290,8 @@ export async function emailVrcsForPayPeriod(options: {
       const intendedEmail = client.vrcEmail.trim();
       const { to, redirected } = await resolveVrcOutboundEmail(intendedEmail);
       const greetingName = vrcFirstName(vrcName);
-      const subject = `BHI session notification — ${client.lniClaimNumber}`;
-      const { text: bodyText, html: bodyHtml } = buildVrcEmailBody(greetingName, lineItems, true);
+      const subject = vrcEmailSubject(client.lniClaimNumber, sessions);
+      const { text: bodyText, html: bodyHtml } = buildVrcEmailBody(greetingName, sessions, true);
       const redirectNote = redirected ? outboundEmailRedirectNote(vrcName, intendedEmail) : null;
       const text = redirectNote
         ? [
