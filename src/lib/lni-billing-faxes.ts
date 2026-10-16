@@ -7,6 +7,8 @@ import {
 } from "@/lib/google-drive";
 import { getDriveAccessTokenForClient } from "@/lib/google-drive-access";
 import { generateLniFaxCoverPdf } from "@/lib/lni-fax-cover";
+import { isPhoneCallOnly, sessionTypesForProcedureCodes } from "@/lib/session-types";
+import type { BilledSession, SessionType } from "@/lib/session-types";
 import {
   LNI_FAX_PRODUCTION,
   LNI_FAX_TEST,
@@ -114,6 +116,7 @@ async function buildFaxFiles(
     clientName: string;
     providerName: string;
     serviceDates: Date[];
+    sessionTypes: SessionType[];
     sessionAttachments: InvoiceAttachmentRecord[];
   },
 ): Promise<FaxFile[]> {
@@ -122,6 +125,7 @@ async function buildFaxFiles(
     clientName: options.clientName,
     providerName: options.providerName,
     serviceDatesPhrase: formatServiceDatesPhrase(options.serviceDates),
+    sessionTypes: options.sessionTypes,
   });
 
   const files: FaxFile[] = [
@@ -164,7 +168,7 @@ export async function faxLniForPayPeriod(options: {
         },
       },
       therapist: { select: { id: true, firstName: true, lastName: true } },
-      lineItems: { select: { serviceDate: true } },
+      lineItems: { select: { serviceDate: true, procedureCode: true } },
       attachments: true,
     },
     orderBy: [{ client: { lastName: "asc" } }, { invoiceNumber: "asc" }],
@@ -180,15 +184,25 @@ export async function faxLniForPayPeriod(options: {
       client: (typeof invoices)[number]["client"];
       therapist: (typeof invoices)[number]["therapist"];
       therapistId: string;
-      lineItems: Date[];
+      sessions: BilledSession[];
       attachments: InvoiceAttachmentRecord[];
     }
   >();
+  const phoneCallSkips: string[] = [];
+
+  // A phone call is billed but has no session documentation to fax; L&I is
+  // adjudicating a bill, and sending a call's notes tells it nothing.
+  const phoneCallOnlyClients = new Map<string, (typeof invoices)[number]["client"]>();
 
   for (const invoice of invoices) {
+    if (isPhoneCallOnly(invoice.lineItems)) {
+      phoneCallOnlyClients.set(invoice.clientId, invoice.client);
+      continue;
+    }
+
     const existing = byClient.get(invoice.clientId);
     if (existing) {
-      existing.lineItems.push(...invoice.lineItems.map((line) => line.serviceDate));
+      existing.sessions.push(...invoice.lineItems);
       existing.attachments.push(...invoice.attachments);
       continue;
     }
@@ -196,14 +210,21 @@ export async function faxLniForPayPeriod(options: {
       client: invoice.client,
       therapist: invoice.therapist,
       therapistId: invoice.therapistId,
-      lineItems: invoice.lineItems.map((line) => line.serviceDate),
+      sessions: [...invoice.lineItems],
       attachments: [...invoice.attachments],
     });
   }
 
-  const result: LniBillingFaxResult = { sent: 0, sentDetails: [], skipped: [], errors: [] };
+  for (const [clientId, client] of phoneCallOnlyClients) {
+    if (byClient.has(clientId)) continue;
+    phoneCallSkips.push(
+      `${client.lniClaimNumber} (${client.lastName}, ${client.firstName}): phone call only, not faxed`,
+    );
+  }
 
-  for (const { client, therapist, therapistId, lineItems, attachments } of byClient.values()) {
+  const result: LniBillingFaxResult = { sent: 0, sentDetails: [], skipped: [...phoneCallSkips], errors: [] };
+
+  for (const { client, therapist, therapistId, sessions, attachments } of byClient.values()) {
     const label = `${client.lniClaimNumber} (${client.lastName}, ${client.firstName})`;
     const clientName = `${client.lastName}, ${client.firstName}`;
     const providerName = `${therapist.firstName} ${therapist.lastName}`.trim() || "Provider";
@@ -224,7 +245,8 @@ export async function faxLniForPayPeriod(options: {
         claimNumber: client.lniClaimNumber,
         clientName,
         providerName,
-        serviceDates: lineItems,
+        serviceDates: sessions.map((session) => session.serviceDate),
+        sessionTypes: sessionTypesForProcedureCodes(sessions.map((s) => s.procedureCode)),
         sessionAttachments,
       });
 

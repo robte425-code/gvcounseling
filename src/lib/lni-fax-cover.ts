@@ -1,11 +1,27 @@
 import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
+import { sessionTypeNames } from "@/lib/session-types";
+import type { SessionType } from "@/lib/session-types";
 import { VRC_BILLING_EMAIL_SIGNATURE } from "@/lib/vrc-billing-emails";
+
+/**
+ * What the cover says is attached.
+ *
+ * It read "BHI session documentation" on every fax, including the ones carrying
+ * notes from a psychotherapy session. The service is named from the codes billed,
+ * and left unnamed where none of them is a code this practice recognises, rather
+ * than telling L&I the wrong thing about a bill it is adjudicating.
+ */
+function defaultCoverNote(sessionTypes: SessionType[]): string {
+  const names = sessionTypeNames(sessionTypes);
+  return `Attached: ${names ? `${names} ` : ""}session documentation for the above claim. Invoice submitted separately via L&I billing portal.`;
+}
 
 export async function generateLniFaxCoverPdf(options: {
   claimNumber: string;
   clientName: string;
   serviceDatesPhrase: string;
   providerName: string;
+  sessionTypes?: SessionType[];
   coverNote?: string;
 }): Promise<Uint8Array> {
   const doc = await PDFDocument.create();
@@ -70,8 +86,7 @@ export async function generateLniFaxCoverPdf(options: {
 
   y -= 12;
   page.drawText(
-    options.coverNote ??
-      "Attached: BHI session documentation for the above claim. Invoice submitted separately via L&I billing portal.",
+    options.coverNote ?? defaultCoverNote(options.sessionTypes ?? []),
     {
       x: margin,
       y,

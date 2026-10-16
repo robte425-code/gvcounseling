@@ -1,9 +1,10 @@
 import {
   indefiniteArticleForInitialism,
+  isPhoneCallOnly,
   sessionTypeNames,
   sessionTypesForProcedureCodes,
 } from "@/lib/session-types";
-import type { SessionType } from "@/lib/session-types";
+import type { BilledSession, SessionType } from "@/lib/session-types";
 import { calendarIsoFromDate, formatDate, formatCalendarDate } from "@/lib/constants";
 import { sendEmailTo } from "@/lib/email";
 import {
@@ -88,7 +89,7 @@ function escapeHtml(value: string): string {
     .replaceAll('"', "&quot;");
 }
 
-export type VrcEmailSession = { serviceDate: Date; procedureCode: string };
+export type VrcEmailSession = BilledSession;
 
 /**
  * How to refer to the sessions in a subject line: "BHI", "MHS", "BHI and MHS",
@@ -237,8 +238,18 @@ export async function emailVrcsForPayPeriod(options: {
       attachments: InvoiceAttachmentRecord[];
     }
   >();
+  const phoneCallSkips: string[] = [];
+
+  // A phone call is billed but has no session to report, so it is left out
+  // entirely — its files are not the VRC's to receive.
+  const phoneCallOnlyClients = new Map<string, (typeof invoices)[number]["client"]>();
 
   for (const invoice of invoices) {
+    if (isPhoneCallOnly(invoice.lineItems)) {
+      phoneCallOnlyClients.set(invoice.clientId, invoice.client);
+      continue;
+    }
+
     const existing = byClient.get(invoice.clientId);
     if (existing) {
       existing.sessions.push(...invoice.lineItems);
@@ -253,10 +264,19 @@ export async function emailVrcsForPayPeriod(options: {
     });
   }
 
+  // Said out loud, so a client missing from the batch is explained rather than
+  // silently absent.
+  for (const [clientId, client] of phoneCallOnlyClients) {
+    if (byClient.has(clientId)) continue;
+    phoneCallSkips.push(
+      `${client.lniClaimNumber} (${client.lastName}, ${client.firstName}): phone call only, not emailed`,
+    );
+  }
+
   const result: VrcBillingEmailResult = {
     sent: 0,
     sentDetails: [],
-    skipped: [],
+    skipped: [...phoneCallSkips],
     errors: [],
     adminCc: [],
   };

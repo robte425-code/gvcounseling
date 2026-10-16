@@ -13,6 +13,9 @@
  */
 export type SessionType = "BHI" | "MHS";
 
+/** A billed session, carrying enough to say what service it was and when. */
+export type BilledSession = { serviceDate: Date; procedureCode: string };
+
 const SESSION_TYPE_BY_CODE: Record<string, SessionType> = {
   "96156": "BHI",
   "96158": "BHI",
@@ -21,6 +24,29 @@ const SESSION_TYPE_BY_CODE: Record<string, SessionType> = {
   "90834": "MHS",
   "90837": "MHS",
 };
+
+/**
+ * Telephone assessment and management by a qualified nonphysician — a phone call,
+ * not a session. These are billed, but their notes are not sent to L&I or to a
+ * VRC: there is no session to document. 62 invoices carry one, each with files
+ * that were going out with the rest.
+ */
+const PHONE_CALL_CODES = new Set(["98966", "98967", "98968"]);
+
+export function isPhoneCallProcedureCode(code: string): boolean {
+  return PHONE_CALL_CODES.has(code.trim().toUpperCase());
+}
+
+/**
+ * Every line on this invoice is a phone call, so there is nothing to send.
+ *
+ * Judged per invoice because no invoice in the project's history mixes a phone
+ * call with a session — all 1286 are one or the other — so dropping the whole
+ * invoice cannot take a real session's notes with it.
+ */
+export function isPhoneCallOnly(lines: Array<{ procedureCode: string }>): boolean {
+  return lines.length > 0 && lines.every((line) => isPhoneCallProcedureCode(line.procedureCode));
+}
 
 export function sessionTypeForProcedureCode(code: string): SessionType | null {
   return SESSION_TYPE_BY_CODE[code.trim().toUpperCase()] ?? null;
