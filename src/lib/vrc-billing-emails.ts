@@ -72,6 +72,12 @@ export function vrcFirstName(vrcName: string): string {
   const first = (withoutSuffix || trimmed).split(/\s+/)[0] ?? "";
   if (!first) return "VRC";
 
+  // The fallback is an initialism, not a name, so the title-casing below must not
+  // reach it: "VRC" came back as "Vrc", which is what a client with no VRC name
+  // on file would have been greeted as.
+  if (first.toUpperCase() === "VRC") return "VRC";
+
+  // A name typed in capitals reads as shouting in a greeting.
   if (first === first.toUpperCase() && first.length > 1) {
     return first.charAt(0) + first.slice(1).toLowerCase();
   }
@@ -313,9 +319,8 @@ export async function emailVrcsForPayPeriod(options: {
       const vrcName = client.vrcName?.trim() || "VRC";
       const intendedEmail = client.vrcEmail.trim();
       const { to, redirected } = await resolveVrcOutboundEmail(intendedEmail);
-      const greetingName = vrcFirstName(vrcName);
       const subject = vrcEmailSubject(client.lniClaimNumber, sessions);
-      const { text: bodyText, html: bodyHtml } = buildVrcEmailBody(greetingName, sessions, true);
+      const { text: bodyText, html: bodyHtml } = buildVrcEmailBody(vrcName, sessions, true);
       const redirectNote = redirected ? outboundEmailRedirectNote(vrcName, intendedEmail) : null;
       const text = redirectNote
         ? [
