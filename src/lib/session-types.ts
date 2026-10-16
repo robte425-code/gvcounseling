@@ -26,33 +26,36 @@ const SESSION_TYPE_BY_CODE: Record<string, SessionType> = {
 };
 
 /**
- * A telephone call rather than a session. Billed, but with no session to
- * document, so its files are not sent to L&I or to a VRC.
+ * A billed communication rather than a session — a call or a secure message.
+ * There is no session to document, so its files go to neither L&I nor the VRC.
  *
- * 98966 to 98968 are telephone evaluation and management, and 9919M is L&I's own
- * code for case management telephone calls — its "M" suffix marks it as a
- * Washington L&I local code rather than a CPT one, which is why it did not look
- * like the others. PROCEDURE_CODES in constants.ts describes all of them.
+ * 98966 to 98968 are telephone evaluation and management, 9919M is L&I's own code
+ * for case management telephone calls, and 9918M is electronic provider
+ * communication. The "M" suffix on the last two marks them as Washington L&I
+ * local codes rather than CPT ones, which is why they do not look like the
+ * others; PROCEDURE_CODES in constants.ts describes each.
  *
- * Two codes are deliberately left out, and neither has ever been billed: 9918M is
- * electronic provider communication, not a call, and 1073M is the Activity
- * Prescription Form, which is a document L&I may well want to receive.
+ * 1073M is deliberately not here. It is also a communication code, but it bills
+ * the Activity Prescription Form, and that form is a document L&I wants to
+ * receive, so it keeps going out.
  */
-const PHONE_CALL_CODES = new Set(["98966", "98967", "98968", "9919M"]);
+const COMMUNICATION_ONLY_CODES = new Set(["98966", "98967", "98968", "9919M", "9918M"]);
 
-export function isPhoneCallProcedureCode(code: string): boolean {
-  return PHONE_CALL_CODES.has(code.trim().toUpperCase());
+export function isCommunicationOnlyProcedureCode(code: string): boolean {
+  return COMMUNICATION_ONLY_CODES.has(code.trim().toUpperCase());
 }
 
 /**
- * Every line on this invoice is a phone call, so there is nothing to send.
+ * Every line on this invoice is a communication, so there is nothing to send.
  *
- * Judged per invoice because no invoice in the project's history mixes a call
- * with a session — all 1286 are one or the other — so dropping the whole invoice
- * cannot take a real session's notes with it.
+ * Judged per invoice because no invoice in the project's history mixes a
+ * communication with a session — all 1286 are one or the other — so dropping the
+ * whole invoice cannot take a real session's notes with it.
  */
-export function isPhoneCallOnly(lines: Array<{ procedureCode: string }>): boolean {
-  return lines.length > 0 && lines.every((line) => isPhoneCallProcedureCode(line.procedureCode));
+export function isCommunicationOnly(lines: Array<{ procedureCode: string }>): boolean {
+  return (
+    lines.length > 0 && lines.every((line) => isCommunicationOnlyProcedureCode(line.procedureCode))
+  );
 }
 
 export function sessionTypeForProcedureCode(code: string): SessionType | null {

@@ -7,7 +7,7 @@ import {
 } from "@/lib/google-drive";
 import { getDriveAccessTokenForClient } from "@/lib/google-drive-access";
 import { generateLniFaxCoverPdf } from "@/lib/lni-fax-cover";
-import { isPhoneCallOnly, sessionTypesForProcedureCodes } from "@/lib/session-types";
+import { isCommunicationOnly, sessionTypesForProcedureCodes } from "@/lib/session-types";
 import type { BilledSession, SessionType } from "@/lib/session-types";
 import {
   LNI_FAX_PRODUCTION,
@@ -188,15 +188,16 @@ export async function faxLniForPayPeriod(options: {
       attachments: InvoiceAttachmentRecord[];
     }
   >();
-  const phoneCallSkips: string[] = [];
+  const communicationSkips: string[] = [];
 
-  // A phone call is billed but has no session documentation to fax; L&I is
-  // adjudicating a bill, and sending a call's notes tells it nothing.
-  const phoneCallOnlyClients = new Map<string, (typeof invoices)[number]["client"]>();
+  // A call or secure message has no session documentation to fax; L&I is
+  // adjudicating a bill, and sending its notes tells it nothing. The Activity
+  // Prescription Form, 1073M, is not in this group — L&I wants that form.
+  const communicationOnlyClients = new Map<string, (typeof invoices)[number]["client"]>();
 
   for (const invoice of invoices) {
-    if (isPhoneCallOnly(invoice.lineItems)) {
-      phoneCallOnlyClients.set(invoice.clientId, invoice.client);
+    if (isCommunicationOnly(invoice.lineItems)) {
+      communicationOnlyClients.set(invoice.clientId, invoice.client);
       continue;
     }
 
@@ -215,14 +216,14 @@ export async function faxLniForPayPeriod(options: {
     });
   }
 
-  for (const [clientId, client] of phoneCallOnlyClients) {
+  for (const [clientId, client] of communicationOnlyClients) {
     if (byClient.has(clientId)) continue;
-    phoneCallSkips.push(
-      `${client.lniClaimNumber} (${client.lastName}, ${client.firstName}): phone call only, not faxed`,
+    communicationSkips.push(
+      `${client.lniClaimNumber} (${client.lastName}, ${client.firstName}): call or message only, no session, not faxed`,
     );
   }
 
-  const result: LniBillingFaxResult = { sent: 0, sentDetails: [], skipped: [...phoneCallSkips], errors: [] };
+  const result: LniBillingFaxResult = { sent: 0, sentDetails: [], skipped: [...communicationSkips], errors: [] };
 
   for (const { client, therapist, therapistId, sessions, attachments } of byClient.values()) {
     const label = `${client.lniClaimNumber} (${client.lastName}, ${client.firstName})`;

@@ -1,6 +1,6 @@
 import {
   indefiniteArticleForInitialism,
-  isPhoneCallOnly,
+  isCommunicationOnly,
   sessionTypeNames,
   sessionTypesForProcedureCodes,
 } from "@/lib/session-types";
@@ -248,15 +248,15 @@ export async function emailVrcsForPayPeriod(options: {
       attachments: InvoiceAttachmentRecord[];
     }
   >();
-  const phoneCallSkips: string[] = [];
+  const communicationSkips: string[] = [];
 
-  // A phone call is billed but has no session to report, so it is left out
-  // entirely — its files are not the VRC's to receive.
-  const phoneCallOnlyClients = new Map<string, (typeof invoices)[number]["client"]>();
+  // A call or secure message is billed but has no session to report, so it is
+  // left out entirely — its files are not the VRC's to receive.
+  const communicationOnlyClients = new Map<string, (typeof invoices)[number]["client"]>();
 
   for (const invoice of invoices) {
-    if (isPhoneCallOnly(invoice.lineItems)) {
-      phoneCallOnlyClients.set(invoice.clientId, invoice.client);
+    if (isCommunicationOnly(invoice.lineItems)) {
+      communicationOnlyClients.set(invoice.clientId, invoice.client);
       continue;
     }
 
@@ -276,17 +276,17 @@ export async function emailVrcsForPayPeriod(options: {
 
   // Said out loud, so a client missing from the batch is explained rather than
   // silently absent.
-  for (const [clientId, client] of phoneCallOnlyClients) {
+  for (const [clientId, client] of communicationOnlyClients) {
     if (byClient.has(clientId)) continue;
-    phoneCallSkips.push(
-      `${client.lniClaimNumber} (${client.lastName}, ${client.firstName}): phone call only, not emailed`,
+    communicationSkips.push(
+      `${client.lniClaimNumber} (${client.lastName}, ${client.firstName}): call or message only, no session, not emailed`,
     );
   }
 
   const result: VrcBillingEmailResult = {
     sent: 0,
     sentDetails: [],
-    skipped: [...phoneCallSkips],
+    skipped: [...communicationSkips],
     errors: [],
     adminCc: [],
   };
