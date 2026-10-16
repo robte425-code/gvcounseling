@@ -80,6 +80,7 @@ export function vrcFirstName(vrcName: string): string {
 }
 
 const REFER_CLIENT_URL = "https://gvcounseling.com/refer-a-client";
+const REFER_CLIENT_PROMPT = "Have a client who needs BHI or MHS therapy?";
 
 function escapeHtml(value: string): string {
   return value
@@ -126,12 +127,11 @@ export function buildVrcEmailBody(
     : plural
       ? `This confirms that ${noun} were conducted with the client on ${serviceDatePhrase}.`
       : `This confirms that ${typeNames ? indefiniteArticleForInitialism(typeNames) : "a"} ${noun} was conducted with the client on ${serviceDatePhrase}.`;
-  // "or", not "and": this invites a referral for either kind of care, where the
-  // line above reports what was actually delivered.
-  const referTypes = sessionTypeNames(types, "or");
-  const referSubject = `${referTypes ? `${referTypes} ` : ""}therapy`;
-  const referLineText = `Have a client who needs ${referSubject}? Click here to refer your client! ${REFER_CLIENT_URL}`;
-  const referLineHtml = `Have a client who needs ${escapeHtml(referSubject)}? <a href="${REFER_CLIENT_URL}">Click here to refer your client!</a>`;
+  // Fixed, unlike the line above it. That line reports the session this email
+  // carries notes for; this one advertises what the practice takes referrals for,
+  // which is both services whatever this particular session was.
+  const referLineText = `${REFER_CLIENT_PROMPT} Click here to refer your client! ${REFER_CLIENT_URL}`;
+  const referLineHtml = `${escapeHtml(REFER_CLIENT_PROMPT)} <a href="${REFER_CLIENT_URL}">Click here to refer your client!</a>`;
 
   const text = [
     `Dear ${greetingName},`,
